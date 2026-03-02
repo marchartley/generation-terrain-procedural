@@ -1,19 +1,19 @@
 #include "SnakeSegmentation.h"
 
 SnakeSegmentation::SnakeSegmentation()
-    : SnakeSegmentation(nullptr)
+    : SnakeSegmentation(nullptr, nullptr)
 {
 
 }
 
 SnakeSegmentation::SnakeSegmentation(const BSpline &curve)
-    : SnakeSegmentation(nullptr, curve)
+    : SnakeSegmentation(nullptr, nullptr, curve)
 {
 
 }
 
-SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters *params, const BSpline &curve)
-    : params(params), contour(curve)
+SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const BSpline& curve)
+    : params(params), field(fields), contour(curve)
 {
 
 }
@@ -316,22 +316,18 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
 
 float SnakeSegmentation::getImageAt(const Vector3 &p) const
 {
-    return this->params->getImageAt(p);
+    return field->getImage(p);
 }
 
 Vector3 SnakeSegmentation::getGradientImageAt(const Vector3 &p) const
 {
-    return this->params->getGradientImageAt(p);
+    return field->getGradient(p);
 }
 
-/*
-float SnakeSegmentation::getImageAt(const Vector3 &p) const
-{
-    return this->image.interpolate(p);
-}
 
-Vector3 SnakeSegmentation::getGradientImageAt(const Vector3 &p) const
-{
-    return this->gradientField.interpolate(p);
+
+
+
+std::function<Vector3 (const Vector3&)> gradientFromFieldFunction(const std::function<float (const Vector3&)>& func) {
+    return [=](const Vector3& pos) { float f00 = func(pos); return Vector3(func(pos + Vector3(1.f, 0.f, 0.f)) - f00, func(pos + Vector3(0.f, 1.f, 0.f)) - f00); };
 }
-*/

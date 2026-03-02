@@ -9,7 +9,7 @@ EnvironmentalScene::EnvironmentalScene()
     initFlow();
     this->materials = std::map<std::string, EnvMaterial>();
     this->availableObjects = std::map<std::string, EnvObject*>();
-    this->instantiatedObjects = std::vector<EnvObject*>();
+    this->instantiatedObjects = std::vector<EnvObjectInstance*>();
     this->currentMaxID = -1;
     this->transformationRules = std::vector<MaterialsTransformation>();
     this->currentTime = 0;
@@ -40,7 +40,7 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
 {
     auto json = nlohmann::ordered_json::parse(toLower(content));
     for (auto& obj : json) {
-        std::string objName = obj["name"];
+        std::string objName = toLower(obj["name"]);
         if (startsWith(objName, "--")) continue; // Ignore some objects if the name starts with "--"
         if (!obj.contains("type")) {
             throw std::domain_error("No type given for Environmental Object defined as " + nlohmann::to_string(obj));
@@ -49,14 +49,12 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
         if (obj["type"] == "point") {
             EnvPoint o = obj.get<EnvPoint>();
             this->availableObjects[objName] = o.clone();
-            // this->availableObjects[objName] = new EnvPoint;
-            // *this->availableObjects[objName] = obj.get<EnvPoint>(); //EnvPoint::fromJSON(obj);
         } else if (obj["type"] == "curve") {
             EnvCurve o = obj.get<EnvCurve>();
-            this->availableObjects[objName] = o.clone(); // EnvCurve::fromJSON(obj);
+            this->availableObjects[objName] = o.clone();
         } else if (obj["type"] == "area") {
             EnvArea o = obj.get<EnvArea>();
-            this->availableObjects[objName] = o.clone(); //EnvArea::fromJSON(obj);
+            this->availableObjects[objName] = o.clone();
         } else {
             throw std::domain_error("Unrecognized type for Environmental Object defined as " + nlohmann::to_string(obj));
         }
@@ -66,19 +64,15 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
     for (auto& [name, obj] : this->availableObjects) {
         obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name, this);
         obj->fitnessFunction = EnvObject::parseFittingFunction(obj->s_FitnessFunction, obj->name, this);
-
-        dynamic_cast<SnakeSegmentationImplicitParameters*>(obj->snake.params)->imageField = obj->fittingFunction;
-        dynamic_cast<SnakeSegmentationImplicitParameters*>(obj->snake.params)->gradientField = gradientFromFieldFunction(obj->fittingFunction);
+        obj->updateFittingFunction();
     }
 
     for (auto& obj : this->instantiatedObjects) {
-        auto name = obj->name;
-        // obj->flowEffect = this->availableObjects[name]->flowEffect;
-        //        obj->sandEffect = this->availableObjects[name]->sandEffect;
-        obj->materialAbsorptionRate = this->availableObjects[name]->materialAbsorptionRate;
-        obj->materialDepositionRate = this->availableObjects[name]->materialDepositionRate;
+        auto name = obj->getDefinition()->name;
+        obj->getDefinition()->materialAbsorptionRate = this->availableObjects[name]->materialAbsorptionRate;
+        obj->getDefinition()->materialDepositionRate = this->availableObjects[name]->materialDepositionRate;
+        obj->getDefinition()->materialDepositionOnDeath = this->availableObjects[name]->materialDepositionOnDeath;
     }
-    //    precomputeTerrainProperties(Heightmap());
     return json;
 }
 
@@ -94,21 +88,7 @@ nlohmann::ordered_json EnvironmentalScene::readEnvMaterialsFileContent(const std
     auto json = nlohmann::ordered_json::parse(toLower(content));
     for (auto& mat : json) {
         std::string matName = mat["name"];
-        if (startsWith(matName, "--")) continue; // Ignore some materials if the name starts with "--"
-        /*
-        float diffusionSpeed = mat["diffusionspeed"];
-        float waterTransport = mat["watertransport"];
-        float mass = mat["mass"];
-        float decay = mat["decay"];
-        float virtualHeight = mat["virtualheight"];
-
-        EnvMaterial material;
-        material.name = matName;
-        material.diffusionSpeed = diffusionSpeed;
-        material.waterTransport = waterTransport;
-        material.mass = mass;
-        material.decay = decay;
-        material.virtualHeight = virtualHeight;*/
+        if (startsWith(matName, "--")) continue;
         EnvMaterial material = mat;
 
         if (this->materials.count(matName) != 0) {
@@ -234,12 +214,12 @@ std::vector<std::string> EnvironmentalScene::getMaterialsToUpdate() const
 
     for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
-        for (auto& [materialName, absorb] : object->materialAbsorptionRate) {
+        for (auto& [materialName, absorb] : object->getDefinition()->materialAbsorptionRate) {
             if (absorb.rate > 0 && std::find(names.begin(), names.end(), materialName) == names.end()) {
                 names.push_back(materialName);
             }
         }
-        for (auto& [materialName, depos] : object->materialDepositionRate) {
+        for (auto& [materialName, depos] : object->getDefinition()->materialDepositionRate) {
             if (depos.rate > 0 && std::find(names.begin(), names.end(), materialName) == names.end()) {
                 names.push_back(materialName);
             }
@@ -249,12 +229,12 @@ std::vector<std::string> EnvironmentalScene::getMaterialsToUpdate() const
 }
 
 
-EnvObject *EnvironmentalScene::findClosest(const std::string& objectName, const Vector3 &pos)
+EnvObjectInstance *EnvironmentalScene::findClosest(const std::string& objectName, const Vector3& pos)
 {
     float minDist = std::numeric_limits<float>::max();
-    EnvObject* bestElem = nullptr;
+    EnvObjectInstance* bestElem = nullptr;
     for (auto& instance : this->instantiatedObjects) {
-        if (instance->name != objectName) continue;
+        if (instance->getDefinition()->name != objectName) continue;
         float distance = instance->getSqrDistance(pos);
         if (distance < minDist) {
             minDist = distance;
@@ -265,20 +245,20 @@ EnvObject *EnvironmentalScene::findClosest(const std::string& objectName, const 
 }
 
 
-EnvObject *EnvironmentalScene::instantiate(const std::string& objectName)
+EnvObjectInstance* EnvironmentalScene::instantiate(const std::string& objectName)
 {
     if (this->availableObjects.count(objectName) == 0) {
         return nullptr;
     }
     this->currentMaxID++;
-    auto object = this->availableObjects[objectName]->clone();
+    auto object = this->availableObjects[objectName]->instantiate();
     object->ID = this->currentMaxID;
     object->scene = this;
     this->instantiatedObjects.push_back(object);
     return object;
 }
 
-void EnvironmentalScene::removeObject(EnvObject *obj)
+void EnvironmentalScene::removeObject(EnvObjectInstance *obj)
 {
     if (obj) {
         auto& list = this->instantiatedObjects;
@@ -293,41 +273,6 @@ void EnvironmentalScene::removeAllObjects()
     }
     this->instantiatedObjects.clear();
 }
-
-/*
-std::vector<std::string> EnvironmentalScene::updateAllMaterialsOnce(const GridV3& heightsGradients, const GridV3& smoothFluids, const std::vector<std::string>& unstableMaterials)
-{
-    std::vector<short int> stillUnstable(unstableMaterials.size(), 0);
-
-    #pragma omp parallel for schedule(dynamic)
-    for(size_t iMaterial = 0; iMaterial < unstableMaterials.size(); iMaterial++) {
-        auto& material = materials[unstableMaterials[iMaterial]];
-
-        bool needToBeUpdated = false;
-        auto startState = material.currentState;
-
-        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
-            auto& object = this->instantiatedObjects[i];
-            object->applyDeposition(material);
-            needToBeUpdated = true;
-        }
-        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
-            auto& object = this->instantiatedObjects[i];
-            object->applyAbsorption(material);
-            needToBeUpdated = true;
-        }
-
-        if (needToBeUpdated) {
-            material.update(smoothFluids, heightsGradients, this->scenario.dt);
-            float diff = (material.currentState - startState).abs().sum() / float(startState.size() / 100); // Scaling difference by 100 otherwise it is very small...
-            if (diff > 1e-3) {
-                stillUnstable[iMaterial] = 1;
-            }
-        }
-    }
-    return where_masked(unstableMaterials, stillUnstable);
-}
-*/
 
 EnvMaterial& EnvironmentalScene::stabilizeOneMaterial(const GridV3& heightsGradients, const GridV3& smoothFluids, EnvMaterial& material, int maxIterations)
 {
@@ -365,13 +310,6 @@ void EnvironmentalScene::stabilizeMaterials(const GridF &heights, int maxIterati
     // auto smoothFluids = this->flowfield.meanSmooth(3, 3, 1, true);
     std::vector<std::string> unstableMaterials = this->getMaterialsToUpdate();
 
-    /*for (int iteration = 0; iteration < maxIterations; iteration++) {
-        unstableMaterials = this->updateAllMaterialsOnce(heightsGradients, this->flowfield, unstableMaterials);
-        if (unstableMaterials.empty()) {
-            break;
-        }
-    }
-    */
     #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < unstableMaterials.size(); i++) {
         this->stabilizeOneMaterial(heightsGradients, this->flowfield, this->materials[unstableMaterials[i]], maxIterations);
@@ -504,7 +442,7 @@ void EnvironmentalScene::recomputeTerrainPropertiesForObject(const std::string& 
     auto name = objectName;
     this->flowfield.iterateParallel([&](const Vector3i& pos) {
         //        auto [distance, object] = this->getSqrDistanceTo(name, pos);
-        EnvObject* object = this->findClosest(objectName, pos);
+        EnvObjectInstance* object = this->findClosest(objectName, pos);
         if (object == nullptr) {
             this->allVectorProperties[name](pos) = Vector3::invalid;
             this->allVectorProperties[name + ".center"](pos) = Vector3::invalid;
@@ -567,19 +505,19 @@ GridF EnvironmentalScene::getHeightmap(const GridF& initialHeightmap, float abso
         if (auto patch = dynamic_cast<ImplicitPrimitive*>(obj->_patch)) {
             GridF grid = GridF(subsidedHeightmap.getDimensions(), 0.f);
             grid = grid.paste(obj->createHeightfield() * obj->computeGrowingState2(), patch->position.xy());
-            if (flowErosionFactor != 0 && this->materials.count(toLower(stringFromMaterial(obj->material)))) {
-                grid = grid.warpWith(this->flowfield * flowErosionFactor * this->materials[toLower(stringFromMaterial(obj->material))].waterTransport, 10);
+            if (flowErosionFactor != 0 && this->materials.count(toLower(stringFromMaterial(obj->getDefinition()->material)))) {
+                grid = grid.warpWith(this->flowfield * flowErosionFactor * this->materials[toLower(stringFromMaterial(obj->getDefinition()->material))].waterTransport, 10);
             }
-            if (obj->heightFrom == EnvObject::HeightmapFrom::SURFACE) {
-                surfaceHeights = (surfaceHeights + grid * (isIn(obj->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f)).max(-15.f);
-            } else if (obj->heightFrom == EnvObject::HeightmapFrom::GROUND) {
+            if (obj->getDefinition()->heightFrom == EnvObject::HeightmapFrom::SURFACE) {
+                surfaceHeights = (surfaceHeights + grid * (isIn(obj->getDefinition()->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f)).max(-15.f);
+            } else if (obj->getDefinition()->heightFrom == EnvObject::HeightmapFrom::GROUND) {
                 groundConstraintedHeights = groundConstraintedHeights.max(grid * subsidenceFactor, Vector3());
-            } else if (obj->heightFrom == EnvObject::HeightmapFrom::WATER) {
+            } else if (obj->getDefinition()->heightFrom == EnvObject::HeightmapFrom::WATER) {
                 grid.iterateParallel([&] (size_t i) {
                     grid[i] = (std::abs(grid[i]) < 1e-4 ? -10000.f : grid[i]);
                 });
                 // std::cout << "Max height for " << obj->name << ": " << grid.max() << " while height = " << obj->height << "(grow = " <<  obj->computeGrowingState2() << ")" << std::endl;
-                waterConstraintedHeights = waterConstraintedHeights.max((grid - (obj->height)) - (obj->name == "lagoon" || obj->name == "smalllagoon" ? 3.f : 1.f), Vector3()); // Not sure why I need to multiply by 2.0, but otherwise, maxHeight is heigher than obj->height...
+                waterConstraintedHeights = waterConstraintedHeights.max((grid - (obj->getDefinition()->height)) - (obj->getDefinition()->name == "lagoon" || obj->getDefinition()->name == "smalllagoon" ? 3.f : 1.f), Vector3()); // Not sure why I need to multiply by 2.0, but otherwise, maxHeight is heigher than obj->height...
             }
         }
     }
@@ -598,11 +536,11 @@ GridF EnvironmentalScene::getHeightmap(const GridF& initialHeightmap, float abso
     bool modificationsAppliedToSurface = false;
     for (auto& obj : this->instantiatedObjects) {
         if (displayGrooves) {
-            if (endsWith(toLower(obj->name), "reef")) {
-                auto objAsEnvCurve = dynamic_cast<EnvCurve*>(obj);
+            if (endsWith(toLower(obj->getDefinition()->name), "reef")) {
+                auto objAsEnvCurve = dynamic_cast<EnvCurveInstance*>(obj);
                 BSpline path = objAsEnvCurve->curve;
                 float nbGrooves = path.length() / 10.f;
-                float sigma = objAsEnvCurve->width;
+                float sigma = objAsEnvCurve->getDefinition()->width;
                 surfaceHeights.iterateParallel([&](const Vector3i& pos) {
                     float closestT = path.estimateClosestTime(pos);
                     float closestGrooveStartT = float(int(closestT * nbGrooves)) / nbGrooves;
@@ -642,7 +580,7 @@ void EnvironmentalScene::reset()
 {
     std::set<std::string> destroyedObjects;
     for (auto& obj : this->instantiatedObjects) {
-        destroyedObjects.insert(obj->name);
+        destroyedObjects.insert(obj->getDefinition()->name);
         delete obj;
     }
     this->instantiatedObjects.clear();
@@ -655,23 +593,3 @@ void EnvironmentalScene::reset()
     }
 
 }
-
-/*
-#include "Utils/Delaunay.h"
-GraphObj EnvironmentalScene::sceneToGraph()
-{
-    GraphObj graph;
-    std::vector<GraphNodeObj*> nodes(this->instantiatedObjects.size());
-    std::vector<Vector3> positions(nodes.size());
-
-    for (int i = 0; i < nodes.size(); i++) {
-        auto& obj = this->instantiatedObjects[i];
-        positions[i] = dynamic_cast<EnvPoint*>(obj)->position;
-        //        nodes[i] = graph.addNode(new GraphNodeObj(obj, positions[i], i));
-    }
-
-    graph = Delaunay().fromVoronoi(Voronoi(positions)).graph.cast<EnvObject*>();
-
-    return graph;
-}
-*/

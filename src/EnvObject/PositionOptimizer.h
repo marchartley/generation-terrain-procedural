@@ -71,9 +71,9 @@ public:
     static BSpline followIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
     static BSpline followGradient(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
 
-    static SnakeSegmentationImplicitParameters getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float(const Vector3&)>& func, float minLength);
-    static SnakeSegmentationImplicitParameters getSnakeForExactLengthCurveFollowingGradients(const std::function<float(const Vector3&)>& func, float targetLength);
-    static SnakeSegmentationImplicitParameters getSnakeForSkeletonCurve(const std::function<float(const Vector3&)>& func, float targetLength);
+    static SnakeSegmentationParameters getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float(const Vector3&)>& func, float minLength);
+    static SnakeSegmentationParameters getSnakeForExactLengthCurveFollowingGradients(const std::function<float(const Vector3&)>& func, float targetLength);
+    static SnakeSegmentationParameters getSnakeForSkeletonCurve(const std::function<float(const Vector3&)>& func, float targetLength);
 };
 
 
@@ -85,10 +85,9 @@ public:
     static ShapeCurve getAreaOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetArea);
     static ShapeCurve getPerimeterOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
 
-    static SnakeSegmentationImplicitParameters getSnakeForAreaOptimizedShape(const std::function<float(const Vector3&)>& func, float targetArea);
-    static SnakeSegmentationImplicitParameters getSnakeForPerimeterOptimizedShape(const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
+    static SnakeSegmentationParameters getSnakeForAreaOptimizedShape(const std::function<float(const Vector3&)>& func, float targetArea);
+    static SnakeSegmentationParameters getSnakeForPerimeterOptimizedShape(const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
 };
 
-std::function<Vector3 (const Vector3&)> gradientFromFieldFunction(const std::function<float (const Vector3&)>& func);
 
 #endif // POSITIONOPTIMIZER_H

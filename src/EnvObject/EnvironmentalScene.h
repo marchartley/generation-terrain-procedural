@@ -43,12 +43,12 @@ public:
     std::map<std::string, EnvMaterial> materials;
 
     std::map<std::string, EnvObject*> availableObjects;
-    std::vector<EnvObject*> instantiatedObjects;
+    std::vector<EnvObjectInstance*> instantiatedObjects;
 
-    EnvObject* findClosest(const std::string& objectName, const Vector3& pos);
+    EnvObjectInstance* findClosest(const std::string& objectName, const Vector3& pos);
 
-    EnvObject* instantiate(const std::string& objectName);
-    void removeObject(EnvObject* obj);
+    EnvObjectInstance* instantiate(const std::string& objectName);
+    void removeObject(EnvObjectInstance *obj);
     void removeAllObjects();
     // bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
     // bool updateSedimentation(const GridF& heights);

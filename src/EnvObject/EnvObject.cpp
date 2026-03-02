@@ -14,7 +14,8 @@
 
 EnvObject::EnvObject()
 {
-
+    this->snakeParameters = new SnakeSegmentationParameters;
+    this->snakeField = new SnakeImageFieldImplicit;
 }
 
 EnvObject::~EnvObject()
@@ -22,149 +23,18 @@ EnvObject::~EnvObject()
 
 }
 
-
-/*
-EnvObject* EnvObject::fromJSON(nlohmann::json content)
+EnvObjectInstance::EnvObjectInstance()
+    : EnvObjectInstance(nullptr)
 {
-    EnvObject* obj = nullptr;
-    std::string objName = content["name"];
-    std::string objType = content["type"];
-    std::map<std::string, float> materialDepositionRate;
-    std::map<std::string, float> materialAbsorptionRate;
-    std::map<std::string, float> materialDepositionOnDeath;
-    TerrainTypes material = materialFromString(content["material"]);
-    ImplicitPatch::PredefinedShapes shape = predefinedShapeFromString(content["geometry"]);
-    Vector3 dimensions = content["dimensions"];
-    HeightmapFrom heightFrom = (!content.contains("heightfrom") || content["heightfrom"] == "surface" ? SURFACE : (content["heightfrom"] == "water" ? WATER : GROUND));
-    float minScore = (content.contains("minscore") ? content["minscore"].get<float>() : 0.f);
 
-    // bool snakeDefined = false;
-    SnakeSegmentationImplicit snakeParameters;
-
-    Vector3 flowEffect;
-    if (objType == "point") {
-        auto asPoint = new EnvPoint;
-        asPoint->radius = dimensions.x();
-        asPoint->height = dimensions.z();
-        obj = asPoint;
-        if (content["flow"].is_number())
-            flowEffect = Vector3(content["flow"], content["flow"], content["flow"]);
-        else
-            flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
-    } else if (objType == "curve") {
-        auto asCurve = new EnvCurve;
-        asCurve->width = dimensions.x();
-        asCurve->length = dimensions.y();
-        asCurve->height = dimensions.z();
-        obj = asCurve;
-        if (content.contains("follows")) {
-            if (content["follows"] == "isovalue") {
-                asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::ISOVALUE;
-                snakeParameters = ContinuousCurveOptimizer::getSnakeForMinLengthCurveFollowingIsolevel(obj->fittingFunction, asCurve->length);
-            }
-            else if (content["follows"] == "gradients") {
-                asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::GRADIENTS;
-                snakeParameters = ContinuousCurveOptimizer::getSnakeForExactLengthCurveFollowingGradients(obj->fittingFunction, asCurve->length);
-            }
-            else if (content["follows"] == "skeleton") {
-                asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::SKELETON;
-                snakeParameters = ContinuousCurveOptimizer::getSnakeForSkeletonCurve(obj->fittingFunction, asCurve->length);
-            }
-            else {
-                std::cerr << "Value for 'follow' in object " << objName << " not recognized. Should be 'isovalue', 'gradients' or 'skeleton'. Got " << content["follows"] << std::endl;
-            }
-        }
-        flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
-    } else if (objType == "area") {
-        auto asArea = new EnvArea;
-        asArea->width = dimensions.x();
-        asArea->length = dimensions.y();
-        asArea->height = dimensions.z();
-        obj = asArea;
-        snakeParameters = ContinuousAreaOptimizer::getSnakeForAreaOptimizedShape(obj->fittingFunction, asArea->width * asArea->length);
-        flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
-    }
-
-    if (content.contains("depositionrate")) {
-        auto deposits = content["depositionrate"].get<std::map<std::string, float>>();
-        for (auto& [mat, val] : deposits) {
-            materialDepositionRate[mat] = val;
-            materialAbsorptionRate[mat] = val;
-        }
-    }
-    if (content.contains("absorptionrate")) {
-        auto absorbs = content["absorptionrate"].get<std::map<std::string, float>>();
-        for (auto& [mat, val] : absorbs) {
-            materialAbsorptionRate[mat] = val;
-        }
-    }
-    if (content.contains("ondeath")) {
-        auto depos = content["ondeath"].get<std::map<std::string, float>>();
-        for (auto& [mat, val] : depos) {
-            materialDepositionOnDeath[mat] = val;
-        }
-    }
-
-    if (content.contains("needs")) {
-        obj->needsForGrowth = content["needs"].get<std::map<std::string, float>>();
-        for (auto [key, val] : obj->needsForGrowth)
-            obj->currentSatisfaction[key] = 0;
-    }
-
-    if (content.contains("snake")) {
-        auto snakeParamsJSON = content["snake"];
-        snakeParameters.connectivityCost = snakeParamsJSON["connectivity"];
-        snakeParameters.curvatureCost = snakeParamsJSON["curvature"];
-        snakeParameters.lengthCost = snakeParamsJSON["length"];
-        snakeParameters.areaCost = snakeParamsJSON["area"];
-        snakeParameters.imageCost = snakeParamsJSON["image"];
-        snakeParameters.imageInsideCoef = snakeParamsJSON["imageinside"];
-        snakeParameters.imageBordersCoef = snakeParamsJSON["imageborders"];
-        snakeParameters.nbCatapillars = snakeParamsJSON["catapillars"];
-        snakeParameters.targetLength = (snakeParamsJSON.contains("targetlength") ? snakeParamsJSON["targetlength"].get<float>() : snakeParameters.targetLength);
-        snakeParameters.targetArea = (snakeParamsJSON.contains("targetarea") ? snakeParamsJSON["targetarea"].get<float>() : snakeParameters.targetArea);
-        // snakeDefined = true;
-    }
-    snakeParameters.positionCost = 1.f;
-
-    obj->name = toLower(objName);
-    obj->flowEffect = flowEffect;
-    obj->materialAbsorptionRate = materialAbsorptionRate;
-    obj->materialDepositionRate = materialDepositionRate;
-    obj->materialDepositionOnDeath = materialDepositionOnDeath;
-    obj->s_FittingFunction = content["rule"];
-    if (content.contains("fitness")) {
-        obj->s_FitnessFunction = content["fitness"];
-    } else {
-        obj->s_FitnessFunction = obj->s_FittingFunction;
-    }
-    obj->snake = snakeParameters;
-    // obj->snakeDefined = snakeDefined;
-    obj->material = material;
-    obj->implicitShape = shape;
-    obj->inputDimensions = dimensions;
-    obj->recomputeEvaluationPoints();
-    obj->heightFrom = heightFrom;
-    obj->minScore = minScore;
-    if (dimensions.z() == 0) obj->inputDimensions = Vector3();
-    return obj;
+}
+EnvObjectInstance::EnvObjectInstance(EnvObject* definition)
+    : definition(definition), scene(definition->scene)
+{
+    this->snake = SnakeSegmentation(definition->snakeParameters, definition->snakeField);
 }
 
-nlohmann::json EnvObject::toJSON() const
-{
-    nlohmann::json json;
-
-    json["name"] = this->name;
-    json["ID"] = this->ID;
-    json["age"] = this->age;
-    json["needs"] = this->currentSatisfaction;
-    json["fitnessScoreAtCreation"] = this->fitnessScoreAtCreation;
-
-    return json;
-}
-*/
-
-float EnvObject::computeGrowingState()
+float EnvObjectInstance::computeGrowingState()
 {
     if (this->createdManually) return 1.f;
     return 1.f; // Yep, let's say that it is always mature....
@@ -190,11 +60,11 @@ float EnvObject::computeGrowingState()
     return totalScore;*/
 }
 
-float EnvObject::computeGrowingState2()
+float EnvObjectInstance::computeGrowingState2()
 {
     if (this->createdManually) return 1.f;
     // return this->evaluate();
-    return (this->evaluate() > this->minScore ? 1.f : 0.f); // Let's say that it is either dead or alive...
+    return (this->evaluate() > this->getDefinition()->minScore ? 1.f : 0.f); // Let's say that it is either dead or alive...
 
     /*
     // float newFitnessEvaluation = this->evaluate(this->evaluationPosition);
@@ -206,7 +76,7 @@ float EnvObject::computeGrowingState2()
     */
 }
 
-GridF EnvObject::createHeightfield()
+GridF EnvObjectInstance::createHeightfield()
 {
     if (_patch) {
         if (auto patch = dynamic_cast<ImplicitPrimitive*>(_patch)) {
@@ -228,7 +98,7 @@ GridF EnvObject::createHeightfield()
     return _cachedHeightfield;
 }
 
-std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene* scene, bool removeSelfInstances, EnvObject *myObject)
+std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene* scene, bool removeSelfInstances, EnvObjectInstance *myObject)
 {
     formula = toLower(formula);
     if (formula == "")
@@ -341,62 +211,38 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
     };
 }
 
-/*
-std::pair<std::string, std::string> EnvObject::extractNameAndComplement(const std::string& variable)
+void EnvObject::updateFittingFunction()
 {
-    auto splitted = split(variable, ".");
-    if (splitted.size() == 0) splitted = {"", ""};
-    else if (splitted.size() == 1) splitted = {splitted[0], ""};
-    return {splitted[0], splitted[1]};
-}
+    if (this->s_FittingFunction != "") {
+        this->snakeField->imageField = this->fittingFunction;
+        this->snakeField->gradientField = gradientFromFieldFunction(this->fittingFunction);
+    } else {
+        std::cout << "Warning: '" << name << "' has no fitting function defined, using the fitness." << std::endl;
 
-std::pair<float, EnvObject *> EnvObject::getSqrDistanceTo(const std::string& objectName, const Vector3 &position)
-{
-    auto [name, complement] = EnvObject::extractNameAndComplement(objectName);
-    float minDist = std::numeric_limits<float>::max();
-    EnvObject* bestElem = nullptr;
-    for (auto& instance : EnvObject::instantiatedObjects) {
-        if (instance->name != name) continue;
-        float distance = instance->getSqrDistance(position, complement);
-        if (distance < minDist) {
-            minDist = distance;
-            bestElem = instance;
-        }
+        this->snakeField->imageField = this->fitnessFunction;
+        this->snakeField->gradientField = gradientFromFieldFunction(this->fitnessFunction);
     }
-    return {minDist, bestElem};
 }
 
-std::pair<Vector3, EnvObject *> EnvObject::getVectorOf(const std::string& objectName, const Vector3 &position)
+float EnvObjectInstance::evaluate(const Vector3 &position)
 {
-    auto [name, complement] = EnvObject::extractNameAndComplement(objectName);
-    if (name == "current") {
-        return {EnvObject::flowfield.at(position), nullptr};
-    }
-    auto object = EnvObject::getSqrDistanceTo(objectName, position).second;
-    if (object == nullptr) return {Vector3::invalid(), nullptr};
-    return {object->getVector(position, complement), object};
-}
-*/
-
-float EnvObject::evaluate(const Vector3 &position)
-{
-    return this->fitnessFunction(position.xy());
+    return this->getDefinition()->fitnessFunction(position.xy());
 }
 
-float EnvObject::evaluate()
+float EnvObjectInstance::evaluate()
 {
     if (this->premature) return 1.f;
     // Should only be at one point...
 
     if (evaluationPositions.empty()) {
-        std::cerr << "Object " << name << " has no evaluation point..." << std::endl;
+        std::cerr << "Object " << this->getDefinition()->name << " has no evaluation point..." << std::endl;
         return 0;
     }
     float totalScore = 0;
     for (auto& p : evaluationPositions) {
         float score = evaluate(p);
         if (score != score) {
-            std::cerr << "NaN found while evaluating " << this->name << " at " << p << std::endl;
+            std::cerr << "NaN found while evaluating " << this->getDefinition()->name << " at " << p << std::endl;
         } else {
             totalScore += score;
         }
@@ -404,7 +250,7 @@ float EnvObject::evaluate()
     return totalScore / float(evaluationPositions.size());
 }
 
-void EnvObject::die()
+void EnvObjectInstance::die()
 {
     this->applyDepositionOnDeath();
 }

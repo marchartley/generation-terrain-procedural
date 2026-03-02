@@ -2,6 +2,7 @@
 #define ENVPOINT_H
 
 class EnvPoint;
+class EnvPointInstance;
 
 #include "EnvObject/EnvObject.h"
 
@@ -9,17 +10,31 @@ class EnvPoint : public EnvObject {
 public:
     EnvPoint();
 
-    // static EnvPoint* fromJSON(nlohmann::json content);
-
-    Vector3 position;
     float radius;
-    float height = 10.f;
+    float height;
 
     std::vector<Kelvinlet*> mainKelvinlets;
 
+    virtual EnvPoint* clone() const;
+    virtual EnvObjectInstance* instantiate();
+
+    virtual bool isPoint() const { return true; }
+};
+
+
+class EnvPointInstance : public EnvObjectInstance {
+public:
+    EnvPointInstance();
+    EnvPointInstance(EnvPoint* definition);
+    virtual ~EnvPointInstance() {}
+
+    EnvPoint* getDefinition() const { return dynamic_cast<EnvPoint*>(definition); }
+
+    Vector3 position;
+
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvPoint* clone();
+    virtual EnvPointInstance* clone();
     // static EnvPoint* instantiate(const std::string& objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
@@ -37,9 +52,7 @@ public:
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 
-    virtual EnvPoint& translate(const Vector3& translation);
-
-    virtual bool isPoint() const { return true; }
+    virtual EnvPointInstance& translate(const Vector3& translation);
 };
 
 #endif // ENVPOINT_H

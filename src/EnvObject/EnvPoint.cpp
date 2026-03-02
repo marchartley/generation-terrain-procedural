@@ -8,12 +8,36 @@ EnvPoint::EnvPoint()
 {
 }
 
-float EnvPoint::getSqrDistance(const Vector3 &position)
+EnvPoint *EnvPoint::clone() const
+{
+    auto newDefinition = new EnvPoint();
+    *newDefinition = *this;
+    return newDefinition;
+}
+
+EnvObjectInstance* EnvPoint::instantiate()
+{
+    auto newObject = new EnvPointInstance(this);
+    return newObject;
+}
+
+EnvPointInstance::EnvPointInstance()
+    : EnvPointInstance(nullptr)
+{
+
+}
+EnvPointInstance::EnvPointInstance(EnvPoint *definition)
+    : EnvObjectInstance(definition)
+{
+
+}
+
+float EnvPointInstance::getSqrDistance(const Vector3 &position)
 {
     return (position - this->position).norm2();
 }
 
-std::map<std::string, Vector3> EnvPoint::getAllProperties(const Vector3 &position) const
+std::map<std::string, Vector3> EnvPointInstance::getAllProperties(const Vector3 &position) const
 {
     Vector3 diff = (this->position - position);
     return {
@@ -21,21 +45,21 @@ std::map<std::string, Vector3> EnvPoint::getAllProperties(const Vector3 &positio
         {"center", this->position},
         {"start", this->position},
         {"end", this->position},
-        {"inside", (diff.norm2() < this->radius * this->radius ? Vector3(true) : Vector3(false))},
+        {"inside", (diff.norm2() < this->getDefinition()->radius * this->getDefinition()->radius ? Vector3(true) : Vector3(false))},
         {"normal", diff.normalized()},
         {"dir", Vector3::invalid},
-        {"curvature", Vector3(this->radius, 0, 0)}
+        {"curvature", Vector3(this->getDefinition()->radius, 0, 0)}
     };
 }
 
-EnvPoint *EnvPoint::clone()
+EnvPointInstance *EnvPointInstance::clone()
 {
-    EnvPoint* self = new EnvPoint;
+    EnvPointInstance* self = new EnvPointInstance;
     *self = *this;
     return self;
 }
 
-bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
+bool EnvPointInstance::placeInTerrain(const Vector3 &seedPosition)
 {
     if (!seedPosition.isValid() || seedPosition == Vector3()) { // Not sure if second test is really needed...
         // std::cout << "WTF pos = " << seedPosition << std::endl;
@@ -45,7 +69,7 @@ bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
     // this->translate(seedPosition.xy());
     this->recomputeEvaluationPoints();
     this->fitnessScoreAtCreation = this->evaluate();
-    if (this->fitnessScoreAtCreation < this->minScore) {
+    if (this->fitnessScoreAtCreation < this->getDefinition()->minScore) {
         // std::cout << "Evaluation of " << name << " for " << this->position << " : " << fitnessScoreAtCreation << " / " << this->minScore << std::endl;
         return false;
     }
@@ -53,27 +77,27 @@ bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
     return true;
 }
 
-bool EnvPoint::placeInTerrain(const BSpline &seedCurve)
+bool EnvPointInstance::placeInTerrain(const BSpline &seedCurve)
 {
     if (seedCurve.empty())
         return false;
     return this->placeInTerrain(seedCurve.points.back());
 }
 
-void EnvPoint::improvePositionning(float maxDistance)
+void EnvPointInstance::improvePositionning(float maxDistance)
 {
-    this->position += gradientFromFieldFunction(this->fitnessFunction)(this->position).normalize() * maxDistance;
+    this->position += gradientFromFieldFunction(this->getDefinition()->fitnessFunction)(this->position).normalize() * maxDistance;
 }
 
-void EnvPoint::recomputeEvaluationPoints()
+void EnvPointInstance::recomputeEvaluationPoints()
 {
     this->evaluationPositions = {position};
 }
 
-void EnvPoint::applyDeposition(EnvMaterial& material)
+void EnvPointInstance::applyDeposition(EnvMaterial& material)
 {
-    if (this->materialDepositionRate.count(material.name) == 0) return;
-    auto depositionProperties = this->materialDepositionRate[material.name];
+    if (this->getDefinition()->materialDepositionRate.count(material.name) == 0) return;
+    auto depositionProperties = this->getDefinition()->materialDepositionRate[material.name];
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
 
     AABBox box = AABBox(this->position - Vector3(1, 1, 0) * depositionProperties.radius, this->position + Vector3(1, 1, 0) * depositionProperties.radius);
@@ -97,10 +121,10 @@ void EnvPoint::applyDeposition(EnvMaterial& material)
     */
 }
 
-void EnvPoint::applyAbsorption(EnvMaterial& material)
+void EnvPointInstance::applyAbsorption(EnvMaterial& material)
 {
-    if (this->materialAbsorptionRate.count(material.name) == 0) return;
-    auto absorptionProperties = this->materialAbsorptionRate[material.name];
+    if (this->getDefinition()->materialAbsorptionRate.count(material.name) == 0) return;
+    auto absorptionProperties = this->getDefinition()->materialAbsorptionRate[material.name];
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
 
     AABBox box = AABBox(this->position - Vector3(1, 1, 0) * absorptionProperties.radius, this->position + Vector3(1, 1, 0) * absorptionProperties.radius);
@@ -133,22 +157,22 @@ void EnvPoint::applyAbsorption(EnvMaterial& material)
     */
 }
 
-void EnvPoint::applyDepositionOnDeath()
+void EnvPointInstance::applyDepositionOnDeath()
 {
-    for (auto& [materialName, depos] : materialDepositionOnDeath) {
+    for (auto& [materialName, depos] : this->getDefinition()->materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
         if (depos.rate == 0) return;
-        GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * depos.rate;
+        GridF sand = GridF::normalizedGaussian(depos.radius, depos.radius, 1, depos.radius * .25f) * depos.rate;
         material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
     }
 }
 
-GridV3& EnvPoint::computeFlowModification(GridV3& waterFlow)
+GridV3& EnvPointInstance::computeFlowModification(GridV3& waterFlow)
 {
     std::vector<RelativeKelvinlet> relativeFlows;
-    for (size_t i = 0; i < mainKelvinlets.size(); i++) {
-        if (mainKelvinlets[i]->valid())
-            relativeFlows.push_back(RelativeKelvinlet(mainKelvinlets[i], this->position));
+    for (size_t i = 0; i < this->getDefinition()->mainKelvinlets.size(); i++) {
+        if (this->getDefinition()->mainKelvinlets[i]->valid())
+            relativeFlows.push_back(RelativeKelvinlet(this->getDefinition()->mainKelvinlets[i], this->position));
     }
 
     const Vector3 initialFlow = waterFlow.interpolate(this->position);
@@ -167,7 +191,7 @@ GridV3& EnvPoint::computeFlowModification(GridV3& waterFlow)
 
         ScaleKelvinlet k;
         k.pos = this->position;
-        k.radialScale = this->radius * .2f;
+        k.radialScale = this->getDefinition()->radius * .2f;
         k.force = 10.f * this->flowEffect.x();
         k.mu = .9f;
         k.v = 0.f;
@@ -185,36 +209,36 @@ GridV3& EnvPoint::computeFlowModification(GridV3& waterFlow)
     return waterFlow;
 }
 
-ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
+ImplicitPatch* EnvPointInstance::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
 {
     if (!geometryNeedsUpdate) return this->_patch;
-    if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
+    if (this->getDefinition()->implicitShape == ImplicitPatch::PredefinedShapes::None) {
         previousPrimitive = nullptr;
         return nullptr;
     }
     ImplicitPrimitive* patch;
     float growingState = 1.f; // this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
-    Vector3 dimensions = Vector3(radius * growingState, radius * growingState, radius * growingState* this->height);
-    Vector3 patchPosition = this->position.xy() - Vector3(radius, radius) * .5f;
+    Vector3 dimensions = Vector3(this->getDefinition()->radius * growingState, this->getDefinition()->radius * growingState, this->getDefinition()->radius * growingState* this->getDefinition()->height);
+    Vector3 patchPosition = this->position.xy() - Vector3(this->getDefinition()->radius, this->getDefinition()->radius) * .5f;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, 0, {}, false);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, dimensions, 0, {}, false);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, radius * .25f * growingState, {}, false);
+        patch = ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, dimensions, this->getDefinition()->radius * .25f * growingState, {}, false);
         patchPosition.z() = heights(this->position.xy());
     }
 
     patch->position = patchPosition;
     patch->supportDimensions = dimensions;
-    patch->material = this->material;
-    patch->name = this->name;
+    patch->material = this->getDefinition()->material;
+    patch->name = this->getDefinition()->name;
     this->_patch = patch;
     this->geometryNeedsUpdate = false;
     return patch;
 }
 
-EnvPoint &EnvPoint::translate(const Vector3 &translation)
+EnvPointInstance &EnvPointInstance::translate(const Vector3 &translation)
 {
     this->position.translate(translation);
     // this->evaluationPosition.translate(translation);

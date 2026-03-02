@@ -70,14 +70,13 @@ void from_json(const Json &json, SnakeSegmentationParameters& snake)
 template <class Json>
 void to_json(Json& json, const SnakeSegmentation& snake) {
     json["parameters"] = snake.params;
-    if (dynamic_cast<SnakeSegmentationImplicitParameters*>(snake.params)) {
+    if (dynamic_cast<SnakeImageFieldImplicit*>(snake.field)) {
         json["type"] = "implicit";
-    } else if (dynamic_cast<SnakeSegmentationExplicitParameters*>(snake.params)) {
+    } else if (dynamic_cast<SnakeImageFieldExplicit*>(snake.field)) {
         json["type"] = "explicit";
     } else {
         json["type"] = "undefined";
     }
-    json["type"] = "implicit";
 }
 
 template <class Json>
@@ -85,17 +84,17 @@ void from_json(const Json& json, SnakeSegmentation& snake) {
     if (json.contains("type")) {
         std::string type = json.at("type");
         if (type == "implicit") {
-            snake.params = new SnakeSegmentationImplicitParameters;
+            snake.field = new SnakeImageFieldImplicit;
         } else if (type == "explicit") {
-            snake.params = new SnakeSegmentationExplicitParameters;
+            snake.field = new SnakeImageFieldExplicit;
         } else {
-            throw std::invalid_argument("Snake parameter type unknown: '" + type + "'");
+            throw std::invalid_argument("Snake type unknown: '" + type + "'");
         }
-        from_json(json["parameters"], *snake.params);
     } else {
-        snake.params = new SnakeSegmentationImplicitParameters;
-        from_json(json, *snake.params);
+        snake.field = new SnakeImageFieldImplicit; // Default, most versatile
     }
+    snake.params = new SnakeSegmentationParameters;
+    from_json(json, *snake.params);
 }
 
 #endif // SNAKESERIALIZER_H

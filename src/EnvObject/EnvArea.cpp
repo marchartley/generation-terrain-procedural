@@ -8,12 +8,36 @@ EnvArea::EnvArea()
 {
 
 }
-float EnvArea::getSqrDistance(const Vector3 &position)
+
+EnvObjectInstance* EnvArea::instantiate()
+{
+    auto newObject = new EnvAreaInstance(this);
+    return newObject;
+}
+
+EnvArea *EnvArea::clone() const
+{
+    auto newDefinition = new EnvArea();
+    *newDefinition = *this;
+    return newDefinition;
+}
+EnvAreaInstance::EnvAreaInstance()
+    : EnvAreaInstance(nullptr)
+{
+
+}
+EnvAreaInstance::EnvAreaInstance(EnvArea* definition)
+    : EnvObjectInstance(definition)
+{
+
+}
+
+float EnvAreaInstance::getSqrDistance(const Vector3 &position)
 {
     return (position - this->curve.estimateClosestPos(position)).norm2() * (this->curve.containsXY(position, false) ? -1.f : 1.f);
 }
 
-std::map<std::string, Vector3> EnvArea::getAllProperties(const Vector3 &position) const
+std::map<std::string, Vector3> EnvAreaInstance::getAllProperties(const Vector3 &position) const
 {
     float closestTime = this->curve.estimateClosestTime(position);
     Vector3 closestPos = this->curve.getPoint(closestTime);
@@ -29,21 +53,21 @@ std::map<std::string, Vector3> EnvArea::getAllProperties(const Vector3 &position
     };
 }
 
-EnvArea *EnvArea::clone()
+EnvAreaInstance *EnvAreaInstance::clone()
 {
-    EnvArea* self = new EnvArea;
+    EnvAreaInstance* self = new EnvAreaInstance;
     *self = *this;
     return self;
 }
 
-bool EnvArea::placeInTerrain(const Vector3 &seedPosition)
+bool EnvAreaInstance::placeInTerrain(const Vector3 &seedPosition)
 {
-    ShapeCurve initialCurve = ContinuousAreaOptimizer::getAreaOptimizedShape(seedPosition, this->fitnessFunction, this->length * this->width);
+    ShapeCurve initialCurve = ContinuousAreaOptimizer::getAreaOptimizedShape(seedPosition, this->getDefinition()->fitnessFunction, this->getDefinition()->length * this->getDefinition()->width);
     this->snake.position = seedPosition;
     return this->placeInTerrain(initialCurve);
 }
 
-bool EnvArea::placeInTerrain(const BSpline &seedCurve)
+bool EnvAreaInstance::placeInTerrain(const BSpline &seedCurve)
 {
     ShapeCurve initialCurve = ShapeCurve(seedCurve);
     initialCurve.close().resamplePoints();
@@ -57,32 +81,32 @@ bool EnvArea::placeInTerrain(const BSpline &seedCurve)
     this->translate(position.xy());
     this->recomputeEvaluationPoints();
     this->fitnessScoreAtCreation = this->evaluate();
-    if (this->fitnessScoreAtCreation < this->minScore)
+    if (this->fitnessScoreAtCreation < this->getDefinition()->minScore)
         return false;
     this->spawnTime = this->scene->currentTime;
     return true;
 }
 
-void EnvArea::improvePositionning(float steps)
+void EnvAreaInstance::improvePositionning(float steps)
 {
     this->snake.contour = this->curve;
     this->snake.position = this->curve.center();
     this->updateCurve(this->snake.runSegmentation(steps));
 }
 
-void EnvArea::recomputeEvaluationPoints()
+void EnvAreaInstance::recomputeEvaluationPoints()
 {
-    if (evaluateInside) {
+    if (this->getDefinition()->evaluateInside) {
         this->evaluationPositions = curve.randomPointsInside(curve.size());
     } else {
         this->evaluationPositions = curve.points;
     }
 }
 
-void EnvArea::applyDeposition(EnvMaterial& material)
+void EnvAreaInstance::applyDeposition(EnvMaterial& material)
 {
-    if (this->materialDepositionRate.count(material.name) == 0) return;
-    auto depositionProperties = this->materialDepositionRate[material.name];
+    if (this->getDefinition()->materialDepositionRate.count(material.name) == 0) return;
+    auto depositionProperties = this->getDefinition()->materialDepositionRate[material.name];
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
     ShapeCurve translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(depositionProperties.radius);
@@ -100,10 +124,10 @@ void EnvArea::applyDeposition(EnvMaterial& material)
     // material.currentState.add(sand.meanSmooth(depositionProperties.radius, depositionProperties.radius, 1), box.min() - Vector3(depositionProperties.radius, depositionProperties.radius));
 }
 
-void EnvArea::applyAbsorption(EnvMaterial& material)
+void EnvAreaInstance::applyAbsorption(EnvMaterial& material)
 {
-    if (this->materialAbsorptionRate.count(material.name) == 0) return;
-    auto absorptionProperties = this->materialAbsorptionRate[material.name];
+    if (this->getDefinition()->materialAbsorptionRate.count(material.name) == 0) return;
+    auto absorptionProperties = this->getDefinition()->materialAbsorptionRate[material.name];
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
     ShapeCurve translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(absorptionProperties.radius);
@@ -122,33 +146,33 @@ void EnvArea::applyAbsorption(EnvMaterial& material)
     material.currentState.iterateParallel([&](size_t i) { material.currentState[i] = std::max(material.currentState[i], 0.f); });
 }
 
-void EnvArea::applyDepositionOnDeath()
+void EnvAreaInstance::applyDepositionOnDeath()
 {
-    for (auto& [materialName, depos] : materialDepositionOnDeath) {
+    for (auto& [materialName, depos] : this->getDefinition()->materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
         if (depos.rate == 0) return;
         AABBox box = AABBox(this->curve.points);
         ShapeCurve translatedCurve = this->curve;
         for (auto& p : translatedCurve)
-            p = p + Vector3(width, width, 0) - box.min();
-        GridF sand = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
+            p = p + Vector3(depos.radius, depos.radius, 0) - box.min();
+        GridF sand = GridF(box.dimensions().x() + depos.radius * 2.f, box.dimensions().y() + depos.radius * 2.f);
 
         sand.iterateParallel([&] (const Vector3& pos) {
             bool inside = translatedCurve.contains(pos);
             sand(pos) = (inside ? 1.f : 0.f) * depos.rate;
         });
-        material.currentState.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
+        material.currentState.add(sand.meanSmooth(depos.radius, depos.radius, 1), box.min() - Vector3(depos.radius, depos.radius));
     }
 }
 
-GridV3& EnvArea::computeFlowModification(GridV3& waterFlow)
+GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow)
 {
     std::vector<RelativeKelvinlet> evaluatedCurveKelvinlets;
-    for (size_t i = 0; i < curveKelvinlets.size(); i++) {
-        if (curveKelvinlets[i]->valid()) {
-            if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(curveKelvinlets[i]))
+    for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
+        if (this->getDefinition()->curveKelvinlets[i]->valid()) {
+            if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(this->getDefinition()->curveKelvinlets[i]))
                 asCurveKelvinlet->curve = this->curve;
-            evaluatedCurveKelvinlets.push_back(RelativeKelvinlet(curveKelvinlets[i], Vector3()));
+            evaluatedCurveKelvinlets.push_back(RelativeKelvinlet(this->getDefinition()->curveKelvinlets[i], Vector3()));
         }
     }
     this->scene->flowfield.iterateParallel([&](const Vector3& p) {
@@ -225,11 +249,11 @@ GridV3& EnvArea::computeFlowModification(GridV3& waterFlow)
     return waterFlow;
 }
 
-ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)
+ImplicitPatch* EnvAreaInstance::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)
 {
     if (!geometryNeedsUpdate) return this->_patch;
 
-    if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
+    if (this->getDefinition()->implicitShape == ImplicitPatch::PredefinedShapes::None) {
         previousPrimitive = nullptr;
         return nullptr;
     }
@@ -240,28 +264,28 @@ ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimit
     AABBox box(translatedCurve.points);
     float growingState = 1.f; //this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
-    Vector3 offset(this->width, this->width, this->height * growingState);
+    Vector3 offset(this->getDefinition()->width, this->getDefinition()->width, this->getDefinition()->height * growingState);
     translatedCurve.translate(-(box.min() - offset * .5f));
-    box.expand(box.max() + Vector3(0, 0, this->height * growingState));
+    box.expand(box.max() + Vector3(0, 0, this->getDefinition()->height * growingState));
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
         translatedCurve = previousPrimitive->optionalCurve;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, true);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, this->getDefinition()->height * growingState, translatedCurve, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, true);
+        patch = ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, this->getDefinition()->height * growingState, translatedCurve, true);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
     // patch->position.z() += heights(patch->position.xy());
     patch->supportDimensions = box.dimensions() + offset;
-    patch->material = this->material;
-    patch->name = this->name;
+    patch->material = this->getDefinition()->material;
+    patch->name = this->getDefinition()->name;
     this->_patch = patch;
     this->geometryNeedsUpdate = false;
     return patch;
 }
 /*
-GridF EnvArea::createHeightfield()
+GridF EnvAreaInstance::createHeightfield()
 {
     if (_cachedHeightfield.empty()) {
         auto patch = dynamic_cast<ImplicitPrimitive*>(_patch);
@@ -276,7 +300,7 @@ GridF EnvArea::createHeightfield()
     return _cachedHeightfield;
 }
 */
-EnvArea &EnvArea::translate(const Vector3 &translation)
+EnvAreaInstance &EnvAreaInstance::translate(const Vector3 &translation)
 {
     this->curve.translate(translation);
     for (auto& p : evaluationPositions)
@@ -287,9 +311,9 @@ EnvArea &EnvArea::translate(const Vector3 &translation)
     return *this;
 }
 
-void EnvArea::updateCurve(const BSpline &newCurve)
+void EnvAreaInstance::updateCurve(const BSpline &newCurve)
 {
-    if (evaluateInside) {
+    if (this->getDefinition()->evaluateInside) {
         std::cerr << "Need to implement 'updateCurve' for inside...!" << std::endl;
         for (auto& evaluationPosition : this->evaluationPositions) {
             float evaluationPointClosestTime = this->curve.estimateClosestTime(evaluationPosition);

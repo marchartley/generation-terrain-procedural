@@ -46,10 +46,6 @@ struct AbsorptionRate {
     float rate = 0;
 };
 
-struct FlowEffect {
-
-};
-
 
 struct EnvPointKelvinletAttachment {
     float relativeDistanceToCenter;
@@ -71,9 +67,11 @@ class EnvObject
 public:
     EnvObject();
     virtual ~EnvObject();
-    static std::function<float(const Vector3&)> parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene *scene, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
+    static std::function<float(const Vector3&)> parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene *scene, bool removeSelfInstances = false, EnvObjectInstance* myObject = nullptr);
 
     float height;
+
+    void updateFittingFunction();
 
 
     std::string name;
@@ -91,17 +89,43 @@ public:
     float fitnessScoreAtCreation = -1.f;
     std::vector<Vector3> evaluationPositions;
     float minScore = 0.f;
-    // Vector3 evaluationPosition;
-    // std::vector<RelativeKelvinlet> relativeKelvinlets;
-    // std::vector<KelvinletCurve*> curveKelvinlets;
 
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
+
+    SnakeSegmentationParameters* snakeParameters;
+    SnakeImageFieldImplicit* snakeField;
+
+    virtual EnvObjectInstance* instantiate() = 0;
+
+
+    virtual bool isPoint() const { return false; }
+    virtual bool isCurve() const { return false; }
+    virtual bool isArea() const { return false; }
+
+    virtual EnvObject* clone() const = 0;
+
+
+    enum HeightmapFrom {
+        SURFACE, GROUND, WATER
+    };
+    HeightmapFrom heightFrom = SURFACE;
+
+
+
+    EnvironmentalScene* scene;
+
+    /*
+
     int ID = -1;
     int spawnTime = 0;
 
     SnakeSegmentation snake;
     // bool snakeDefined = false;
+
+
+
+
 
     virtual float getSqrDistance(const Vector3& position) = 0;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
@@ -146,13 +170,10 @@ public:
 
     Vector3 storedOrientation = Vector3::invalid;
 
+
+
     EnvironmentalScene* scene;
-
-
-
-    virtual bool isPoint() const { return false; }
-    virtual bool isCurve() const { return false; }
-    virtual bool isArea() const { return false; }
+    */
 };
 
 
@@ -162,13 +183,18 @@ class EnvObjectInstance
 {
 public:
     EnvObjectInstance();
-    virtual ~EnvObjectInstance();
+    EnvObjectInstance(EnvObject *definition);
+    virtual ~EnvObjectInstance() {}
 
     float age = 0.f;
     float fitnessScoreAtCreation = -1.f;
     std::vector<Vector3> evaluationPositions;
     int ID = -1;
     int spawnTime = 0;
+
+    EnvObject* definition;
+
+    virtual EnvObject* getDefinition() const { return dynamic_cast<EnvObject*>(definition); }
 
     SnakeSegmentation snake; //
 
@@ -177,7 +203,7 @@ public:
 
     virtual void recomputeEvaluationPoints() = 0;
 
-    virtual EnvObject* clone() = 0;
+    virtual EnvObjectInstance* clone() = 0;
     virtual float computeGrowingState();
     virtual float computeGrowingState2();
     virtual void applyDeposition(EnvMaterial& material) = 0;
@@ -186,7 +212,7 @@ public:
     virtual GridV3& computeFlowModification(GridV3& waterFlow) = 0;
     virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
     virtual GridF createHeightfield();
-    virtual EnvObject& translate(const Vector3& translation) = 0;
+    virtual EnvObjectInstance& translate(const Vector3& translation) = 0;
     float evaluate(const Vector3& position);
     float evaluate();
 
@@ -202,11 +228,6 @@ public:
     bool createdManually = false;
     bool geometryNeedsUpdate = true;
 
-    enum HeightmapFrom {
-        SURFACE, GROUND, WATER
-    };
-    HeightmapFrom heightFrom = SURFACE;
-
     GridV3 _cachedFlowModif;
     ImplicitPatch* _patch = nullptr;
     GridF _cachedHeightfield;
@@ -216,12 +237,6 @@ public:
     Vector3 storedOrientation = Vector3::invalid;
 
     EnvironmentalScene* scene;
-
-
-
-    virtual bool isPoint() const { return false; }
-    virtual bool isCurve() const { return false; }
-    virtual bool isArea() const { return false; }
 };
 
 #endif // ENVOBJECT_H

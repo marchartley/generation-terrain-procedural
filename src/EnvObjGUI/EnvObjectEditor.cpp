@@ -37,10 +37,10 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
 
     auto anchorSelectionCombobox = new ComboboxElement("Anchor");
     if (this->currentObject) {
-        if (this->currentObject->isPoint()) {
+        if (this->currentObject->getDefinition()->isPoint()) {
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Center", MAIN), true);
         }
-        else if (this->currentObject->isCurve()) {
+        else if (this->currentObject->getDefinition()->isCurve()) {
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Start", START), true);
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("End", END));
         } else {
@@ -55,7 +55,7 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
 
     auto validationButton = new ButtonElement("Validate");
 
-    if (this->currentObject->isCurve() || this->currentObject->isArea()) {
+    if (this->currentObject->getDefinition()->isCurve() || this->currentObject->getDefinition()->isArea()) {
 
         auto pinchForceSlider = new SliderElement("Pinch force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.pinchK->force);
         auto twistForceSlider = new SliderElement("Twist force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.twistK->force);
@@ -126,13 +126,13 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
     kelvinletParams.setOnNewKelvinlet([=](Kelvinlet* k) {
         this->kelvinletAnchors[k] = currentAnchorPoint;
         if (kelvinletAnchors[k] == KELVINLET_ANCHOR_POINT::MAIN) {
-            k->translate(-(dynamic_cast<EnvPoint*>(currentObject))->position);
+            k->translate(-(dynamic_cast<EnvPointInstance*>(currentObject))->position);
         }
         else if (kelvinletAnchors[k] == KELVINLET_ANCHOR_POINT::START) {
-            k->translate(-(dynamic_cast<EnvCurve*>(currentObject))->curve.points.front());
+            k->translate(-(dynamic_cast<EnvCurveInstance*>(currentObject))->curve.points.front());
         }
         else if (kelvinletAnchors[k] == KELVINLET_ANCHOR_POINT::END) {
-            k->translate(-(dynamic_cast<EnvCurve*>(currentObject))->curve.points.back());
+            k->translate(-(dynamic_cast<EnvCurveInstance*>(currentObject))->curve.points.back());
         }
     });
 
@@ -146,9 +146,9 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
 
 EnvObjectEditor *EnvObjectEditor::addEnvObject(EnvObject *envObj)
 {
-    this->currentObject = envObj->clone();
+    this->currentObject = envObj->instantiate();
 
-    if (currentObject->isCurve() || currentObject->isArea()) {
+    if (currentObject->getDefinition()->isCurve() || currentObject->getDefinition()->isArea()) {
         bodyParameters.pinchK = new PinchKelvinletCurve();
         bodyParameters.twistK = new TwistKelvinletCurve();
         bodyParameters.grabK = new GrabKelvinletCurve();
@@ -160,37 +160,37 @@ EnvObjectEditor *EnvObjectEditor::addEnvObject(EnvObject *envObj)
         kelvinletParams.additional_kelvinlets.push_back(bodyParameters.scaleK);
     }
 
-    if (auto asPoint = dynamic_cast<EnvPoint*>(this->currentObject)) {
+    if (auto asPoint = dynamic_cast<EnvPointInstance*>(this->currentObject)) {
         asPoint->position = Vector3(50, 50, 0);
         this->objectScale = 1.f;
 
-    } else if (auto asCurve = dynamic_cast<EnvCurve*>(this->currentObject)) {
+    } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {
         asCurve->curve = BSpline({Vector3(10, 10), Vector3(60, 30), Vector3(30, 60), Vector3(90, 90)});
-        this->objectScale = asCurve->curve.length() / asCurve->length;
+        this->objectScale = asCurve->curve.length() / asCurve->getDefinition()->length;
 
         bodyParameters.pinchK->curve = asCurve->curve;
         bodyParameters.twistK->curve = asCurve->curve;
         bodyParameters.grabK->curve = asCurve->curve;
         bodyParameters.scaleK->curve = asCurve->curve;
 
-        bodyParameters.pinchK->radialScale = asCurve->width;
-        bodyParameters.twistK->radialScale = asCurve->width;
-        bodyParameters.grabK->radialScale = asCurve->width;
-        bodyParameters.scaleK->radialScale = asCurve->width;
+        bodyParameters.pinchK->radialScale = asCurve->getDefinition()->width;
+        bodyParameters.twistK->radialScale = asCurve->getDefinition()->width;
+        bodyParameters.grabK->radialScale = asCurve->getDefinition()->width;
+        bodyParameters.scaleK->radialScale = asCurve->getDefinition()->width;
 
-    } else if (auto asArea = dynamic_cast<EnvArea*>(this->currentObject)) {
+    } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
         asArea->curve = ShapeCurve({Vector3(30, 30), Vector3(30, 70), Vector3(70, 70), Vector3(60, 40)});
-        this->objectScale = asArea->curve.computeArea() / (asArea->width * asArea->length);
+        this->objectScale = asArea->curve.computeArea() / (asArea->getDefinition()->width * asArea->getDefinition()->length);
 
         bodyParameters.pinchK->curve = asArea->curve;
         bodyParameters.twistK->curve = asArea->curve;
         bodyParameters.grabK->curve = asArea->curve;
         bodyParameters.scaleK->curve = asArea->curve;
 
-        bodyParameters.pinchK->radialScale = asArea->width;
-        bodyParameters.twistK->radialScale = asArea->width;
-        bodyParameters.grabK->radialScale = asArea->width;
-        bodyParameters.scaleK->radialScale = asArea->width;
+        bodyParameters.pinchK->radialScale = asArea->getDefinition()->width;
+        bodyParameters.twistK->radialScale = asArea->getDefinition()->width;
+        bodyParameters.grabK->radialScale = asArea->getDefinition()->width;
+        bodyParameters.scaleK->radialScale = asArea->getDefinition()->width;
 
     }
 
@@ -204,21 +204,21 @@ std::pair<GridV3, GridF> EnvObjectEditor::displayEnvObject() const
     Vector3 imgScale = Vector3(2.f, 2.f, 1.f);
     GridV3 img(100 * imgScale.x(), 100 * imgScale.y(), 1, this->dataModel->vectorData.displayParameters.backgroundColor);
     GridF alpha(img.getDimensions());
-    if (auto asPoint = dynamic_cast<EnvPoint*>(this->currentObject)) {
+    if (auto asPoint = dynamic_cast<EnvPointInstance*>(this->currentObject)) {
         float crossLength = 3;
         Vector3 pos = asPoint->position * imgScale;
 
         PlotVectorData::drawLine(img, Vector3(0, 0, 1), pos - Vector3(crossLength / 2, crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, crossLength / 2) * imgScale);
         PlotVectorData::drawLine(img, Vector3(0, 0, 1), pos - Vector3(crossLength / 2, -crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, -crossLength / 2) * imgScale);
 
-        PlotVectorData::drawCircle(img, Vector3(1, 0, 0), pos, asPoint->radius);
+        PlotVectorData::drawCircle(img, Vector3(1, 0, 0), pos, asPoint->getDefinition()->radius);
 
         PlotVectorData::drawLine(alpha, 1.f, pos - Vector3(crossLength / 2, crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, crossLength / 2) * imgScale);
         PlotVectorData::drawLine(alpha, 1.f, pos - Vector3(crossLength / 2, -crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, -crossLength / 2) * imgScale);
 
-        PlotVectorData::drawCircle(alpha, 1.f, pos, asPoint->radius);
+        PlotVectorData::drawCircle(alpha, 1.f, pos, asPoint->getDefinition()->radius);
 
-    } else if (auto asCurve = dynamic_cast<EnvCurve*>(this->currentObject)) {
+    } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {
         BSpline curve = asCurve->curve;
         img.iterateParallel([&](const Vector3& p) {
             float distToCurve = curve.estimateDistanceFrom(p / imgScale);
@@ -227,12 +227,12 @@ std::pair<GridV3, GridF> EnvObjectEditor::displayEnvObject() const
                 img(p) = Vector3(0, 0, 1);
                 alpha(p) = 1.f;
             }
-            if (abs(distToCurve - asCurve->width) < 1.f) {
+            if (abs(distToCurve - asCurve->getDefinition()->width) < 1.f) {
                 img(p) = Vector3(1, 0, 0);
                 alpha(p) = 1.f;
             }
         });
-    } else if (auto asArea = dynamic_cast<EnvArea*>(this->currentObject)) {
+    } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
         ShapeCurve curve = asArea->curve;
         img.iterateParallel([&](const Vector3& p) {
             float distToCurve = curve.estimateDistanceFrom(p / imgScale);
@@ -337,7 +337,7 @@ EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinl
     // nlohmann::json json = currentObject;
     // std::cout << "My object in JSON form: \n" << json["flow-effect"].dump(1) << std::endl;
 
-    return currentObject;
+    return currentObject->getDefinition();
 }
 
 void EnvObjectEditor::animateEnvObject(bool animate)
@@ -345,26 +345,26 @@ void EnvObjectEditor::animateEnvObject(bool animate)
     if (animate) {
         if (animationFrame == 0) {
             AABBox bounds(Vector3::origin, dataModel->vectorData.field.getDimensions().xy());
-            if (auto asPoint = dynamic_cast<EnvPoint*>(this->currentObject)) {
+            if (auto asPoint = dynamic_cast<EnvPointInstance*>(this->currentObject)) {
                 verticesTargets = {Vector3::random(bounds)};
             }
-            else if (auto asCurve = dynamic_cast<EnvCurve*>(this->currentObject)) {
+            else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {
                 verticesTargets.resize(asCurve->curve.size());
                 for (auto& p : verticesTargets)
                     p = Vector3::random(bounds);
             }
-            else if (auto asArea = dynamic_cast<EnvArea*>(this->currentObject)) {
+            else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
                 verticesTargets.resize(asArea->curve.size());
                 for (auto& p : verticesTargets)
                     p = Vector3::random(bounds);
             }
         }
         float remainingFrames = 50 - animationFrame;
-        if (auto asPoint = dynamic_cast<EnvPoint*>(this->currentObject)) {
+        if (auto asPoint = dynamic_cast<EnvPointInstance*>(this->currentObject)) {
             auto& p = asPoint->position;
             p += (verticesTargets[0] - p) * (interpolation::smooth(remainingFrames / 50.f)) / remainingFrames;
         }
-        else if (auto asCurve = dynamic_cast<EnvCurve*>(this->currentObject)) {
+        else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {
             auto newCurve = asCurve->curve;
             for (size_t i = 0; i < newCurve.size(); i++) {
                 auto& p = newCurve[i];
@@ -372,7 +372,7 @@ void EnvObjectEditor::animateEnvObject(bool animate)
             }
             asCurve->updateCurve(newCurve);
         }
-        else if (auto asArea = dynamic_cast<EnvArea*>(this->currentObject)) {
+        else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
             auto newCurve = asArea->curve;
             for (size_t i = 0; i < newCurve.size(); i++) {
                 auto& p = newCurve[i];

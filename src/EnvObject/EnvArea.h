@@ -2,6 +2,7 @@
 #define ENVAREA_H
 
 class EnvArea;
+class EnvAreaInstance;
 
 #include "EnvObject/EnvObject.h"
 
@@ -9,9 +10,9 @@ class EnvArea : public EnvObject {
 public:
     EnvArea();
 
-    // static EnvArea* fromJSON(nlohmann::json content);
+    virtual EnvObjectInstance* instantiate();
+    virtual EnvArea* clone() const;
 
-    ShapeCurve curve;
     float width;
     float length;
     float flowAttenuation;
@@ -20,10 +21,25 @@ public:
 
     bool evaluateInside = false; // Ture = evaluation points inside, false = evaluation points on borders
 
+
+    virtual bool isArea() const { return true; }
+};
+
+
+class EnvAreaInstance : public EnvObjectInstance {
+public:
+    EnvAreaInstance();
+    EnvAreaInstance(EnvArea* definition);
+    virtual ~EnvAreaInstance() {}
+
+    EnvArea* getDefinition() const { return dynamic_cast<EnvArea*>(definition); }
+
+    ShapeCurve curve;
+
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvArea* clone();
-    // static EnvArea* instantiate(const std::string& objectName);
+    virtual EnvAreaInstance* clone();
+    // static EnvAreaInstance* instantiate(const std::string& objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
     virtual bool placeInTerrain(const BSpline& seedCurve);
@@ -40,10 +56,8 @@ public:
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 
-    virtual EnvArea& translate(const Vector3& translation);
+    virtual EnvAreaInstance& translate(const Vector3& translation);
     void updateCurve(const BSpline& newCurve);
-
-    virtual bool isArea() const { return true; }
 };
 
 #endif // ENVAREA_H

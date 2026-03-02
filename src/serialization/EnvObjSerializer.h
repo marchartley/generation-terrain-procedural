@@ -18,6 +18,14 @@ void to_json(Json& json, const EnvCurve& obj);
 template <class Json>
 void to_json(Json& json, const EnvArea& obj);
 template <class Json>
+void to_json(Json& json, const EnvObjectInstance& obj);
+template <class Json>
+void to_json(Json& json, const EnvPointInstance& obj);
+template <class Json>
+void to_json(Json& json, const EnvCurveInstance& obj);
+template <class Json>
+void to_json(Json& json, const EnvAreaInstance& obj);
+template <class Json>
 void to_json(Json& json, const EnvMaterial& material);
 
 template <class Json>
@@ -42,6 +50,14 @@ template <class Json>
 void from_json(const Json& json, EnvCurve& obj);
 template <class Json>
 void from_json(const Json& json, EnvArea& obj);
+template <class Json>
+void from_json(const Json& json, EnvObjectInstance& obj);
+template <class Json>
+void from_json(const Json& json, EnvPointInstance& obj);
+template <class Json>
+void from_json(const Json& json, EnvCurveInstance& obj);
+template <class Json>
+void from_json(const Json& json, EnvAreaInstance& obj);
 template <class Json>
 void from_json(const Json& json, EnvMaterial& material);
 
@@ -70,6 +86,11 @@ template <class Json>
 void from_json(const Json& json, EnvObject*& envObject);
 
 
+template <class Json>
+void to_json(Json& json, const EnvObjectInstance* envObject);
+
+template <class Json>
+void from_json(const Json& json, EnvObjectInstance*& envObject);
 
 
 
@@ -106,7 +127,7 @@ void to_json(Json& json, const EnvObject& obj)
     json["name"] = obj.name;
     json["fitness"] = obj.s_FitnessFunction;
     json["fitting"] = obj.s_FittingFunction;
-    json["snake"] = obj.snake;
+    json["snake"] = obj.snakeParameters;
     json["material"] = obj.material;
     json["geometry"] = obj.implicitShape;
     json["height-from"] = obj.heightFrom;
@@ -156,6 +177,41 @@ void to_json(Json& json, const EnvArea& obj)
     json["type"] = "Area";
 }
 
+
+template <class Json>
+void to_json(Json& json, const EnvObjectInstance& obj)
+{
+    json["name"] = obj.getDefinition()->name;
+    json["age"] = obj.age;
+    json["manual"] = obj.createdManually;
+    json["fitness-at-creation"] = obj.fitnessScoreAtCreation;
+    json["orientation"] = obj.storedOrientation;
+    json["id"] = obj.ID;
+}
+
+
+template <class Json>
+void to_json(Json& json, const EnvPointInstance& obj)
+{
+    to_json(json, static_cast<const EnvObjectInstance&>(obj));
+    json["position"] = obj.position;
+}
+
+
+template <class Json>
+void to_json(Json& json, const EnvCurveInstance& obj)
+{
+    to_json(json, static_cast<const EnvObjectInstance&>(obj));
+    json["curve"] = obj.curve;
+}
+
+
+template <class Json>
+void to_json(Json& json, const EnvAreaInstance& obj)
+{
+    to_json(json, static_cast<const EnvObjectInstance&>(obj));
+    json["curve"] = obj.curve;
+}
 
 template <class Json>
 void to_json(Json& json, const EnvMaterial& material)
@@ -257,10 +313,13 @@ void from_json(const Json& json, EnvObject& obj)
     } else {
         obj.s_FittingFunction = "";
     }
-    if (json.contains("snake"))
-        obj.snake = json.at("snake");
-    obj.material = materialFromString(json.at("material"));
-    obj.implicitShape = predefinedShapeFromString(json.at("geometry"));
+    // if (json.contains("snake"))
+        // obj.snakeParameters = json.at("snake");
+    obj.snakeParameters = new SnakeSegmentationParameters;
+    from_json(json.at("snake"), *obj.snakeParameters);
+
+    obj.material = json.at("material");
+    obj.implicitShape = json.at("geometry");
     obj.heightFrom = json.value("height-from", EnvObject::SURFACE);
     obj.minScore = json.at("min-score");
     obj.height = json.at("height");
@@ -274,8 +333,6 @@ void from_json(const Json& json, EnvPoint& obj)
     if (json.contains("flow-effect")) {
         obj.mainKelvinlets = json.at("flow-effect");
     }
-
-    obj.recomputeEvaluationPoints();
 }
 
 template <class Json>
@@ -309,7 +366,7 @@ void from_json(const Json& json, EnvCurve& obj)
         obj.curveKelvinlets = flow.at("curve-effect");
     }
 
-    obj.recomputeEvaluationPoints();
+    // obj.recomputeEvaluationPoints();
 }
 
 template <class Json>
@@ -327,8 +384,46 @@ void from_json(const Json& json, EnvArea& obj)
         obj.flowAttenuation = flow.at("flow-attenuation");
     }
 
-    obj.recomputeEvaluationPoints();
+    // obj.recomputeEvaluationPoints();
 }
+
+
+
+
+
+template <class Json>
+void from_json(const Json& json, EnvObjectInstance& obj, EnvironmentalScene*& scene)
+{
+    obj.ID = json.at("id");
+    obj.createdManually = json.at("manual");
+    obj.fitnessScoreAtCreation = json.at("fitness-at-creation");
+    obj.scene = scene;
+    obj.definition = obj.scene->availableObjects[json.at("name")];
+}
+
+template <class Json>
+void from_json(const Json& json, EnvPointInstance& obj, EnvironmentalScene*& scene)
+{
+    from_json(json, static_cast<EnvObjectInstance&>(obj), scene);
+    obj.position = json.at("position");
+}
+
+template <class Json>
+void from_json(const Json& json, EnvCurveInstance& obj, EnvironmentalScene*& scene)
+{
+    from_json(json, static_cast<EnvObjectInstance&>(obj), scene);
+    obj.curve = json.at("curve");
+}
+
+template <class Json>
+void from_json(const Json& json, EnvAreaInstance& obj, EnvironmentalScene*& scene)
+{
+    from_json(json, static_cast<EnvObjectInstance&>(obj), scene);
+    obj.curve = json.at("curve");
+}
+
+
+
 
 template <class Json>
 void from_json(const Json& json, EnvMaterial& material)
@@ -407,9 +502,9 @@ void to_json(Json& json, const EnvObject* envObj)
 
 
 template <class Json>
-EnvObject* make_envobj_from_json(const Json& j)
+EnvObject* make_envobj_from_json(const Json& json)
 {
-    const std::string type = toLower(j["type"]);
+    const std::string type = toLower(json["type"]);
 
     if (type == "point")  return new EnvPoint();
     if (type == "curve") return new EnvCurve();
@@ -426,6 +521,38 @@ void from_json(const Json& json, EnvObject*& envObject)
     from_json(json, *envObject);
 }
 
+
+
+
+
+
+
+
+template <class Json>
+void to_json(Json& json, const EnvObjectInstance* envObj)
+{
+    if (auto obj = dynamic_cast<const EnvPointInstance*>(envObj))
+        to_json(json, *obj);
+    if (auto obj = dynamic_cast<const EnvCurveInstance*>(envObj))
+        to_json(json, *obj);
+    if (auto obj = dynamic_cast<const EnvAreaInstance*>(envObj))
+        to_json(json, *obj);
+}
+
+
+template <class Json>
+EnvObjectInstance* make_envobj_instance_from_json(const Json& json, EnvironmentalScene*& scene)
+{
+    return scene->instantiate(json.at("name"));
+}
+
+
+template <class Json>
+void from_json(const Json& json, EnvObjectInstance*& envObject, EnvironmentalScene*& scene)
+{
+    envObject = make_envobj_instance_from_json(json, scene);
+    from_json(json, *envObject, scene);
+}
 
 
 #endif // ENVOBJSERIALIZER_H

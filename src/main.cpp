@@ -143,14 +143,23 @@ int main(int argc, char *argv[])
     scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
     scene.readEnvObjectsFile("EnvObjects/primitives.json");
 
-    // EnvObject* envObj = scene.instantiate("coralpolyp");
-    EnvObject* envObj = scene.instantiate("river");
-    // EnvObject* envObj = scene.instantiate("island");
 
-    SnakeSegmentationEditor* viewer = SnakeSegmentationEditor::get()->associateEnvObject(envObj);
+    // EnvObjectInstance* envObj = scene.instantiate("coralpolyp");
+    // EnvObjectInstance* envObj = scene.instantiate("river");
+    // EnvObjectInstance* envObj = scene.instantiate("island");
 
+    SnakeSegmentationEditor* viewer = SnakeSegmentationEditor::get()->associateEnvObject(scene.availableObjects["river"]);
+
+    viewer->exec();
+
+    viewer->associateEnvObject(scene.availableObjects["island"]);
+
+    viewer->exec();
+
+    viewer->associateEnvObject(scene.availableObjects["river"]);
 
     return viewer->exec();
+
     /*
     BSpline s;
     for (int i = 0; i < 10; i++) {
