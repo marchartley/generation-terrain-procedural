@@ -400,6 +400,14 @@ QLineEdit* TextEditElement::lineEdit()
     return dynamic_cast<QLineEdit*>(_lineEdit);
 }
 
+TextEditElement *TextEditElement::setText(const std::string &newText)
+{
+    /*if (boundVariable) {
+        *boundVariable = newText;
+    }*/
+    lineEdit()->setText(QString::fromStdString(newText));
+}
+
 TextEditElement* TextEditElement::setOnTextChange(std::function<void (const std::string&)> func)
 {
 //    this->addConnection()

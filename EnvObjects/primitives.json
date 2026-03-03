@@ -16,11 +16,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -57,11 +52,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -106,11 +96,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -156,11 +141,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -197,11 +177,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "ROCK",
@@ -233,11 +208,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "WATER",
@@ -274,11 +244,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -332,11 +297,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -382,11 +342,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -432,11 +387,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -482,11 +432,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -532,11 +477,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -577,11 +517,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -622,11 +557,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -667,11 +597,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -717,11 +642,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -775,11 +695,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "CORAL",
@@ -825,11 +740,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "WATER",
@@ -866,11 +776,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -912,11 +817,6 @@
 			"target-area": 500.0,
 			"position-cost": 0.0,
 			"closed": true,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -962,11 +862,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1007,11 +902,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "WATER",
@@ -1048,11 +938,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1098,11 +983,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1134,11 +1014,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "WATER",
@@ -1175,11 +1050,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1246,11 +1116,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1287,11 +1152,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "WATER",
@@ -1307,6 +1167,47 @@
 		"absorption-rate": {},
 		"on-death-deposition": {},
 		"height": 4.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 40.0,
+		"width": 5.0,
+		"type": "Curve"
+	},
+	{
+		"name": "river2",
+		"fitness": "normal(depth)",
+		"fitting": "depth * -1.0",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 1.0,
+			"area-cost": 0.0,
+			"image-cost": 1.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 40.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"slope-cost": 0.0
+		},
+		"material": "WATER",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"freshwater": {
+				"radius": 2.0,
+				"rate": 10.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
 		"flow-effect": {
 			"curve-effect": [],
 			"ending-effect": [],
@@ -1333,11 +1234,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1378,11 +1274,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1424,11 +1315,6 @@
 			"target-area": 0.0,
 			"position-cost": 0.0,
 			"closed": false,
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
 			"slope-cost": 0.0
 		},
 		"material": "SAND",
@@ -1436,14 +1322,14 @@
 		"height-from": "Surface",
 		"min-score": 0.009999999776482582,
 		"deposition-rate": {
+			"freshwater": {
+				"radius": 5.0,
+				"rate": 0.10000000149011612
+			},
 			"shade": {
 				"radius": 2.0,
 				"rate": 1.0
-			},
-      "freshwater": {
-        "radius": 5.0,
-        "rate" : 0.1
-      }
+			}
 		},
 		"absorption-rate": {},
 		"on-death-deposition": {},

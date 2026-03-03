@@ -1147,8 +1147,40 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
     }
 
     Vector3 offsetToCenter(.5f, .5f, .5f);
-    std::vector<Vector3> positions;
-    std::vector<Vector3> colors;
+
+    std::vector<Vector3> dummyArrow = Mesh::getPointsForArrow(Vector3(1, 0), Vector3(0, 1));
+    size_t dataSize = (displayArrow ? dummyArrow.size() : 2);
+
+    std::vector<Vector3> positions(field.size() * dataSize);
+    std::vector<Vector3> colors(field.size() * dataSize);
+
+    field.iterateParallel([&] (size_t i) {
+        Vector3 pos = field.getCoordAsVector3(i);
+        Vector3 value = field[i];
+        float mag = 0.f, relativeMag = .5f; // Default values
+        if (minMag != maxMag) {
+            mag = sqrMagnitudeField[i];
+            relativeMag = (mag - minMag) / (maxMag - minMag);
+        }
+        if (displayArrow) {
+            std::vector<Vector3> arrowPoints = Mesh::getPointsForArrow(pos + offsetToCenter, pos + offsetToCenter + value);
+            std::vector<Vector3> colorArray(dataSize, colorPalette(relativeMag, colorScale));
+            std::copy(arrowPoints.begin(), arrowPoints.end(), positions.begin() + i * dataSize);
+            std::copy(colorArray.begin(), colorArray.end(), colors.begin() + i * dataSize);
+            // positions.insert(positions.end(), arrowPoints.begin(), arrowPoints.end());
+            // colors.insert(colors.end(), colorArray.begin(), colorArray.end());
+        } else {
+            std::vector<Vector3> colorArray(2, colorPalette(relativeMag, colorScale));
+            positions[2 * i + 0] = pos + offsetToCenter;
+            positions[2 * i + 1] = pos + offsetToCenter + value;
+            colors[2 * i + 0] = colorArray[0];
+            colors[2 * i + 1] = colorArray[1];
+            // positions.push_back(pos + offsetToCenter);
+            // positions.push_back(pos + offsetToCenter + value);
+            // colors.insert(colors.end(), colorArray.begin(), colorArray.end());
+        }
+    });
+/*
     for (int x = 0; x < field.sizeX; x++) {
         for (int y = 0; y < field.sizeY; y++) {
             for (int z = 0; z < field.sizeZ; z++) {
@@ -1173,6 +1205,7 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
             }
         }
     }
+*/
     if (finalDimensions.isValid()) {
         Vector3 ratio = finalDimensions / field.getDimensions();
         for (auto& n : positions) {

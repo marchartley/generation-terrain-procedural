@@ -127,7 +127,7 @@ void to_json(Json& json, const EnvObject& obj)
     json["name"] = obj.name;
     json["fitness"] = obj.s_FitnessFunction;
     json["fitting"] = obj.s_FittingFunction;
-    json["snake"] = obj.snakeParameters;
+    json["snake"] = *obj.snakeParameters;
     json["material"] = obj.material;
     json["geometry"] = obj.implicitShape;
     json["height-from"] = obj.heightFrom;

@@ -101,7 +101,9 @@ public:
 
     void previewCurrentEnvObjectPlacement(const Vector3& position);
     void previewFlowEdition(const Vector3& mousePos, const Vector3& brushDir);
-    void previewMaterialEdition(const Vector3& position, bool addingMaterial);
+
+    void openObjectKelvinletEditor(const std::string& objName);
+    void openObjectSnakeEditor(const std::string& objName);
 
     void showAllElementsOnPlotter();
 

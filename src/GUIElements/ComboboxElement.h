@@ -29,7 +29,7 @@ public:
     ComboboxLineElementBase* getSelection() const;
 
     template <class T>
-    ComboboxLineElement<T>* getSelection() const;
+    T getSelection() const;
 
     ComboboxElement* addChoice(ComboboxLineElementBase* addedChoice, bool selected = false);
 
@@ -49,10 +49,10 @@ public:
 };
 
 template<class T>
-ComboboxLineElement<T>* ComboboxElement::getSelection() const
+T ComboboxElement::getSelection() const
 {
     auto res = this->getSelection();
-    return dynamic_cast<ComboboxLineElement<T>*>(res);
+    return dynamic_cast<ComboboxLineElement<T>*>(res)->value;
 }
 
 template <class T>

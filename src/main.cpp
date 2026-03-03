@@ -106,7 +106,6 @@ int main(int argc, char *argv[])
 
     std::cout << "Done." << std::endl;
     return 0;
-
     */
 
 
@@ -139,6 +138,7 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+    /*
     EnvironmentalScene scene;
     scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
     scene.readEnvObjectsFile("EnvObjects/primitives.json");
@@ -152,14 +152,20 @@ int main(int argc, char *argv[])
 
     viewer->exec();
 
+    nlohmann::json j = scene.availableObjects["river"];
+    std::cout << j.dump(1) << std::endl;
+    from_json(j, scene.availableObjects["river2"]);
+
+    std::cout << scene.availableObjects["river2"]->snakeParameters->lengthCost << std::endl;
+
     viewer->associateEnvObject(scene.availableObjects["island"]);
 
     viewer->exec();
 
-    viewer->associateEnvObject(scene.availableObjects["river"]);
+    viewer->associateEnvObject(scene.availableObjects["river2"]);
 
     return viewer->exec();
-
+    */
     /*
     BSpline s;
     for (int i = 0; i < 10; i++) {

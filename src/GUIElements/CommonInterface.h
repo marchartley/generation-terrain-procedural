@@ -246,6 +246,7 @@ public:
 
     QLineEdit* lineEdit();
     std::string getText() { return lineEdit()->text().toStdString(); }
+    TextEditElement* setText(const std::string& newText);
 
     DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnReturnPressed, QLineEdit, _lineEdit, returnPressed)
     TextEditElement* setOnTextChange(std::function<void(const std::string&)> func);
