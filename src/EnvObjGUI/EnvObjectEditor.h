@@ -45,11 +45,11 @@ public:
 
     GridF& simulateDeposition(GridF& currentState, int iterations = 10);
 
-    GridV3 getVectorFieldWithRotation(bool takeIntoAccountCurrentKelvinlet) const;
+    GridV3 getVectorFieldWithRotation(bool takeIntoAccountCurrentKelvinlet);
 
     void updateCurrentChartViewWithCurrentKelvinlets(const Vector3& mouseRelPos, bool updateCurrentKelvinlet);
 
-    EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true) const;
+    EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true);
 
     void animateEnvObject(bool animate);
 
@@ -75,6 +75,7 @@ public:
     float objectScale = 1.f;
 
 Q_SIGNALS:
+    void objectModified(const EnvObject* object);
            // void imagePainted(const GridF& newImage);
 };
 

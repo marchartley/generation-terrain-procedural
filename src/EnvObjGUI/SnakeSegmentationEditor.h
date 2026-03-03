@@ -65,6 +65,8 @@ public:
 
     SnakeSegmentationEditor* associateEnvObject(EnvObject* obj);
 
+    SnakeSegmentationEditor* setSnakeImage(const GridF& newFieldValues);
+
     SnakeEditionParameters snakeParameters;
     PainterToolParams painterParameters;
 

@@ -220,8 +220,12 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow)
             relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.points.back()));
     }
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
-        if (this->getDefinition()->curveKelvinlets[i]->valid())
-            relativeCurveFlow.push_back(RelativeKelvinlet(this->getDefinition()->curveKelvinlets[i], Vector3()));
+        if (this->getDefinition()->curveKelvinlets[i]->valid()) {
+            auto k = this->getDefinition()->curveKelvinlets[i]->clone();
+            auto asCurve = dynamic_cast<KelvinletCurve*>(k);
+            asCurve->curve = this->curve;
+            relativeCurveFlow.push_back(RelativeKelvinlet(asCurve, Vector3()));
+        }
     }
 
     const Vector3 initialFlowStarting = waterFlow.interpolate(this->curve.points.front());

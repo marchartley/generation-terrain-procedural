@@ -16,19 +16,11 @@ SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, ChartV
 {
     this->painterParameters.RGBimage = false;
 
-    this->currentField = GridF::perlin(Vector3i(100, 100, 1), Vector3(5.f, 5.f, 1));
-    this->currentGradientField = currentField.gradient();
-
     this->snakeParameters.snake = SnakeSegmentation();
     this->snakeParameters.params = new SnakeSegmentationParameters();
     this->snakeParameters.field = new SnakeImageFieldImplicit();
 
-    auto snakeField = dynamic_cast<SnakeImageFieldImplicit*>(snakeParameters.field);
-    snakeField->imageField = [=](const Vector3& p) { return currentField.interpolate(p); };
-    snakeField->gradientField = [=](const Vector3& p) { return currentGradientField.interpolate(p); };
-
-    this->addImage(currentField);
-
+    this->setSnakeImage(GridF::perlin(Vector3i(100, 100, 1), Vector3(5.f, 5.f, 1)));
 
     // QObject::connect(this, &SnakeSegmentationEditor::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
     this->animate([=]() {
@@ -85,9 +77,10 @@ void SnakeSegmentationEditor::showSnakePath() {
 
     this->setOverlay(colors, alpha, "snake");
 
-    std::cout << snakeParameters.snake.contour << std::endl;
-    std::cout << "Area: " << ShapeCurve(snakeParameters.snake.contour).computeArea() << "/" << snakeParameters.params->targetArea << " -- Length: " << snakeParameters.snake.contour.length() << "/" << snakeParameters.params->targetLength << std::endl;
-    this->show();
+    // std::cout << snakeParameters.snake.contour << std::endl;
+    // std::cout << "Area: " << ShapeCurve(snakeParameters.snake.contour).computeArea() << "/" << snakeParameters.params->targetArea << " -- Length: " << snakeParameters.snake.contour.length() << "/" << snakeParameters.params->targetLength << std::endl;
+    // this->show();
+    this->draw();
 }
 
 SnakeSegmentationEditor* SnakeSegmentationEditor::associateEnvObject(EnvObject* obj)
@@ -96,6 +89,19 @@ SnakeSegmentationEditor* SnakeSegmentationEditor::associateEnvObject(EnvObject* 
     // obj->updateFittingFunction();
     *(obj->snakeField) = SnakeImageFieldImplicit([=](const Vector3& p) { return this->currentField.interpolate(p); });
     this->snakeParameters.snake = obj->instantiate()->snake;
+    return this;
+}
+
+SnakeSegmentationEditor *SnakeSegmentationEditor::setSnakeImage(const GridF& newFieldValues)
+{
+    this->currentField = newFieldValues;
+    this->currentGradientField = currentField.gradient();
+
+    auto snakeField = dynamic_cast<SnakeImageFieldImplicit*>(snakeParameters.field);
+    snakeField->imageField = [=](const Vector3& p) { return currentField.interpolate(p); };
+    snakeField->gradientField = [=](const Vector3& p) { return currentGradientField.interpolate(p); };
+
+    this->addImage(currentField);
     return this;
 }
 

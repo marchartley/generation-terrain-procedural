@@ -16,7 +16,8 @@
 #include "EnvObjGUI/EnvMaterialViewer.h"
 #include "EnvObjGUI/FocusAreaViewer.h"
 #include "EnvObjGUI/WaterFlowViewer.h"
-
+#include "EnvObjGUI/EnvObjectEditor.h"
+#include "EnvObjGUI/SnakeSegmentationEditor.h"
 
 
 EnvObjsInterface::EnvObjsInterface(QWidget *parent)
@@ -80,29 +81,21 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         this->previewCurrentEnvObjectPlacement(clickPos);
     });
 
-    /*QObject::connect(EnvMaterialViewer::get("Material"), &EnvMaterialViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
-        bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
-        bool rightPressed = event->buttons().testFlag(Qt::RightButton);
-        if (!leftPressed && !rightPressed) return;
-        this->previewMaterialEdition(clickPos, leftPressed);
-    });*/
     QObject::connect(EnvMaterialViewer::get("Material"), &EnvMaterialViewer::imagePainted, this, [&](const GridF& newDistrib) {
         this->scene->materials[this->currentMaterialEdited].currentState = newDistrib;
     });
 
-    /*QObject::connect(FocusAreaViewer::get("Focus"), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
-        bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
-        bool rightPressed = event->buttons().testFlag(Qt::RightButton);
-        if (!leftPressed && !rightPressed) return;
-
-        this->previewFocusAreaEdition(mousePos, leftPressed);
-    });*/
     QObject::connect(FocusAreaViewer::get("Focus"), &FocusAreaViewer::imagePainted, this, [&](const GridF& newDistrib) {
         this->focusedArea = newDistrib;
     });
 
     QObject::connect(WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::updated, this, [&]() {
         this->userKelvinlets = WaterFlowViewer::get("Flowfield")->kelvinletParams.kelvinlets;
+        this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
+        Q_EMIT this->updated();
+    });
+
+    QObject::connect(EnvObjectEditor::get(""), &EnvObjectEditor::objectModified, this, [&](const EnvObject* modifiedObject) {
         this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
         Q_EMIT this->updated();
     });
@@ -154,13 +147,11 @@ void EnvObjsInterface::replay(nlohmann::json action)
 
 QLayout *EnvObjsInterface::createGUI()
 {
-    QLayout* layout = new QVBoxLayout;
+    InterfaceUI* ui = new InterfaceUI(new QVBoxLayout);
 
-    InterfaceUI* ui = new InterfaceUI(layout);
-
-    // ButtonElement* instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
-    // ButtonElement* recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
-    ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() {
+    // auto instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
+    // auto recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
+    auto spendTimeButton = new ButtonElement("Wait", [&]() {
         for (auto& obj : this->scene->instantiatedObjects) {
             obj->improvePositionning(1.f);
         }
@@ -170,19 +161,19 @@ QLayout *EnvObjsInterface::createGUI()
         Q_EMIT this->updated();
         //this->saveScene("testEnvObjects.json");
     });
-    CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
-//    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
-    ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("EnvObjects/testEnvObjects.json"); });
-    TextEditElement* testingFittingFormula = new TextEditElement("", "Fitting func: ");
+    auto waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
+//    auto createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
+    auto createFromFile = new ButtonElement("From file", [&]() { this->loadScene("EnvObjects/testEnvObjects.json"); });
+    auto testingFittingFormula = new TextEditElement("", "Fitting func: ");
     // testingFittingFormula->setOnTextChange([&](const std::string& expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
-    TextEditElement* testingFitnessFormula = new TextEditElement("", "Fitness func: ");
+    auto testingFitnessFormula = new TextEditElement("", "Fitness func: ");
     // testingFitnessFormula->setOnTextChange([&](const std::string& expression) { this->evaluateAndDisplayCustomFitnessFormula(expression); });
     testingFitnessFormula->setOnTextChange([&](const std::string& expression) { this->testedFitnessFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
     testingFittingFormula->setOnTextChange([&](const std::string& expression) { this->testedFittingFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
-    // ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
-    ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
-    CheckboxElement* addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
-    ButtonElement* saveForRendersButton = new ButtonElement("Save for render", [&]() { this->saveForRenders(); });
+    // auto testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
+    auto resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
+    auto addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
+    auto saveForRendersButton = new ButtonElement("Save for render", [&]() { this->saveForRenders(); });
 
     LabelElement* label = new LabelElement("Objects: " + std::to_string(this->scene->instantiatedObjects.size()));
 
@@ -200,10 +191,10 @@ QLayout *EnvObjsInterface::createGUI()
             selectionForCoral = objectsChoices.size() - 1;
         }
     }
-    ButtonElement* showButton = new ButtonElement("Show", [&](){
+    auto showButton = new ButtonElement("Show", [&](){
         this->displayProbas(getCurrentObjectName());
     });
-    ButtonElement* forceButton = new ButtonElement("Force", [&](){
+    auto forceButton = new ButtonElement("Force", [&](){
         this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
         updateObjectsList();
         Q_EMIT this->updated();
@@ -213,23 +204,30 @@ QLayout *EnvObjsInterface::createGUI()
         updateObjectsList();
         Q_EMIT this->updated();
     });
+
+    auto editObjectKelvinletsButton = new ButtonElement("Edit Kelvinlets", [&]() {
+        this->openObjectKelvinletEditor(getCurrentObjectName());
+    });
+    auto editObjectSnakeButton = new ButtonElement("Edit snake", [&]() {
+        this->openObjectSnakeEditor(getCurrentObjectName());
+    });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
     objectCombobox->combobox()->setCurrentIndex(selectionForCoral);
 
     std::vector<UIElement*> materialsButtons;
     for (auto& [name, material] : this->scene->materials) {
-        ButtonElement* showButton = new ButtonElement("Show " + toCapitalize(name), [&](){ this->displayMaterialDistrib(name); });
+        auto showButton = new ButtonElement("Show " + toCapitalize(name), [&](){ this->displayMaterialDistrib(name); });
         materialsButtons.push_back(showButton);
     }
 
-    ButtonElement* editFocusAreaButton = new ButtonElement("Edit focus", [&]() { this->manualModificationOfFocusArea(); });
-    ButtonElement* editFlowfieldButton = new ButtonElement("Edit flowfield", [&]() { this->manualModificationOfFlowfield(); });
-    ButtonElement* resetFlowfieldButton = new ButtonElement("Reset flow", [&]() { this->resetFlowfield(); });
-    ButtonElement* showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
+    auto editFocusAreaButton = new ButtonElement("Edit focus", [&]() { this->manualModificationOfFocusArea(); });
+    auto editFlowfieldButton = new ButtonElement("Edit flowfield", [&]() { this->manualModificationOfFlowfield(); });
+    auto resetFlowfieldButton = new ButtonElement("Reset flow", [&]() { this->resetFlowfield(); });
+    auto showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
 
-    ButtonElement* saveButton = new ButtonElement("Save", [&]() {this->saveScene("EnvObjects/testEnvObjects.json");});
+    auto saveButton = new ButtonElement("Save", [&]() {this->saveScene("EnvObjects/testEnvObjects.json");});
 
-    SliderElement* flowErosionSlider = new SliderElement("Erode", -10.f, 10.f, .1f);
+    auto flowErosionSlider = new SliderElement("Erode", -10.f, 10.f, .1f);
     flowErosionSlider->setOnValueChanged([&](float newValue) {
         this->flowErosionFactor = newValue;
         this->addObjectsHeightmaps();
@@ -238,7 +236,7 @@ QLayout *EnvObjsInterface::createGUI()
         Q_EMIT this->updated();
     });
 
-    CheckboxElement* newObjectCreationBox = new CheckboxElement("Manual creation", [&](bool checked) {
+    auto newObjectCreationBox = new CheckboxElement("Manual creation", [&](bool checked) {
         this->manuallyCreatingObject = checked;
         this->startNewObjectCreation();
         this->updateSelectionMesh();
@@ -247,11 +245,11 @@ QLayout *EnvObjsInterface::createGUI()
         Q_EMIT this->updated();
     });
 
-    ButtonElement* nextStepButton = new ButtonElement("Step", [&]() {
+    auto nextStepButton = new ButtonElement("Step", [&]() {
         forceScenarioInterruption = true;
         this->runNextStep();
     });
-    ButtonElement* runButton = new ButtonElement("Run", [&]() {
+    auto runButton = new ButtonElement("Run", [&]() {
         if (!this->forceScenarioInterruption) {
             std::cout << "Stopping scenario" << std::endl;
             this->forceScenarioInterruption = true;
@@ -260,16 +258,18 @@ QLayout *EnvObjsInterface::createGUI()
         }
     });
 
-    RadioButtonElement* grabKelvinlet = new RadioButtonElement("Grab");
-    RadioButtonElement* scaleKelvinlet = new RadioButtonElement("Scale");
-    RadioButtonElement* pinchKelvinlet = new RadioButtonElement("Pinch");
-    RadioButtonElement* twistKelvinlet = new RadioButtonElement("Twist");
+    /*
+    auto grabKelvinlet = new RadioButtonElement("Grab");
+    auto scaleKelvinlet = new RadioButtonElement("Scale");
+    auto pinchKelvinlet = new RadioButtonElement("Pinch");
+    auto twistKelvinlet = new RadioButtonElement("Twist");
     grabKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "grab"; } });
     scaleKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "scale"; } });
     pinchKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "pinch"; } });
     twistKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "twist"; } });
+    */
 
-    CheckboxElement* displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
+    auto displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
 
     ui->add({
              createHorizontalGroupUI({newObjectCreationBox, waitAtEachFrameButton}),
@@ -277,16 +277,28 @@ QLayout *EnvObjsInterface::createGUI()
              createMultiColumnGroupUI(materialsButtons, 2),
              flowErosionSlider,
              objectCombobox,
-             createMultiColumnGroupUI({showButton, forceButton}, 2),
+             createMultiColumnGroupUI({showButton, forceButton, editObjectKelvinletsButton, editObjectSnakeButton}, 2),
              createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton, resetFlowfieldButton}),
              showElementsOnCanvasButton,
              objectsListWidget,
              createVerticalGroupUI({testingFitnessFormula, testingFittingFormula}),
-             createHorizontalGroupUI({/*instantiaABCbutton, testPerformancesButton, */resetButton}),
-             addGroovesButton,
-             createVerticalGroupUI({grabKelvinlet, scaleKelvinlet, pinchKelvinlet, twistKelvinlet}),
+             resetButton,
+             // addGroovesButton,
+             // createVerticalGroupUI({grabKelvinlet, scaleKelvinlet, pinchKelvinlet, twistKelvinlet}),
              createHorizontalGroupUI({label, createFromFile, saveButton, displayCurrentsButton}),
              saveForRendersButton
+    });
+
+    objectCombobox->setOnSelectionChanged([=](int selectionIndex) {
+        EnvObject* obj = objectCombobox->getSelection<EnvObject*>();
+        blockSignals(true);
+        // testingFitnessFormula->block();
+        testingFitnessFormula->setText(obj->s_FitnessFunction);
+        // testingFitnessFormula->unblock();
+        // testingFittingFormula->block();
+        testingFittingFormula->setText(obj->s_FittingFunction);
+        // testingFittingFormula->unblock();
+        blockSignals(false);
     });
 
     return ui->get()->layout();
@@ -939,18 +951,13 @@ void EnvObjsInterface::manualModificationOfFocusArea()
     this->focusAreaEditing = true;
     this->flowfieldEditing = false;
     this->previewingObjectInPlotter = false;
-    // FocusAreaViewer::get("Focus")->addImage(this->renderFocusArea());
+
     FocusAreaViewer::get("Focus")->addImage(this->focusedArea);
     FocusAreaViewer::get("Focus")->show();
 }
 
 void EnvObjsInterface::manualModificationOfFlowfield()
 {
-    // this->focusAreaEditing = false;
-    // this->flowfieldEditing = true;
-    // this->previewingObjectInPlotter = false;
-    // this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField);
-    // WaterFlowViewer::get("Flowfield")->addImage(this->renderFlowfield());
     WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
     WaterFlowViewer::get("Flowfield")->show();
 }
@@ -981,10 +988,6 @@ void EnvObjsInterface::updateObjectsList()
     auto list = this->scene->instantiatedObjects;
 
     for (auto& obj : list) {
-
-        // float startingScore = obj->fitnessScoreAtCreation;
-        // float endingScore = obj->evaluate(obj->evaluationPosition);
-
         std::string text = obj->getDefinition()->name;
         if (obj->createdManually)
             text += " [*]";
@@ -1731,21 +1734,6 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
     ImageViewer::get("Object Preview")->show();
 }
 
-/*
-void EnvObjsInterface::previewFocusAreaEdition(const Vector3 &mousePos, bool addingFocus)
-{
-    //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
-    auto brush = GridF::normalizedGaussian(30, 30, 1, 8.f) * (addingFocus ? 1.f : -1.f) * 8.f;
-    this->focusedArea.add(brush, mousePos - brush.getDimensions().xy() * .5f);
-
-    focusedArea.iterateParallel([&](size_t i) {
-        focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
-    });
-    FocusAreaViewer::get("Focus")->addImage(renderFocusArea());
-    FocusAreaViewer::get("Focus")->show();
-}
-*/
-
 void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3 &brushDir)
 {
     displayProcessTime("updateFlowfield", [&]() {
@@ -1763,21 +1751,25 @@ void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3
     });
 }
 
-void EnvObjsInterface::previewMaterialEdition(const Vector3 &position, bool addingMaterial)
+void EnvObjsInterface::openObjectKelvinletEditor(const std::string& objName)
 {
-    /*if (this->scene->materials.count(this->currentMaterialEdited) == 0) return;
+    auto obj = scene->availableObjects[objName];
+    auto viewer = EnvObjectEditor::get();
+    viewer->addVectorField(userFlowField + this->computeUserKelvinletField() + simulationFlowField);
+    viewer->addEnvObject(obj);
+    viewer->show();
+}
 
-    auto& materialContent = this->scene->materials[this->currentMaterialEdited].currentState;
-
-    int radius = 10;
-    float amount = 5.f;
-
-    GridF mask = GridF::normalizedGaussian(2 * radius + 1, 2 * radius + 1, 1, float(radius / 4.f)) * amount;
-
-    materialContent.add(mask, position - mask.getDimensions().xy() * .5f);
-
-    EnvMaterialViewer::get("Material")->addImage(materialContent);
-    EnvMaterialViewer::get("Material")->show();*/
+void EnvObjsInterface::openObjectSnakeEditor(const std::string& objName)
+{
+    auto obj = scene->availableObjects[objName];
+    SnakeSegmentationEditor* viewer;
+    viewer = SnakeSegmentationEditor::get();
+    GridF fittingGrid(this->heightmap->heights.getDimensions());
+    fittingGrid.iterateParallel([&](const Vector3& p) { fittingGrid[p] = obj->fittingFunction(p); });
+    viewer->setSnakeImage(fittingGrid);
+    viewer->associateEnvObject(obj);
+    viewer->show();
 }
 
 void EnvObjsInterface::showAllElementsOnPlotter()
