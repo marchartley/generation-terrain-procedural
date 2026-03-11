@@ -276,18 +276,15 @@ void EnvironmentalScene::removeAllObjects()
 
 EnvMaterial& EnvironmentalScene::stabilizeOneMaterial(const GridV3& heightsGradients, const GridV3& smoothFluids, EnvMaterial& material, int maxIterations)
 {
-    bool needToBeUpdated = false;
     auto startState = material.currentState;
 
     for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
         object->applyDeposition(material);
-        needToBeUpdated = true;
     }
     for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
         object->applyAbsorption(material);
-        needToBeUpdated = true;
     }
 
     GridF mask = material.currentState - startState;
@@ -473,7 +470,7 @@ void EnvironmentalScene::recomputeFlowAndSandProperties(const GridF& heightmap, 
         this->allScalarProperties[matName] = material.currentState;
         this->allVectorProperties[matName + ".gradient"] = material.currentState.gradient();
     }
-    this->allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.meanSmooth(3, 3, 1));
+    this->allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap); //.meanSmooth(3, 3, 1));
     // this->allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.gaussianSmooth(1.f, true));
     this->allVectorProperties["depth.gradient"] = this->allScalarProperties["depth"].gradient();
 

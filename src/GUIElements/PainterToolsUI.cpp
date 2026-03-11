@@ -3,32 +3,34 @@
 #include "Utils/Utils.h"
 
 
-InterfaceUI *PainterToolsUI::createPainterToolsUI(ChartView *chartView, PlotModel *dataModel, PainterToolParams *params)
+InterfaceUI* PainterToolsUI::createPainterToolsUI(PainterToolParams *params)
 {
-    InterfaceUI* UI = new InterfaceUI(new QVBoxLayout(), true, "Painting tools");
+    auto UI = new InterfaceUI(); // (new QVBoxLayout(), true, "Painting tools");
 
     auto radiusSlider = new SliderElement("Radius", params->minRadius, params->maxRadius, 1.f, params->radius);
     auto amountSlider = new SliderElement("Opacity", params->minOpacity, params->maxOpacity, 0.01f, params->opacity);
     auto falloffSlider = new SliderElement("Blur", 0.f, 1.f, 0.01f, params->falloff);
 
-    auto addCheck = (new RadioButtonElement("Add"))->setOnChecked([=](bool checked){ params->additiveMode = checked; });
-    auto replaceCheck = (new RadioButtonElement("Replace"))->setOnChecked([=](bool checked){ params->additiveMode = !checked; });
-    addCheck ->setChecked(params->additiveMode);
-    replaceCheck->setChecked(!params->additiveMode);
+    auto addCheck = new RadioButtonElement("Add", true, params->additiveMode);
+    auto replaceCheck = new RadioButtonElement("Replace", false, params->additiveMode);
+
+    UIElement* colorPicker;
+    if (params->RGBimage) {
+        colorPicker = new ColorPickerElement("Color", params->color);
+    } else {
+        colorPicker = new SliderElement("Color", params->minColor.x(), params->maxColor.x(), 0.01f, params->color.x());
+    }
+
+    // addCheck->setOnChecked([=](bool checked){ params->additiveMode = checked; });
+    // replaceCheck->setOnChecked([=](bool checked){ params->additiveMode = !checked; });
+    // addCheck->setChecked(params->additiveMode);
+    // replaceCheck->setChecked(!params->additiveMode);
 
     UI->add(std::vector<UIElement*>{
         radiusSlider,
         amountSlider,
-        falloffSlider});
-    if (params->RGBimage) {
-        auto colorPicker = new ColorPickerElement("Color", params->color);
-        UI->add(colorPicker);
-    } else {
-        auto grayPicker = new SliderElement("Color", params->minColor.x(), params->maxColor.x(), 0.01f, params->color.x());
-        UI->add(grayPicker);
-    }
-
-    UI->add(std::vector<UIElement*>{
+        falloffSlider,
+        colorPicker,
         createHorizontalGroupUI({addCheck, replaceCheck})
     });
 
@@ -113,40 +115,60 @@ void updateKelvinletList(HierarchicalListUI* listWidget, KelvinletToolParams* pa
     listWidget->get()->blockSignals(false);
     listWidget->update();
 }
-InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params, std::function<void (const Vector3 &, bool)> onUpdateCallback, std::function<GridV3 (bool)> vectorFieldFunction)
+InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, KelvinletToolParams* params, std::function<void (const Vector3 &, bool)> onUpdateCallback, std::function<GridV3 (bool)> vectorFieldFunction)
 {
+    auto& chartView = plotter->chartView;
+    auto& dataModel = plotter->dataModel;
+
     if (!vectorFieldFunction) {
         vectorFieldFunction = [=](bool useCurrentKelvinlet) { return params->getVectorField(useCurrentKelvinlet); };
     }
     if (!onUpdateCallback) {
-        onUpdateCallback = [=](const Vector3& mousePos, bool updateCurrentKelvinlet){ PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, mousePos, updateCurrentKelvinlet, vectorFieldFunction); };
+        onUpdateCallback = [=](const Vector3& mousePos, bool updateCurrentKelvinlet){ PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, params, mousePos, updateCurrentKelvinlet, vectorFieldFunction); };
     }
     params->temporaryVectorData = dataModel->vectorData;
 
-    InterfaceUI* UI = new InterfaceUI(new QVBoxLayout(), false, "Kelvinlet tool editor");
+    auto UI = new InterfaceUI();
 
     auto radialScaleSlider = new SliderElement("Radial Scale", params->minRadialScale, params->maxRadialScale, 1.f, params->radialScale);
     auto muSlider = new SliderElement("Mu", params->minMu, params->maxMu, 0.01f, params->mu);
     auto poissonSlider = new SliderElement("Poisson ratio", params->minPoisson, params->maxPoisson, 0.01f, params->poisson);
 
-    if (!params->currentKelvinlet) {
-        params->currentKelvinlet = new GrabKelvinlet();
-    }
-    auto pinchRadio = (new RadioButtonElement("Pinch"))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(PinchKelvinlet));
-    auto twistRadio = (new RadioButtonElement("Twist"))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(TwistKelvinlet));
-    auto grabRadio = (new RadioButtonElement("Grab"))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(GrabKelvinlet));
-    auto scaleRadio = (new RadioButtonElement("Scale"))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(ScaleKelvinlet));
+    auto updateKelvinletType = [=](Kelvinlet* newKelvinlet) {
+        if (params->currentKelvinlet)
+            delete params->currentKelvinlet;
+        params->currentKelvinlet = newKelvinlet;
+        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
+    };
 
-    auto displayAsArrowsCheckbox = (new RadioButtonElement("Arrows"))->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::ARROWS);
-    auto displayAsFlowLinesCheckbox = (new RadioButtonElement("Flow lines"))->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::FLOWLINES);
-    auto displayNoDisplayCheckbox = (new RadioButtonElement("No display"))->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::NONE);
+    // if (!params->currentKelvinlet) {
+        // params->currentKelvinlet = new GrabKelvinlet();
+    // }
+    updateKelvinletType(new GrabKelvinlet);
+    auto pinchRadio = new RadioButtonElement<int>("Pinch", [=] (bool checked) { if (checked) updateKelvinletType(new PinchKelvinlet); });
+    auto twistRadio = new RadioButtonElement<int>("Twist", [=] (bool checked) { if (checked) updateKelvinletType(new TwistKelvinlet); });
+    auto grabRadio = new RadioButtonElement<int>("Grab", [=] (bool checked) { if (checked) updateKelvinletType(new GrabKelvinlet); });
+    auto scaleRadio = new RadioButtonElement<int>("Scale", [=] (bool checked) { if (checked) updateKelvinletType(new ScaleKelvinlet); });
+    pinchRadio->setChecked(true);
 
+    auto displayAsArrowsCheckbox = new RadioButtonElement("Arrows", DisplayedVectorFieldParameters::ARROWS, dataModel->vectorData.displayParameters.displayMode);
+    auto displayAsFlowLinesCheckbox = new RadioButtonElement("Flow lines", DisplayedVectorFieldParameters::FLOWLINES, dataModel->vectorData.displayParameters.displayMode);
+    auto displayNoDisplayCheckbox = new RadioButtonElement("No display", DisplayedVectorFieldParameters::NONE, dataModel->vectorData.displayParameters.displayMode);
 
+    auto deleteKelvinletButton = new ButtonElement("Delete");
+
+    /*
+    pinchRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(PinchKelvinlet));
+    twistRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(TwistKelvinlet));
+    grabRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(GrabKelvinlet));
+    scaleRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(ScaleKelvinlet));
+
+    displayAsArrowsCheckbox->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::ARROWS);
+    displayAsFlowLinesCheckbox->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::FLOWLINES);
+    displayNoDisplayCheckbox->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::NONE);
+    */
     auto kelvinletsHistory = new HierarchicalListUI();
     updateKelvinletList(kelvinletsHistory, params);
-
-    // auto editKelvinletCheck = (new CheckboxElement("Edit this Kelvinlet?"))->setChecked(false);
-    auto deleteKelvinletButton = new ButtonElement("Delete");
 
     UI->add(std::vector<UIElement*>{
         radialScaleSlider,
@@ -168,6 +190,7 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ch
         onUpdateCallback(Vector3::invalid, true);
     });
 
+    /*
     pinchRadio->setOnChecked([=](bool checked) {
         if (!checked) return;
         if (params->currentKelvinlet)
@@ -212,6 +235,7 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ch
         dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::NONE;
         onUpdateCallback(Vector3::invalid, false);
     });
+    */
 
 
     kelvinletsHistory->setOnItemSelectionChanged([=]() {
@@ -337,8 +361,10 @@ std::pair<GridV3, GridF> PainterToolsUI::getKelvinletParametersImage(GridV3& img
     return {img, alpha};
 }
 
-void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params, const Vector3& mouseRelPos, bool updateCurrentKelvinlet, std::function<GridV3 (bool)> vectorFieldFunction)
+void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, KelvinletToolParams* params, const Vector3& mouseRelPos, bool updateCurrentKelvinlet, std::function<GridV3 (bool)> vectorFieldFunction)
 {
+    auto& chartView = plotter->chartView;
+    auto& dataModel = plotter->dataModel;
     if (!vectorFieldFunction) {
         vectorFieldFunction = [=](bool useCurrentKelvinlet) { return params->getVectorField(useCurrentKelvinlet); };
     }

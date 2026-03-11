@@ -8,7 +8,7 @@
 ManualEditionInterface::ManualEditionInterface(QWidget *parent)
     : ActionInterface("manualedit", "Manual edit", "digging", "Manual editing", "manual-edit_button.png", parent)
 {
-    this->grabber = std::make_unique<ControlPoint>(Vector3(), this->manualEditionSize/2.f, NEUTRAL, false);
+    this->grabber = std::make_shared<ControlPoint>(Vector3(), this->manualEditionSize/2.f, NEUTRAL, false);
     this->grabber->setGrabberStateColor(POSITIVE, std::vector<float>({.1f, .9f, .1f, .2f}));
     this->grabber->setGrabberStateColor(NEGATIVE, std::vector<float>({.9f, .1f, .1f, .2f}));
     setAddingMode(addingMode);
@@ -172,27 +172,22 @@ void ManualEditionInterface::wheelEvent(QWheelEvent* event)
 }
 
 
-QLayout *ManualEditionInterface::createGUI()
+InterfaceUI* ManualEditionInterface::createGUI()
 {
-    this->manualEditLayout = new QHBoxLayout();
+    auto UI = new InterfaceUI();
     // Manual rock erosion layout
-    this->manualEditSizeSlider = new FancySlider(Qt::Orientation::Horizontal, 1, 200);
-    this->manualEditStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 3.0, 0.1);
-    this->addingModeButton = new QRadioButton("Ajouter de la matière");
-    this->suppressModeButton = new QRadioButton("Detruire de la matière");
-    manualEditLayout->addWidget(createSliderGroup("Taille", manualEditSizeSlider));
-//    manualEditLayout->addWidget(createSliderGroup("Force", manualEditStrengthSlider));
-    manualEditLayout->addWidget(createVerticalGroup({addingModeButton, suppressModeButton}));
+    auto manualEditSizeSlider = new SliderElement("Taille", 1, 200, 1, this->manualEditionStrength);
+    auto manualEditStrengthSlider = new SliderElement("Force", 0.0, 3.0, 0.1, this->manualEditionStrength);
+    auto addingModeButton = new RadioButtonElement("Ajouter de la matière", true, addingMode);
+    auto suppressModeButton = new RadioButtonElement("Detruire de la matière", false, addingMode);
 
-    this->manualEditSizeSlider->setValue(this->manualEditionSize);
-    this->manualEditStrengthSlider->setfValue(this->manualEditionStrength);
-    this->addingModeButton->setChecked(this->addingMode);
-    this->addingModeButton->setChecked(!this->addingMode);
 
-    QObject::connect(manualEditSizeSlider, &FancySlider::valueChanged, this, &ManualEditionInterface::setSize);
-    QObject::connect(manualEditStrengthSlider, &FancySlider::floatValueChanged, this, [=](float newStrength) { this->manualEditionStrength = newStrength; });
-    QObject::connect(addingModeButton, &QRadioButton::clicked, this, [=](){ this->setAddingMode(true); } );
-    QObject::connect(suppressModeButton, &QRadioButton::clicked, this, [=](){ this->setAddingMode(false); } );
+    UI->add(std::vector<UIElement*>{
+        manualEditSizeSlider,
+        // manualEditStrengthSlider,
+        addingModeButton,
+        suppressModeButton
+    });
 
-    return this->manualEditLayout;
+    return UI;
 }

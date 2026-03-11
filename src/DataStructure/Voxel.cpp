@@ -87,7 +87,7 @@ void VoxelDataFile::loadFromFileBinary(const std::string &filename) {
         data.sizeX = width;
         data.sizeY = depth;
         data.sizeZ = height;
-
+        data._updateStrides();
         inFile.close();
         std::cout << "Data loaded from file successfully." << std::endl;
     } else {
@@ -205,7 +205,7 @@ void VectorFieldDataFile::loadFromFileBinary(const std::string &filename) {
         data.sizeX = width;
         data.sizeY = depth;
         data.sizeZ = height;
-
+        data._updateStrides();
         inFile.close();
         std::cout << "Data loaded from file successfully." << std::endl;
     } else {

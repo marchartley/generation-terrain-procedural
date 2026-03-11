@@ -47,7 +47,7 @@ public:
     Vector3 minPos;
     Vector3 maxPos;
 
-    std::unique_ptr<ControlPoint> sliderControlPoint;
+    std::shared_ptr<ControlPoint> sliderControlPoint;
     Mesh sliderMesh;
 
     void init(const Vector3& positionMin, const Vector3& positionMax, float minValue = 0.f, float maxValue = 1.f, float val = 0.f);

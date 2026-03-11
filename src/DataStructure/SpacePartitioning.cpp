@@ -66,7 +66,7 @@ NoPartitioning::NoPartitioning(std::vector<Triangle> triangles)
     this->triangles = triangles;
 }
 
-SpacePartitioning& NoPartitioning::build(const std::vector<Triangle> &triangles)
+const SpacePartitioning &NoPartitioning::build(const std::vector<Triangle> &triangles)
 {
     this->triangles = triangles;
     return *this;

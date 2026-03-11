@@ -11,7 +11,7 @@ public:
 //    SpacePartitioning(const std::vector<Triangle>& triangles);
 //    SpacePartitioning(const std::vector<std::vector<Vector3>>& triangles);
 
-    virtual SpacePartitioning& build(const std::vector<Triangle>& triangles) = 0;
+    virtual const SpacePartitioning& build(const std::vector<Triangle>& triangles) = 0;
 //    virtual SpacePartitioning& build(const std::vector<std::vector<Vector3>>& triangles) const;
 
     virtual Vector3 getIntersection(const Vector3& rayStart, const Vector3& rayEnd) const;
@@ -36,7 +36,7 @@ public:
     NoPartitioning();
     NoPartitioning(std::vector<Triangle> triangles);
 
-    virtual SpacePartitioning &build(const std::vector<Triangle> &triangles) override;
+    virtual const SpacePartitioning &build(const std::vector<Triangle> &triangles) override;
     virtual std::set<size_t> getAllStoredTrianglesIndices() const override;
     virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const override;
     virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, size_t ignoredTriangle) const override;

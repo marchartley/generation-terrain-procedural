@@ -104,7 +104,7 @@ void Viewer::init() {
 //    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
-    this->mainGrabber = std::make_unique<ControlPoint>(Vector3(), 1.f, ACTIVE, false);
+    this->mainGrabber = std::make_shared<ControlPoint>(Vector3(), 1.f, ACTIVE, false);
 
 
     this->light = PositionalLight(

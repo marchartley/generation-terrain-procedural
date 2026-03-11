@@ -200,8 +200,8 @@ float closestTimeIntervalAnalysis(const BSpline& curve, const Vector3& pos, floa
 struct KDNode {
     Vector3 point;
     float t; // parameter t corresponding to the point on the spline
-    std::unique_ptr<KDNode> left;
-    std::unique_ptr<KDNode> right;
+    std::shared_ptr<KDNode> left;
+    std::shared_ptr<KDNode> right;
     int axis;
 
     KDNode(const Vector3& pt, float param, int ax)
@@ -210,11 +210,11 @@ struct KDNode {
 
 class KDTree {
 private:
-    std::unique_ptr<KDNode> root;
+    std::shared_ptr<KDNode> root;
 
-    std::unique_ptr<KDNode> insert(std::unique_ptr<KDNode> node, const Vector3& point, float t, int depth) {
+    std::shared_ptr<KDNode> insert(std::shared_ptr<KDNode> node, const Vector3& point, float t, int depth) {
         if (!node) {
-            return std::make_unique<KDNode>(point, t, depth % 3);
+            return std::make_shared<KDNode>(point, t, depth % 3);
         }
 
         int axis = depth % 3;

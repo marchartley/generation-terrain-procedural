@@ -17,31 +17,25 @@ void TerrainSavingInterface::replay(nlohmann::json action)
     // Nothing to replay
 }
 
-QLayout *TerrainSavingInterface::createGUI()
+InterfaceUI* TerrainSavingInterface::createGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout();
-    QLabel* selectedFilenameLabel = new QLabel((this->mainFilename == "" ? "No file selected" : QString::fromStdString(this->mainFilename).split("/").back().split("\\").back()));
-    QPushButton* fileSelectionButton = new QPushButton("...");
+    auto UI = new InterfaceUI();
 
-    QCheckBox* saveHeightmapCheck = new QCheckBox("Heightmap");
-    QCheckBox* saveVoxelsCheck = new QCheckBox("Voxels");
-    QCheckBox* saveLayersCheck = new QCheckBox("Layers");
+    auto selectedFilenameLabel = new LabelElement((this->mainFilename == "" ? "No file selected" : QString::fromStdString(this->mainFilename).split("/").back().split("\\").back().toStdString()));
+    auto fileSelectionButton = new ButtonElement("...", [&]() {
+        std::string path = "saved_maps/Geometry/";
+        QString fileSelection = QFileDialog::getSaveFileName(this, "Saving file", QString::fromStdString(path), "*.json", nullptr, QFileDialog::DontConfirmOverwrite);
+        if (!fileSelection.isEmpty()) {
+            this->mainFilename = fileSelection.toStdString();
+            selectedFilenameLabel->setText(split(split(this->mainFilename, "/").back(), "\\").back());
+        }
+    });
 
-    QPushButton* saveButton = new QPushButton("Save");
+    auto saveHeightmapCheck = new CheckboxElement("Heightmap", saveHeightmap);
+    auto saveVoxelsCheck = new CheckboxElement("Voxels", saveVoxels);
+    auto saveLayersCheck = new CheckboxElement("Layers", saveLayers);
 
-    layout->addWidget(createHorizontalGroup({selectedFilenameLabel, fileSelectionButton}));
-    layout->addWidget(createVerticalGroup({
-                                              saveHeightmapCheck,
-                                              saveVoxelsCheck,
-                                              saveLayersCheck
-                                          }));
-    layout->addWidget(saveButton);
-
-    QObject::connect(saveHeightmapCheck, &QCheckBox::toggled, this, [this](bool checked) { this->saveHeightmap = checked; });
-    QObject::connect(saveVoxelsCheck, &QCheckBox::toggled, this, [this](bool checked) { this->saveVoxels = checked; });
-    QObject::connect(saveLayersCheck, &QCheckBox::toggled, this, [this](bool checked) { this->saveLayers = checked; });
-
-    QObject::connect(saveButton, &QPushButton::pressed, this, [this]() {
+    auto saveButton = new ButtonElement("Save", [this]() {
         time_t now = std::time(0);
         tm *gmtm = std::gmtime(&now);
         char s_time[80];
@@ -49,20 +43,16 @@ QLayout *TerrainSavingInterface::createGUI()
         this->saveTerrainGeometry(this->mainFilename + "_" + std::string(s_time));
     });
 
-    QObject::connect(fileSelectionButton, &QPushButton::pressed, this, [this, selectedFilenameLabel]() {
-        std::string path = "saved_maps/Geometry/";
-        QString fileSelection = QFileDialog::getSaveFileName(this, "Saving file", QString::fromStdString(path), "*.json", nullptr, QFileDialog::DontConfirmOverwrite);
-        if (!fileSelection.isEmpty()) {
-            this->mainFilename = fileSelection.toStdString();
-            selectedFilenameLabel->setText(QString::fromStdString(this->mainFilename).split("/").back().split("\\").back());
-        }
+
+    UI->add(std::vector<UIElement*>{
+        createHorizontalGroupUI({selectedFilenameLabel, fileSelectionButton}),
+        saveHeightmapCheck,
+        saveVoxelsCheck,
+        saveLayersCheck,
+        saveButton
     });
 
-    saveHeightmapCheck->setChecked(this->saveHeightmap);
-    saveVoxelsCheck->setChecked(this->saveVoxels);
-    saveLayersCheck->setChecked(this->saveLayers);
-
-    return layout;
+    return UI;
 }
 
 std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(const std::string& _filename)

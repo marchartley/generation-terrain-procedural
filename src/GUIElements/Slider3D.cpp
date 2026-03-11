@@ -89,7 +89,7 @@ void Slider3D::init(const Vector3& positionMin, const Vector3& positionMax, floa
     this->maxPos = positionMax;
     this->minValue = minValue;
     this->maxValue = maxValue;
-    this->sliderControlPoint = std::make_unique<ControlPoint>(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
+    this->sliderControlPoint = std::make_shared<ControlPoint>(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
     this->constraint = new SliderConstraint(positionMin, positionMax);
     this->sliderControlPoint->custom_constraint = constraint;
     this->sliderMesh.fromArray({minPos, maxPos});

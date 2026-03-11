@@ -21,7 +21,7 @@ public:
 
     GridV3 randomIslandGenerator();
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     std::map<std::string, QProcess*> ganProcesses;
     std::map<std::string, std::string> ganModelNames;

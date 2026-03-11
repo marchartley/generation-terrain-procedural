@@ -163,48 +163,33 @@ void MeshInstanceAmplificationInterface::reloadShaders()
     }, verbose);
 }
 
-QLayout* MeshInstanceAmplificationInterface::createGUI()
+InterfaceUI* MeshInstanceAmplificationInterface::createGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout();
-
-    QCheckBox* displayCoralsCheckbox = new QCheckBox("Display corals");
-    QCheckBox* displayRocksCheckbox = new QCheckBox("Display rocks");
+    auto UI = new InterfaceUI();
 
     for (auto& meshType : meshesOptions) {
-        CheckboxElement* displayElement = new CheckboxElement("Display " + meshType.name);
-        displayElement->setChecked(meshType.displayed);
+        auto displayElement = new CheckboxElement("Display " + meshType.name, meshType.displayed);
         displayElement->setOnChecked([&](bool check) { this->setDisplayingType(meshType, check); });
-        layout->addWidget(displayElement->get());
+        UI->add(displayElement);
     }
 
-//    layout->addWidget(displayCoralsCheckbox);
-//    layout->addWidget(displayRocksCheckbox);
-
-    ButtonElement* exportButton = new ButtonElement("Export", [&]() {
+    auto exportButton = new ButtonElement("Export", [&]() {
         QString q_folder = QFileDialog::getExistingDirectory(this, QString("Save current mesh"), QString("EnvObjects/"));
         if (q_folder.isEmpty()) return;
 
         std::string folder = q_folder.toStdString();
         this->exportJSONFile(folder + "/terrain_saved.json");
         heightmap->saveHeightmap(folder + "/heightmap.png", Vector3::invalid, true);
-        // QString q_filename = QFileDialog::getSaveFileName(this, QString("Save current meshes as JSON"), QString("EnvObjects/saved"));
-        // if (q_filename.isEmpty()) return;
-
-        // this->exportJSONFile(q_filename.toStdString());
     });
-    layout->addWidget(exportButton->get());
 
-    ButtonElement* recomputePositionsButton = new ButtonElement("Recompute positions");
-    recomputePositionsButton->setOnClick([&]() { this->afterTerrainUpdated(); }); // Should be modified in the future
-    layout->addWidget(recomputePositionsButton->get());
+    auto recomputePositionsButton = new ButtonElement("Recompute positions", [&]() { this->afterTerrainUpdated(); });
 
-    displayCoralsCheckbox->setChecked(this->displayCorals);
-    displayRocksCheckbox->setChecked(this->displayRocks);
+    UI->add(std::vector<UIElement*>{
+        exportButton,
+        recomputePositionsButton
+    });
 
-    QObject::connect(displayCoralsCheckbox, &QCheckBox::toggled, this, &MeshInstanceAmplificationInterface::setCoralsDisplayed);
-    QObject::connect(displayRocksCheckbox, &QCheckBox::toggled, this, &MeshInstanceAmplificationInterface::setRocksDisplayed);
-
-    return layout;
+    return UI;
 }
 
 std::vector< AABBox > MeshInstanceAmplificationInterface::getAvailablePositionsForMaterial(TerrainTypes target)

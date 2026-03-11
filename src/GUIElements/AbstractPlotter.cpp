@@ -12,21 +12,20 @@
 std::map<std::string, AbstractPlotter*> AbstractPlotter::instances = std::map<std::string, AbstractPlotter*>();
 std::string AbstractPlotter::defaultName = "default";
 
-AbstractPlotter::AbstractPlotter(const std::string& name, const std::string& title, QWidget *parent) : AbstractPlotter(name, new ChartView(new Chart()), title, parent)
+AbstractPlotter::AbstractPlotter(const std::string &name, QWidget *parent)
+    : AbstractPlotter(name, name, parent)
 {
 }
 
-AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, const std::string &title, QWidget *parent) : QDialog(parent), chartView(chartView), name(name)
+AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &title, QWidget *parent) : QDialog(parent), name(name)
 {
-    if (this->chartView == nullptr)
-        this->chartView = new ChartView(new Chart());
+    this->chartView = new ChartView();
 
-    this->dataModel = new PlotModel();
+    this->dataModel = std::make_shared<PlotModel>();
 
     auto layout = new InterfaceUI(new QVBoxLayout());
     auto mainLayout = new InterfaceUI(new QHBoxLayout());
 
-    //    auto right = new QVBoxLayout();
     mainInterface = new InterfaceUI(new QVBoxLayout(), "Main");
     mainInterface->add(new UIElement(this->chartView));
     toolsInterface = new InterfaceUI(new QVBoxLayout(), "Tools");
@@ -44,8 +43,6 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
     //    this->chartView->chart()->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     //    this->mouseInfoLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
-    //    this->setWindowModality(Qt::WindowModality::NonModal);
-    //    this->setModal(false);
 
     layout->add(std::vector<UIElement*>({mainLayout, infosInterface}));
 
@@ -100,7 +97,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
     });
 }
 
-AbstractPlotter* AbstractPlotter::addPlot(std::vector<float> data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(std::vector<float> data, std::string name, QColor color)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
@@ -109,18 +106,18 @@ AbstractPlotter* AbstractPlotter::addPlot(std::vector<float> data, std::string n
     return this->addPlot(_data, name, color);
 }
 
-AbstractPlotter* AbstractPlotter::addPlot(std::vector<Vector3> data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(std::vector<Vector3> data, std::string name, QColor color)
 {
     this->dataModel->addPlot(data, name, color);
-    return this;
+    return *this;
 }
 
-AbstractPlotter *AbstractPlotter::addPlot(const BSpline &data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(const BSpline &data, std::string name, QColor color)
 {
     return this->addPlot(data.points, name, color);
 }
 
-AbstractPlotter* AbstractPlotter::addScatter(std::vector<float> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+AbstractPlotter& AbstractPlotter::addScatter(std::vector<float> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
@@ -129,70 +126,70 @@ AbstractPlotter* AbstractPlotter::addScatter(std::vector<float> data, std::strin
     return this->addScatter(_data, name, labels, colors);
 }
 
-AbstractPlotter* AbstractPlotter::addScatter(std::vector<Vector3> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+AbstractPlotter& AbstractPlotter::addScatter(std::vector<Vector3> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
 {
     this->dataModel->addScatter(data, name, labels, colors);
-    return this;
+    return *this;
 }
 
-AbstractPlotter* AbstractPlotter::addImage(const GridV3& image)
+AbstractPlotter& AbstractPlotter::addImage(const GridV3& image)
 {
     this->dataModel->addImage(image);
-    return this;
+    return *this;
 }
 
-AbstractPlotter* AbstractPlotter::addImage(const GridF &image)
+AbstractPlotter& AbstractPlotter::addImage(const GridF &image)
 {
     this->dataModel->addImage(image);
-    return this;
+    return *this;
 }
 
-AbstractPlotter* AbstractPlotter::addImage(const Matrix3<double> &image)
+AbstractPlotter& AbstractPlotter::addImage(const Matrix3<double> &image)
 {
     return this->addImage((GridF)image);
 }
 
-AbstractPlotter* AbstractPlotter::addImage(const GridI &image)
+AbstractPlotter& AbstractPlotter::addImage(const GridI &image)
 {
     return this->addImage((GridF)image);
 }
 
-AbstractPlotter *AbstractPlotter::addVectorField(const GridV3 &field)
+AbstractPlotter& AbstractPlotter::addVectorField(const GridV3 &field)
 {
     this->dataModel->addVectorField(field);
-    return this;
+    return *this;
 }
 
-AbstractPlotter* AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha, const std::string &overlayName, int layer)
+AbstractPlotter& AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha, const std::string &overlayName, int layer)
 {
     this->chartView->setOverlay(colors, overlayName, alpha, layer);
-    return this;
+    return *this;
 }
 
-AbstractPlotter *AbstractPlotter::setOverlay(const std::pair<GridV3, GridF> &colorAndAlpha, const std::string &overlayName, int layer)
+AbstractPlotter& AbstractPlotter::setOverlay(const std::pair<GridV3, GridF> &colorAndAlpha, const std::string &overlayName, int layer)
 {
     return this->setOverlay(colorAndAlpha.first, colorAndAlpha.second, overlayName, layer);
 }
 
-AbstractPlotter* AbstractPlotter::setOverlay(const GridF& colors, const GridF &alpha, const std::string &overlayName, int layer)
+AbstractPlotter& AbstractPlotter::setOverlay(const GridF& colors, const GridF &alpha, const std::string &overlayName, int layer)
 {
     return this->setOverlay(this->dataModel->imageData.prepareImageForDisplay(Image(colors)), alpha, overlayName, layer);
 }
 
-AbstractPlotter *AbstractPlotter::setOverlay(const std::pair<GridF, GridF> &colorAndAlpha, const std::string &overlayName, int layer)
+AbstractPlotter& AbstractPlotter::setOverlay(const std::pair<GridF, GridF> &colorAndAlpha, const std::string &overlayName, int layer)
 {
     return this->setOverlay(colorAndAlpha.first, colorAndAlpha.second, overlayName, layer);
 }
 
-AbstractPlotter *AbstractPlotter::showOverlay(const std::string &overlayName)
+AbstractPlotter& AbstractPlotter::showOverlay(const std::string &overlayName)
 {
     this->chartView->overlayDisplayed[overlayName] = true;
-    return this;
+    return *this;
 }
-AbstractPlotter *AbstractPlotter::hideOverlay(const std::string &overlayName)
+AbstractPlotter& AbstractPlotter::hideOverlay(const std::string &overlayName)
 {
     this->chartView->overlayDisplayed[overlayName] = false;
-    return this;
+    return *this;
 }
 
 GridV3 AbstractPlotter::computeStreamLinesRendering(const GridV3 &field, Vector3 imgSize) const
@@ -227,7 +224,7 @@ GridV3 AbstractPlotter::computeStreamLinesRendering(const GridV3 &field, Vector3
     return img;
 }
 
-AbstractPlotter* AbstractPlotter::addStreamLines(const GridV3 &field, Vector3 imgSize, float opacity)
+AbstractPlotter& AbstractPlotter::addStreamLines(const GridV3 &field, Vector3 imgSize, float opacity)
 {
     GridV3 img = computeStreamLinesRendering(field, imgSize);
     if (this->hasImage()) {
@@ -236,21 +233,19 @@ AbstractPlotter* AbstractPlotter::addStreamLines(const GridV3 &field, Vector3 im
     return this->addImage(img);
 }
 
-AbstractPlotter* AbstractPlotter::draw()
+void AbstractPlotter::draw()
 {
     this->chartView->setPlotModel(this->dataModel);
-    return this;
 }
 
-AbstractPlotter* AbstractPlotter::show()
+void AbstractPlotter::show()
 {
     this->updateUI();
     this->draw();
     QDialog::show();
-    return this;
 }
 
-AbstractPlotter* AbstractPlotter::updateUI(bool forceUpdate)
+AbstractPlotter& AbstractPlotter::updateUI(bool forceUpdate)
 {
     if (forceUpdate || !this->isVisible()) {
         blockSignals(true);
@@ -261,31 +256,31 @@ AbstractPlotter* AbstractPlotter::updateUI(bool forceUpdate)
         this->updateInfosInterface();
         blockSignals(false);
     }
-    return this;
+    return *this;
 }
 
-AbstractPlotter *AbstractPlotter::updateToolsInterface()
+AbstractPlotter& AbstractPlotter::updateToolsInterface()
 {
     this->toolsInterface->update();
-    return this;
+    return *this;
 }
 
-AbstractPlotter *AbstractPlotter::updateViewOptionsInterface()
+AbstractPlotter& AbstractPlotter::updateViewOptionsInterface()
 {
     this->viewOptionsInterface->update();
-    return this;
+    return *this;
 }
 
-AbstractPlotter *AbstractPlotter::updateSaveCopyInterface()
+AbstractPlotter& AbstractPlotter::updateSaveCopyInterface()
 {
     this->saveCopyInterface->update();
-    return this;
+    return *this;
 }
 
-AbstractPlotter *AbstractPlotter::updateInfosInterface()
+AbstractPlotter& AbstractPlotter::updateInfosInterface()
 {
     this->infosInterface->update();
-    return this;
+    return *this;
 }
 
 int AbstractPlotter::exec()
@@ -296,21 +291,21 @@ int AbstractPlotter::exec()
 
 }
 
-AbstractPlotter* AbstractPlotter::saveFig(const std::string& filename)
+AbstractPlotter& AbstractPlotter::saveFig(const std::string& filename)
 {
     QPixmap p = this->chartView->grab();
     if (this->hasImage())
         p = QPixmap::fromImage(this->dataModel->imageData.computeDisplayedImage());
     p.save(QString::fromStdString(filename), "PNG");
     std::cout << "Image " << filename << " saved." << std::endl;
-    return this;
+    return *this;
 }
 
-AbstractPlotter* AbstractPlotter::copyToClipboard()
+AbstractPlotter& AbstractPlotter::copyToClipboard()
 {
     QPixmap p = this->chartView->grab();
     QApplication::clipboard()->setPixmap(p, QClipboard::Clipboard);
-    return this;
+    return *this;
 }
 
 void AbstractPlotter::resizeEvent(QResizeEvent *event)
@@ -345,25 +340,24 @@ QTimer *AbstractPlotter::animate(std::function<void ()> callback, int interval_m
 }
 
 /*
-AbstractPlotter* AbstractPlotter::reset()
+AbstractPlotter& AbstractPlotter::reset()
 {
     this->dataModel->reset();
     this->chartView->setPlotModel(this->dataModel);
-    return this;
+    return *this;
 }
 */
 
-AbstractPlotter* AbstractPlotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
+void AbstractPlotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
 {
     if (!this->hasImage() || relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
-        return this;
+        return;
     std::ostringstream oss;
     Vector3 size = this->dataModel->getImage().getDimensions();
     Vector3 position = relativeMousePos * size;
     Vector3 value = this->dataModel->getImage()(position);
     oss << "Mouse pos: " << int(position.x()) << ", " << int(position.y()) << " -- Value : (" << value.x() << ", " << value.y() << ", " << value.z() << ") [norm: " << value.norm() << "]";
     this->mouseInfoLabel->setText(QString::fromStdString(oss.str()));
-    return this;
 }
 
 

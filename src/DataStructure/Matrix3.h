@@ -103,15 +103,14 @@ public:
     int rows() const;
     int cols() const;
 
-    int getIndex(size_t x, size_t y, size_t z) const;
-    // int getIndex(const Vector3& coord) const;
-    int getIndex(const Vector3i& coord) const;
-    std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
-    Vector3 getCoordAsVector3(size_t index) const;
-    Vector3i getCoordAsVector3i(size_t index) const;
-    bool checkCoord(int x, int y, int z = 0) const;
-    bool checkCoord(const Vector3i& pos) const;
-    bool checkIndex(size_t i) const;
+    inline size_t getIndex(size_t x, size_t y, size_t z) const noexcept;
+    inline size_t getIndex(const Vector3i& coord) const noexcept;
+    inline std::tuple<size_t, size_t, size_t> getCoord(size_t index) const noexcept;
+    inline Vector3 getCoordAsVector3(size_t index) const;
+    inline Vector3i getCoordAsVector3i(size_t index) const;
+    inline bool checkCoord(int x, int y, int z = 0) const;
+    inline bool checkCoord(const Vector3i& pos) const;
+    inline bool checkIndex(size_t i) const;
 
     Matrix3<T> col(int colIndex, int depthIndex = 0);
     Matrix3<T> row(int rowIndex, int depthIndex = 0);
@@ -148,7 +147,7 @@ public:
     // Matrix3<T> subset(const Vector3& start, const Vector3& end) const;
     Matrix3<T> subset(const Vector3i& start, const Vector3i& end) const;
     // Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, const Vector3& upperLeftFrontCorner = Vector3());
-    Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, const Vector3i& upperLeftFrontCorner = Vector3i());
+    inline Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, const Vector3i& upperLeftFrontCorner = Vector3i());
     Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(const Matrix3<T>& matrixToAdd, const Vector3& upperLeftFrontCorner, bool useInterpolation = false);
     Matrix3<T>& add(const Matrix3<T>& matrixToAdd, const Vector3i& upperLeftFrontCorner);
@@ -157,7 +156,8 @@ public:
 
     Matrix3<float> toDistanceMap(bool ignoreZlayer = false, bool considerBorders = true);
     Matrix3<std::complex<float>> FFT() const;
-    Matrix3<std::complex<float>> iFFT() const;
+    Matrix3<std::complex<float>> iFFT(const Vector3i& finalDimensions = Vector3i::invalid) const;
+    Matrix3<std::complex<float>> iFFT(size_t cropX, size_t cropY, size_t cropZ) const;
 
     Matrix3<T> flip(bool onX, bool onY = false, bool onZ = false);
 
@@ -171,10 +171,10 @@ public:
     Matrix3<T>& max(const T& maxVal);
 
     // Matrix3<T>& max(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
-    Matrix3<T>& max(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner);
+    inline Matrix3<T>& max(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner);
     Matrix3<T>& max(const Matrix3<T>& otherMatrix, int left, int up, int front);
     // Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
-    Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner);
+    inline Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner);
     Matrix3<T>& min(const Matrix3<T>& otherMatrix, int left, int up, int front);
 
     static Matrix3<T> max(const Matrix3<T>& m1, const Matrix3<T>& m2);
@@ -194,14 +194,14 @@ public:
     Matrix3<T> transposeXY();
 
     Matrix3<Vector3> gradient() const;
-    Matrix3<Vector3> grad() const;
+    inline Matrix3<Vector3> grad() const;
     Matrix3<float> divergence() const;
-    Matrix3<float> div() const;
+    inline Matrix3<float> div() const;
     Matrix3<T> curl(float radius = 1.f) const;
-    Matrix3<T> rot() const;
+    inline Matrix3<T> rot() const;
     Matrix3<T> laplacian() const;
     Vector3 gradient(const Vector3& position) const;
-    Vector3 gradient(float posX, float posY, float posZ = 0) const;
+    inline Vector3 gradient(float posX, float posY, float posZ = 0) const;
 
     Matrix3<int> skeletonize() const;
     std::vector<BSpline> skeletonizeToBSplines() const;
@@ -234,7 +234,7 @@ public:
 
     Matrix3<T>& insertRow(size_t indexToInsert, int affectedDimension, T newData = T());
 
-    void clear() { this->sizeX = 0; this->sizeY = 0; this->sizeZ = 0; return this->data.clear(); }
+    void clear() { this->sizeX = 0; this->sizeY = 0; this->sizeZ = 0; this->_updateStrides(); return this->data.clear(); }
     void reset(T newVal = T()) { for (auto& val : data) val = newVal; }
 
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
@@ -299,32 +299,45 @@ public:
     bool stillRaiseErrorForY = false;
     bool stillRaiseErrorForZ = false;
 
-    auto begin() const { return data.begin(); }
-    auto end() const { return data.end(); }
-    auto begin() { return data.begin(); }
-    auto end() { return data.end(); }
-    std::size_t size() const { return end() - begin(); }
-    bool empty() const { return begin() == end(); }
+    inline auto begin() const noexcept{ return data.begin(); }
+    inline auto end() const noexcept{ return data.end(); }
+    inline auto begin() { return data.begin(); }
+    inline auto end() { return data.end(); }
+    inline std::size_t size() const noexcept{ return end() - begin(); }
+    inline bool empty() const noexcept{ return begin() == end(); }
 
-    Vector3 getMirrorPosition(const Vector3& pos) const;
-    Vector3i getMirrorPosition(const Vector3i& pos) const;
-    Vector3 getWrappedPosition(const Vector3& pos) const;
-    Vector3i getWrappedPosition(const Vector3i& pos) const;
-    Vector3 getRepeatPosition(const Vector3& pos) const;
-    Vector3i getRepeatPosition(const Vector3i& pos) const;
+    inline Vector3 getMirrorPosition(const Vector3& pos) const noexcept;
+    inline Vector3i getMirrorPosition(const Vector3i& pos) const noexcept;
+    inline size_t getMirrorIndex(int x, int y, int z = 0) const noexcept;
+    inline size_t getMirrorIndex(const Vector3i& p) const noexcept { return getMirrorIndex(p.x(), p.y(), p.z()); }
+    inline Vector3 getWrappedPosition(const Vector3& pos) const noexcept;
+    inline Vector3i getWrappedPosition(const Vector3i& pos) const noexcept;
+    inline size_t getWrappedIndex(int x, int y, int z = 0) const noexcept;
+    inline size_t getWrappedIndex(const Vector3i& p) const noexcept { return getWrappedIndex(p.x(), p.y(), p.z()); }
+    inline Vector3 getRepeatPosition(const Vector3& pos) const noexcept;
+    inline Vector3i getRepeatPosition(const Vector3i& pos) const noexcept;
+    inline size_t getRepeatIndex(int x, int y, int z = 0) const noexcept;
+    inline size_t getRepeatIndex(const Vector3i& p) const noexcept { return getRepeatIndex(p.x(), p.y(), p.z()); }
 
     Matrix3& init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
     std::string displayValues() const;
     std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5, std::string charForError = "X", std::string separator = "") const;
+
+    void _updateStrides() {
+        _strideY = sizeX;
+        _strideZ = _strideY * sizeY;
+    }
+// protected:
+    std::size_t _strideY = 0, _strideZ = 0;
 };
 
 template <class T> template <class Func>
 void Matrix3<T>::iterate(Func function) const
 {
-    for (size_t x = 0; x < this->sizeX; x++) {
+    for (size_t z = 0; z < this->sizeZ; z++) {
         for (size_t y = 0; y < this->sizeY; y++) {
-            for (size_t z = 0; z < this->sizeZ; z++) {
+                for (size_t x = 0; x < this->sizeX; x++) {
                 if constexpr (std::is_invocable_v<Func, Vector3i>) {
                     Vector3i pos(x, y, z);
                     function(pos);
@@ -357,9 +370,9 @@ void Matrix3<T>::iterate(Func function) const
 template <class T> template <class Func>
 void Matrix3<T>::iterateReverse(Func function) const
 {
-    for (int x = this->sizeX - 1; x >= 0; x--) {
+    for (int z = this->sizeZ - 1; z >= 0; z--) {
         for (int y = this->sizeY - 1; y >= 0; y--) {
-            for (int z = this->sizeZ - 1; z >= 0; z--) {
+                for (int x = this->sizeX - 1; x >= 0; x--) {
                 if constexpr (std::is_invocable_v<Func, Vector3i>) {
                     Vector3i pos(x, y, z);
                     function(pos);
@@ -393,20 +406,27 @@ void Matrix3<T>::iterateReverse(Func function) const
 template <class T> template <class Func>
 void Matrix3<T>::iterateParallel(Func function) const
 {
-#pragma omp parallel for collapse(3) schedule(dynamic)
-    for (size_t x = 0; x < this->sizeX; x++) {
-        for (size_t y = 0; y < this->sizeY; y++) {
-            for (size_t z = 0; z < this->sizeZ; z++) {
-                if constexpr (std::is_invocable_v<Func, Vector3i>) {
-                    Vector3i pos(x, y, z);
-                    function(pos);
-                } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
-                    Vector3i pos(x, y, z);
-                    function(pos.x(), pos.y(), pos.z());
-                } else if constexpr (std::is_invocable_v<Func, int>) {
-                    function(this->getIndex(x, y, z));
-                } else {
-                    function();
+    if constexpr (std::is_invocable_v<Func, int>) {
+        #pragma omp parallel for
+        for (size_t i = 0; i < this->size(); i++) {
+            function(i);
+        }
+    } else {
+        #pragma omp parallel for collapse(3) schedule(dynamic)
+        for (size_t z = 0; z < this->sizeZ; z++) {
+            for (size_t y = 0; y < this->sizeY; y++) {
+                for (size_t x = 0; x < this->sizeX; x++) {
+                    if constexpr (std::is_invocable_v<Func, Vector3i>) {
+                        Vector3i pos(x, y, z);
+                        function(pos);
+                    } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
+                        Vector3i pos(x, y, z);
+                        function(pos.x(), pos.y(), pos.z());
+                    } else /*if constexpr (std::is_invocable_v<Func, int>) {
+                        function(this->getIndex(x, y, z));
+                    } else*/ {
+                        function();
+                    }
                 }
             }
         }
@@ -530,6 +550,7 @@ Matrix3<T>::Matrix3(size_t sizeX, size_t sizeY, size_t sizeZ, T initValue)
     this->sizeX = sizeX;
     this->sizeY = sizeY;
     this->sizeZ = sizeZ;
+    _updateStrides();
 }
 template <class T>
 Matrix3<T>::Matrix3(const std::vector<T>& data, size_t sizeX, size_t sizeY, int sizeZ)
@@ -563,30 +584,34 @@ Matrix3<T>::Matrix3(const std::vector<std::vector<std::vector<T> > > &data)
 }
 
 template <class T>
-bool Matrix3<T>::checkCoord(int x, int y, int z) const
+inline bool Matrix3<T>::checkCoord(int x, int y, int z) const
 {
     return ((0 <= x && static_cast<std::size_t>(x) < sizeX) && (0 <= y && static_cast<std::size_t>(y) < sizeY) && (0 <= z && static_cast<std::size_t>(z) < sizeZ));
 }
 
 template <class T>
-bool Matrix3<T>::checkCoord(const Vector3i& pos) const
+inline bool Matrix3<T>::checkCoord(const Vector3i& pos) const
 {
     // if (pos.minComp() < 0 || pos.x() > sizeX-1 || pos.y() > sizeY-1 || pos.z() > sizeZ-1) return false;
     return checkCoord(pos.x(), pos.y(), pos.z());
 }
 
 template <class T>
-bool Matrix3<T>::checkIndex(size_t i) const
+inline bool Matrix3<T>::checkIndex(size_t i) const
 {
-    return (0 <= i && i < sizeX * sizeY * sizeZ);
+    return (0 <= i && i < data.size());
 }
 
 template <class T>
 Matrix3<T> Matrix3<T>::col(int colIndex, int depthIndex)
 {
     Matrix3<T> res(1, this->sizeY, 1);
+    auto dst = res.data.data();
+    const auto src = data.data();
+
+    #pragma omp parallel for
     for (size_t y = 0; y < this->sizeY; y++) {
-        res(0, y, 0) = this->unsafe(colIndex, y, depthIndex);
+        dst[y] = src[getIndex(colIndex, y, depthIndex)];
     }
     return res;
 }
@@ -595,8 +620,11 @@ template <class T>
 Matrix3<T> Matrix3<T>::row(int rowIndex, int depthIndex)
 {
     Matrix3<T> res(this->sizeX, 1, 1);
+    auto dst = res.data.data();
+    const auto src = data.data();
+    #pragma omp parallel for
     for (size_t x = 0; x < this->sizeX; x++) {
-        res(x, 0, 0) = this->unsafe(x, rowIndex, depthIndex);
+        dst[x] = src[getIndex(x, rowIndex, depthIndex)];
     }
     return res;
 }
@@ -607,35 +635,37 @@ T Matrix3<T>::interpolate(const Vector3& coord, RETURN_VALUE_ON_OUTSIDE padding)
     Vector3i round = coord.floor();
     Vector3 cellOffset = coord - round;
 
-    using PosFn = Vector3i (Matrix3::*)(const Vector3i&) const;
+    using PosFn = size_t (Matrix3::*)(const Vector3i&) const;
     PosFn pos_fn = nullptr;
     switch (padding) {
     case RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE:
-        pos_fn = &Matrix3::getMirrorPosition; break;
+        pos_fn = &Matrix3::getMirrorIndex; break;
     case RETURN_VALUE_ON_OUTSIDE::WRAPPED_VALUE:
-        pos_fn = &Matrix3::getWrappedPosition; break;
+        pos_fn = &Matrix3::getWrappedIndex; break;
     case RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE:
-        pos_fn = &Matrix3::getRepeatPosition; break;
+        pos_fn = &Matrix3::getRepeatIndex; break;
     default:
         break;
     }
 
-    auto mapPos = [&](const Vector3i& p) -> Vector3i {
-        return pos_fn ? (this->*pos_fn)(p) : p;
+    auto mapPos = [&](const Vector3i& p) -> size_t {
+        return pos_fn ? (this->*pos_fn)(p) : getIndex(p);
     };
+
+    const auto src = data.data();
 
     // bool previousErrorConfig = this->raiseErrorOnBadCoord;
     // RETURN_VALUE_ON_OUTSIDE previousOutsideConfig = this->returned_value_on_outside;
 //    this->raiseErrorOnBadCoord = false;
 //    this->returned_value_on_outside = padding;
-    T f000 = this->unsafe(mapPos(round + Vector3i(0, 0, 0)));
-    T f100 = this->unsafe(mapPos(round + Vector3i(1, 0, 0)));
-    T f010 = this->unsafe(mapPos(round + Vector3i(0, 1, 0)));
-    T f110 = this->unsafe(mapPos(round + Vector3i(1, 1, 0)));
-    T f001 = this->unsafe(mapPos(round + Vector3i(0, 0, 1)));
-    T f101 = this->unsafe(mapPos(round + Vector3i(1, 0, 1)));
-    T f011 = this->unsafe(mapPos(round + Vector3i(0, 1, 1)));
-    T f111 = this->unsafe(mapPos(round + Vector3i(1, 1, 1)));
+    T f000 = src[mapPos(round + Vector3i(0, 0, 0))];
+    T f100 = src[mapPos(round + Vector3i(1, 0, 0))];
+    T f010 = src[mapPos(round + Vector3i(0, 1, 0))];
+    T f110 = src[mapPos(round + Vector3i(1, 1, 0))];
+    T f001 = src[mapPos(round + Vector3i(0, 0, 1))];
+    T f101 = src[mapPos(round + Vector3i(1, 0, 1))];
+    T f011 = src[mapPos(round + Vector3i(0, 1, 1))];
+    T f111 = src[mapPos(round + Vector3i(1, 1, 1))];
     // Interpolation
     T interpol = ((
                               f000 * (1-cellOffset.x()) + f100 * cellOffset.x()) * (1-cellOffset.y()) + (
@@ -882,43 +912,41 @@ T& Matrix3<T>::operator()(const Vector3i& pos) {
 }
 
 template <class T>
-int Matrix3<T>::getIndex(size_t x, size_t y, size_t z) const
+inline size_t Matrix3<T>::getIndex(size_t x, size_t y, size_t z) const noexcept
 {
-    return z * (this->sizeX * this->sizeY) + y * (this->sizeX) + x;
+    return z * this->_strideZ + y * this->_strideY + x;
 }
-/*template <class T>
-int Matrix3<T>::getIndex(const Vector3& coord) const
-{
-    return this->getIndex(int(coord.x()), int(coord.y()), int(coord.z()));
-}*/
 template <class T>
-int Matrix3<T>::getIndex(const Vector3i& coord) const
+inline size_t Matrix3<T>::getIndex(const Vector3i& coord) const noexcept
 {
     return this->getIndex(coord.x(), coord.y(), coord.z());
 }
 
 template <class T>
-std::tuple<size_t, size_t, size_t> Matrix3<T>::getCoord(size_t index) const
+inline std::tuple<size_t, size_t, size_t> Matrix3<T>::getCoord(size_t index) const noexcept
 {
-    int z = index / (this->sizeX * this->sizeY);
-    int y = (index % (this->sizeX * this->sizeY)) / this->sizeX;
-    int x = index % this->sizeX;
-    return std::make_tuple(x, y, z);
+    const size_t z = index / _strideZ;
+    index -= z * _strideZ;
+    const size_t y = index / _strideY;
+    const size_t x = index - y * _strideY;
+    return {x, y, z};
 }
 template <class T>
-Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
+inline Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
 {
-    int z = index / (this->sizeX * this->sizeY);
-    int y = (index % (this->sizeX * this->sizeY)) / this->sizeX;
-    int x = index % this->sizeX;
+    const size_t z = index / _strideZ;
+    index -= z * _strideZ;
+    const size_t y = index / _strideY;
+    const size_t x = index - y * _strideY;
     return Vector3(x, y, z);
 }
 template <class T>
-Vector3i Matrix3<T>::getCoordAsVector3i(size_t index) const
+inline Vector3i Matrix3<T>::getCoordAsVector3i(size_t index) const
 {
-    int z = index / (this->sizeX * this->sizeY);
-    int y = (index % (this->sizeX * this->sizeY)) / this->sizeX;
-    int x = index % this->sizeX;
+    const size_t z = index / _strideZ;
+    index -= z * _strideZ;
+    const size_t y = index / _strideY;
+    const size_t x = index - y * _strideY;
     return Vector3i(x, y, z);
 }
 
@@ -960,16 +988,16 @@ Matrix3<T>& Matrix3<T>::addValueAt(T value, float x, float y, float z) {
 template <class T>
 Vector3 Matrix3<T>::gradient(const Vector3& position) const
 {
-    Vector3 p = position.floor();
+    Vector3i p = position.floor();
 
-    auto mirror = [&](const Vector3& q) -> Vector3 {
+    auto mirror = [&](const Vector3i& q) -> Vector3i {
         return this->checkCoord(q) ? q : this->getMirrorPosition(q);
     };
 
-    const Vector3 p0 = mirror(p);
-    const Vector3 px = mirror(p + Vector3(1, 0, 0));
-    const Vector3 py = mirror(p + Vector3(0, 1, 0));
-    const Vector3 pz = mirror(p + Vector3(0, 0, 1));
+    const Vector3i p0 = mirror(p);
+    const Vector3i px = mirror(p + Vector3i(1, 0, 0));
+    const Vector3i py = mirror(p + Vector3i(0, 1, 0));
+    const Vector3i pz = mirror(p + Vector3i(0, 0, 1));
 
     const T f0 = this->unsafe(p0);
     return Vector3(
@@ -1182,6 +1210,7 @@ Matrix3<T>& Matrix3<T>::init(const std::vector<T>& data, size_t sizeX, size_t si
     this->sizeX = sizeX;
     this->sizeY = sizeY;
     this->sizeZ = sizeZ;
+    _updateStrides();
     // std::cout << "Copied " << this->data.size() << std::endl;
     return *this;
 }
@@ -1268,10 +1297,11 @@ Matrix3<T>& Matrix3<T>::normalize() {
         if (min > val) min = val;
         if (max < val) max = val;
     }
+    T diff = max - min;
     if (min != max) {
         for (T& val : data)
         {
-            val = (val - min)/ (max - min);
+            val = (val - min)/ diff;
         }
     } else {
         for (T& val : data)
@@ -1355,45 +1385,6 @@ Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ
 }
 template <class T>
 Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, [[maybe_unused]] bool ignoreBorders) const {
-    /*
-    Matrix3<T> tempResult = *this; //(this->sizeX, this->sizeY, this->sizeZ);
-    tempResult.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-    tempResult.raiseErrorOnBadCoord = false;
-    Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
-    result.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-    result.raiseErrorOnBadCoord = false;
-
-    // Perform 1D convolution along x-axis
-    this->iterateParallel([&](int x, int y, int z) {
-        T neighboringSum = T();
-        for (int dx = -(sizeOnX / 2); dx <= (sizeOnX / 2); ++dx) {
-            if (x + dx >= 0 && x + dx < this->sizeX) {
-                neighboringSum += tempResult.unsafe(x + dx, y, z);
-            }
-        }
-        result.unsafe(x, y, z) = neighboringSum;
-    });
-    this->iterateParallel([&](int x, int y, int z) {
-        T neighboringSum = T();
-        for (int dx = -(sizeOnY / 2); dx <= (sizeOnY / 2); ++dx) {
-            if (y + dx >= 0 && y + dx < this->sizeY) {
-                neighboringSum += result.unsafe(x, y + dx, z);
-            }
-        }
-        tempResult.unsafe(x, y, z) = neighboringSum;
-    });
-    this->iterateParallel([&](int x, int y, int z) {
-        T neighboringSum = T();
-        for (int dx = -(sizeOnZ / 2); dx <= (sizeOnZ / 2); ++dx) {
-            if (z + dx >= 0 && z + dx < this->sizeZ) {
-                neighboringSum += tempResult.unsafe(x, y, z + dx);
-            }
-        }
-        result.unsafe(x, y, z) = neighboringSum;
-    });
-
-    return result / T(sizeOnX * sizeOnY * sizeOnZ);
-    */
     auto mirror_idx = [&](int i, size_t n) {
         if (n <= 1) return 0;
         // small-radius typical, so loop is tiny near borders
@@ -1822,37 +1813,30 @@ Matrix3<T> Matrix3<T>::medianBlur(int sizeOnX, int sizeOnY, int sizeOnZ, bool ig
 template <class T>
 Matrix3<Vector3> Matrix3<T>::gradient() const {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
-    // auto self = *this;
-    // bool oldError = this->raiseErrorOnBadCoord;
-    // RETURN_VALUE_ON_OUTSIDE oldReturn = this->returned_value_on_outside;
-    // self.raiseErrorOnBadCoord = false;
-    // self.returned_value_on_outside = MIRROR_VALUE;
 
-    auto repeat = [&](int x, int y, int z) -> Vector3i {
-        const auto p = Vector3i(x, y, z);
-        return this->checkCoord(x, y, z) ? p : this->getRepeatPosition(p);
+    auto res = returningGrid.data.data();
+    const auto src = this->data.data();
+
+    const auto repeat = [&](int x, int y, int z) -> size_t {
+        return this->checkCoord(x, y, z) ? getIndex(x, y, z) : this->getRepeatIndex(x, y, z);
     };
-    iterateParallel([&](int x, int y, int z) {
-        returningGrid.at(x, y, z) = Vector3((this->unsafe(repeat(x + 1, y, z)) - this->unsafe(repeat(x - 1, y, z))) * .5f,
-                                            (this->unsafe(repeat(x, y + 1, z)) - this->unsafe(repeat(x, y - 1, z))) * .5f,
-                                            (this->unsafe(repeat(x, y, z + 1)) - this->unsafe(repeat(x, y, z - 1))) * .5f);
-    });
-    /*#pragma omp parallel for collapse(3)
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                returningGrid.at(x, y, z) = Vector3((at(x + 1, y, z) - at(x - 1, y, z)) * .5f,
-                                                    (at(x, y + 1, z) - at(x, y - 1, z)) * .5f,
-                                                    (at(x, y, z + 1) - at(x, y, z - 1)) * .5f);
-            }
-        }
-    }*/
-//    this->raiseErrorOnBadCoord = oldError;
-//    this->returned_value_on_outside = oldReturn;
+    if (this->sizeZ > 1) {
+        iterateParallel([&](int x, int y, int z) {
+            res[getIndex(x, y, z)] = Vector3((src[repeat(x + 1, y, z)] - src[repeat(x - 1, y, z)]) * .5f,
+                                                (src[repeat(x, y + 1, z)] - src[repeat(x, y - 1, z)]) * .5f,
+                                                (src[repeat(x, y, z + 1)] - src[repeat(x, y, z - 1)]) * .5f);
+        });
+    } else {
+        iterateParallel([&](int x, int y, int z) {
+            res[getIndex(x, y, z)] = Vector3((src[repeat(x + 1, y, z)] - src[repeat(x - 1, y, z)]) * .5f,
+                                                (src[repeat(x, y + 1, z)] - src[repeat(x, y - 1, z)]) * .5f,
+                                                0);
+        });
+    }
     return returningGrid;
 }
 template <class T>
-Matrix3<Vector3> Matrix3<T>::grad() const {
+inline Matrix3<Vector3> Matrix3<T>::grad() const {
     return this->gradient();
 }
 
@@ -2351,9 +2335,16 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
     newMat.raiseErrorOnBadCoord = false;
     float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
 
+    auto dst = newMat.data.data();
+    const auto src = data.data();
+
     if (mode == LINEAR) {
         newMat.iterateParallel([&](size_t x, size_t y, size_t z) {
-            size_t x_original = size_t(x * rx);
+            // float d_x = (float(x) * rx) - int(x * rx);
+            // float d_y = (float(y) * ry) - int(y * ry);
+            // float d_z = (float(z) * rz) - int(z * rz);
+            dst[newMat.getIndex(x, y, z)] = interpolate(x * rx, y * ry, z * rz);
+            /*size_t x_original = size_t(x * rx);
             size_t x_plus_1 = (x_original >= this->sizeX - 1 ? x_original : x_original + 1);
             float d_x = (x * rx) - x_original;
             size_t y_original = size_t(y * ry);
@@ -2379,43 +2370,8 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
                                      f001 * (1-d_x) + f101 * d_x) * (1-d_y) + (
                                      f011 * (1-d_x) + f111 * d_x) * d_y) * d_z;
 
-            newMat.at(x, y, z) = res;
+            newMat.at(x, y, z) = res;*/
         });
-        /*
-        // Apply interpolations
-        for (size_t x = 0; x < newX; x++) {
-            int x_original = int(x * rx);
-            int x_plus_1 = (x_original >= this->sizeX - 1 ? x_original : x_original + 1);
-            float d_x = (x * rx) - x_original;
-            for (size_t y = 0; y < newY; y++) {
-                int y_original = int(y * ry);
-                int y_plus_1 = (y_original >= this->sizeY - 1 ? y_original : y_original + 1);
-                float d_y = (y * ry) - y_original;
-                for (size_t z = 0; z < newZ; z++) {
-                    int z_original = int(z * rz);
-                    int z_plus_1 = (z_original >= this->sizeZ - 1 ? z_original : z_original + 1);
-                    float d_z = (z * rz) - z_original;
-
-                    T f000 = this->unsafe(x_original    , y_original    , z_original    );
-                    T f100 = this->unsafe(x_plus_1, y_original    , z_original    );
-                    T f010 = this->unsafe(x_original    , y_plus_1, z_original    );
-                    T f110 = this->unsafe(x_plus_1, y_plus_1, z_original    );
-                    T f001 = this->unsafe(x_original    , y_original    , z_plus_1);
-                    T f101 = this->unsafe(x_plus_1, y_original    , z_plus_1);
-                    T f011 = this->unsafe(x_original    , y_plus_1, z_plus_1);
-                    T f111 = this->unsafe(x_plus_1, y_plus_1, z_plus_1);
-                    // Interpolation
-                    T res = ((
-                                              f000 * (1-d_x) + f100 * d_x) * (1-d_y) + (
-                                              f010 * (1-d_x) + f110 * d_x) * d_y) * (1 - d_z) +
-                                        ((
-                                             f001 * (1-d_x) + f101 * d_x) * (1-d_y) + (
-                                             f011 * (1-d_x) + f111 * d_x) * d_y) * d_z;
-
-                    newMat.at(x, y, z) = res;
-                }
-            }
-        }*/
     } else if (mode == NEAREST) {
         newMat = this->resizeNearest(newX, newY, newZ);
 
@@ -2503,8 +2459,10 @@ template <class T>
 Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int startZ, int endZ) const
 {
     if (endZ == -1) endZ = this->sizeZ;
+    if (startX == 0 && endX == sizeX && startY == 0 && endY == sizeY && startZ == 0 &&  endZ == sizeZ) return *this;
+
     Matrix3<T> croppedMatrix(std::max(endX - startX, 0), std::max(endY - startY, 0), std::max(endZ - startZ, 0));
-    croppedMatrix.iterate([&](int x, int y, int z) {
+    croppedMatrix.iterateParallel([&](int x, int y, int z) {
         int oldX = x + startX;
         int oldY = y + startY;
         int oldZ = z + startZ;
@@ -2515,19 +2473,22 @@ Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int st
 }
 
 template <class T>
-Matrix3<T>& Matrix3<T>::paste(const Matrix3<T> &matrixToPaste, const Vector3i& upperLeftFrontCorner)
+inline Matrix3<T>& Matrix3<T>::paste(const Matrix3<T> &matrixToPaste, const Vector3i& upperLeftFrontCorner)
 {
     return this->paste(matrixToPaste, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
 }
 template <class T>
 Matrix3<T>& Matrix3<T>::paste(const Matrix3<T>& matrixToPaste, int left, int up, int front)
 {
+    auto dst = data.data();
+    const auto src = matrixToPaste.data.data();
+
     iterateParallel([&](int x, int y, int z) {
        int oldX = x - left;
        int oldY = y - up;
        int oldZ = z - front;
        if (!checkCoord(x, y, z) || !matrixToPaste.checkCoord(oldX, oldY, oldZ)) return;
-       this->unsafe(x, y, z) = matrixToPaste(oldX, oldY, oldZ);
+       dst[getIndex(x, y, z)] = src[matrixToPaste.getIndex(oldX, oldY, oldZ)];
     });
     return *this;
 }
@@ -2536,7 +2497,7 @@ template <class T>
 Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperLeftFrontCorner, [[maybe_unused]] bool useInterpolation)
 {
     if (useInterpolation) {
-        matrixToAdd.iterate([&](const Vector3& pos) {
+        matrixToAdd.iterate([&](const Vector3i& pos) {
             this->addValueAt(matrixToAdd(pos), upperLeftFrontCorner + pos);
         });
         return *this;
@@ -2547,12 +2508,15 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperL
 template <class T>
 Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int front, [[maybe_unused]] bool useInterpolation)
 {
+    auto dst = data.data();
+    const auto src = matrixToAdd.data.data();
+
     matrixToAdd.iterateParallel([&](int x, int y, int z) {
        int oldX = x + left;
        int oldY = y + up;
        int oldZ = z + front;
        if (!checkCoord(oldX, oldY, oldZ) || !matrixToAdd.checkCoord(x, y, z)) return;
-       this->unsafe(oldX, oldY, oldZ) += matrixToAdd(x, y, z);
+       dst[getIndex(oldX, oldY, oldZ)] += src[matrixToAdd.getIndex(x, y, z)];
     });
     return *this;
 }
@@ -2567,37 +2531,45 @@ Matrix3<T> Matrix3<T>::concat(const Matrix3<T>& matrixToConcat)
 }
 
 template <class T>
-Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner)
+inline Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner)
 {
     return this->max(otherMatrix, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
 }
 template <class T>
 Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, int left, int up, int front)
 {
+    auto dst = data.data();
+    const auto src = otherMatrix.data.data();
+
     otherMatrix.iterateParallel([&](int x, int y, int z) {
        int oldX = x + left;
        int oldY = y + up;
        int oldZ = z + front;
        if (!checkCoord(oldX, oldY, oldZ) || !otherMatrix.checkCoord(x, y, z)) return;
-       this->unsafe(oldX, oldY, oldZ) = std::max(this->unsafe(oldX, oldY, oldZ), otherMatrix(x, y, z));
+       size_t idx = getIndex(oldX, oldY, oldZ);
+       dst[idx] = std::max(dst[idx], src[otherMatrix.getIndex(x, y, z)]);
     });
     return *this;
 }
 
 template <class T>
-Matrix3<T>& Matrix3<T>::min(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner)
+inline Matrix3<T>& Matrix3<T>::min(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner)
 {
     return this->min(otherMatrix, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
 }
 template <class T>
 Matrix3<T>& Matrix3<T>::min(const Matrix3<T> &otherMatrix, int left, int up, int front)
 {
+    auto dst = data.data();
+    const auto src = otherMatrix.data.data();
+
     otherMatrix.iterateParallel([&](int x, int y, int z) {
        int oldX = x + left;
        int oldY = y + up;
        int oldZ = z + front;
        if (!checkCoord(oldX, oldY, oldZ) || !otherMatrix.checkCoord(x, y, z)) return;
-       this->unsafe(oldX, oldY, oldZ) = std::min(this->unsafe(oldX, oldY, oldZ), otherMatrix(x, y, z));
+       size_t idx = getIndex(oldX, oldY, oldZ);
+       dst[idx] = std::min(dst[idx], src[otherMatrix.getIndex(x, y, z)]);
     });
     return *this;
 }
@@ -2608,8 +2580,11 @@ Matrix3<T> Matrix3<T>::max(const Matrix3<T>& m1, const Matrix3<T>& m2)
     if (m1.getDimensions() != m2.getDimensions())
         throw std::domain_error("Matrices must have same sizes to be maxed (M1 = " + m1.toString() + " and M2 = " + m2.toString());
     Matrix3<T> res(m1.getDimensions());
+    auto R = res.data.data();
+    const auto M1 = m1.data.data();
+    const auto M2 = m2.data.data();
     res.iterateParallel([&](size_t i) {
-        res[i] = std::max(m1[i], m2[i]);
+        R[i] = std::max(M1[i], M2[i]);
     });
     return res;
 }
@@ -2620,8 +2595,11 @@ Matrix3<T> Matrix3<T>::min(const Matrix3<T>& m1, const Matrix3<T>& m2)
     if (m1.getDimensions() != m2.getDimensions())
         throw std::domain_error("Matrices must have same sizes to be mined (M1 = " + m1.toString() + " and M2 = " + m2.toString());
     Matrix3<T> res(m1.getDimensions());
+    auto R = res.data.data();
+    const auto M1 = m1.data.data();
+    const auto M2 = m2.data.data();
     res.iterateParallel([&](size_t i) {
-        res[i] = std::max(m1[i], m2[i]);
+        R[i] = std::min(M1[i], M2[i]);
     });
     return res;
 }
@@ -2683,145 +2661,145 @@ Matrix3<std::complex<float>> Matrix3<T>::FFT() const {
     int dimX = (isPowerOf2(sizeX) ? sizeX : findNextPowerOfTwo(sizeX));
     int dimY = (isPowerOf2(sizeY) ? sizeY : findNextPowerOfTwo(sizeY));
     int dimZ = (isPowerOf2(sizeZ) ? sizeZ : findNextPowerOfTwo(sizeZ));
-    Matrix3<std::complex<float>> resultX(dimX, dimY, dimZ); // Result for X-axis FFT
-    Matrix3<std::complex<float>> resultY(dimX, dimY, dimZ); // Result for Y-axis FFT
-    Matrix3<std::complex<float>> resultZ(dimX, dimY, dimZ); // Result for Z-axis FFT
+    Matrix3<std::complex<float>> result0(dimX, dimY, dimZ); // Result for X-axis FFT
+    Matrix3<std::complex<float>> result1(dimX, dimY, dimZ); // Result for Y-axis FFT
+
+    auto R0 = result0.data.data();
+    auto R1 = result1.data.data();
+
+    const size_t strideY = result0._strideY;
+    const size_t strideZ = result0._strideZ;
+    auto indx = [=](size_t x, size_t y, size_t z) { return z * strideZ + y * strideY + x; };
 
     // Perform FFT along X-axis for each YZ plane
+    #pragma omp parallel for collapse(2)
     for (size_t y = 0; y < dimY; ++y) {
         for (size_t z = 0; z < dimZ; ++z) {
             std::vector<std::complex<float>> col(dimX);
             for (size_t x = 0; x < dimX; ++x) {
-                col[x] = std::complex<float>(this->unsafe(x, y, z), 0);
+                col[x] = std::complex<float>((checkCoord(x, y, z) ? float(this->unsafe(x, y, z)) : 0.f), 0);
             }
             std::vector<std::complex<float>> fft_result_x = fft(col); // Perform 1D FFT along X-axis
             for (size_t x = 0; x < dimX; ++x) {
-                resultX(x, y, z) = fft_result_x[x];
+                R0[indx(x, y, z)] = fft_result_x[x];
             }
         }
     }
 
     // Perform FFT along Y-axis for each XZ plane
+    #pragma omp parallel for collapse(2)
     for (size_t x = 0; x < dimX; ++x) {
         for (size_t z = 0; z < dimZ; ++z) {
             std::vector<std::complex<float>> col(dimY);
             for (size_t y = 0; y < dimY; ++y) {
-                col[y] = resultX(x, y, z); // Use the result from X-axis FFT
+                col[y] = R0[indx(x, y, z)]; // Use the result from X-axis FFT
             }
             std::vector<std::complex<float>> fft_result_y = fft(col); // Perform 1D FFT along Y-axis
             for (size_t y = 0; y < dimY; ++y) {
-                resultY(x, y, z) = fft_result_y[y];
+                R1[indx(x, y, z)] = fft_result_y[y];
             }
         }
     }
 
     // Perform FFT along Z-axis for each XY plane
+    #pragma omp parallel for collapse(2)
     for (size_t x = 0; x < dimX; ++x) {
         for (size_t y = 0; y < dimY; ++y) {
             std::vector<std::complex<float>> row(dimZ);
             for (size_t z = 0; z < dimZ; ++z) {
-                row[z] = resultY(x, y, z); // Use the result from Y-axis FFT
+                row[z] = R1[indx(x, y, z)]; // Use the result from Y-axis FFT
             }
             std::vector<std::complex<float>> fft_result_z = fft(row); // Perform 1D FFT along Z-axis
             for (size_t z = 0; z < dimZ; ++z) {
-                resultZ(x, y, z) = fft_result_z[z];
+                R0[indx(x, y, z)] = fft_result_z[z];
             }
         }
     }
 
-    return resultZ; // Return the final result after X, Y, and Z axis FFTs
+    return result0; // Return the final result after X, Y, and Z axis FFTs
 }
 template <class T>
-Matrix3<std::complex<float> > Matrix3<T>::iFFT() const
+Matrix3<std::complex<float> > Matrix3<T>::iFFT(const Vector3i& finalDimensions) const
 {
+    if (!finalDimensions.isValid()) {
+        return this->iFFT(sizeX, sizeY, sizeZ);
+    } else {
+        return this->iFFT(finalDimensions.x(), finalDimensions.y(), finalDimensions.z());
+    }
+}
+template <class T>
+Matrix3<std::complex<float> > Matrix3<T>::iFFT(size_t cropX, size_t cropY, size_t cropZ) const
+{
+    auto initial = Matrix3<std::complex<float>>(findNextPowerOfTwo(sizeX), findNextPowerOfTwo(sizeY), findNextPowerOfTwo(sizeZ));
+    initial.paste(*this, 0, 0, 0);
     Matrix3<std::complex<float>> result(this->getDimensions()); // Result after inverse FFT
 
-        // Perform inverse FFT along X-axis for each YZ plane
-        for (size_t y = 0; y < sizeY; ++y) {
-            for (size_t z = 0; z < sizeZ; ++z) {
-                std::vector<std::complex<float>> col(sizeX);
-                for (size_t x = 0; x < sizeX; ++x) {
-                    col[x] = this->unsafe(x, y, z);
-                }
-                std::vector<std::complex<float>> ifft_result_x = inverseFFT(col); // Perform 1D IFFT along X-axis
-                for (size_t x = 0; x < sizeX; ++x) {
-                    result(x, y, z) = ifft_result_x[x];
-                }
+    auto R = result.data.data();
+
+    // Perform inverse FFT along X-axis for each YZ plane
+    #pragma omp parallel for collapse(2)
+    for (size_t y = 0; y < initial.sizeY; ++y) {
+        for (size_t z = 0; z < initial.sizeZ; ++z) {
+            std::vector<std::complex<float>> col(initial.sizeX);
+            for (size_t x = 0; x < initial.sizeX; ++x) {
+                col[x] = initial.unsafe(x, y, z);
+            }
+            std::vector<std::complex<float>> ifft_result_x = inverseFFT(col); // Perform 1D IFFT along X-axis
+            for (size_t x = 0; x < initial.sizeX; ++x) {
+                R[result.getIndex(x, y, z)] = ifft_result_x[x];
             }
         }
+    }
 
-        // Perform inverse FFT along Y-axis for each XZ plane
-        for (size_t x = 0; x < sizeX; ++x) {
-            for (size_t z = 0; z < sizeZ; ++z) {
-                std::vector<std::complex<float>> col(sizeY);
-                for (size_t y = 0; y < sizeY; ++y) {
-                    col[y] = result(x, y, z); // Use the result after X-axis inverse FFT
-                }
-                std::vector<std::complex<float>> ifft_result_y = inverseFFT(col); // Perform 1D IFFT along Y-axis
-                for (size_t y = 0; y < sizeY; ++y) {
-                    result(x, y, z) = ifft_result_y[y];
-                }
+    // Perform inverse FFT along Y-axis for each XZ plane
+    #pragma omp parallel for collapse(2)
+    for (size_t x = 0; x < initial.sizeX; ++x) {
+        for (size_t z = 0; z < initial.sizeZ; ++z) {
+            std::vector<std::complex<float>> col(initial.sizeY);
+            for (size_t y = 0; y < initial.sizeY; ++y) {
+                col[y] = R[result.getIndex(x, y, z)]; // Use the result after X-axis inverse FFT
+            }
+            std::vector<std::complex<float>> ifft_result_y = inverseFFT(col); // Perform 1D IFFT along Y-axis
+            for (size_t y = 0; y < initial.sizeY; ++y) {
+                R[result.getIndex(x, y, z)] = ifft_result_y[y];
             }
         }
+    }
 
-        // Perform inverse FFT along Z-axis for each XY plane
-        for (size_t x = 0; x < sizeX; ++x) {
-            for (size_t y = 0; y < sizeY; ++y) {
-                std::vector<std::complex<float>> row(sizeZ);
-                for (size_t z = 0; z < sizeZ; ++z) {
-                    row[z] = result(x, y, z); // Use the result after Y-axis inverse FFT
-                }
-                std::vector<std::complex<float>> ifft_result_z = inverseFFT(row); // Perform 1D IFFT along Z-axis
-                for (size_t z = 0; z < sizeZ; ++z) {
-                    result(x, y, z) = ifft_result_z[z];
-                }
+    // Perform inverse FFT along Z-axis for each XY plane
+    #pragma omp parallel for collapse(2)
+    for (size_t x = 0; x < initial.sizeX; ++x) {
+        for (size_t y = 0; y < initial.sizeY; ++y) {
+            std::vector<std::complex<float>> row(initial.sizeZ);
+            for (size_t z = 0; z < initial.sizeZ; ++z) {
+                row[z] = R[result.getIndex(x, y, z)]; // Use the result after Y-axis inverse FFT
+            }
+            std::vector<std::complex<float>> ifft_result_z = inverseFFT(row); // Perform 1D IFFT along Z-axis
+            for (size_t z = 0; z < initial.sizeZ; ++z) {
+                R[result.getIndex(x, y, z)] = ifft_result_z[z];
             }
         }
+    }
 
-        return result; // Return the final result after X, Y, and Z axis inverse FFTs
+    return result.subset(0, cropX, 0, cropY, 0, cropZ); // Return the final result after X, Y, and Z axis inverse FFTs
 }
-
 
 template <class T>
 Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
 {
     Matrix3<T> result = *this;
+
+    auto dst = result.data.data();
+    const auto src = data.data();
     result.iterateParallel([&](int x, int y, int z) {
         int targetX = (onX ? this->sizeX - (x +1) : x);
         int targetY = (onY ? this->sizeY - (y +1) : y);
         int targetZ = (onZ ? this->sizeZ - (z +1) : z);
-        result.at(x, y, z) = this->unsafe(targetX, targetY, targetZ);
+        dst[result.getIndex(x, y, z)] = src[getIndex(targetX, targetY, targetZ)];
     });
     return result;
 }
 
-template <class T, class U>
-Matrix3<T> convolutionIgnoredBorders(const Matrix3<T>& initial, const Matrix3<U>& convMatrix)
-{
-    Matrix3<T> result(initial.sizeX, initial.sizeY, initial.sizeZ);
-//    this->raiseErrorOnBadCoord = false;
-
-    // Pre-calculate normalisation value
-    U normalisationValue = convMatrix.sum();
-
-    convMatrix.iterate([&](int dx, int dy, int dz) {
-        int dt_x = dx - (convMatrix.sizeX / 2);
-        int dt_y = dy - (convMatrix.sizeY / 2);
-        int dt_z = dz - (convMatrix.sizeZ / 2);
-        U convVal = convMatrix.at(dx, dy, dz);
-        initial.iterateParallel([&](int x, int y, int z) {
-            Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
-            if (!result.checkCoord(cellValuePosition)) return;
-            result.at(x, y, z) += initial.at(cellValuePosition) * convVal;
-        });
-    });
-    if (normalisationValue != U()) {
-        result.iterateParallel([&](size_t i) {
-            result[i] /= normalisationValue;
-        });
-    }
-    return result;
-}
 template <class T> template <class U>
 Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS borders) const
 {
@@ -2874,7 +2852,7 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
 }
 
 template <class T>
-Vector3 Matrix3<T>::getMirrorPosition(const Vector3& pos)  const
+inline Vector3 Matrix3<T>::getMirrorPosition(const Vector3& pos)  const noexcept
 {
     float x = pos.x();
     float y = pos.y();
@@ -2886,7 +2864,7 @@ Vector3 Matrix3<T>::getMirrorPosition(const Vector3& pos)  const
 }
 
 template <class T>
-Vector3 Matrix3<T>::getWrappedPosition(const Vector3& pos) const
+inline Vector3 Matrix3<T>::getWrappedPosition(const Vector3& pos) const noexcept
 {
     Vector3 rounded = pos.roundedDown();
     Vector3 decimals = pos - rounded;
@@ -2898,7 +2876,7 @@ Vector3 Matrix3<T>::getWrappedPosition(const Vector3& pos) const
 }
 
 template <class T>
-Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const
+inline Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const noexcept
 {
     Vector3 returned;
     returned.x() = std::min(std::max(0.f, pos.x()), (float)sizeX - 1);
@@ -2908,7 +2886,7 @@ Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const
 }
 
 template <class T>
-Vector3i Matrix3<T>::getMirrorPosition(const Vector3i& pos)  const
+inline Vector3i Matrix3<T>::getMirrorPosition(const Vector3i& pos)  const noexcept
 {
     int x = pos.x();
     int y = pos.y();
@@ -2919,20 +2897,40 @@ Vector3i Matrix3<T>::getMirrorPosition(const Vector3i& pos)  const
     return Vector3i(x, y, z);
 }
 
+template<class T>
+inline size_t Matrix3<T>::getMirrorIndex(int x, int y, int z) const noexcept
+{
+    return getIndex(x < 0 ? std::abs(x) : (x >= int(sizeX) ? (int(sizeX) - 1) - (x - sizeX) : x),
+                    y < 0 ? std::abs(y) : (y >= int(sizeY) ? (int(sizeY) - 1) - (y - sizeY) : y),
+                    z < 0 ? std::abs(z) : (z >= int(sizeZ) ? (int(sizeZ) - 1) - (z - sizeZ) : z));
+}
+
 template <class T>
-Vector3i Matrix3<T>::getWrappedPosition(const Vector3i& pos) const
+inline Vector3i Matrix3<T>::getWrappedPosition(const Vector3i& pos) const noexcept
 {
     return Vector3i((pos.x() + sizeX) % sizeX, (pos.y() + sizeY) % sizeY, (pos.z() + sizeZ) % sizeZ);
 }
 
+template<class T>
+inline size_t Matrix3<T>::getWrappedIndex(int x, int y, int z) const noexcept
+{
+    return getIndex((x + sizeX) % sizeX, (y + sizeY) % sizeY, (z + sizeZ) % sizeZ);
+}
+
 template <class T>
-Vector3i Matrix3<T>::getRepeatPosition(const Vector3i& pos) const
+inline Vector3i Matrix3<T>::getRepeatPosition(const Vector3i& pos) const noexcept
 {
     Vector3i returned;
     returned.x() = std::min(std::max(0, pos.x()), int(sizeX) - 1);
     returned.y() = std::min(std::max(0, pos.y()), int(sizeY) - 1);
     returned.z() = std::min(std::max(0, pos.z()), int(sizeZ) - 1);
     return returned;
+}
+
+template<class T>
+inline size_t Matrix3<T>::getRepeatIndex(int x, int y, int z) const noexcept
+{
+    return getIndex(std::min(std::max(0, x), int(sizeX) - 1), std::min(std::max(0, y), int(sizeY) - 1), std::min(std::max(0, z), int(sizeZ) - 1));
 }
 
 template <class T>
@@ -2966,12 +2964,12 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
                 pos -= warper.interpolate(pos) / float(precision);
             }
         });
-        iterate([&](const Vector3& pos) {
+        iterateParallel([&](const Vector3& pos) {
             const auto& warp = displacements.at(pos);
             result.at(pos) = valOrDefault(warp);
         });
     } else {
-        iterate([&](const Vector3& pos) {
+        iterateParallel([&](const Vector3& pos) {
             const Vector3& warp = warper.at(pos);
             result.addValueAt(valOrDefault(pos), pos + warp);
         });

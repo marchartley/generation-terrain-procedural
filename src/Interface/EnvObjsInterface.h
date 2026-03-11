@@ -1,9 +1,9 @@
 #ifndef ENVOBJSINTERFACE_H
 #define ENVOBJSINTERFACE_H
 
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/ActionInterface.h"
-#include "GUIElements/HierarchicalListWidget.h"
+// #include "GUIElements/HierarchicalListWidget.h"
 #include "Utils/HotreloadFile.h"
 
 // #include "EnvObject/EnvPoint.h"
@@ -23,7 +23,7 @@ public:
 
     void replay(nlohmann::json action);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     std::tuple<GridF, GridV3> extractErosionDataOnTerrain();
 
@@ -129,6 +129,8 @@ public:
     GridV3 computeUserKelvinletField() const;
 
 public:
+    std::string currentObjectName;
+
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;
     Mesh highDepositionMesh;

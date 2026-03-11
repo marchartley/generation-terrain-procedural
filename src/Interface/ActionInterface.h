@@ -3,6 +3,7 @@
 
 class ActionInterface;
 
+#include "GUIElements/CommonInterface.h"
 #include "Interface/CustomInteractiveObject.h"
 #include "TerrainModification/TerrainAction.h"
 #include "TerrainGen/VoxelGrid.h"
@@ -30,7 +31,7 @@ public:
 
     virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
-    virtual QLayout* createGUI();
+    virtual InterfaceUI* createGUI();
     virtual void display(const Vector3& camPos = Vector3::invalid);
     virtual void reloadShaders();
 

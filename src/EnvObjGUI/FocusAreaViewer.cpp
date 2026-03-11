@@ -3,10 +3,8 @@
 #include "GUIElements/PainterToolsUI.h"
 #include "GUIElements/ImageViewerOptionsUI.h"
 
-FocusAreaViewer::FocusAreaViewer(const std::string& name, QWidget* parent) : FocusAreaViewer(name, new ChartView(new Chart()), parent)
-{}
-FocusAreaViewer::FocusAreaViewer(const std::string& name, ChartView* chartView, QWidget* parent)
-    : ImageViewer(name, chartView, parent)
+FocusAreaViewer::FocusAreaViewer(const std::string& name, QWidget* parent)
+    : ImageViewer(name, parent)
 {
     painterParams.additiveMode = true;
     painterParams.RGBimage = false;
@@ -25,40 +23,12 @@ FocusAreaViewer::FocusAreaViewer(const std::string& name, ChartView* chartView, 
         this->show();
     });
 }
-/*
-FocusAreaViewer *FocusAreaViewer::getInstance(const std::string& name)
-{
-    if (name == "") name = FocusAreaViewer::defaultName;
-    if (FocusAreaViewer::instances.count(name) == 0) {
-        FocusAreaViewer::init(name);
-    }
-    return dynamic_cast<FocusAreaViewer*>(FocusAreaViewer::instances[name]);
-}
 
-FocusAreaViewer *FocusAreaViewer::init(const std::string& name, ChartView *chartView, QWidget *parent)
-{
-    if (FocusAreaViewer::instances.count(name))
-        delete FocusAreaViewer::instances[name];
-    FocusAreaViewer::instances[name] = new FocusAreaViewer(name, chartView, parent);
-    return FocusAreaViewer::getInstance(name);
-}
-*/
-FocusAreaViewer *FocusAreaViewer::updateToolsInterface()
+FocusAreaViewer& FocusAreaViewer::updateToolsInterface()
 {
     this->toolsInterface->clear();
-    this->toolsInterface->add(PainterToolsUI::createPainterToolsUI(this->chartView, this->dataModel, &this->painterParams));
+    auto UI = PainterToolsUI::createPainterToolsUI(&this->painterParams);
+    this->toolsInterface->add(std::move(UI));
     ImageViewer::updateToolsInterface();
-    return this;
+    return *this;
 }
-
-/*
-FocusAreaViewer *FocusAreaViewer::updateViewOptionsInterface()
-{
-    if (this->viewOptionsInterface != nullptr)
-        this->viewOptionsInterface->clear();
-    else
-        this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
-    this->viewOptionsInterface->add(ImageViewerOptionsUI::createGreyImageViewerOptions(this->chartView, this->dataModel));
-    return this;
-}
-*/

@@ -30,16 +30,15 @@ struct BodyKelvinletParameters {
 class EnvObjectEditor : public ImageViewer
 {
     Q_OBJECT
-protected: // Singleton
+public: // protected: // Singleton
     EnvObjectEditor(const std::string& name, QWidget* parent = nullptr);
-    EnvObjectEditor(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     DECLARE_PLOTTER_GETTER(EnvObjectEditor)
 
-    virtual EnvObjectEditor* updateToolsInterface();
+    virtual EnvObjectEditor& updateToolsInterface();
 
-    EnvObjectEditor* addEnvObject(EnvObject* envObj);
+    EnvObjectEditor& addEnvObject(EnvObject* envObj);
 
     std::pair<GridV3, GridF> displayEnvObject() const;
 

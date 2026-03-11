@@ -208,7 +208,7 @@ std::pair<GridF, GridI> Pathfinding::FloydWarshall(Graph& graph)
     GridF W = graph.getAdjacencyMatrix();
     int n = W.sizeX;
     GridI prec(n, n, 1, -1);
-    prec.iterate([&](int u, int v, int) {
+    prec.iterateParallel([&](int u, int v, int) {
         if (W(u, v) < 100000) prec(u, v) = u;
         if (u == v) prec(u, v) = -1;
     });
@@ -237,7 +237,7 @@ std::pair<GridF, GridI > Pathfinding::FloydWarshallImproved(Graph& graph)
     GridF W = graph.getAdjacencyMatrix();
     int n = W.sizeX;
     GridI prec(n, n, 1, -1);
-    prec.iterate([&](int u, int v, int) {
+    prec.iterateParallel([&](int u, int v, int) {
         if (W(u, v) < 100000) prec(u, v) = u;
         if (u == v) prec(u, v) = -1;
     });

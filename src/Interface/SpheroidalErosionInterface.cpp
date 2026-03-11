@@ -46,42 +46,14 @@ void SpheroidalErosionInterface::mousePressEvent(QMouseEvent *event)
     return ActionInterface::mousePressEvent(event);
 }
 
-QLayout *SpheroidalErosionInterface::createGUI()
+InterfaceUI* SpheroidalErosionInterface::createGUI()
 {
-    QLayout* layout = new QVBoxLayout;
-    QPushButton* applyButton = new QPushButton("Apply");
-//    FancySlider* subsidenceSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-//    RangeSlider* coralLevelsSlider = new RangeSlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-//    FancySlider* verticalScaleSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-//    FancySlider* horizontalScaleSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-//    FancySlider* alphaSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
+    auto UI = new InterfaceUI();
+    auto applyButton = new ButtonElement("Apply", [=]() { this->applyWeatheringErosion(); });
 
-//    layout->addWidget(createMultipleSliderGroup({
-//                                                    {"Subsidence", subsidenceSlider},
-//                                                    {"Coral", coralLevelsSlider},
-//                                                    {"Vertical", verticalScaleSlider},
-//                                                    {"Horizontal", horizontalScaleSlider},
-//                                                    {"Alpha", alphaSlider}
-//                                                }));
+    UI->add(applyButton);
 
-    layout->addWidget(applyButton);
-
-//    subsidenceSlider->setfValue(subsidence);
-//    coralLevelsSlider->setMinValue(coralLevelMin);
-//    coralLevelsSlider->setMaxValue(coralLevelMax);
-//    verticalScaleSlider->setfValue(vScale);
-//    horizontalScaleSlider->setfValue(hScale);
-//    alphaSlider->setfValue(alpha);
-
-    QObject::connect(applyButton, &QPushButton::pressed, this, &SpheroidalErosionInterface::applyWeatheringErosion);
-//    QObject::connect(subsidenceSlider, &FancySlider::floatValueChanged, this, &SpheroidalErosionInterface::setSubsidence);
-//    QObject::connect(coralLevelsSlider, &RangeSlider::minValueChanged, this, &SpheroidalErosionInterface::setCoralLevelMin);
-//    QObject::connect(coralLevelsSlider, &RangeSlider::maxValueChanged, this, &SpheroidalErosionInterface::setCoralLevelMax);
-//    QObject::connect(verticalScaleSlider, &FancySlider::floatValueChanged, this, &SpheroidalErosionInterface::setVScale);
-//    QObject::connect(horizontalScaleSlider, &FancySlider::floatValueChanged, this, &SpheroidalErosionInterface::setHScale);
-//    QObject::connect(alphaSlider, &FancySlider::floatValueChanged, this, &SpheroidalErosionInterface::setAlpha);
-
-    return layout;
+    return UI;
 }
 
 void SpheroidalErosionInterface::hide()

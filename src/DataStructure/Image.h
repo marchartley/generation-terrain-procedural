@@ -26,8 +26,8 @@ public:
     static Image readFromFile(const std::string& filename);
     void writeToFile(const std::string& filename, int bit_depth = 16);
 
-    Image& setImage(const GridF& img);
-    Image& setImage(const GridV3 &img);
+    const Image& setImage(const GridF& img);
+    const Image &setImage(const GridV3 &img);
 
     GridF getBwImage() const;
     GridV3 getColorImage() const;

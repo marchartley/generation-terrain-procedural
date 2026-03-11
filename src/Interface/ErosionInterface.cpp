@@ -1019,486 +1019,190 @@ std::function<Vector3 (const Vector3&)> ErosionInterface::computeFlowfieldFuncti
 
 
 
-QLayout *ErosionInterface::createGUI()
+InterfaceUI* ErosionInterface::createGUI()
 {
-    this->erosionLayout = new QHBoxLayout();
+    auto UI = new InterfaceUI();
 
-    ButtonElement* thermalButton = new ButtonElement("Thermal", [&]() { thermalErosionProcess(); });
-    ButtonElement* hydraulicButton = new ButtonElement("Hydraulic", [&]() { hydraulicErosionProcess(); });
-    ButtonElement* gobelinsButton = new ButtonElement("Gobelins", [&]() { gobelinsErosionProcess(); });
-    ButtonElement* desertButton = new ButtonElement("Desert", [&]() { desertErosionProcess(); });
-    ButtonElement* coastalButton = new ButtonElement("Coastal", [&]() { coastalErosionProcess(); });
-    ButtonElement* fluidButton = new ButtonElement("Simu fluid", [&]() { fluidSimErosionProcess(); });
-    ButtonElement* volcanoButton = new ButtonElement("Volcano 1", [&]() { volcanoErosionProcess(); });
-    ButtonElement* implicitButton = new ButtonElement("Implicit", [&]() { implicitErosionProcess(); });
-    ButtonElement* heightmapButton = new ButtonElement("Heightmap", [&]() { heightmapErosionProcess(); });
-    ButtonElement* voxelsButton = new ButtonElement("Voxels", [&]() { voxelsErosionProcess(); });
+    auto thermalButton = new ButtonElement("Thermal", [&]() { thermalErosionProcess(); });
+    auto hydraulicButton = new ButtonElement("Hydraulic", [&]() { hydraulicErosionProcess(); });
+    auto gobelinsButton = new ButtonElement("Gobelins", [&]() { gobelinsErosionProcess(); });
+    auto desertButton = new ButtonElement("Desert", [&]() { desertErosionProcess(); });
+    auto coastalButton = new ButtonElement("Coastal", [&]() { coastalErosionProcess(); });
+    auto fluidButton = new ButtonElement("Simu fluid", [&]() { fluidSimErosionProcess(); });
+    auto volcanoButton = new ButtonElement("Volcano 1", [&]() { volcanoErosionProcess(); });
+    auto implicitButton = new ButtonElement("Implicit", [&]() { implicitErosionProcess(); });
+    auto heightmapButton = new ButtonElement("Heightmap", [&]() { heightmapErosionProcess(); });
+    auto voxelsButton = new ButtonElement("Voxels", [&]() { voxelsErosionProcess(); });
 
-    FancySlider* rockSizeSlider = new FancySlider(Qt::Horizontal, 0.f, 100.f);
-    FancySlider* rockStrengthSlider = new FancySlider(Qt::Horizontal, 0.f, .5f, .01f);
-    FancySlider* rockQttSlider = new FancySlider(Qt::Horizontal, 1.f, maxParticles);
-    FancySlider* rockRandomnessSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* gravitySlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
-    FancySlider* bouncingCoefficientSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* bouncinessSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* minSpeedSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
-    FancySlider* maxSpeedSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
-    FancySlider* maxCapacityFactorSlider = new FancySlider(Qt::Horizontal, 0.f, 10.f, .01f);
-    FancySlider* erosionFactorSlider = new FancySlider(Qt::Horizontal, 0.f, 5.f, .01f);
-    FancySlider* depositFactorSlider = new FancySlider(Qt::Horizontal, 0.f, 5.f, .01f);
-    FancySlider* matterDensitySlider = new FancySlider(Qt::Horizontal, 0.f, 2000.f, .25f);
-    FancySlider* materialImpactSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
+    auto rockSizeSlider = new SliderElement("Size", 0.f, 100.f, erosionSize);
+    auto rockStrengthSlider = new SliderElement("Strength", 0.f, .5f, .01f, erosionStrength);
+    auto rockQttSlider = new SliderElement("Quantity", 1, 1000, 1);
+    auto rockRandomnessSlider = new SliderElement("Randomness", 0.f, 1.f, .01f, rockRandomness);
+    auto gravitySlider = new SliderElement("Gravity", 0.f, 2.f, .01f, gravity);
+    auto bouncingCoefficientSlider = new SliderElement("Bounce Coef", 0.f, 1.f, .01f, bouncingCoefficient);
+    auto bouncinessSlider = new SliderElement("Bounciness", 0.f, 1.f, .01f, bounciness);
+    auto minSpeedSlider = new SliderElement("Min Speed", 0.f, 2.f, .01f, minSpeed);
+    auto maxSpeedSlider = new SliderElement("Max Speed", 0.f, 2.f, .01f, maxSpeed);
+    auto maxCapacityFactorSlider = new SliderElement("Max Capacity", 0.f, 10.f, .01f, maxCapacityFactor);
+    auto erosionFactorSlider = new SliderElement("Erosion", 0.f, 5.f, .01f, erosionFactor);
+    auto depositFactorSlider = new SliderElement("Deposition", 0.f, 5.f, .01f, depositFactor);
+    auto matterDensitySlider = new SliderElement("Density", 0.f, 2000.f, .25f, matterDensity);
+    auto materialImpactSlider = new SliderElement("Impact", 0.f, 1.f, .01f, materialImpact);
 
-    FancySlider* airFlowfieldRotationSlider = new FancySlider(Qt::Horizontal, 0.f, 360.f, 45.f);
-    FancySlider* waterFlowfieldRotationSlider = new FancySlider(Qt::Horizontal, 0.f, 360.f, 45.f);
-    FancySlider* airForceSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* waterForceSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
+    auto airFlowfieldRotationSlider = new SliderElement("Air rotation", 0.f, 360.f, 45.f, airFlowfieldRotation);
+    auto waterFlowfieldRotationSlider = new SliderElement("Water rotation", 0.f, 360.f, 45.f, waterFlowfieldRotation);
+    auto airForceSlider = new SliderElement("Air force", 0.f, 1.f, .01f, airForce);
+    auto waterForceSlider = new SliderElement("Water force", 0.f, 1.f, .01f, waterForce);
 
-    FancySlider* dtSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
-    FancySlider* shearingStressConstantKSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
-    FancySlider* shearingRatePowerSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* erosionPowerValueSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
-    FancySlider* criticalShearStressSlider = new FancySlider(Qt::Horizontal, 0.f, 5.f, .1f);
+    auto dtSlider = new SliderElement("dt", 0.f, 2.f, .01f, dt);
+    auto shearingStressConstantKSlider = new SliderElement("Shear K", 0.f, 2.f, .01f, shearingStressConstantK);
+    auto shearingRatePowerSlider = new SliderElement("Shear rate power", 0.f, 1.f, .01f, shearingRatePower);
+    auto erosionPowerValueSlider = new SliderElement("Erosion power", 0.f, 2.f, .01f, erosionPowerValue);
+    auto criticalShearStressSlider = new SliderElement("Critical shear stress", 0.f, 5.f, .1f, criticalShearStress);
 
-    FancySlider* iterationSlider = new FancySlider(Qt::Orientation::Horizontal, 1.f, 500.f);
+    auto iterationSlider = new SliderElement("Iterations", 1, 500, 1);
+    iterationSlider->setValue(numberOfIterations).setOnValueChanged([=](float val) { numberOfIterations = val; });
 
-    FancySlider* initialCapacitySlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
+    auto initialCapacitySlider = new SliderElement("Initial capa.", 0.f, 1.f, .01f, initialCapacity);
 
-    QPushButton* confirmFromRandom = new QPushButton("Random");
-    QPushButton* confirmFromSurface = new QPushButton("From surface");
-    QPushButton* confirmFromSkyButton = new QPushButton("Rain");
-    QPushButton* confirmFromRiverButton = new QPushButton("River");
-    QPushButton* confirmFromRiver2Button = new QPushButton("Underwater");
-    QPushButton* confirmFromSideButton = new QPushButton("SideX");
-    QPushButton* confirmFromBigSideButton = new QPushButton("AllSideX");
-    QPushButton* confirmFromVolcanoButton = new QPushButton("Volcano");
-    QPushButton* confirmFromVolcano2Button = new QPushButton("Volcano2");
-    QPushButton* confirmFromVolcano3Button = new QPushButton("Volcano3");
 
-    QCheckBox* displayBoundariesButton = new QCheckBox("Display walls");
-    QCheckBox* displayTrajectoriesButton = new QCheckBox("Display path");
+    auto confirmFromRandom = new ButtonElement("Random", [&](){ this->throwFrom(EVERYWHERE); } );
+    auto confirmFromSurface = new ButtonElement("From surface", [&](){ this->throwFrom(JUST_ABOVE_VOXELS); } );
+    auto confirmFromSkyButton = new ButtonElement("Rain", [&](){ this->throwFrom(SKY); } );
+    auto confirmFromRiverButton = new ButtonElement("River", [&](){ this->throwFrom(RIVER); } );
+    auto confirmFromRiver2Button = new ButtonElement("Underwater", [&](){ this->throwFrom(UNDERWATER); } );
+    auto confirmFromSideButton = new ButtonElement("SideX", [&](){ this->throwFrom(FROM_X); } );
+    auto confirmFromBigSideButton = new ButtonElement("AllSideX", [&](){ this->throwFrom(FROM_BIG_X); } );
+    auto confirmFromVolcanoButton = new ButtonElement("Volcano", [&](){ this->throwFrom(VOLCANO); } );
+    auto confirmFromVolcano2Button = new ButtonElement("Volcano2", [&](){ this->throwFrom(VOLCANO2); } );
+    auto confirmFromVolcano3Button = new ButtonElement("Volcano3", [&](){ this->throwFrom(VOLCANO3); } );
 
-    QRadioButton* applyOnVoxels = new QRadioButton("on voxels");
-    QRadioButton* applyOnHeightmap = new QRadioButton("on heightmap");
-    QRadioButton* applyOnImplicit = new QRadioButton("on implicit");
-    QRadioButton* applyOnLayers = new QRadioButton("on layers");
+    auto displayBoundariesButton = new CheckboxElement("Display walls", displayBoundaries);
+    auto displayTrajectoriesButton = new CheckboxElement("Display path", displayTrajectories);
 
-    QRadioButton* useBasicFlowfield = new QRadioButton("Basic flowfield");
-    QRadioButton* useImageFlowfield = new QRadioButton("Flowfield from image");
-    QRadioButton* useSimulatedFlowfield = new QRadioButton("Simulation");
-    QRadioButton* useEnvObjFlowfield = new QRadioButton("Env objects");
-    QLabel* labWater = new QLabel;
-    QLabel* labAir = new QLabel;
-    QPushButton* browseWaterFlow = new QPushButton("...");
-    QPushButton* browseAirFlow = new QPushButton("...");
+    auto applyOnVoxels = new RadioButtonElement("on voxels", EROSION_APPLIED::DENSITY_VOXELS, applyOn);
+    // applyOnVoxels->setChecked(this->applyOn == EROSION_APPLIED::DENSITY_VOXELS).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::DENSITY_VOXELS; });
+    auto applyOnHeightmap = new RadioButtonElement("on heightmap", EROSION_APPLIED::HEIGHTMAP, applyOn);
+    // applyOnHeightmap->setChecked(this->applyOn == EROSION_APPLIED::HEIGHTMAP).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::HEIGHTMAP; });
+    auto applyOnImplicit = new RadioButtonElement("on implicit", EROSION_APPLIED::IMPLICIT_TERRAIN, applyOn);
+    // applyOnImplicit->setChecked(this->applyOn == EROSION_APPLIED::IMPLICIT_TERRAIN).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::IMPLICIT_TERRAIN; });
+    auto applyOnLayers = new RadioButtonElement("on layers", EROSION_APPLIED::LAYER_TERRAIN, applyOn);
+    // applyOnLayers->setChecked(this->applyOn == EROSION_APPLIED::LAYER_TERRAIN).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::LAYER_TERRAIN; });
 
-    QRadioButton* useRandomDensity = new QRadioButton("Random density");
-    QRadioButton* useLayeredDensity = new QRadioButton("Layered");
-    QRadioButton* useNativeDensity = new QRadioButton("Native density");
-    QRadioButton* useImageDensity = new QRadioButton("Density from image");
-    QLabel* labDensityField = new QLabel;
-    QPushButton* densityFieldFileChooser = new QPushButton("...");
+    auto useBasicFlowfield = new RadioButtonElement("Basic flowfield", FLOWFIELD_TYPE::BASIC, flowfieldUsed);
+    // useBasicFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::BASIC).setOnChecked([=](bool checked) { if (checked) this->flowfieldUsed = FLOWFIELD_TYPE::BASIC; });
+    auto useImageFlowfield = new RadioButtonElement("Flowfield from image", FLOWFIELD_TYPE::FLOWFIELD_IMAGE, flowfieldUsed);
+    // useImageFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_IMAGE).setOnChecked([=](bool checked) { if (checked) this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_IMAGE; });
+    auto useSimulatedFlowfield = new RadioButtonElement("Simulation", FLOWFIELD_TYPE::FLUID_SIMULATION, flowfieldUsed);
+    // useSimulatedFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::FLUID_SIMULATION).setOnChecked([=](bool checked) { if (checked) this->flowfieldUsed = FLOWFIELD_TYPE::FLUID_SIMULATION; });
+    auto useEnvObjFlowfield = new RadioButtonElement("Env objects", FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS, flowfieldUsed);
+    // useEnvObjFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS).setOnChecked([=](bool checked) { if (checked) this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS; });
 
-    QPushButton* lotsOfTestsButton = new QPushButton("Do tests");
+    auto labWater = new LabelElement("Water: " + getFilename(this->airFlowImagePath));
+    auto labAir = new LabelElement("Air: " + getFilename(this->airFlowImagePath));
+    auto browseWaterFlow = new ButtonElement("...", [=]() { this->browseWaterFlowFromFile(); labWater->setText("Water: " + getFilename(this->waterFlowImagePath));});
+    auto browseAirFlow = new ButtonElement("...", [=]() { this->browseAirFlowFromFile(); labAir->setText("Air: " + getFilename(this->airFlowImagePath));});
 
-    QRadioButton* waterDensity = new QRadioButton("Hydraulic");
-    QRadioButton* airDensity = new QRadioButton("Aeolian");
-    QRadioButton* noDensity = new QRadioButton("Nope");
+    auto useRandomDensity = new RadioButtonElement("Random density", DENSITY_TYPE::RANDOM_DENSITY, densityUsed);
+    // useRandomDensity->setChecked(this->densityUsed == DENSITY_TYPE::RANDOM_DENSITY).setOnChecked([=](bool checked) { if (checked) this->densityUsed = DENSITY_TYPE::RANDOM_DENSITY; });
+    auto useLayeredDensity = new RadioButtonElement("Layered", DENSITY_TYPE::LAYERED_DENSITY, densityUsed);
+    // useLayeredDensity->setChecked(this->densityUsed == DENSITY_TYPE::LAYERED_DENSITY).setOnChecked([=](bool checked) { if (checked) this->densityUsed = DENSITY_TYPE::LAYERED_DENSITY; });
+    auto useNativeDensity = new RadioButtonElement("Native density", DENSITY_TYPE::NATIVE, densityUsed);
+    // useNativeDensity->setChecked(this->densityUsed == DENSITY_TYPE::NATIVE).setOnChecked([=](bool checked) { if (checked) this->densityUsed = DENSITY_TYPE::NATIVE; });
+    auto useImageDensity = new RadioButtonElement("Density from image", DENSITY_TYPE::DENSITY_IMAGE, densityUsed);
+    // useImageDensity->setChecked(this->densityUsed == DENSITY_TYPE::DENSITY_IMAGE).setOnChecked([=](bool checked) { if (checked) this->densityUsed = DENSITY_TYPE::DENSITY_IMAGE; });
+    auto labDensityField = new LabelElement("File: " + getFilename(this->densityFieldImagePath));
+    auto densityFieldFileChooser = new ButtonElement("...", [=]() { this->browseDensityFieldFromFile(); labAir->setText("File: " + getFilename(this->airFlowImagePath));});
 
-    QRadioButton* particleSizeSmall = new QRadioButton("Small");
-    QRadioButton* particleSizeMedium = new QRadioButton("Medium");
-    QRadioButton* particleSizeBig = new QRadioButton("Big");
+    auto waterDensity = new RadioButtonElement("Hydraulic", 1662.f, matterDensity);
+    // waterDensity->setChecked(0 < this->matterDensity && this->matterDensity < 1000.f).setOnChecked([=](bool checked) { if (checked) matterDensity = 500; });
+    auto airDensity = new RadioButtonElement("Aeolian", 500.f, matterDensity);
+    // airDensity->setChecked(this->matterDensity >= 1000.f).setOnChecked([=](bool checked) { if (checked) matterDensity = 1662; });
+    auto noDensity = new RadioButtonElement("Nope", -1.f, matterDensity);
+    // noDensity->setChecked(this->matterDensity <= 0).setOnChecked([=](bool checked) { if (checked) matterDensity = -1; });
 
-    QCheckBox* continuousRotationButton = new QCheckBox("Continuous rotation");
-    QCheckBox* wrapPositionsButton = new QCheckBox("Wrap position");
+    auto particleSizeSmall = new RadioButtonElement("Small", 4.f, erosionSize);
+    // particleSizeSmall->setChecked(this->erosionSize < 5.f).setOnChecked([=](bool checked) { if (checked) erosionSize = 4; });
+    auto particleSizeMedium = new RadioButtonElement("Medium", 8.f, erosionSize);
+    // particleSizeMedium->setChecked(this->erosionSize >= 5.f && this->erosionSize < 10.f).setOnChecked([=](bool checked) { if (checked) erosionSize = 8; });
+    auto particleSizeBig = new RadioButtonElement("Big", 10.f, erosionSize);
+    // particleSizeBig->setChecked(this->erosionSize >= 10.f).setOnChecked([=](bool checked) { if (checked) erosionSize = 12; });
 
-    QComboBox* simulationTypeButton = new QComboBox;
+    auto continuousRotationButton = new CheckboxElement("Continuous rotation", continuousRotation);
+    auto wrapPositionsButton = new CheckboxElement("Wrap position", wrapParticles);
+
+    auto simulationTypeButton = new ComboboxElement("Simulation");
     std::vector<FluidSimType> possibleSimTypes = {LBM, FLIP, SPH, STABLE, WARP};
     for (size_t i = 0; i < possibleSimTypes.size(); i++) {
-        simulationTypeButton->addItem(QString::fromStdString(stringFromFluidSimType(possibleSimTypes[i])));
-    }
-//    simulationTypeButton->addItems({"MLB", "FLIP", "SPH", "Stable", "Warp"});
-//    simulationTypeButton->addItem("MLB", QVariant(FluidSimType::LBM));
-//    simulationTypeButton->addItem("FLIP", QVariant(FluidSimType::FLIP));
-//    simulationTypeButton->addItem("SPH", QVariant(FluidSimType::SPH));
-//    simulationTypeButton->addItem("Stable", QVariant(FluidSimType::STABLE));
-//    simulationTypeButton->addItem("Warp", QVariant(FluidSimType::WARP));
-
-    QRadioButton* noLimitCollisionButton = new QRadioButton("No");
-    QRadioButton* singleCollisionButton = new QRadioButton("1");
-    QRadioButton* twoCollisionButton = new QRadioButton("2");
-    QRadioButton* tenCollisionButton = new QRadioButton("10");
-
-
-//    erosionLayout->addWidget(createVerticalGroup({displayTrajectoriesButton})););
-/*
-    erosionLayout->addWidget(createVerticalGroup({
-                                                     thermalButton->get(),
-                                                     hydraulicButton->get(),
-                                                     gobelinsButton->get(),
-                                                     desertButton->get(),
-                                                     volcanoButton->get(),
-                                                    implicitButton->get(),
-                                                    heightmapButton->get(),
-                                                    voxelsButton->get(),
-                                                     createMultipleSliderGroup({
-//                                                           {"Taille", rockSizeSlider},
-                                                           {"Strength", rockStrengthSlider},
-                                                           {"Quantity", rockQttSlider},
-                                                           // {"gravity", gravitySlider},
-                                                           // {"bouncing Coefficient", bouncingCoefficientSlider},
-                                                           {"bounciness", bouncinessSlider},
-//                                                           {"minSpeed", minSpeedSlider},
-//                                                           {"maxSpeed", maxSpeedSlider},
-                                                           {"max Capacity Factor", maxCapacityFactorSlider},
-                                                           {"erosion Factor", erosionFactorSlider},
-                                                           {"deposit Factor", depositFactorSlider},
-//                                                           {"matter Density", matterDensitySlider},
-//                                                           {"material Impact", materialImpactSlider},
-                                                           // {"air Rotation", airFlowfieldRotationSlider},
-                                                           // {"water Rotation", waterFlowfieldRotationSlider},
-                                                           {"air Force", airForceSlider},
-                                                           {"water Force", waterForceSlider},
-                                                           {"nb iterations", iterationSlider},
-//                                                           {"dt", dtSlider},
-//                                                           {"ShearConstantK", shearingStressConstantKSlider},
-//                                                           {"ShearRatePower", shearingRatePowerSlider},
-//                                                           {"ErosionPower", erosionPowerValueSlider},
-//                                                           {"Critical shear stress", criticalShearStressSlider},
-                                                           {"Initial capacity", initialCapacitySlider},
-                                                       }),
-                                                        displayTrajectoriesButton,
-                                                        displayBoundariesButton
-    }));
-*/
-
-    erosionLayout->addWidget(createVerticalGroup({
-                                                     thermalButton->get(),
-                                                     hydraulicButton->get(),
-                                                     gobelinsButton->get(),
-                                                     desertButton->get(),
-                                                     volcanoButton->get(),
-                                                     createMultipleSliderGroup({
-//                                                           {"Taille", rockSizeSlider},
-                                                           {"Strength", rockStrengthSlider},
-                                                           {"Quantity", rockQttSlider},
-                                                           {"gravity", gravitySlider},
-                                                           {"bouncing Coefficient", bouncingCoefficientSlider},
-                                                           {"bounciness", bouncinessSlider},
-//                                                           {"minSpeed", minSpeedSlider},
-//                                                           {"maxSpeed", maxSpeedSlider},
-                                                           {"max Capacity Factor", maxCapacityFactorSlider},
-                                                           {"erosion Factor", erosionFactorSlider},
-                                                           {"deposit Factor", depositFactorSlider},
-//                                                           {"matter Density", matterDensitySlider},
-//                                                           {"material Impact", materialImpactSlider},
-                                                           {"air Rotation", airFlowfieldRotationSlider},
-                                                           {"water Rotation", waterFlowfieldRotationSlider},
-                                                           {"air Force", airForceSlider},
-                                                           {"water Force", waterForceSlider},
-                                                           {"nb iterations", iterationSlider},
-//                                                           {"dt", dtSlider},
-//                                                           {"ShearConstantK", shearingStressConstantKSlider},
-//                                                           {"ShearRatePower", shearingRatePowerSlider},
-//                                                           {"ErosionPower", erosionPowerValueSlider},
-//                                                           {"Critical shear stress", criticalShearStressSlider},
-                                                           {"Initial capacity", initialCapacitySlider},
-                                                       }),
-                                                     createHorizontalGroup({
-                                                         airDensity, waterDensity, noDensity
-                                                     }),
-                                                     createHorizontalGroup({
-                                                         particleSizeSmall, particleSizeMedium, particleSizeBig
-                                                     }),
-                                                     createHorizontalGroup({
-                                                         continuousRotationButton, wrapPositionsButton
-                                                     }),
-                                                     createHorizontalGroup({
-                                                         noLimitCollisionButton, singleCollisionButton, twoCollisionButton, tenCollisionButton
-                                                     })
-                                                 }));
-    erosionLayout->addWidget(createVerticalGroup({
-                                                     confirmFromSurface,
-                                                     confirmFromSkyButton,
-                                                     confirmFromRiverButton,
-                                                     confirmFromRiver2Button,
-                                                     confirmFromRandom,
-                                                     confirmFromSideButton,
-                                                     confirmFromBigSideButton,
-                                                     confirmFromVolcanoButton,
-                                                     confirmFromVolcano2Button,
-                                                     confirmFromVolcano3Button,
-
-                                                     displayTrajectoriesButton,
-                                                     displayBoundariesButton,
-                                                     createVerticalGroup({
-                                                         applyOnHeightmap,
-                                                         applyOnVoxels,
-                                                         applyOnImplicit,
-                                                         applyOnLayers
-                                                     }),
-                                                     createVerticalGroup({
-                                                         useBasicFlowfield,
-                                                         useImageFlowfield,
-                                                         useEnvObjFlowfield,
-                                                         labWater, browseWaterFlow,
-                                                         labAir, browseAirFlow,
-                                                         useSimulatedFlowfield, simulationTypeButton
-                                                     }),
-//                                                     lotsOfTestsButton,
-                                                     createVerticalGroup({
-                                                         useImageDensity,
-                                                         useLayeredDensity,
-                                                         labDensityField,
-                                                         densityFieldFileChooser,
-                                                         useNativeDensity,
-                                                         useRandomDensity
-                                                     })
-                                                 }));
-
-    /*
-    erosionLayout->addWidget(createVerticalGroup({
-                                                     createMultipleSliderGroup({
-//                                                           {"Taille", rockSizeSlider},
-                                                           {"Strength", rockStrengthSlider},
-                                                           {"Quantity", rockQttSlider},
-//                                                           {"gravity", gravitySlider},
-                                                           {"bouncing Coefficient", bouncingCoefficientSlider},
-                                                           {"bounciness", bouncinessSlider},
-//                                                           {"minSpeed", minSpeedSlider},
-//                                                           {"maxSpeed", maxSpeedSlider},
-                                                           {"max Capacity Factor", maxCapacityFactorSlider},
-                                                           {"erosion Factor", erosionFactorSlider},
-                                                           {"deposit Factor", depositFactorSlider},
-//                                                           {"matter Density", matterDensitySlider},
-//                                                           {"material Impact", materialImpactSlider},
-                                                           {"air Rotation", airFlowfieldRotationSlider},
-                                                           {"water Rotation", waterFlowfieldRotationSlider},
-                                                           {"air Force", airForceSlider},
-                                                           {"water Force", waterForceSlider},
-                                                           {"nb iterations", iterationSlider},
-//                                                           {"dt", dtSlider},
-//                                                           {"ShearConstantK", shearingStressConstantKSlider},
-//                                                           {"ShearRatePower", shearingRatePowerSlider},
-//                                                           {"ErosionPower", erosionPowerValueSlider},
-//                                                           {"Critical shear stress", criticalShearStressSlider},
-                                                           {"Initial capacity", initialCapacitySlider},
-                                                       }),
-                                                     createHorizontalGroup({
-                                                         airDensity, waterDensity
-                                                     }),
-                                                     createHorizontalGroup({
-                                                         particleSizeSmall, particleSizeMedium, particleSizeBig
-                                                     }),
-                                                     createHorizontalGroup({
-                                                         continuousRotationButton, wrapPositionsButton
-                                                     }),
-                                                     createHorizontalGroup({
-                                                         noLimitCollisionButton, singleCollisionButton, twoCollisionButton, tenCollisionButton
-                                                     })
-                                                 }));
-    erosionLayout->addWidget(createVerticalGroup({
-                                                     confirmFromSurface,
-                                                     confirmFromSkyButton,
-                                                     confirmFromRiverButton,
-                                                     confirmFromRiver2Button,
-                                                     confirmFromRandom,
-                                                     confirmFromSideButton,
-                                                     confirmFromBigSideButton,
-                                                     confirmFromVolcanoButton,
-                                                     confirmFromVolcano2Button,
-                                                     confirmFromVolcano3Button,
-
-                                                     displayTrajectoriesButton,
-                                                     displayBoundariesButton,
-                                                     createVerticalGroup({
-                                                         applyOnHeightmap,
-                                                         applyOnVoxels,
-                                                         applyOnImplicit,
-                                                         applyOnLayers
-                                                     }),
-                                                     createVerticalGroup({
-                                                         useBasicFlowfield,
-                                                         useImageFlowfield,
-                                                         useEnvObjFlowfield,
-                                                         labWater, browseWaterFlow,
-                                                         labAir, browseAirFlow,
-                                                         useSimulatedFlowfield, simulationTypeButton
-                                                     }),
-//                                                     lotsOfTestsButton,
-                                                     createVerticalGroup({
-                                                         useImageDensity,
-                                                         useLayeredDensity,
-                                                         labDensityField,
-                                                         densityFieldFileChooser,
-                                                         useNativeDensity,
-                                                         useRandomDensity
-                                                     })
-                                                 }));
-                                                     */
-
-    QObject::connect(rockSizeSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionSize = newVal; });
-    QObject::connect(rockStrengthSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionStrength = newVal; });
-    QObject::connect(rockQttSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionQtt = newVal; });
-    QObject::connect(rockRandomnessSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->rockRandomness = newVal; });
-
-    QObject::connect(gravitySlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->gravity = newVal; });
-    QObject::connect(bouncingCoefficientSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->bouncingCoefficient = newVal; });
-    QObject::connect(bouncinessSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->bounciness = newVal; });
-    QObject::connect(minSpeedSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->minSpeed = newVal; });
-    QObject::connect(maxSpeedSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->maxSpeed = newVal; });
-    QObject::connect(maxCapacityFactorSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->maxCapacityFactor = newVal; });
-    QObject::connect(erosionFactorSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionFactor = newVal; });
-    QObject::connect(depositFactorSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->depositFactor = newVal; });
-    QObject::connect(matterDensitySlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->matterDensity = newVal; });
-    QObject::connect(materialImpactSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->materialImpact = newVal; });
-    QObject::connect(airFlowfieldRotationSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->airFlowfieldRotation = newVal; });
-    QObject::connect(waterFlowfieldRotationSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->waterFlowfieldRotation = newVal; });
-    QObject::connect(airForceSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->airForce = newVal; });
-    QObject::connect(waterForceSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->waterForce = newVal; });
-    QObject::connect(iterationSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->numberOfIterations = (int) newVal; });
-
-    QObject::connect(dtSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->dt = newVal; });
-    QObject::connect(shearingStressConstantKSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->shearingStressConstantK = newVal; });
-    QObject::connect(shearingRatePowerSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->shearingRatePower = newVal; });
-    QObject::connect(erosionPowerValueSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionPowerValue = newVal; });
-    QObject::connect(criticalShearStressSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->criticalShearStress = newVal; });
-    QObject::connect(initialCapacitySlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->initialCapacity = newVal; });
-
-    QObject::connect(confirmFromRandom, &QPushButton::pressed, this, [&](){ this->throwFrom(EVERYWHERE); });
-    QObject::connect(confirmFromSurface, &QPushButton::pressed, this, [&](){ this->throwFrom(JUST_ABOVE_VOXELS); });
-    QObject::connect(confirmFromSkyButton, &QPushButton::pressed, this, [&](){ this->throwFrom(SKY); });
-    QObject::connect(confirmFromRiverButton, &QPushButton::pressed, this, [&](){ this->throwFrom(RIVER); });
-    QObject::connect(confirmFromRiver2Button, &QPushButton::pressed, this, [&](){ this->throwFrom(UNDERWATER); });
-    QObject::connect(confirmFromSideButton, &QPushButton::pressed, this, [&](){ this->throwFrom(FROM_X); });
-    QObject::connect(confirmFromBigSideButton, &QPushButton::pressed, this, [&](){ this->throwFrom(FROM_BIG_X); });
-    QObject::connect(confirmFromVolcanoButton, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO); });
-    QObject::connect(confirmFromVolcano2Button, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO2); });
-    QObject::connect(confirmFromVolcano3Button, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO3); });
-
-    QObject::connect(displayTrajectoriesButton, &QCheckBox::toggled, this, [&](bool checked) { this->displayTrajectories = checked; });
-    QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [&](bool checked) { this->displayBoundaries = checked; });
-
-    QObject::connect(applyOnVoxels, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::DENSITY_VOXELS; });
-    QObject::connect(applyOnHeightmap, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::HEIGHTMAP; });
-    QObject::connect(applyOnImplicit, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::IMPLICIT_TERRAIN; });
-    QObject::connect(applyOnLayers, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::LAYER_TERRAIN; });
-
-    QObject::connect(useBasicFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::BASIC; });
-    QObject::connect(useImageFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_IMAGE; });
-    QObject::connect(useSimulatedFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::FLUID_SIMULATION; });
-    QObject::connect(useEnvObjFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS; });
-
-    QObject::connect(browseWaterFlow, &QPushButton::pressed, this, [=]() { this->browseWaterFlowFromFile(); labWater->setText("Water: " + QString::fromStdString(getFilename(this->waterFlowImagePath)));});
-    QObject::connect(browseAirFlow, &QPushButton::pressed, this, [=]() { this->browseAirFlowFromFile(); labAir->setText("Air: " + QString::fromStdString(getFilename(this->airFlowImagePath)));} );
-
-    QObject::connect(useRandomDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::RANDOM_DENSITY; });
-    QObject::connect(useLayeredDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::LAYERED_DENSITY; });
-    QObject::connect(useNativeDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::NATIVE; });
-    QObject::connect(useImageDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::DENSITY_IMAGE; });
-    QObject::connect(densityFieldFileChooser, &QPushButton::pressed, this, [=]() { this->browseDensityFieldFromFile(); labAir->setText("File: " + QString::fromStdString(getFilename(this->airFlowImagePath)));} );
-
-    QObject::connect(lotsOfTestsButton, &QPushButton::pressed, this, &ErosionInterface::testManyManyErosionParameters);
-
-    QObject::connect(airDensity, &QRadioButton::pressed, this, [=]() { this->matterDensity = 500.f; });
-    QObject::connect(waterDensity, &QRadioButton::pressed, this, [=]() { this->matterDensity = 1662.f; });
-    QObject::connect(noDensity, &QRadioButton::pressed, this, [=]() { this->matterDensity = -1; });
-
-    QObject::connect(continuousRotationButton, &QCheckBox::toggled, this, [=](bool checked) { this->continuousRotation = checked; });
-    QObject::connect(wrapPositionsButton, &QCheckBox::toggled, this, [=](bool checked) { this->wrapParticles = checked; });
-
-    QObject::connect(particleSizeSmall, &QRadioButton::pressed, this, [=]() { this->erosionSize = 4.f; });
-    QObject::connect(particleSizeMedium, &QRadioButton::pressed, this, [=]() { this->erosionSize = 8.f; });
-    QObject::connect(particleSizeBig, &QRadioButton::pressed, this, [=]() { this->erosionSize = 12.f; });
-
-    QObject::connect(simulationTypeButton, &QComboBox::currentTextChanged, this, [=](QString text) { this->selectedSimulationType = FluidSimTypeFromString(text.toStdString()); });
-//    QObject::connect(simulationTypeButton, &QComboBox::currentIndexChanged, this, [=](int index) { this->selectedSimulationType = simulationTypeButton->item; });
-
-    QObject::connect(noLimitCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = -1; });
-    QObject::connect(singleCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 1; });
-    QObject::connect(twoCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 2; });
-    QObject::connect(tenCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 10; });
-
-    rockSizeSlider->setfValue(this->erosionSize);
-    rockStrengthSlider->setfValue(this->erosionStrength);
-    rockQttSlider->setfValue(this->erosionQtt);
-    rockRandomnessSlider->setfValue(this->rockRandomness);
-    gravitySlider->setfValue(this->gravity);
-    bouncingCoefficientSlider->setfValue(this->bouncingCoefficient);
-    bouncinessSlider->setfValue(this->bounciness);
-    minSpeedSlider->setfValue(this->minSpeed);
-    maxSpeedSlider->setfValue(this->maxSpeed);
-    maxCapacityFactorSlider->setfValue(this->maxCapacityFactor);
-    erosionFactorSlider->setfValue(this->erosionFactor);
-    depositFactorSlider->setfValue(this->depositFactor);
-    matterDensitySlider->setfValue(this->matterDensity);
-    materialImpactSlider->setfValue(this->materialImpact);
-    airFlowfieldRotationSlider->setfValue(this->airFlowfieldRotation);
-    waterFlowfieldRotationSlider->setfValue(this->waterFlowfieldRotation);
-    airForceSlider->setfValue(this->airForce);
-    waterForceSlider->setfValue(this->waterForce);
-    iterationSlider->setfValue(this->numberOfIterations);
-    dtSlider->setfValue(this->dt);
-    shearingStressConstantKSlider->setfValue(this->shearingStressConstantK);
-    shearingRatePowerSlider->setfValue(this->shearingRatePower);
-    erosionPowerValueSlider->setfValue(this->erosionPowerValue);
-    criticalShearStressSlider->setfValue(this->criticalShearStress);
-    initialCapacitySlider->setfValue(this->initialCapacity);
-
-    continuousRotationButton->setChecked(this->continuousRotation);
-    wrapPositionsButton->setChecked(this->wrapParticles);
-
-    displayTrajectoriesButton->setChecked(this->displayTrajectories);
-
-    noLimitCollisionButton->setChecked(this->particleMaxCollisions == -1);
-    singleCollisionButton->setChecked(this->particleMaxCollisions == 1);
-    twoCollisionButton->setChecked(this->particleMaxCollisions == 2);
-    tenCollisionButton->setChecked(this->particleMaxCollisions == 10);
-
-    applyOnVoxels->setChecked(this->applyOn == EROSION_APPLIED::DENSITY_VOXELS);
-    applyOnHeightmap->setChecked(this->applyOn == EROSION_APPLIED::HEIGHTMAP);
-    applyOnImplicit->setChecked(this->applyOn == EROSION_APPLIED::IMPLICIT_TERRAIN);
-    applyOnLayers->setChecked(this->applyOn == EROSION_APPLIED::LAYER_TERRAIN);
-
-    labWater->setText("Water: " + QString::fromStdString(getFilename(this->airFlowImagePath)));
-    labAir->setText("Air: " + QString::fromStdString(getFilename(this->airFlowImagePath)));
-
-    useBasicFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::BASIC);
-    useImageFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_IMAGE);
-    useSimulatedFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::FLUID_SIMULATION);
-    useEnvObjFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS);
-
-    useRandomDensity->setChecked(this->densityUsed == DENSITY_TYPE::RANDOM_DENSITY);
-    useLayeredDensity->setChecked(this->densityUsed == DENSITY_TYPE::LAYERED_DENSITY);
-    useNativeDensity->setChecked(this->densityUsed == DENSITY_TYPE::NATIVE);
-    useImageDensity->setChecked(this->densityUsed == DENSITY_TYPE::DENSITY_IMAGE);
-    labDensityField->setText("File: " + QString::fromStdString(getFilename(this->densityFieldImagePath)));
-
-    airDensity->setChecked(0 < this->matterDensity && this->matterDensity < 1000.f);
-    waterDensity->setChecked(this->matterDensity >= 1000.f);
-    noDensity->setChecked(this->matterDensity <= 0);
-
-    particleSizeSmall->setChecked(this->erosionSize < 5.f);
-    particleSizeMedium->setChecked(this->erosionSize >= 5.f && this->erosionSize < 10.f);
-    particleSizeBig->setChecked(this->erosionSize >= 10.f);
-
-//    simulationTypeButton->setCurrentIndex(0);
-    for (size_t i = 0; i < possibleSimTypes.size(); i++) {
-        if (this->selectedSimulationType == possibleSimTypes[i])
-            simulationTypeButton->setCurrentIndex(i);
+        simulationTypeButton->addChoice(new ComboboxLineElement<FluidSimType>(stringFromFluidSimType(possibleSimTypes[i]), possibleSimTypes[i]), this->selectedSimulationType == possibleSimTypes[i]);
     }
 
-    return erosionLayout;
+    rockQttSlider->setValue(erosionQtt).setOnValueChanged([=](float val) { erosionQtt = val; });
+
+
+
+    UI->add(std::vector<UIElement*>{
+        thermalButton,
+        hydraulicButton,
+        gobelinsButton,
+        desertButton,
+        volcanoButton,
+
+        rockStrengthSlider,
+        rockQttSlider,
+        gravitySlider,
+        bouncingCoefficientSlider,
+        bouncinessSlider,
+        maxCapacityFactorSlider,
+        erosionFactorSlider,
+        depositFactorSlider,
+        airFlowfieldRotationSlider,
+        waterFlowfieldRotationSlider,
+        airForceSlider,
+        waterForceSlider,
+        iterationSlider,
+        initialCapacitySlider,
+        createHorizontalGroupUI({airDensity, waterDensity, noDensity}),
+        createHorizontalGroupUI({particleSizeSmall, particleSizeMedium, particleSizeBig}),
+        createHorizontalGroupUI({continuousRotationButton, wrapPositionsButton}),
+        // createHorizontalGroupUI({noLimitCollisionButton, singleCollisionButton, twoCollisionButton, tenCollisionButton}),
+        confirmFromSurface,
+        confirmFromSkyButton,
+        confirmFromRiverButton,
+        confirmFromRiver2Button,
+        confirmFromRandom,
+        confirmFromSideButton,
+        confirmFromBigSideButton,
+        confirmFromVolcanoButton,
+        confirmFromVolcano2Button,
+        confirmFromVolcano3Button,
+
+        displayTrajectoriesButton,
+        displayBoundariesButton,
+
+        applyOnHeightmap,
+        applyOnVoxels,
+        applyOnImplicit,
+        applyOnLayers,
+
+        useBasicFlowfield,
+        useImageFlowfield,
+        useEnvObjFlowfield,
+        labWater, browseWaterFlow,
+        labAir, browseAirFlow,
+        useSimulatedFlowfield, simulationTypeButton,
+
+        useImageDensity,
+        useLayeredDensity,
+        labDensityField,
+        densityFieldFileChooser,
+        useNativeDensity,
+        useRandomDensity
+    });
+    return UI;
 }
 
-/*void ErosionInterface::keyPressEvent(QKeyEvent *e)
-{
-    if (!this->isVisible()) return ActionInterface::keyPressEvent(e);
 
-    if (e->key() == Qt::Key_0) {
-        auto [untouched, eroded, deposited] = UnderwaterErosion::flatteningErodedTerrain()
-    }
-}*/
 
 void ErosionInterface::show()
 {
@@ -1516,26 +1220,7 @@ void ErosionInterface::hide()
     ActionInterface::hide();
 }
 
-/*
 
-    float erosionSize = 8.f;
-    float erosionStrength = .5; // .35f;
-    int erosionQtt = 1000;
-    float rockRandomness = .1f;
-
-    int maxParticles = 1000;
-
-    float gravity = .981f;
-    float bouncingCoefficient = 0.15f; //0.15f; // 1.f;
-    float bounciness = 1.f;
-    float minSpeed = .1f;
-    float maxSpeed = 5.f;
-    float maxCapacityFactor = 1.f;
-    float erosionFactor = 1.f;
-    float depositFactor = 1.f;
-    float matterDensity = 500.f;
-    float materialImpact = 1.f;
-*/
 void ErosionInterface::thermalErosionProcess()
 {
     erosionStrength = 0.06;

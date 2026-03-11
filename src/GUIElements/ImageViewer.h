@@ -5,23 +5,21 @@
 
 class ImageViewer : public AbstractPlotter {
     Q_OBJECT
-protected: // Singleton
+public: // protected: // Singleton
     ImageViewer(const std::string& name, QWidget* parent = nullptr);
-    ImageViewer(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     DECLARE_PLOTTER_GETTER(ImageViewer)
 
+    ImageViewer& setNormalizedModeImage(bool normalize);
+    ImageViewer& setAbsoluteModeImage(bool absolute);
+    ImageViewer& setFilteredValuesImage(bool filtered);
+
+    ImageViewer& updateUI();
+    void displayInfoUnderMouse(const Vector3 &relativeMousePos);
+
 public Q_SLOTS:
-    ImageViewer* updateUI();
-
-    ImageViewer* setNormalizedModeImage(bool normalize);
-    ImageViewer* setAbsoluteModeImage(bool absolute);
-    ImageViewer* setFilteredValuesImage(bool filtered);
-
-    ImageViewer* updateViewOptionsInterface();
-
-    ImageViewer* displayInfoUnderMouse(const Vector3 &relativeMousePos);
+    ImageViewer& updateViewOptionsInterface();
 };
 
 #endif // IMAGEVIEWER_H

@@ -488,26 +488,74 @@ std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, 
 // Function to perform the inverse FFT on a given FFT result
 std::vector<std::complex<float>> inverseFFT(const std::vector<std::complex<float>>& fft_result) {
     return fft(fft_result, true);
-    /*
-    size_t size = fft_result.size();
-    std::vector<std::complex<float>> conjugate(size);
-
-    // Take the conjugate of the FFT result
-    for (size_t i = 0; i < size; ++i) {
-        conjugate[i] = std::conj(fft_result[i]);
-    }
-
-    // Perform another FFT (or IFFT) on the conjugate result
-    std::vector<std::complex<float>> inverse_result = fft(conjugate); // Assuming fft() is your IFFT function
-
-    // Normalize the result by dividing by the size
-    for (size_t i = 0; i < size; ++i) {
-        inverse_result[i] /= static_cast<float>(size);
-    }
-
-    return inverse_result;
-    */
 }
+
+
+
+
+
+
+// Function to perform FFT
+std::vector<std::complex<float>> fftParallel(const std::vector<std::complex<float>>& x, bool inverse) {
+    const size_t N = x.size();
+    if (N <= 1) return x;
+
+    std::vector<std::complex<float>> result(N);
+
+    // Bit-reversal permutation (optional but enhances performance)
+    std::vector<size_t> permutation(N);
+    size_t logN = static_cast<size_t>(std::log2(N));
+    #pragma omp parallel for
+    for (size_t i = 0; i < N; ++i) {
+        size_t j = 0;
+        for (size_t bit = 0; bit < logN; ++bit) {
+            if (i & (1 << bit)) {
+                j |= (1 << (logN - 1 - bit));
+            }
+        }
+        permutation[i] = j;
+    }
+
+    // Perform FFT
+    #pragma omp parallel for
+    for (size_t i = 0; i < N; ++i) {
+        result[permutation[i]] = x[i];
+    }
+
+
+    for (size_t s = 1; s <= logN; ++s) {
+        size_t m = 1 << s;
+        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * float(PI) / float(m));
+        for (size_t k = 0; k < N; k += m) {
+            std::complex<float> w = 1.0f;
+            for (size_t j = 0; j < m / 2; ++j) {
+                std::complex<float> t = w * result[k + j + m / 2];
+                std::complex<float> u = result[k + j];
+                result[k + j] = u + t;
+                result[k + j + m / 2] = u - t;
+                w *= wm;
+            }
+        }
+    }
+
+    if (inverse) {
+        #pragma omp parallel for
+        for (size_t i = 0; i < N; ++i) {
+            result[i] /= N; // Scaling for the inverse FFT
+        }
+    }
+
+    return result;
+}
+
+// Function to perform the inverse FFT on a given FFT result
+std::vector<std::complex<float>> inverseFFTParallel(const std::vector<std::complex<float>>& fft_result) {
+    return fftParallel(fft_result, true);
+}
+
+
+
+
 
 bool isPowerOf2(int n)
 {

@@ -362,14 +362,14 @@ void ViewerInterface::setupUi()
     });
     mainLayout->addWidget(viewer, 1, 0);
 
-
+    /*
     QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
 
-    InterfaceUI* displayOptionUI = new InterfaceUI(new QVBoxLayout, "Options");
+    auto displayOptionUI = new InterfaceUI(new QVBoxLayout, "Options");
 
     for (int i = 0; i < 4; i++) {
-        ButtonElement* viewerSetupExperimental = new ButtonElement("Setup view " + std::to_string(i));
-        ButtonElement* viewerSetupExperimental_save = new ButtonElement("Save");
+        auto viewerSetupExperimental = std::make_shared<ButtonElement>("Setup view " + std::to_string(i));
+        auto viewerSetupExperimental_save = std::make_shared<ButtonElement>("Save");
         std::string associatedFilename = "experiments_state" + std::to_string(i) + ".xml";
         viewerSetupExperimental->setOnClick([=]() { this->viewer->setupViewFromFile(associatedFilename); });
         viewerSetupExperimental_save->setOnClick([=]() { this->viewer->saveViewToFile(associatedFilename); });
@@ -377,23 +377,23 @@ void ViewerInterface::setupUi()
         displayOptionUI->add(createHorizontalGroupUI({viewerSetupExperimental, viewerSetupExperimental_save}));
     }
 
-    CheckboxElement* displayAsComparisonTerrainButton = new CheckboxElement("Comp.");
+    CheckboxElement* displayAsComparisonTerrainButton = std::make_shared<CheckboxElement>("Comp.");
     displayAsComparisonTerrainButton->setChecked(terrainGenerationInterface->displayAsComparativeMode);
     displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});
 
-    CheckboxElement* displayWaterDepthButton = new CheckboxElement("Depth");
+    CheckboxElement* displayWaterDepthButton = std::make_shared<CheckboxElement>("Depth");
     displayWaterDepthButton->setChecked(terrainGenerationInterface->displayDepth);
     displayWaterDepthButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayDepthMode(check);});
 
-    CheckboxElement* displayShadowsButton = new CheckboxElement("Shadows");
+    CheckboxElement* displayShadowsButton = std::make_shared<CheckboxElement>("Shadows");
     displayShadowsButton->setChecked(terrainGenerationInterface->displayShadows);
     displayShadowsButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayShadowsMode(check);});
 
-    SliderElement* waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, terrainGenerationInterface->waterLevel);
+    SliderElement* waterLevelSlider = std::make_shared<SliderElement>("Water", 0.f, 1.f, 0.01f, terrainGenerationInterface->waterLevel);
     waterLevelSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });
-    SliderElement* ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, terrainGenerationInterface->ambiantOcclusionFactor);
+    SliderElement* ambiantOcclusionSlider = std::make_shared<SliderElement>("AO", 0.f, 1.f, 0.01f, terrainGenerationInterface->ambiantOcclusionFactor);
     ambiantOcclusionSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setAmbiantOcclusion(newValue); });
-    SliderElement* heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
+    SliderElement* heightFactorSlider = std::make_shared<SliderElement>("Height", 0.01f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
     heightFactorSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setHeightFactor(newValue); });
 
     displayOptionUI->add(displayModeLayout);
@@ -410,7 +410,7 @@ void ViewerInterface::setupUi()
                                                    createHorizontalGroupUI({
                                                        createVerticalGroupUI({
                                                            displayAsComparisonTerrainButton,
-                                                           new CheckboxElement("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
+                                                           std::make_shared<CheckboxElement>("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
                                                        }),
                                                        createVerticalGroupUI({
                                                            displayShadowsButton,
@@ -419,7 +419,7 @@ void ViewerInterface::setupUi()
                                                    })
                                             }));
     displayOptionWidget->setWidget(displayOptionUI->getWidget());
-
+    */
 
     QWidget* mainFrame = new QWidget(this);
     mainFrame->setLayout(mainLayout);
@@ -429,9 +429,9 @@ void ViewerInterface::setupUi()
     frame = new StickyFrame(this->viewer, 0, -1, -1, 1, false);
     frame->hide();
 
-    QObject::connect(reloadShadersButton, &QPushButton::pressed, this, [&]() {
-        this->viewer->reloadAllShaders();
-    });
+    // QObject::connect(reloadShadersButton, &QPushButton::pressed, this, [&]() {
+    //     this->viewer->reloadAllShaders();
+    // });
 
     this->setAllValuesToFitViewerDefaults(this->viewer);
     this->setupBindings();
@@ -490,7 +490,7 @@ void ViewerInterface::openInterface(std::shared_ptr<ActionInterface> object)
     } else {
         lastOpenedInterface = object;
         object->show();
-        this->frame->setContent(object->createGUI());
+        this->frame->setContent(object->createGUI()->get()->layout());
         this->frame->show();
     }
     this->viewer->update();

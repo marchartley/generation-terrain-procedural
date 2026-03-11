@@ -74,42 +74,27 @@ void EnvObjectFluidSimulation::replay([[maybe_unused]] nlohmann::json action)
     // ActionInterface::replay(action);
 }
 
-QLayout *EnvObjectFluidSimulation::createGUI()
+InterfaceUI* EnvObjectFluidSimulation::createGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout();
+    auto UI = new InterfaceUI();
 
-    QCheckBox* displayBoundariesButton = new QCheckBox("Display boundaries");
-    QCheckBox* displayGridBoundariesButton = new QCheckBox("Display boundaries (grid)");
-    QCheckBox* displayParticlesButton = new QCheckBox("Display particles");
-    QCheckBox* displayVectorsButton = new QCheckBox("Display vectors");
-    QCheckBox* autoComputeButton = new QCheckBox("Compute at each frame");
-    QPushButton* computeButton = new QPushButton("Compute");
-    QPushButton* updateMeshButton = new QPushButton("Update terrain");
+    auto displayBoundariesButton = new CheckboxElement("Display boundaries", displayBoundaries);
+    auto displayGridBoundariesButton = new CheckboxElement("Display boundaries (grid)", displayGridBoundaries);
+    auto displayParticlesButton = new CheckboxElement("Display particles", displayParticles);
+    auto displayVectorsButton = new CheckboxElement("Display vectors", displayVectors);
+    auto autoComputeButton = new CheckboxElement("Compute at each frame", computeAtEachFrame);
+    auto computeButton = new ButtonElement("Compute", [=]() { this->computeSimulation(this->nbComputationsPerFrame); });
+    auto updateMeshButton = new ButtonElement("Update terrain", [=]() { this->updateBoundariesMesh(); });
 
-    layout->addWidget(displayBoundariesButton);
-    layout->addWidget(displayGridBoundariesButton);
-    layout->addWidget(displayParticlesButton);
-    layout->addWidget(displayVectorsButton);
-    layout->addWidget(autoComputeButton);
-    layout->addWidget(createHorizontalGroup({
-                                                computeButton,
-                                                updateMeshButton
-                                            }));
-
-    displayBoundariesButton->setChecked(this->displayBoundaries);
-    displayParticlesButton->setChecked(this->displayParticles);
-    displayVectorsButton->setChecked(this->displayVectors);
-    autoComputeButton->setChecked(this->computeAtEachFrame);
-
-    QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayBoundaries = checked; });
-    QObject::connect(displayGridBoundariesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayGridBoundaries = checked; });
-    QObject::connect(displayParticlesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayParticles = checked; });
-    QObject::connect(displayVectorsButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayVectors = checked; });
-    QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool checked) { this->computeAtEachFrame = checked; });
-    QObject::connect(computeButton, &QPushButton::pressed, this, [=]() { computeSimulation(this->nbComputationsPerFrame); });
-    QObject::connect(updateMeshButton, &QPushButton::pressed, this, &EnvObjectFluidSimulation::updateBoundariesMesh);
-
-    return layout;
+    UI->add(std::vector<UIElement*>{
+        displayBoundariesButton,
+        displayGridBoundariesButton,
+        displayParticlesButton,
+        displayVectorsButton,
+        autoComputeButton,
+        createHorizontalGroupUI({ computeButton, updateMeshButton })
+    });
+    return UI;
 }
 
 void EnvObjectFluidSimulation::updateVectorsMesh()

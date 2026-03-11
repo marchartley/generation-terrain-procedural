@@ -55,48 +55,34 @@ void CoralIslandGeneratorInterface::mousePressEvent(QMouseEvent *event)
     return ActionInterface::mousePressEvent(event);
 }
 
-QLayout *CoralIslandGeneratorInterface::createGUI()
+InterfaceUI* CoralIslandGeneratorInterface::createGUI()
 {
-    QLayout* layout = new QVBoxLayout;
-    QPushButton* applyButton = new QPushButton("Apply");
-    FancySlider* subsidenceSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-    RangeSlider* coralLevelsSlider = new RangeSlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* verticalScaleSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* horizontalScaleSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
-    FancySlider* alphaSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
+    auto UI = new InterfaceUI();
+    auto applyButton = new ButtonElement("Apply", [=]() { this->validateTerrainChange(); });
+    auto subsidenceSlider = new SliderElement("Subsidence", 0.f, 1.f, .01f, subsidence);
+    auto coralLevelsSlider = new RangeSliderElement("Coral", 0.f, 1.f, .01f, coralLevelMin, coralLevelMax);
+    auto verticalScaleSlider = new SliderElement("Vertical", 0.f, 1.f, .01f, vScale);
+    auto horizontalScaleSlider = new SliderElement("Horizontal", 0.f, 1.f, .01f, hScale);
+    auto alphaSlider = new SliderElement("Alpha", 0.f, 1.f, .01f, alpha);
+    auto fromGanButton = new ButtonElement("From GAN", [=]() { this->fromGanUI(); });
 
-    QPushButton* fromGanButton = new QPushButton("From GAN");
+    subsidenceSlider->setOnValueChanged([=](float) { this->updateCoral(); });
+    coralLevelsSlider->setOnValueChanged([=](float) { this->updateCoral(); });
+    verticalScaleSlider->setOnValueChanged([=](float) { this->updateCoral(); });
+    horizontalScaleSlider->setOnValueChanged([=](float) { this->updateCoral(); });
+    alphaSlider->setOnValueChanged([=](float) { this->updateCoral(); });
 
-    layout->addWidget(createMultipleSliderGroup({
-                                                    {"Subsidence", subsidenceSlider},
-                                                    {"Coral", coralLevelsSlider},
-//                                                    {"Vertical", verticalScaleSlider},
-//                                                    {"Horizontal", horizontalScaleSlider},
-                                                    {"Alpha", alphaSlider}
-                                                }));
+    UI->add(std::vector<UIElement*>{
+        applyButton,
+        subsidenceSlider,
+        coralLevelsSlider,
+        verticalScaleSlider,
+        horizontalScaleSlider,
+        alphaSlider,
+        fromGanButton
+    });
 
-    layout->addWidget(applyButton);
-    layout->addWidget(fromGanButton);
-
-
-    subsidenceSlider->setfValue(subsidence);
-    coralLevelsSlider->setMinValue(coralLevelMin);
-    coralLevelsSlider->setMaxValue(coralLevelMax);
-    verticalScaleSlider->setfValue(vScale);
-    horizontalScaleSlider->setfValue(hScale);
-    alphaSlider->setfValue(alpha);
-
-    QObject::connect(applyButton, &QPushButton::pressed, this, &CoralIslandGeneratorInterface::validateTerrainChange);
-    QObject::connect(subsidenceSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setSubsidence);
-    QObject::connect(coralLevelsSlider, &RangeSlider::minValueChanged, this, &CoralIslandGeneratorInterface::setCoralLevelMin);
-    QObject::connect(coralLevelsSlider, &RangeSlider::maxValueChanged, this, &CoralIslandGeneratorInterface::setCoralLevelMax);
-    QObject::connect(verticalScaleSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setVScale);
-    QObject::connect(horizontalScaleSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setHScale);
-    QObject::connect(alphaSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setAlpha);
-
-    QObject::connect(fromGanButton, &QPushButton::pressed, this, &CoralIslandGeneratorInterface::fromGanUI);
-
-    return layout;
+    return UI;
 }
 
 void CoralIslandGeneratorInterface::hide()

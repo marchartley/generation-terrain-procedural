@@ -4,9 +4,9 @@
 class ManualEditionInterface;
 
 #include "Interface/ActionInterface.h"
-#include <QObject>
-#include "TerrainGen/VoxelGrid.h"
-#include "GUIElements/FancySlider.h"
+// #include <QObject>
+// #include "TerrainGen/VoxelGrid.h"
+// #include "GUIElements/FancySlider.h"
 #include "GUIElements/ControlPoint.h"
 
 class ManualEditionInterface : public ActionInterface
@@ -19,7 +19,7 @@ public:
     void replay(nlohmann::json action);
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     void show();
@@ -49,13 +49,13 @@ public:
     float manualEditionStrength = 2.f;
     bool addingMode = false;
 
-    std::unique_ptr<ControlPoint> grabber;
+    std::shared_ptr<ControlPoint> grabber;
 
-    QHBoxLayout* manualEditLayout;
-    FancySlider* manualEditSizeSlider;
-    FancySlider* manualEditStrengthSlider;
-    QRadioButton* addingModeButton;
-    QRadioButton* suppressModeButton;
+    // QHBoxLayout* manualEditLayout;
+    // FancySlider* manualEditSizeSlider;
+    // FancySlider* manualEditStrengthSlider;
+    // QRadioButton* addingModeButton;
+    // QRadioButton* suppressModeButton;
 };
 
 #endif // MANUALEDITIONINTERFACE_H

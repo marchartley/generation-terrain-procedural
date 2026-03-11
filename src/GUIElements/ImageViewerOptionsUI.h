@@ -8,8 +8,8 @@ class ImageViewerOptionsUI
 {
 public:
     // ImageViewerOptionsUI();
-    static InterfaceUI* createRGBImageViewerOptions(ChartView* chartView, PlotModel* dataModel);
-    static InterfaceUI* createGreyImageViewerOptions(ChartView* chartView, PlotModel* dataModel);
+    static InterfaceUI* createRGBImageViewerOptions(AbstractPlotter* plotter);
+    static InterfaceUI* createGreyImageViewerOptions(AbstractPlotter* plotter);
 };
 
 #endif // IMAGEVIEWEROPTIONSUI_H

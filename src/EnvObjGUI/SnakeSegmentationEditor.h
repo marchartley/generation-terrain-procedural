@@ -51,21 +51,20 @@ struct SnakeEditionParameters {
 class SnakeSegmentationEditor : public ImageViewer
 {
     Q_OBJECT
-protected: // Singleton
+public: // protected: // Singleton
     SnakeSegmentationEditor(const std::string& name, QWidget* parent = nullptr);
-    SnakeSegmentationEditor(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     DECLARE_PLOTTER_GETTER(SnakeSegmentationEditor)
 
-    virtual SnakeSegmentationEditor* updateToolsInterface();
-    virtual SnakeSegmentationEditor* updateViewOptionsInterface();
+    virtual SnakeSegmentationEditor& updateToolsInterface();
+    virtual SnakeSegmentationEditor& updateViewOptionsInterface();
 
     void showSnakePath();
 
-    SnakeSegmentationEditor* associateEnvObject(EnvObject* obj);
+    SnakeSegmentationEditor& associateEnvObject(EnvObject* obj);
 
-    SnakeSegmentationEditor* setSnakeImage(const GridF& newFieldValues);
+    SnakeSegmentationEditor& setSnakeImage(const GridF& newFieldValues);
 
     SnakeEditionParameters snakeParameters;
     PainterToolParams painterParameters;

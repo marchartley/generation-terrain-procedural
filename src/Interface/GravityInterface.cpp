@@ -95,32 +95,33 @@ void GravityInterface::show()
     CustomInteractiveObject::show();
 }
 
-QLayout* GravityInterface::createGUI()
+InterfaceUI* GravityInterface::createGUI()
 {
-    this->gravityLayout = new QHBoxLayout;
+    auto UI = new InterfaceUI();
 
-    gravityComputeButton = new QPushButton("Calculer");
-    QPushButton* arrangingLayersButton = new QPushButton("Rearrange layers");
-    QPushButton* gravityLayersButton = new QPushButton("Apply gravity on layers");
-    gravityLayout->addWidget(createVerticalGroup({
-                                                     gravityComputeButton,
-                                                     gravityLayersButton,
-                                                     arrangingLayersButton
-                                                 }));
+    auto gravityComputeButton = new ButtonElement("Calculer", [=]() { this->createSandGravity(); });
+    auto arrangingLayersButton = new ButtonElement("Rearrange layers");
+    auto gravityLayersButton = new ButtonElement("Apply gravity on layers");
 
-    QObject::connect(gravityComputeButton, &QPushButton::pressed, this, &GravityInterface::createSandGravity);
-    QObject::connect(gravityLayersButton, &QPushButton::pressed, this, [&]() {
+    UI->add(std::vector<UIElement*>({
+        gravityComputeButton,
+        gravityLayersButton,
+        arrangingLayersButton
+    }));
+
+
+    gravityLayersButton->setOnPressed([&]() {
         this->layerGrid->thermalErosion();
         this->voxelGrid->fromLayerBased(*this->layerGrid, this->voxelGrid->getSizeZ());
         this->heightmap->fromLayerGrid(*this->layerGrid);
         Q_EMIT this->terrainUpdated();
     });
-    QObject::connect(arrangingLayersButton, &QPushButton::pressed, this, [&]() {
+    arrangingLayersButton->setOnPressed([&]() {
         this->layerGrid->reorderLayers();
         this->voxelGrid->fromLayerBased(*this->layerGrid, this->voxelGrid->getSizeZ());
         this->heightmap->fromLayerGrid(*this->layerGrid);
         Q_EMIT this->terrainUpdated();
     });
 
-    return this->gravityLayout;
+    return UI;
 }

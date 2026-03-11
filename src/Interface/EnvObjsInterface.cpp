@@ -77,25 +77,25 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->simulationFlowField = GridV3(initialHeightmap.getDimensions());
     this->scene->precomputeTerrainProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
 
-    QObject::connect(ImageViewer::get("Object Preview"), &ImageViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
+    QObject::connect(&ImageViewer::get("Object Preview"), &ImageViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
         this->previewCurrentEnvObjectPlacement(clickPos);
     });
 
-    QObject::connect(EnvMaterialViewer::get("Material"), &EnvMaterialViewer::imagePainted, this, [&](const GridF& newDistrib) {
+    QObject::connect(&EnvMaterialViewer::get("Material"), &EnvMaterialViewer::imagePainted, this, [&](const GridF& newDistrib) {
         this->scene->materials[this->currentMaterialEdited].currentState = newDistrib;
     });
 
-    QObject::connect(FocusAreaViewer::get("Focus"), &FocusAreaViewer::imagePainted, this, [&](const GridF& newDistrib) {
+    QObject::connect(&FocusAreaViewer::get("Focus"), &FocusAreaViewer::imagePainted, this, [&](const GridF& newDistrib) {
         this->focusedArea = newDistrib;
     });
 
-    QObject::connect(WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::updated, this, [&]() {
-        this->userKelvinlets = WaterFlowViewer::get("Flowfield")->kelvinletParams.kelvinlets;
+    QObject::connect(&WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::updated, this, [&]() {
+        this->userKelvinlets = WaterFlowViewer::get("Flowfield").kelvinletParams.kelvinlets;
         this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
         Q_EMIT this->updated();
     });
 
-    QObject::connect(EnvObjectEditor::get(""), &EnvObjectEditor::objectModified, this, [&](const EnvObject* modifiedObject) {
+    QObject::connect(&EnvObjectEditor::get(""), &EnvObjectEditor::objectModified, this, [&](const EnvObject* modifiedObject) {
         this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
         Q_EMIT this->updated();
     });
@@ -145,43 +145,24 @@ void EnvObjsInterface::replay(nlohmann::json action)
 
 }
 
-QLayout *EnvObjsInterface::createGUI()
+InterfaceUI* EnvObjsInterface::createGUI()
 {
-    InterfaceUI* ui = new InterfaceUI(new QVBoxLayout);
+    auto UI = new InterfaceUI();
 
-    // auto instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
-    // auto recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
-    auto spendTimeButton = new ButtonElement("Wait", [&]() {
-        for (auto& obj : this->scene->instantiatedObjects) {
-            obj->improvePositionning(1.f);
-        }
-        this->updateUntilStabilization();
-        this->updateSelectionMesh();
+    objectsListWidget = new HierarchicalListUI();
 
-        Q_EMIT this->updated();
-        //this->saveScene("testEnvObjects.json");
-    });
+    auto spendTimeButton = new ButtonElement("Wait");
     auto waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
-//    auto createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
     auto createFromFile = new ButtonElement("From file", [&]() { this->loadScene("EnvObjects/testEnvObjects.json"); });
     auto testingFittingFormula = new TextEditElement("", "Fitting func: ");
-    // testingFittingFormula->setOnTextChange([&](const std::string& expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
     auto testingFitnessFormula = new TextEditElement("", "Fitness func: ");
-    // testingFitnessFormula->setOnTextChange([&](const std::string& expression) { this->evaluateAndDisplayCustomFitnessFormula(expression); });
-    testingFitnessFormula->setOnTextChange([&](const std::string& expression) { this->testedFitnessFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
-    testingFittingFormula->setOnTextChange([&](const std::string& expression) { this->testedFittingFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
-    // auto testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
     auto resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
     auto addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
     auto saveForRendersButton = new ButtonElement("Save for render", [&]() { this->saveForRenders(); });
 
-    LabelElement* label = new LabelElement("Objects: " + std::to_string(this->scene->instantiatedObjects.size()));
+    auto label = new LabelElement("Objects: " + std::to_string(this->scene->instantiatedObjects.size()));
 
-    objectsListWidget = new HierarchicalListUI;
-    objectsListWidget->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
-    updateObjectsList();
-    objectsListWidget->setOnItemSelectionChanged([&]() { this->updateObjectsListSelection(); });
-
+    new UIElement(objectsListWidget);
 
     std::vector<ComboboxLineElement<EnvObject*>*> objectsChoices;
     int selectionForCoral = 0;
@@ -191,26 +172,13 @@ QLayout *EnvObjsInterface::createGUI()
             selectionForCoral = objectsChoices.size() - 1;
         }
     }
-    auto showButton = new ButtonElement("Show", [&](){
-        this->displayProbas(getCurrentObjectName());
-    });
-    auto forceButton = new ButtonElement("Force", [&](){
-        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
-        updateObjectsList();
-        Q_EMIT this->updated();
-    });
-    forceButton->setOnRepeat([&](){
-        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
-        updateObjectsList();
-        Q_EMIT this->updated();
-    });
+    this->currentObjectName = objectsChoices[selectionForCoral]->label;
 
-    auto editObjectKelvinletsButton = new ButtonElement("Edit Kelvinlets", [&]() {
-        this->openObjectKelvinletEditor(getCurrentObjectName());
-    });
-    auto editObjectSnakeButton = new ButtonElement("Edit snake", [&]() {
-        this->openObjectSnakeEditor(getCurrentObjectName());
-    });
+    auto showButton = new ButtonElement("Show", [&](){ this->displayProbas(getCurrentObjectName()); });
+    auto forceButton = new ButtonElement("Force");
+
+    auto editObjectKelvinletsButton = new ButtonElement("Edit Kelvinlets", [&]() { this->openObjectKelvinletEditor(getCurrentObjectName()); });
+    auto editObjectSnakeButton = new ButtonElement("Edit snake", [&]() { this->openObjectSnakeEditor(getCurrentObjectName()); });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
     objectCombobox->combobox()->setCurrentIndex(selectionForCoral);
 
@@ -228,7 +196,17 @@ QLayout *EnvObjsInterface::createGUI()
     auto saveButton = new ButtonElement("Save", [&]() {this->saveScene("EnvObjects/testEnvObjects.json");});
 
     auto flowErosionSlider = new SliderElement("Erode", -10.f, 10.f, .1f);
-    flowErosionSlider->setOnValueChanged([&](float newValue) {
+
+    auto newObjectCreationBox = new CheckboxElement("Manual creation");
+
+    auto nextStepButton = new ButtonElement("Step");
+
+    auto runButton = new ButtonElement("Run");
+
+    auto displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
+
+
+    flowErosionSlider->setOnValueChanged([=](float newValue) {
         this->flowErosionFactor = newValue;
         this->addObjectsHeightmaps();
         this->flowErosionSimulation();
@@ -236,7 +214,7 @@ QLayout *EnvObjsInterface::createGUI()
         Q_EMIT this->updated();
     });
 
-    auto newObjectCreationBox = new CheckboxElement("Manual creation", [&](bool checked) {
+    newObjectCreationBox->setOnChecked([&](bool checked) {
         this->manuallyCreatingObject = checked;
         this->startNewObjectCreation();
         this->updateSelectionMesh();
@@ -245,11 +223,11 @@ QLayout *EnvObjsInterface::createGUI()
         Q_EMIT this->updated();
     });
 
-    auto nextStepButton = new ButtonElement("Step", [&]() {
+    nextStepButton->setOnPressed([&]() {
         forceScenarioInterruption = true;
         this->runNextStep();
     });
-    auto runButton = new ButtonElement("Run", [&]() {
+    runButton->setOnPressed([&]() {
         if (!this->forceScenarioInterruption) {
             std::cout << "Stopping scenario" << std::endl;
             this->forceScenarioInterruption = true;
@@ -258,20 +236,38 @@ QLayout *EnvObjsInterface::createGUI()
         }
     });
 
-    /*
-    auto grabKelvinlet = new RadioButtonElement("Grab");
-    auto scaleKelvinlet = new RadioButtonElement("Scale");
-    auto pinchKelvinlet = new RadioButtonElement("Pinch");
-    auto twistKelvinlet = new RadioButtonElement("Twist");
-    grabKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "grab"; } });
-    scaleKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "scale"; } });
-    pinchKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "pinch"; } });
-    twistKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "twist"; } });
-    */
 
-    auto displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
+    objectsListWidget->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
+    updateObjectsList();
+    objectsListWidget->setOnItemSelectionChanged([=]() { this->updateObjectsListSelection(); });
 
-    ui->add({
+    testingFitnessFormula->setOnTextChange([&](const std::string& expression) { this->testedFitnessFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
+    testingFittingFormula->setOnTextChange([&](const std::string& expression) { this->testedFittingFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
+
+
+    spendTimeButton->setOnPressed([&]() {
+       for (auto& obj : this->scene->instantiatedObjects) {
+           obj->improvePositionning(1.f);
+       }
+       this->updateUntilStabilization();
+       this->updateSelectionMesh();
+
+       Q_EMIT this->updated();
+    });
+
+    forceButton->setOnPressed([&](){
+       this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
+       updateObjectsList();
+       Q_EMIT this->updated();
+    });
+    forceButton->setOnRepeat([&](){
+        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
+        updateObjectsList();
+        Q_EMIT this->updated();
+    });
+
+
+    UI->add(std::vector<UIElement*>{
              createHorizontalGroupUI({newObjectCreationBox, waitAtEachFrameButton}),
              createHorizontalGroupUI({spendTimeButton, nextStepButton, runButton}),
              createMultiColumnGroupUI(materialsButtons, 2),
@@ -292,16 +288,13 @@ QLayout *EnvObjsInterface::createGUI()
     objectCombobox->setOnSelectionChanged([=](int selectionIndex) {
         EnvObject* obj = objectCombobox->getSelection<EnvObject*>();
         blockSignals(true);
-        // testingFitnessFormula->block();
         testingFitnessFormula->setText(obj->s_FitnessFunction);
-        // testingFitnessFormula->unblock();
-        // testingFittingFormula->block();
         testingFittingFormula->setText(obj->s_FittingFunction);
-        // testingFittingFormula->unblock();
+        this->currentObjectName = objectCombobox->choices[objectCombobox->combobox()->currentIndex()]->label;
         blockSignals(false);
     });
 
-    return ui->get()->layout();
+    return UI;
 }
 
 void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
@@ -397,7 +390,7 @@ void EnvObjsInterface::afterWaterLevelChanged()
     this->scene->recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
 
     if (this->isVisible()) {
-        if (ImageViewer::get("Object Preview")->isVisible()) {
+        if (ImageViewer::get("Object Preview").isVisible()) {
             displayProbas(getCurrentObjectName());
         }
     }
@@ -918,9 +911,9 @@ void EnvObjsInterface::displayProbas(const std::string& objectName)
     bool possible;
     GridF score = computeScoreMap(this->scene, objectName, dimensions, possible, false);
     if (!possible) {
-        ImageViewer::get("Object Preview")->addImage(score * 0.f);
+        ImageViewer::get("Object Preview").addImage(score * 0.f);
     } else {
-        ImageViewer::get("Object Preview")->addImage(score);
+        ImageViewer::get("Object Preview").addImage(score);
 
         float smallestPositive = score.max();
         score.iterate([&](size_t i) {
@@ -931,7 +924,7 @@ void EnvObjsInterface::displayProbas(const std::string& objectName)
             score[i] = std::max(score[i], smallestPositive);
         });
     }
-    ImageViewer::get("Object Preview")->show();
+    ImageViewer::get("Object Preview").show();
     dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(score);
     Q_EMIT updated();
 }
@@ -940,8 +933,8 @@ void EnvObjsInterface::displayMaterialDistrib(const std::string& materialName)
 {
     this->currentMaterialEdited = materialName;
     GridF distribution = this->scene->materials[materialName].currentState;
-    EnvMaterialViewer::get("Material")->addImage(distribution);
-    EnvMaterialViewer::get("Material")->show();
+    EnvMaterialViewer::get("Material").addImage(distribution);
+    EnvMaterialViewer::get("Material").show();
     dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(distribution);
     Q_EMIT updated();
 }
@@ -952,14 +945,14 @@ void EnvObjsInterface::manualModificationOfFocusArea()
     this->flowfieldEditing = false;
     this->previewingObjectInPlotter = false;
 
-    FocusAreaViewer::get("Focus")->addImage(this->focusedArea);
-    FocusAreaViewer::get("Focus")->show();
+    FocusAreaViewer::get("Focus").addImage(this->focusedArea);
+    FocusAreaViewer::get("Focus").show();
 }
 
 void EnvObjsInterface::manualModificationOfFlowfield()
 {
-    WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
-    WaterFlowViewer::get("Flowfield")->show();
+    WaterFlowViewer::get("Flowfield").addVectorField(this->scene->flowfield);
+    WaterFlowViewer::get("Flowfield").show();
 }
 
 void EnvObjsInterface::resetFlowfield()
@@ -974,7 +967,7 @@ void EnvObjsInterface::resetFlowfield()
     this->flowErosionSimulation();
     this->updateVectorFieldVisu();
 
-    WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
+    WaterFlowViewer::get("Flowfield").addVectorField(this->scene->flowfield);
     Q_EMIT this->updated();
 }
 
@@ -1206,8 +1199,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(const std::string&
         eval.iterateParallel([&](const Vector3i& p) {
             eval(p) = fake.fitnessFunction(p);
         });
-        ImageViewer::get("Fitness Function")->addImage(eval);
-        ImageViewer::get("Fitness Function")->show();
+        ImageViewer::get("Fitness Function").addImage(eval);
+        ImageViewer::get("Fitness Function").show();
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
@@ -1232,8 +1225,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(const std::string&
         eval.iterateParallel([&](const Vector3i& p) {
             eval(p) = fake.fittingFunction(p);
         });
-        ImageViewer::get("Fitting Function")->addImage(eval);
-        ImageViewer::get("Fitting Function")->show();
+        ImageViewer::get("Fitting Function").addImage(eval);
+        ImageViewer::get("Fitting Function").show();
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
@@ -1259,8 +1252,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(const st
             eval(p).x() = fake.fitnessFunction(p);
             eval(p).y() = fake.fittingFunction(p);
         });
-        ImageViewer::get("Object Preview")->addImage(eval);
-        ImageViewer::get("Object Preview")->show();
+        ImageViewer::get("Object Preview").addImage(eval);
+        ImageViewer::get("Object Preview").show();
         // dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
@@ -1632,7 +1625,7 @@ void EnvObjsInterface::saveScene(const std::string& filename)
 
 void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
 {
-    GridV3 dataV3 = ImageViewer::get("Object Preview")->dataModel->getImage();
+    GridV3 dataV3 = ImageViewer::get("Object Preview").dataModel->getImage();
     GridF fitnessScoreGrid(dataV3.getDimensions());
     GridF fittingScoreGrid(dataV3.getDimensions());
     dataV3.iterateParallel([&](size_t i) {
@@ -1730,8 +1723,8 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         result(isoline[i]) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
         resultAlpha(isoline[i]) = 1.f;
     }
-    ImageViewer::get("Object Preview")->setOverlay(result, resultAlpha);
-    ImageViewer::get("Object Preview")->show();
+    ImageViewer::get("Object Preview").setOverlay(result, resultAlpha);
+    ImageViewer::get("Object Preview").show();
 }
 
 void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3 &brushDir)
@@ -1753,23 +1746,22 @@ void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3
 
 void EnvObjsInterface::openObjectKelvinletEditor(const std::string& objName)
 {
-    auto obj = scene->availableObjects[objName];
-    auto viewer = EnvObjectEditor::get();
-    viewer->addVectorField(userFlowField + this->computeUserKelvinletField() + simulationFlowField);
-    viewer->addEnvObject(obj);
-    viewer->show();
+    auto& obj = scene->availableObjects[objName];
+    auto& viewer = EnvObjectEditor::get();
+    viewer.addVectorField(userFlowField + this->computeUserKelvinletField() + simulationFlowField);
+    viewer.addEnvObject(obj);
+    viewer.show();
 }
 
 void EnvObjsInterface::openObjectSnakeEditor(const std::string& objName)
 {
-    auto obj = scene->availableObjects[objName];
-    SnakeSegmentationEditor* viewer;
-    viewer = SnakeSegmentationEditor::get();
+    auto& obj = scene->availableObjects[objName];
+    auto& viewer = SnakeSegmentationEditor::get();
     GridF fittingGrid(this->heightmap->heights.getDimensions());
     fittingGrid.iterateParallel([&](const Vector3& p) { fittingGrid[p] = obj->fittingFunction(p); });
-    viewer->setSnakeImage(fittingGrid);
-    viewer->associateEnvObject(obj);
-    viewer->show();
+    viewer.setSnakeImage(fittingGrid);
+    viewer.associateEnvObject(obj);
+    viewer.show();
 }
 
 void EnvObjsInterface::showAllElementsOnPlotter()
@@ -1809,8 +1801,8 @@ void EnvObjsInterface::showAllElementsOnPlotter()
         }
     }
 
-    ImageViewer::get("Topography")->addImage(img);
-    ImageViewer::get("Topography")->show();
+    ImageViewer::get("Topography").addImage(img);
+    ImageViewer::get("Topography").show();
 }
 
 void EnvObjsInterface::addObjectsHeightmaps()
@@ -2116,7 +2108,7 @@ void EnvObjsInterface::endDraggingObject(bool destroyObjects)
 
 std::string EnvObjsInterface::getCurrentObjectName() const
 {
-    return objectCombobox->choices[objectCombobox->combobox()->currentIndex()]->label;
+    return this->currentObjectName; // objectCombobox->choices[objectCombobox->combobox()->currentIndex()]->label;
 }
 
 void EnvObjsInterface::updateVectorFieldVisu()

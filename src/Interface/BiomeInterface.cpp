@@ -608,30 +608,29 @@ void BiomeInterface::displayUniqueSelection(int selectionIndex)
     }
 }
 
-QLayout* BiomeInterface::createGUI()
+InterfaceUI* BiomeInterface::createGUI()
 {
-//    if (this->layout != nullptr) return this->layout;
+    auto UI = new InterfaceUI();
+    biomeSelectionGui = new HierarchicalListWidget();
 
-    layout = new QVBoxLayout();
-    biomeSelectionGui = new HierarchicalListWidget;
+    auto biomeSelWidget = new UIElement(biomeSelectionGui);
 
-    QPushButton* seeAllBiomesButton = new QPushButton("Tout voir");
-    QPushButton* regenerationButton = new QPushButton("Regenerer");
-    QPushButton* interchangeBiomeButton = new QPushButton("Changer le biome...");
-    QPushButton* randomizeButton = new QPushButton("Randomiser");
+    auto seeAllBiomesButton = new ButtonElement("Tout voir", [=]() { displayAllBiomes(); });
+    auto regenerationButton = new ButtonElement("Regenerer",  [=]() { this->generateBiomes(rootBiome); });
+    auto interchangeBiomeButton = new ButtonElement("Changer le biome...", [=]() { this->interchangeBiomes(); });
+    auto randomizeButton = new ButtonElement("Randomiser", [=]() { this->randomize(); });
 
-    layout->addWidget(biomeSelectionGui);
-    layout->addWidget(seeAllBiomesButton);
-    layout->addWidget(interchangeBiomeButton);
-    layout->addWidget(regenerationButton);
-    layout->addWidget(randomizeButton);
+    UI->add(std::vector<UIElement*>{
+        new UIElement(biomeSelectionGui),
+        seeAllBiomesButton,
+        interchangeBiomeButton,
+        regenerationButton,
+        randomizeButton
+    });
     updateBiomeSelectionGui();
 
-    QObject::connect(seeAllBiomesButton, &QPushButton::pressed, this, &BiomeInterface::displayAllBiomes);
-    QObject::connect(regenerationButton, &QPushButton::pressed, this, [&]() -> void { this->generateBiomes(rootBiome); });
-    QObject::connect(randomizeButton, &QPushButton::pressed, this, &BiomeInterface::randomize);
     QObject::connect(biomeSelectionGui, &QListWidget::currentRowChanged, this, &BiomeInterface::displayUniqueSelection);
-    QObject::connect(interchangeBiomeButton, &QPushButton::pressed, this, &BiomeInterface::interchangeBiomes);
+
     QObject::connect(biomeSelectionGui, &HierarchicalListWidget::itemDoubleClicked, this, [&](QListWidgetItem* item) -> void {
 //        int selectedIndex = this->biomeSelectionGui->currentRow();
         auto selectedBiomeItem = dynamic_cast<HierarchicalListWidgetItem<>*>(item);
@@ -684,7 +683,7 @@ QLayout* BiomeInterface::createGUI()
     });
 
     this->replaceDialog = new BiomeReplacementDialog(this);
-    return layout;
+    return UI;
 }
 
 void BiomeInterface::hide()
@@ -793,19 +792,15 @@ void BiomeInterface::deleteBiomeFromID(int ID)
 BiomeReplacementDialog::BiomeReplacementDialog(BiomeInterface* caller)
     : QDialog(), caller(caller)
 {
-    QVBoxLayout * vBoxLayout = new QVBoxLayout(this);
+    auto UI = new InterfaceUI();
     allAvailableBiomes = new HierarchicalListWidget(this);
-    cancelButton = new QPushButton("Annuler", this);
-    validButton = new QPushButton("Confirmer", this);
+    auto cancelButton = new ButtonElement("Annuler", [=]() { this->cancel(); });
+    auto validButton = new ButtonElement("Confirmer", [=]() { this->confirm(); });
 
-    vBoxLayout->addWidget(allAvailableBiomes);
-    vBoxLayout->addWidget(cancelButton);
-    vBoxLayout->addWidget(validButton);
+    new UIElement(allAvailableBiomes);
+    UI->add(std::vector<UIElement*>{new UIElement(allAvailableBiomes), cancelButton, validButton});
 
-    QObject::connect(cancelButton, &QPushButton::pressed, this, &BiomeReplacementDialog::cancel);
-    QObject::connect(validButton, &QPushButton::pressed, this, &BiomeReplacementDialog::confirm);
-
-    setLayout(vBoxLayout);
+    setLayout(UI->get()->layout());
     setSizeGripEnabled(true);
 }
 

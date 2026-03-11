@@ -22,7 +22,7 @@ public:
     void wheelEvent(QWheelEvent* event);
     void mousePressEvent(QMouseEvent* event);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     void hide();

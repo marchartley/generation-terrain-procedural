@@ -7,14 +7,13 @@
 class WaterFlowViewer : public ImageViewer
 {
     Q_OBJECT
-protected: // Singleton
+public: // protected: // Singleton
     WaterFlowViewer(const std::string& name, QWidget* parent = nullptr);
-    WaterFlowViewer(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     DECLARE_PLOTTER_GETTER(WaterFlowViewer)
 
-    virtual WaterFlowViewer* updateToolsInterface();
+    virtual WaterFlowViewer& updateToolsInterface();
 
     // PainterToolParams painterParams;
     KelvinletToolParams kelvinletParams;

@@ -41,23 +41,23 @@ QComboBox* ComboboxElement::combobox() const
     return _combobox;
 }
 
-ComboboxElement* ComboboxElement::setOnSelectionChanged(std::function<void (int)> func)
+ComboboxElement& ComboboxElement::setOnSelectionChanged(std::function<void (int)> func)
 {
     QObject::connect(_combobox, &QComboBox::currentTextChanged, this, [=](QString text) {
         int index = _combobox->currentIndex();
         func(index);
     });
-    return this;
+    return *this;
 }
 
-ComboboxElement* ComboboxElement::bindTo(int &indexSelected)
+ComboboxElement& ComboboxElement::bindTo(int &indexSelected)
 {
     boundIndex = indexSelected;
     combobox()->setCurrentIndex(indexSelected);
-    this->setOnSelectionChanged([&](int index) {
+    this->setOnSelectionChanged([=](int index) {
         this->boundIndex->get() = index;
     });
-    return this;
+    return *this;
 }
 
 ComboboxLineElementBase* ComboboxElement::getSelection() const
@@ -67,7 +67,7 @@ ComboboxLineElementBase* ComboboxElement::getSelection() const
     return nullptr;
 }
 
-ComboboxElement *ComboboxElement::addChoice(ComboboxLineElementBase* addedChoice, bool selected)
+ComboboxElement& ComboboxElement::addChoice(ComboboxLineElementBase* addedChoice, bool selected)
 {
     this->choices.push_back(addedChoice);
     if (selected && this->boundIndex)
@@ -75,7 +75,7 @@ ComboboxElement *ComboboxElement::addChoice(ComboboxLineElementBase* addedChoice
     this->update();
     if (selected)
         combobox()->setCurrentIndex(this->choices.size() - 1);
-    return this;
+    return *this;
 }
 
 void ComboboxElement::update()

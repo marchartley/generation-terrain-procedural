@@ -7,7 +7,7 @@
 SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent)
     : ActionInterface("spacecolonization", "Karst generation by Space Colonization", "digging", "Create karsts using space colonization", "karst_button.png", parent)
 {
-    this->startingPoint = std::make_unique<ControlPoint>();
+    this->startingPoint = std::make_shared<ControlPoint>();
 //    this->
 }
 
@@ -108,7 +108,7 @@ void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Heightmap> heigh
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     Vector3 startPos(0, 0, 0);
-    this->startingPoint = std::make_unique<ControlPoint>(startPos, 5.f);
+    this->startingPoint = std::make_shared<ControlPoint>(startPos, 5.f);
     QObject::connect(this->startingPoint.get(), &ControlPoint::pointModified, this, &SpaceColonizationInterface::computeKarst);
 
     this->visitingCamera = new VisitingCamera();
@@ -149,7 +149,7 @@ void SpaceColonizationInterface::initSpaceColonizer()
 
     this->controlPoints.clear();
     for (size_t i = 0; i < keyPoints.size(); i++) {
-        this->controlPoints.push_back(std::make_unique<ControlPoint>(keyPoints[i], 5.f));
+        this->controlPoints.push_back(std::make_shared<ControlPoint>(keyPoints[i], 5.f));
         this->controlPoints.back()->allowAllAxisTranslation(true);
         QObject::connect(this->controlPoints.back().get(), &ControlPoint::pointModified,
                          this, &SpaceColonizationInterface::computeKarst);
@@ -232,40 +232,37 @@ void SpaceColonizationInterface::createKarst(bool usingSpheres)
                                           }));
 }
 
-QLayout *SpaceColonizationInterface::createGUI()
+InterfaceUI* SpaceColonizationInterface::createGUI()
 {
-    this->spaceColonizationLayout = new QHBoxLayout;
-    QPushButton* spaceColonizerPreviewButton = new QPushButton("Calculer");
-    QPushButton* spaceColonizerConfirmButton = new QPushButton("Creer le karst");
-    QPushButton* spaceColonizerQuickConfirmButton = new QPushButton("Tunnel rond");
-    QCheckBox* spaceColonizerDisplay = new QCheckBox("Afficher");
-    QCheckBox* useAsMainCamera = new QCheckBox("Observer l'interieur");
-    FancySlider* spaceColonizerSegmentSize = new FancySlider(Qt::Orientation::Horizontal, 1.0, 40.0, 1.0);
-    FancySlider* spaceColonizerRandomness = new FancySlider(Qt::Orientation::Horizontal, 0.0, 1.0, 0.1);
-    FancySlider* spaceColonizerTunnelWidth = new FancySlider(Qt::Orientation::Horizontal, 0.0, 30.0);
-    this->spaceColonizationLayout->addWidget(createVerticalGroup({spaceColonizerPreviewButton, spaceColonizerConfirmButton, spaceColonizerQuickConfirmButton}));
-    this->spaceColonizationLayout->addWidget(createVerticalGroup({
-                                                           createSliderGroup("Grossier", spaceColonizerSegmentSize),
-                                                           createSliderGroup("Tortuosité", spaceColonizerRandomness),
-                                                           createSliderGroup("Largeur", spaceColonizerTunnelWidth)
-                                                       }));
-    this->spaceColonizationLayout->addWidget(createVerticalGroup({/*spaceColonizerDisplay, */useAsMainCamera}));
+    auto UI = new InterfaceUI();
+    auto spaceColonizerPreviewButton = new ButtonElement("Calculer", [=]() { this->computeKarst(); });
+    auto spaceColonizerConfirmButton = new ButtonElement("Creer le karst", [=](){ this->createKarst(false); });
+    auto spaceColonizerQuickConfirmButton = new ButtonElement("Tunnel rond", [=](){ this->createKarst(true); });
+    // auto spaceColonizerDisplay = new CheckboxElement("Afficher", [=](bool display){ this->setVisibility(display); }));
+    // auto useAsMainCamera = new CheckboxElement("Observer l'interieur", [=](bool display){
+        // Q_EMIT this->useAsMainCamera(this->visitingCamera, display);
+    // }));
+    auto spaceColonizerSegmentSize = new SliderElement("Grossier", 1.0, 40.0, 1.0, colonizer->segmentLength);
+    auto spaceColonizerRandomness = new SliderElement("Tortuosité", 0.0, 1.0, 0.1, colonizer->randomness);
+    auto spaceColonizerTunnelWidth = new SliderElement("Largeur", 0.0, 30.0, karstWidth);
 
-    spaceColonizerTunnelWidth->setfValue(this->karstWidth);
+    spaceColonizerSegmentSize->setOnValueChanged([=](float) { this->computeKarst(); });
+    spaceColonizerRandomness->setOnValueChanged([=](float) { this->computeKarst(); });
+    spaceColonizerTunnelWidth->setOnValueChanged([=](float) { this->computeKarst(); });
 
-    QObject::connect(spaceColonizerPreviewButton, &QPushButton::pressed, this, &SpaceColonizationInterface::computeKarst);
-    QObject::connect(spaceColonizerConfirmButton, &QPushButton::pressed, [=](){ this->createKarst(false); } );
-    QObject::connect(spaceColonizerQuickConfirmButton, &QPushButton::pressed, this, [=](){ this->createKarst(true); } );
-    QObject::connect(spaceColonizerRandomness, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->randomness = val; this->computeKarst(); } );
-    QObject::connect(spaceColonizerSegmentSize, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->segmentLength = val; this->computeKarst(); } );
-    QObject::connect(spaceColonizerTunnelWidth, &FancySlider::floatValueChanged, this, [=](float val){ this->karstWidth = val; } );
-    QObject::connect(spaceColonizerDisplay, &QCheckBox::toggled, this, [=](bool display){ this->setVisibility(display); } );
-    QObject::connect(useAsMainCamera, &QCheckBox::toggled, this, [=](bool display){
-        Q_EMIT this->useAsMainCamera(this->visitingCamera, display);
-    } );
 
-    spaceColonizerDisplay->setChecked(this->isVisible());
-    useAsMainCamera->setChecked(false);
+    UI->add(std::vector<UIElement*>{
+        spaceColonizerPreviewButton,
+        spaceColonizerConfirmButton,
+        spaceColonizerQuickConfirmButton,
+        spaceColonizerSegmentSize,
+        spaceColonizerRandomness,
+        spaceColonizerTunnelWidth
+    });
 
-    return this->spaceColonizationLayout;
+
+    // spaceColonizerDisplay->setChecked(this->isVisible());
+    // useAsMainCamera->setChecked(false);
+
+    return UI;
 }

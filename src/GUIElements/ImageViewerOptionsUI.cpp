@@ -2,22 +2,35 @@
 
 // ImageViewerOptionsUI::ImageViewerOptionsUI() {}
 
-InterfaceUI *ImageViewerOptionsUI::createRGBImageViewerOptions(ChartView* chartView, PlotModel* dataModel)
+InterfaceUI* ImageViewerOptionsUI::createRGBImageViewerOptions(AbstractPlotter* plotter)
 {
-    const GridV3 img = dataModel->imageData.image.getColorImage();
+    // auto& dataModel = plotter->dataModel;
+    // auto& chartView = plotter->chartView;
+    const GridV3 img = plotter->dataModel->imageData.image.getColorImage();
 
-    InterfaceUI* UI = new InterfaceUI(new QVBoxLayout(), true, "View options");
+    auto UI = new InterfaceUI(new QVBoxLayout(), true, "View options");
 
-    auto normalizeModeButton = (new CheckboxElement("Normalize"))->setChecked(false);
-    auto absoluteModeButton = (new CheckboxElement("Absolute"))->setChecked(false);
+    auto normalizeModeButton = new CheckboxElement("Normalize");
+    auto absoluteModeButton = new CheckboxElement("Absolute");
+
+    auto displayRButton = new CheckboxElement("");
+    auto displayGButton = new CheckboxElement("");
+    auto displayBButton = new CheckboxElement("");
+
+    auto rangeR = new RangeSliderElement("", 0, 1, 0.01f);
+    auto rangeG = new RangeSliderElement("", 0, 1, 0.01f);
+    auto rangeB = new RangeSliderElement("", 0, 1, 0.01f);
+
+    normalizeModeButton->setChecked(false);
+    absoluteModeButton->setChecked(false);
 
     absoluteModeButton->setOnChecked([=](bool toggled) {
-        dataModel->imageData.setAbsolute(toggled);
-        chartView->setPlotModel(dataModel);
+        plotter->dataModel->imageData.setAbsolute(toggled);
+        plotter->chartView->setPlotModel(plotter->dataModel);
     });
     normalizeModeButton->setOnChecked([=](bool toggled) {
-        dataModel->imageData.setNormalized(toggled);
-        chartView->setPlotModel(dataModel);
+        plotter->dataModel->imageData.setNormalized(toggled);
+        plotter->chartView->setPlotModel(plotter->dataModel);
     });
 
     Vector3 minColors = Vector3::max();
@@ -36,26 +49,20 @@ InterfaceUI *ImageViewerOptionsUI::createRGBImageViewerOptions(ChartView* chartV
         maxColors = Vector3(0, 0, 0);
     }
 
-    CheckboxElement* displayRButton = (new CheckboxElement(""))->setChecked(dataModel->imageData.displayParameters.displayedColors.x());
-    CheckboxElement* displayGButton = (new CheckboxElement(""))->setChecked(dataModel->imageData.displayParameters.displayedColors.y());
-    CheckboxElement* displayBButton = (new CheckboxElement(""))->setChecked(dataModel->imageData.displayParameters.displayedColors.z());
 
-    displayRButton->setOnChecked([=](bool toggled) { dataModel->imageData.displayParameters.displayedColors.x() = (toggled ? 1 : 0); chartView->setPlotModel(dataModel); });
-    displayGButton->setOnChecked([=](bool toggled) { dataModel->imageData.displayParameters.displayedColors.y() = (toggled ? 1 : 0); chartView->setPlotModel(dataModel); });
-    displayBButton->setOnChecked([=](bool toggled) { dataModel->imageData.displayParameters.displayedColors.z() = (toggled ? 1 : 0); chartView->setPlotModel(dataModel); });
+    displayRButton->setChecked(plotter->dataModel->imageData.displayParameters.displayedColors.x()).setOnChecked([=](bool toggled) { plotter->dataModel->imageData.displayParameters.displayedColors.x() = (toggled ? 1 : 0); plotter->chartView->setPlotModel(plotter->dataModel); });
+    displayGButton->setChecked(plotter->dataModel->imageData.displayParameters.displayedColors.y()).setOnChecked([=](bool toggled) { plotter->dataModel->imageData.displayParameters.displayedColors.y() = (toggled ? 1 : 0); plotter->chartView->setPlotModel(plotter->dataModel); });
+    displayBButton->setChecked(plotter->dataModel->imageData.displayParameters.displayedColors.z()).setOnChecked([=](bool toggled) { plotter->dataModel->imageData.displayParameters.displayedColors.z() = (toggled ? 1 : 0); plotter->chartView->setPlotModel(plotter->dataModel); });
 
-    RangeSliderElement* rangeR = (new RangeSliderElement("", 0, 1, 0.01f, Qt::Vertical))->setMinMaxValues(0, 1);
-    RangeSliderElement* rangeG = (new RangeSliderElement("", 0, 1, 0.01f, Qt::Vertical))->setMinMaxValues(0, 1);
-    RangeSliderElement* rangeB = (new RangeSliderElement("", 0, 1, 0.01f, Qt::Vertical))->setMinMaxValues(0, 1);
 
-    rangeR->setOnValueChanged([=](float newMin, float newMax) { dataModel->imageData.displayParameters.colorRangeMin.x() = newMin; dataModel->imageData.displayParameters.colorRangeMax.x() = newMax; chartView->setPlotModel(dataModel); });
-    rangeG->setOnValueChanged([=](float newMin, float newMax) { dataModel->imageData.displayParameters.colorRangeMin.y() = newMin; dataModel->imageData.displayParameters.colorRangeMax.y() = newMax; chartView->setPlotModel(dataModel); });
-    rangeB->setOnValueChanged([=](float newMin, float newMax) { dataModel->imageData.displayParameters.colorRangeMin.z() = newMin; dataModel->imageData.displayParameters.colorRangeMax.z() = newMax; chartView->setPlotModel(dataModel); });
+    rangeR->setMinMaxValues(0, 1).setOnValueChanged([=](float newMin, float newMax) { plotter->dataModel->imageData.displayParameters.colorRangeMin.x() = newMin; plotter->dataModel->imageData.displayParameters.colorRangeMax.x() = newMax; plotter->chartView->setPlotModel(plotter->dataModel); });
+    rangeG->setMinMaxValues(0, 1).setOnValueChanged([=](float newMin, float newMax) { plotter->dataModel->imageData.displayParameters.colorRangeMin.y() = newMin; plotter->dataModel->imageData.displayParameters.colorRangeMax.y() = newMax; plotter->chartView->setPlotModel(plotter->dataModel); });
+    rangeB->setMinMaxValues(0, 1).setOnValueChanged([=](float newMin, float newMax) { plotter->dataModel->imageData.displayParameters.colorRangeMin.z() = newMin; plotter->dataModel->imageData.displayParameters.colorRangeMax.z() = newMax; plotter->chartView->setPlotModel(plotter->dataModel); });
 
     std::vector<UIElement*> overlayCheckboxes;
-    for (auto& [name, over] : chartView->overlayColors) {
-        CheckboxElement* checkOverlay = new CheckboxElement(name, [=](bool checked) { chartView->overlayDisplayed[name] = checked; chartView->setPlotModel(dataModel); });
-        checkOverlay->setChecked(chartView->overlayDisplayed[name]);
+    for (auto& [name, over] : plotter->chartView->overlayColors) {
+        auto checkOverlay = new CheckboxElement(name, [=](bool checked) { plotter->chartView->overlayDisplayed[name] = checked; plotter->chartView->setPlotModel(plotter->dataModel); });
+        checkOverlay->setChecked(plotter->chartView->overlayDisplayed[name]);
         overlayCheckboxes.push_back(checkOverlay);
     }
 
@@ -72,41 +79,48 @@ InterfaceUI *ImageViewerOptionsUI::createRGBImageViewerOptions(ChartView* chartV
     return UI;
 }
 
-InterfaceUI *ImageViewerOptionsUI::createGreyImageViewerOptions(ChartView *chartView, PlotModel *dataModel)
+InterfaceUI* ImageViewerOptionsUI::createGreyImageViewerOptions(AbstractPlotter* plotter)
 {
-    InterfaceUI* UI = new InterfaceUI(new QVBoxLayout(), true, "View options");
+    // auto& dataModel = plotter->dataModel;
+    // auto& chartView = plotter->chartView;
 
-    auto normalizeModeButton = (new CheckboxElement("Normalize"))->setChecked(false);
-    auto absoluteModeButton = (new CheckboxElement("Absolute"))->setChecked(false);
-
-    absoluteModeButton->setOnChecked([=](bool toggled) {
-        dataModel->imageData.setAbsolute(toggled);
-        chartView->setPlotModel(dataModel);
-    });
-    normalizeModeButton->setOnChecked([=](bool toggled) {
-        dataModel->imageData.setNormalized(toggled);
-        chartView->setPlotModel(dataModel);
-    });
-
-    auto greyImg = dataModel->getImageGrey();
+    auto greyImg = plotter->dataModel->getImageGrey();
     float mini = greyImg.min();
     float maxi = greyImg.max();
-    RangeSliderElement* rangeSlider = (new RangeSliderElement("", mini, maxi, 0.01f, Qt::Vertical))->setMinMaxValues(mini, maxi);
+
+    auto UI = new InterfaceUI(new QVBoxLayout(), true, "View options");
+
+    auto normalizeModeButton = new CheckboxElement("Normalize");
+    auto absoluteModeButton = new CheckboxElement("Absolute");
+
+    auto rangeSlider = new RangeSliderElement("", mini, maxi, 0.01f, Qt::Vertical);
+
+
+
+    normalizeModeButton->setChecked(false);
+    absoluteModeButton->setChecked(false);
+
+    absoluteModeButton->setOnChecked([=](bool toggled) {
+        plotter->dataModel->imageData.setAbsolute(toggled);
+        plotter->chartView->setPlotModel(plotter->dataModel);
+    });
+    normalizeModeButton->setOnChecked([=](bool toggled) {
+        plotter->dataModel->imageData.setNormalized(toggled);
+        plotter->chartView->setPlotModel(plotter->dataModel);
+    });
+
+    rangeSlider->setMinMaxValues(mini, maxi);
 
     rangeSlider->setOnValueChanged([=](float newMin, float newMax) {
-        dataModel->imageData.displayParameters.colorRangeMin.x() = newMin;
-        // dataModel->imageData.displayParameters.colorRangeMin.y() = newMin;
-        // dataModel->imageData.displayParameters.colorRangeMin.z() = newMin;
-        dataModel->imageData.displayParameters.colorRangeMax.x() = newMax;
-        // dataModel->imageData.displayParameters.colorRangeMax.y() = newMax;
-        // dataModel->imageData.displayParameters.colorRangeMax.z() = newMax;
-        chartView->setPlotModel(dataModel);
+        plotter->dataModel->imageData.displayParameters.colorRangeMin.x() = newMin;
+        plotter->dataModel->imageData.displayParameters.colorRangeMax.x() = newMax;
+        plotter->chartView->setPlotModel(plotter->dataModel);
     });
 
     std::vector<UIElement*> overlayCheckboxes;
-    for (auto& [name, over] : chartView->overlayColors) {
-        CheckboxElement* checkOverlay = new CheckboxElement(name, [=](bool checked) { chartView->overlayDisplayed[name] = checked; chartView->setPlotModel(dataModel); });
-        checkOverlay->setChecked(chartView->overlayDisplayed[name]);
+    for (auto& [name, over] : plotter->chartView->overlayColors) {
+        auto checkOverlay = new CheckboxElement(name, [=](bool checked) { plotter->chartView->overlayDisplayed[name] = checked; plotter->chartView->setPlotModel(plotter->dataModel); });
+        checkOverlay->setChecked(plotter->chartView->overlayDisplayed[name]);
         overlayCheckboxes.push_back(checkOverlay);
     }
 

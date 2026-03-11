@@ -77,8 +77,7 @@ void UndoRedoInterface::show()
     CustomInteractiveObject::show();
 }
 
-QLayout* UndoRedoInterface::createGUI()
+InterfaceUI* UndoRedoInterface::createGUI()
 {
-    QHBoxLayout* nothing = new QHBoxLayout;
-    return nothing;
+    return new InterfaceUI();
 }

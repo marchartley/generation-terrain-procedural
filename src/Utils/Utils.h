@@ -213,6 +213,8 @@ std::pair<T, T> getMuSigma(const std::vector<T>& data)
 
 std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, bool inverse = false);
 std::vector<std::complex<float>> inverseFFT(const std::vector<std::complex<float>>& fft_result);
+std::vector<std::complex<float>> fftParallel(const std::vector<std::complex<float>>& x, bool inverse = false);
+std::vector<std::complex<float>> inverseFFTParallel(const std::vector<std::complex<float>>& fft_result);
 bool isPowerOf2(int n);
 
 template <class T>

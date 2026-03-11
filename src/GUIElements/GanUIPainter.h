@@ -5,14 +5,11 @@
 
 class GanUIPainter : public AbstractPlotter {
     Q_OBJECT
-private: // Singleton
+public: // private: // Singleton
     GanUIPainter(const std::string& name, QWidget* parent = nullptr);
-    GanUIPainter(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
-    static GanUIPainter* getInstance(const std::string& name = "");
-    static GanUIPainter* get(const std::string& name = "") { return GanUIPainter::getInstance(toLower(name)); }
-    static GanUIPainter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    DECLARE_PLOTTER_GETTER(GanUIPainter)
 
     void drawStroke(const Vector3& pStart, const Vector3& pEnd);
 
@@ -24,8 +21,8 @@ public:
     float colorIndex = .2f;
     float sharpness = 0.01f;
 
+    GanUIPainter& updateUI();
 public Q_SLOTS:
-    GanUIPainter* updateUI();
 
     // Q_SIGNALS:
     // void clickedOnImage(const Vector3& pos, Vector3 value);

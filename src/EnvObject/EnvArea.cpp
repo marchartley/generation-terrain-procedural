@@ -167,17 +167,18 @@ void EnvAreaInstance::applyDepositionOnDeath()
 
 GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow)
 {
-    std::vector<RelativeKelvinlet> evaluatedCurveKelvinlets;
+    std::vector<KelvinletCurve*> evaluatedCurveKelvinlets;
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
-            if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(this->getDefinition()->curveKelvinlets[i]))
+            if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(this->getDefinition()->curveKelvinlets[i])) {
                 asCurveKelvinlet->curve = this->curve;
-            evaluatedCurveKelvinlets.push_back(RelativeKelvinlet(this->getDefinition()->curveKelvinlets[i], Vector3()));
+                evaluatedCurveKelvinlets.push_back(asCurveKelvinlet);
+            }
         }
     }
     this->scene->flowfield.iterateParallel([&](const Vector3& p) {
         for (const auto& k : evaluatedCurveKelvinlets) {
-            waterFlow[p] += k.evaluate(p, 0.f, waterFlow[p].norm());
+            waterFlow[p] += k->evaluate(p) * waterFlow[p].norm();
         }
     });
     /*

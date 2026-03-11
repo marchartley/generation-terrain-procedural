@@ -3,10 +3,8 @@
 #include "GUIElements/PainterToolsUI.h"
 #include "GUIElements/ImageViewerOptionsUI.h"
 
-ImagePainter::ImagePainter(const std::string& name, QWidget* parent) : ImagePainter(name, new ChartView(new Chart()), parent)
-{}
-ImagePainter::ImagePainter(const std::string& name, ChartView* chartView, QWidget* parent)
-    : ImageViewer(name, chartView, parent)
+ImagePainter::ImagePainter(const std::string& name, QWidget* parent)
+    : ImageViewer(name, parent)
 {
     painterParams.additiveMode = true;
     painterParams.RGBimage = true;
@@ -50,25 +48,26 @@ ImagePainter *ImagePainter::init(const std::string& name, ChartView *chartView, 
     return ImagePainter::getInstance(name);
 }
 */
-ImagePainter *ImagePainter::updateToolsInterface()
+ImagePainter& ImagePainter::updateToolsInterface()
 {
     this->toolsInterface->clear();
-    this->toolsInterface->add(PainterToolsUI::createPainterToolsUI(this->chartView, this->dataModel, &this->painterParams));
+    auto UI = PainterToolsUI::createPainterToolsUI(&this->painterParams);
+    this->toolsInterface->add(std::move(UI));
     ImageViewer::updateToolsInterface();
-    return this;
+    return *this;
 }
 
-ImagePainter *ImagePainter::updateViewOptionsInterface()
+ImagePainter& ImagePainter::updateViewOptionsInterface()
 {
-    if (this->viewOptionsInterface != nullptr)
+    // if (this->viewOptionsInterface != nullptr)
         this->viewOptionsInterface->clear();
-    else
-        this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
+    // else
+        // this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
 
     if (this->painterParams.RGBimage)
-        this->viewOptionsInterface->add(ImageViewerOptionsUI::createRGBImageViewerOptions(this->chartView, this->dataModel));
+        this->viewOptionsInterface->add(std::move(ImageViewerOptionsUI::createRGBImageViewerOptions(this)));
     else
-        this->viewOptionsInterface->add(ImageViewerOptionsUI::createGreyImageViewerOptions(this->chartView, this->dataModel));
+        this->viewOptionsInterface->add(std::move(ImageViewerOptionsUI::createGreyImageViewerOptions(this)));
 
-    return this;
+    return *this;
 }

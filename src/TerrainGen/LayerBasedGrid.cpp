@@ -558,7 +558,7 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
     }
 }
 
-LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material)
+LayerBasedGrid& LayerBasedGrid::transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material)
 {
 //    material = AIR;
     auto initialColumn = this->layers.at(x, y);
@@ -606,7 +606,7 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
         this->layers.at(x, y)[i] = {zLevels[i].first, (zLevels[i].second.second - zLevels[i].second.first)};
     }
     this->cleanLayer(x, y);
-    return this;
+    return *this;
 
 
     /*auto initialColumn = this->layers.at(x, y);
@@ -640,7 +640,7 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
         currentHeight += height;
         stackIndex ++;
     }
-    return this;*/
+    return *this;*/
 }
 /*
 void LayerBasedGrid::add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)

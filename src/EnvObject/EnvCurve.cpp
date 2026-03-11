@@ -210,7 +210,7 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow)
 {
     std::vector<RelativeKelvinlet> relativeFlowsStarting;
     std::vector<RelativeKelvinlet> relativeFlowsEnding;
-    std::vector<RelativeKelvinlet> relativeCurveFlow;
+    std::vector<KelvinletCurve*> relativeCurveFlow;
     for (size_t i = 0; i < this->getDefinition()->startingPointKelvinlets.size(); i++) {
         if (this->getDefinition()->startingPointKelvinlets[i]->valid())
             relativeFlowsStarting.push_back(RelativeKelvinlet(this->getDefinition()->startingPointKelvinlets[i], this->curve.points.front()));
@@ -224,7 +224,7 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow)
             auto k = this->getDefinition()->curveKelvinlets[i]->clone();
             auto asCurve = dynamic_cast<KelvinletCurve*>(k);
             asCurve->curve = this->curve;
-            relativeCurveFlow.push_back(RelativeKelvinlet(asCurve, Vector3()));
+            relativeCurveFlow.push_back(asCurve);
         }
     }
 
@@ -244,7 +244,7 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow)
             waterFlow[p] += relativeK.evaluate(p, flowAngleEnding, flowStrengthEnding, true);
         }
         for (const auto& k : relativeCurveFlow) {
-            waterFlow[p] += k.evaluate(p, 0.f, waterFlow[p].norm());
+            waterFlow[p] += k->evaluate(p) * waterFlow[p].norm(); // Scale with water flow strength
         }
     });
     /*

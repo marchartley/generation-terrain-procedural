@@ -490,11 +490,11 @@ void GraphTemplate<T>::draw()
 
         for (auto& [neighbor, weight] : node->neighbors) {
 //            linksPos.push_back({{node->pos.x, node->pos.y}, {neighbor->pos.x, neighbor->pos.y}});
-            ImageViewer::get()->addPlot({node->pos, neighbor->pos});
+            ImageViewer::get().addPlot({node->pos, neighbor->pos});
         }
     }
-    ImageViewer::get()->addScatter(nodesPos,  "", labels);
-    ImageViewer::get()->show();
+    ImageViewer::get().addScatter(nodesPos,  "", labels);
+    ImageViewer::get().show();
 }
 
 typedef GraphTemplate<int> Graph;
