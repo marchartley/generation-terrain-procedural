@@ -48,7 +48,7 @@ public:
     void reloadShaders();
 
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     std::vector<AABBox> getAvailablePositionsForMaterial(TerrainTypes target);
     std::vector<AABBox> getCoralAvailablePositions();

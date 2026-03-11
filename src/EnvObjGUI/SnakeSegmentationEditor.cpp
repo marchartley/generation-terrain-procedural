@@ -9,10 +9,8 @@
 #include "EnvObject/EnvCurve.h"
 #include "EnvObject/EnvArea.h"
 
-SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, QWidget* parent) : SnakeSegmentationEditor(name, new ChartView(new Chart()), parent)
-{}
-SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, ChartView* chartView, QWidget* parent)
-    : ImageViewer(name, chartView, parent)
+SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, QWidget* parent)
+    : ImageViewer(name, parent)
 {
     this->painterParameters.RGBimage = false;
 
@@ -83,16 +81,16 @@ void SnakeSegmentationEditor::showSnakePath() {
     this->draw();
 }
 
-SnakeSegmentationEditor* SnakeSegmentationEditor::associateEnvObject(EnvObject* obj)
+SnakeSegmentationEditor& SnakeSegmentationEditor::associateEnvObject(EnvObject* obj)
 {
     this->associatedObject = obj;
     // obj->updateFittingFunction();
     *(obj->snakeField) = SnakeImageFieldImplicit([=](const Vector3& p) { return this->currentField.interpolate(p); });
     this->snakeParameters.snake = obj->instantiate()->snake;
-    return this;
+    return *this;
 }
 
-SnakeSegmentationEditor *SnakeSegmentationEditor::setSnakeImage(const GridF& newFieldValues)
+SnakeSegmentationEditor& SnakeSegmentationEditor::setSnakeImage(const GridF& newFieldValues)
 {
     this->currentField = newFieldValues;
     this->currentGradientField = currentField.gradient();
@@ -102,14 +100,14 @@ SnakeSegmentationEditor *SnakeSegmentationEditor::setSnakeImage(const GridF& new
     snakeField->gradientField = [=](const Vector3& p) { return currentGradientField.interpolate(p); };
 
     this->addImage(currentField);
-    return this;
+    return *this;
 }
 
-SnakeSegmentationEditor *SnakeSegmentationEditor::updateToolsInterface()
+SnakeSegmentationEditor& SnakeSegmentationEditor::updateToolsInterface()
 {
     this->toolsInterface->clear();
 
-    InterfaceUI* UI = new InterfaceUI(new QVBoxLayout);
+    auto UI = new InterfaceUI();
 
     auto connectivityCostInput = new FloatInputElement("Connectivity", snakeParameters.params->connectivityCost);
 
@@ -127,14 +125,17 @@ SnakeSegmentationEditor *SnakeSegmentationEditor::updateToolsInterface()
     auto targetLengthInput = new FloatInputElement("targetLength", snakeParameters.params->targetLength);
     auto targetAreaInput = new FloatInputElement("targetArea", snakeParameters.params->targetArea);
 
-    auto nbCatapillarsInput = (new SliderElement("Catapillars", 0.f, 10.f, 1.0))->setValue(snakeParameters.params->nbCatapillars)->setOnValueChanged([=](float newVal) { snakeParameters.params->nbCatapillars = std::round(newVal);});
+    auto nbCatapillarsInput = new SliderElement("Catapillars", 0.f, 10.f, 1.0);
 
     auto collapseFirstAndLastPointCheckbox = new CheckboxElement("Closed shape", snakeParameters.params->collapseFirstAndLastPoint);
 
     auto stepSizeSlider = new SliderElement("Step size", 0.001f, 1.f, 0.001f, snakeParameters.snake.stepSize);
 
+    nbCatapillarsInput->setValue(snakeParameters.params->nbCatapillars)
+        .setOnValueChanged([=](float newVal) { snakeParameters.params->nbCatapillars = std::round(newVal);});
+    /*
     UI->add(std::vector<UIElement*>{
-        PainterToolsUI::createPainterToolsUI(chartView, dataModel, &painterParameters),
+        PainterToolsUI::createPainterToolsUI(&painterParameters),
         connectivityCostInput,
         curvatureCostInput,
         imageCostInput,
@@ -150,15 +151,16 @@ SnakeSegmentationEditor *SnakeSegmentationEditor::updateToolsInterface()
         collapseFirstAndLastPointCheckbox,
         stepSizeSlider
     });
+    */
 
-    this->toolsInterface->add(UI);
+    this->toolsInterface->add(std::move(UI));
 
-    return this;
+    return *this;
 }
 
-SnakeSegmentationEditor *SnakeSegmentationEditor::updateViewOptionsInterface()
+SnakeSegmentationEditor& SnakeSegmentationEditor::updateViewOptionsInterface()
 {
     this->viewOptionsInterface->clear();
     ImageViewer::updateViewOptionsInterface();
-    return this;
+    return *this;
 }

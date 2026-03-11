@@ -17,103 +17,121 @@
 #include "DataStructure/Image.h"
 #include "ChartView.h"
 
-
-#define DECLARE_PLOTTER_GETTER(Type) \
-public: \
-static Type* get(const std::string& name = "") { return AbstractPlotter::getInstance<Type>([](const std::string& name, ChartView* cv, QWidget* p){ return new Type(name, cv, p); }, toLower(name)); } \
-static Type* reset(const std::string& name = "") { AbstractPlotter::init<Type>([](const std::string& name, ChartView* cv, QWidget* p){ return new Type(name, cv, p); }, toLower(name)); return Type::get(name);}
-
+#define DECLARE_PLOTTER_GETTER(Type)                                   \
+public:                                                               \
+    static Type& get(const std::string& name = "") {                      \
+        return AbstractPlotter::getInstance<Type>(                         \
+           [](const std::string& name, QWidget* p) {       \
+                   return new Type(name, p);                \
+           },                                                             \
+           toLower(name));                                                \
+}                                                                      \
+    static Type& reset(const std::string& name = "") {                     \
+        AbstractPlotter::init<Type>(                                       \
+           [](const std::string& name, QWidget* p) {       \
+                   return new Type(name, p);                \
+           },                                                             \
+           toLower(name));                                                \
+        return Type::get(name);                                            \
+}
 
 class AbstractPlotter : public QDialog {
     Q_OBJECT
-protected: // Singleton
-    AbstractPlotter(const std::string& name, const std::string& title = "", QWidget* parent = nullptr);
-    AbstractPlotter(const std::string& name, ChartView* chartView, const std::string& title = "", QWidget* parent = nullptr);
+public: // protected: // Singleton
+    AbstractPlotter(const std::string& name, QWidget* parent = nullptr);
+    AbstractPlotter(const std::string& name, const std::string& title, QWidget* parent = nullptr);
+    virtual ~AbstractPlotter() {
+    }
 
     template <class Derive>
     static std::string getIDname(const std::string& name) { return name + typeid(Derive).name(); }
 
 public:
     template <class Derived, class Factory>
-    static Derived* getInstance(Factory&& factory, std::string name = "") {
+    static Derived& getInstance(Factory&& factory, const std::string& _name = "") {
+        std::string name = _name;
         if (name == "") name = Derived::defaultName;
         if (Derived::instances.count(getIDname<Derived>(name)) == 0) {
             init<Derived>(factory, name);
         }
-        return dynamic_cast<Derived*>(Derived::instances[getIDname<Derived>(name)]);
+        return dynamic_cast<Derived&>(*Derived::instances[getIDname<Derived>(name)]);
     }
     template <class Derived, class Factory>
-    static void init(Factory&& factory, const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr) {
+    static void init(Factory&& factory, const std::string& name, QWidget* parent = nullptr) {
         if (Derived::instances.count(getIDname<Derived>(name)))
             // delete Derived::instances[getIDname<Derived>(name)];
             Derived::instances[getIDname<Derived>(name)]->deleteLater();
         // AbstractPlotter::erase<Derived>(getIDname<Derived>(name));
         Derived::instances.erase(getIDname<Derived>(name));
-        Derived::instances[getIDname<Derived>(name)] = factory(name, chartView, parent);
+        Derived::instances[getIDname<Derived>(name)] = factory(name, parent);
     }
 
     template <class Derived>
     static void erase(const std::string& name) {
         if (Derived::instances.count(getIDname<Derived>(name)) > 0) delete Derived::instances[getIDname<Derived>(name)];
     }
-    // static AbstractPlotter* getInstance(const std::string& name = "");
-    // static AbstractPlotter* get(const std::string& name = "") { return AbstractPlotter::getInstance(toLower(name)); }
-    // static AbstractPlotter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    DECLARE_PLOTTER_GETTER(AbstractPlotter)
 
-    AbstractPlotter* addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
-    AbstractPlotter* addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
-    AbstractPlotter* addPlot(const BSpline& data, std::string name = "", QColor color = Qt::gray);
+    AbstractPlotter& addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
+    AbstractPlotter& addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
+    AbstractPlotter& addPlot(const BSpline& data, std::string name = "", QColor color = Qt::gray);
 
-    AbstractPlotter* addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
-    AbstractPlotter* addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    AbstractPlotter& addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    AbstractPlotter& addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    AbstractPlotter* addImage(const GridV3 &image);
-    AbstractPlotter* addImage(const GridF& image);
-    AbstractPlotter* addImage(const Matrix3<double>& image);
-    AbstractPlotter* addImage(const GridI& image);
+    AbstractPlotter& addImage(const GridV3 &image);
+    AbstractPlotter& addImage(const GridF& image);
+    AbstractPlotter& addImage(const Matrix3<double>& image);
+    AbstractPlotter& addImage(const GridI& image);
 
-    AbstractPlotter* addVectorField(const GridV3& field);
+    AbstractPlotter& addVectorField(const GridV3& field);
 
-    AbstractPlotter* setOverlay(const GridV3& colors, const GridF& alpha, const std::string& overlayName = "default", int layer = 0);
-    AbstractPlotter* setOverlay(const std::pair<GridV3, GridF>& colorAndAlpha, const std::string& overlayName = "default", int layer = 0);
-    AbstractPlotter* setOverlay(const GridF& colors, const GridF& alpha, const std::string& overlayName = "default", int layer = 0);
-    AbstractPlotter* setOverlay(const std::pair<GridF, GridF>& colorAndAlpha, const std::string& overlayName = "default", int layer = 0);
-    AbstractPlotter* showOverlay(const std::string& overlayName = "default");
-    AbstractPlotter* hideOverlay(const std::string& overlayName = "default");
+    AbstractPlotter& setOverlay(const GridV3& colors, const GridF& alpha, const std::string& overlayName = "default", int layer = 0);
+    AbstractPlotter& setOverlay(const std::pair<GridV3, GridF>& colorAndAlpha, const std::string& overlayName = "default", int layer = 0);
+    AbstractPlotter& setOverlay(const GridF& colors, const GridF& alpha, const std::string& overlayName = "default", int layer = 0);
+    AbstractPlotter& setOverlay(const std::pair<GridF, GridF>& colorAndAlpha, const std::string& overlayName = "default", int layer = 0);
+    AbstractPlotter& showOverlay(const std::string& overlayName = "default");
+    AbstractPlotter& hideOverlay(const std::string& overlayName = "default");
 
     GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3::invalid) const;
-    AbstractPlotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3::invalid, float opacity = .5f);
+    AbstractPlotter& addStreamLines(const GridV3& field, Vector3 imgSize = Vector3::invalid, float opacity = .5f);
 
     int exec();
-    AbstractPlotter* saveFig(const std::string& filename);
-    AbstractPlotter* copyToClipboard();
+    AbstractPlotter& saveFig(const std::string& filename);
+    AbstractPlotter& copyToClipboard();
     void resizeEvent(QResizeEvent* event);
     void showEvent(QShowEvent* event);
     void hideEvent(QHideEvent *event);
 
     QTimer *animate(std::function<void()> callback, int interval_ms = 30);
 
-    // AbstractPlotter* reset();
+    // AbstractPlotter& reset();
 
     bool hasPlotValues() const { return !this->dataModel->plot_data.empty(); }
     bool hasScatterValues() const { return !this->dataModel->scatter_data.empty(); }
     bool hasImage() const { return !this->dataModel->getImage().empty(); }
     bool hasVectorField() const { return !this->dataModel->vectorData.field.empty(); }
 
-    ChartView* chartView = nullptr;
-    PlotModel* dataModel = nullptr;
+    ChartView* chartView;
+    std::shared_ptr<PlotModel> dataModel;
     QLabel* mouseInfoLabel = nullptr;
 
-    InterfaceUI* mainInterface = nullptr;
-    InterfaceUI* toolsInterface = nullptr;
-    InterfaceUI* viewOptionsInterface = nullptr;
-    InterfaceUI* saveCopyInterface = nullptr;
-    InterfaceUI* infosInterface = nullptr;
-
+    InterfaceUI* mainInterface;
+    InterfaceUI* toolsInterface;
+    InterfaceUI* viewOptionsInterface;
+    InterfaceUI* saveCopyInterface;
+    InterfaceUI* infosInterface;
     InterfaceUI* viewAndCopyInterface = nullptr;
 
     std::string name;
 
+    virtual AbstractPlotter& updateUI(bool forceUpdate = false);
+    virtual void displayInfoUnderMouse(const Vector3& relativeMousePos);
+
+    virtual AbstractPlotter& updateToolsInterface();
+    virtual AbstractPlotter& updateViewOptionsInterface();
+    virtual AbstractPlotter& updateSaveCopyInterface();
+    virtual AbstractPlotter& updateInfosInterface();
 
 protected:
     static std::string defaultName;
@@ -122,18 +140,11 @@ protected:
     //    QValueAxis* m_axisX;
     //    QValueAxis* m_axisY;
 public Q_SLOTS:
-    // AbstractPlotter* updateLabelsPositions();
-    // AbstractPlotter* selectData(const Vector3& pos);
-    virtual AbstractPlotter* displayInfoUnderMouse(const Vector3& relativeMousePos);
-    virtual AbstractPlotter* draw();
-    virtual AbstractPlotter* show();
-    virtual AbstractPlotter* updateUI(bool forceUpdate = false);
+    // AbstractPlotter& updateLabelsPositions();
+    // AbstractPlotter& selectData(const Vector3& pos);
+    virtual void draw();
+    virtual void show();
 
-
-    virtual AbstractPlotter* updateToolsInterface();
-    virtual AbstractPlotter* updateViewOptionsInterface();
-    virtual AbstractPlotter* updateSaveCopyInterface();
-    virtual AbstractPlotter* updateInfosInterface();
 
 Q_SIGNALS:
     void clickedOnImage(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick);

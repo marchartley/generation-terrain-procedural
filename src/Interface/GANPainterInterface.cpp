@@ -61,7 +61,7 @@ void GANPainterInterface::replay(nlohmann::json action)
 void GANPainterInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
-    QObject::connect(GanUIPainter::get("cGanPainter"), &GanUIPainter::clickedOnImage, this, [&](const Vector3& pos, const Vector3& value) {
+    QObject::connect(&GanUIPainter::get("cGanPainter"), &GanUIPainter::clickedOnImage, this, [&](const Vector3& pos, const Vector3& value) {
         if (!pos.isValid()) { // On release
             this->runGANs();
         }
@@ -70,7 +70,7 @@ void GANPainterInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, s
 
 void GANPainterInterface::runGANs()
 {
-    GridV3 labelImage = GanUIPainter::get("cGanPainter")->dataModel->getImage() * subsidence;
+    GridV3 labelImage = GanUIPainter::get("cGanPainter").dataModel->getImage() * subsidence;
     Image(labelImage).writeToFile("cGANdata/input_label.png");
 
     for (auto& [name, process] : ganProcesses) {
@@ -118,8 +118,8 @@ GridV3 GANPainterInterface::randomIslandGenerator()
 {
     GridV3 labels(256, 256, 1);
     float offset = random_gen::generate(10000.f);
-    labels.iterate([&] (const Vector3i& pos) {
-        Vector3 p = pos;
+    labels.iterateParallel([&] (const Vector3i& pos) {
+        auto& p = pos;
         // float val = (random_gen::generate_perlin(p.x() / 150.f, p.y() / 150.f) * .8f + random_gen::generate_perlin(p.x() / 100.f, p.y() / 100.f) * .3f + random_gen::generate_perlin(p.x() / 50.f, p.y() / 50.f) * .2f) * 2.f - 1.f;
         float val = random_gen::generate_fbm(p.x() / 2.f, p.y() / 2.f, offset) * .5f + .7f;
         val = clamp(sign(val) * std::pow(abs(val), 1.5f), 0.f, .99f);
@@ -135,29 +135,29 @@ GridV3 GANPainterInterface::randomIslandGenerator()
     return labels;
 }
 
-QLayout *GANPainterInterface::createGUI()
+InterfaceUI* GANPainterInterface::createGUI()
 {
-    InterfaceUI* gui = new InterfaceUI(new QVBoxLayout());
-    ButtonElement* drawButton = new ButtonElement("Draw", [&]() {
-        GanUIPainter::get("cGanPainter")->show();
+    auto UI = new InterfaceUI();
+    auto drawButton = new ButtonElement("Draw", [&]() {
+        GanUIPainter::get("cGanPainter").show();
     });
-    ButtonElement* randomButton = new ButtonElement("Random", [&]() {
-        GanUIPainter::get("cGANPainter")->addImage(this->randomIslandGenerator())->show();
+    auto randomButton = new ButtonElement("Random", [&]() {
+        GanUIPainter::get("cGANPainter").addImage(this->randomIslandGenerator()).show();
         this->runGANs();
         this->computeNewHeightmap();
     });
     auto subsidenceSlider = new SliderElement("Subsidence", 0.01f, .97f, 0.01f, this->subsidence);
-    subsidenceSlider->setOnValueChanged([&](float newVal) { this->runGANs(); this->computeNewHeightmap(); });
+    subsidenceSlider->setOnValueChanged([=](float newVal) { this->runGANs(); this->computeNewHeightmap(); });
 
-    InterfaceUI* modelsUI = new InterfaceUI(new QVBoxLayout());
+    auto modelsUI = new InterfaceUI(new QVBoxLayout());
 
     for (auto& [name, process] : ganProcesses) {
-        SliderElement* slider = new SliderElement(name, 0.f, 1.f, 0.01f, ganModelWeights[name]);
+        auto slider = new SliderElement(name, 0.f, 1.f, 0.01f, ganModelWeights[name]);
+        slider->setOnValueChanged([=](float newVal) { this->computeNewHeightmap(); });
         modelsUI->add(slider);
-        slider->setOnValueChanged([&](float newVal) { this->computeNewHeightmap(); });
     }
 
-    gui->add(std::vector<UIElement*>{drawButton, subsidenceSlider, randomButton, modelsUI});
+    UI->add(std::vector<UIElement*>{drawButton, subsidenceSlider, randomButton, modelsUI});
 
-    return gui->get()->layout();
+    return UI;
 }

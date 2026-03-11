@@ -22,16 +22,16 @@ public:
 
     QComboBox* combobox() const;
 
-    ComboboxElement* setOnSelectionChanged(std::function<void(int)> func);
+    ComboboxElement& setOnSelectionChanged(std::function<void(int)> func);
 
-    ComboboxElement* bindTo(int& indexSelected);
+    ComboboxElement& bindTo(int& indexSelected);
 
     ComboboxLineElementBase* getSelection() const;
 
     template <class T>
     T getSelection() const;
 
-    ComboboxElement* addChoice(ComboboxLineElementBase* addedChoice, bool selected = false);
+    ComboboxElement& addChoice(ComboboxLineElementBase* addedChoice, bool selected = false);
 
 public Q_SLOTS:
     void update();

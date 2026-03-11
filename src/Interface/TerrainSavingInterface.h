@@ -15,7 +15,7 @@ public:
     void replay(nlohmann::json action); // Nothing to replay
 
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     std::vector<std::string> saveTerrainGeometry(const std::string& filename = "");

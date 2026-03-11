@@ -32,8 +32,8 @@ public:
     Vector3 getStartingVector() { return this->startingControlPoint->getPosition(); }
     Vector3 getEndingVector() { return this->endingControlPoint->getPosition(); }
 
-    std::unique_ptr<ControlPoint> startingControlPoint;
-    std::unique_ptr<ControlPoint> endingControlPoint;
+    std::shared_ptr<ControlPoint> startingControlPoint;
+    std::shared_ptr<ControlPoint> endingControlPoint;
     Mesh arrowMesh;
 
     std::vector<Vector3> getArrowPath();

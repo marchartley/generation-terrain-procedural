@@ -67,17 +67,17 @@ struct KelvinletToolParams {
 class PainterToolsUI
 {
 public:
-    static InterfaceUI* createPainterToolsUI(ChartView* chartView, PlotModel* dataModel, PainterToolParams* params);
+    static InterfaceUI* createPainterToolsUI(PainterToolParams* params);
 
     static GridV3& paintImage(GridV3& src, const Vector3& pos, PainterToolParams params, bool removeAmount = false);
     static GridF& paintImage(GridF& src, const Vector3& pos, PainterToolParams params, bool removeAmount = false);
 
 
-    static InterfaceUI* createKelvinletToolsUI(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params, std::function<void(const Vector3&, bool)> onUpdateCallback = {}, std::function<GridV3 (bool)> vectorFieldFunction = {});
+    static InterfaceUI* createKelvinletToolsUI(AbstractPlotter* plotter, KelvinletToolParams* params, std::function<void(const Vector3&, bool)> onUpdateCallback = {}, std::function<GridV3 (bool)> vectorFieldFunction = {});
     static GridV3& paintKelvinlet(GridV3& src, const Vector3& pos, KelvinletToolParams* params);
 
 // protected:
-    static void updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, ChartView *chartView, PlotModel *dataModel, KelvinletToolParams *params, const Vector3 &mouseRelPos, bool updateCurrentKelvinlet = true, std::function<GridV3(bool)> vectorFieldFunction = {});
+    static void updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, KelvinletToolParams *params, const Vector3 &mouseRelPos, bool updateCurrentKelvinlet = true, std::function<GridV3(bool)> vectorFieldFunction = {});
     static Kelvinlet* updateCurrentKelvinlet(KelvinletToolParams* params, const Vector3& mousePos);
     // static Kelvinlet* updateSelectedKelvinlet(KelvinletToolParams* params, Kelvinlet* k, const Vector3& mousePos);
 

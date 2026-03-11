@@ -79,20 +79,17 @@ void TunnelInterface::show()
     CustomInteractiveObject::show();
 }
 
-QLayout* TunnelInterface::createGUI()
+InterfaceUI* TunnelInterface::createGUI()
 {
-//    this->tunnelLayout = new QHBoxLayout;
-    InterfaceUI* tunnelLayout = new InterfaceUI(new QHBoxLayout, "Tunnels");
+    auto UI = new InterfaceUI();
 
-
-//    ButtonElement* addControlPointButton = new ButtonElement("Ajouter un point de control");
-    ButtonElement* tunnelClearControlPointButton = new ButtonElement("Tout retirer", [&](){this->clearTunnelPoints(); /*computeTunnelPreview();*/ });
-    SliderElement* tunnelWidthSlider = new SliderElement("Width", 1, 30, 1, tunnelWidth);
-    SliderElement* tunnelHeightSlider = new SliderElement("Height", 1, 30, 1, tunnelHeight, Qt::Orientation::Vertical);
-    SliderElement* tunnelStrengthSlider = new SliderElement("", 0.0f, 3.0f, 0.1f, erosionStrength);
-    ButtonElement* tunnelCreateMatter = new ButtonElement("Arche", [&]() { this->createTunnel(false); });
-    ButtonElement* tunnelRemoveMatter = new ButtonElement("Tunnel", [&]() { this->createTunnel(true); });
-//    CheckboxElement* tunnelDisplayButton = new CheckboxElement("Afficher");
+    auto tunnelClearControlPointButton = new ButtonElement("Tout retirer", [&](){this->clearTunnelPoints(); /*computeTunnelPreview();*/ });
+    auto tunnelWidthSlider = new SliderElement("Width", 1, 30, 1, tunnelWidth);
+    auto tunnelHeightSlider = new SliderElement("Height", 1, 30, 1, tunnelHeight, Qt::Orientation::Vertical);
+    auto tunnelStrengthSlider = new SliderElement("", 0.0f, 3.0f, 0.1f, erosionStrength);
+    auto tunnelCreateMatter = new ButtonElement("Arche", [&]() { this->createTunnel(false); });
+    auto tunnelRemoveMatter = new ButtonElement("Tunnel", [&]() { this->createTunnel(true); });
+//    CheckboxElement* tunnelDisplayButton = std::make_shared<CheckboxElement>("Afficher");
 
     this->shapes = {
         new ComboboxLineElement<KarstHolePredefinedShapes>("Tube", ":/tunnels/src/assets/tunnels_icons/tunnel_type_tube.png", TUBE),
@@ -103,69 +100,32 @@ QLayout* TunnelInterface::createGUI()
         new ComboboxLineElement<KarstHolePredefinedShapes>("Flat", ":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture_flat.png", STAR)
     };
 
-    ComboboxElement* startingShapeCombobox = new ComboboxElement("Inlet", shapes, startingShapeIndex);
-    ComboboxElement* endingShapeCombobox = new ComboboxElement("Outlet", shapes, endingShapeIndex);
-/*
-    QIcon tubeIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_tube.png");
-    QIcon solubleIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_soluble_bed.png");
-    QIcon keyholeIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_keyhole.png");
-    QIcon canyonIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_canyon.png");
-    QIcon fractureIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture.png");
-    QIcon flatCrackIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture_flat.png");
-
-    startingShapeCombobox->addItem(tubeIcon, "Tube", KarstHolePredefinedShapes::TUBE);
-    startingShapeCombobox->addItem(solubleIcon, "Soluble bed", KarstHolePredefinedShapes::SOLUBLE_BED);
-    startingShapeCombobox->addItem(keyholeIcon, "Keyhole", KarstHolePredefinedShapes::KEYHOLE);
-    startingShapeCombobox->addItem(canyonIcon, "Canyon", KarstHolePredefinedShapes::CANYON);
-    startingShapeCombobox->addItem(fractureIcon, "Fracture", KarstHolePredefinedShapes::CRACK);
-    startingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::STAR);
-
-    endingShapeCombobox->addItem(tubeIcon, "Tube", KarstHolePredefinedShapes::TUBE);
-    endingShapeCombobox->addItem(solubleIcon, "Soluble bed", KarstHolePredefinedShapes::SOLUBLE_BED);
-    endingShapeCombobox->addItem(keyholeIcon, "Keyhole", KarstHolePredefinedShapes::KEYHOLE);
-    endingShapeCombobox->addItem(canyonIcon, "Canyon", KarstHolePredefinedShapes::CANYON);
-    endingShapeCombobox->addItem(fractureIcon, "Fracture", KarstHolePredefinedShapes::CRACK);
-    endingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::STAR);
-    */
-
-    tunnelLayout->add(createVerticalGroupUI({tunnelCreateMatter, tunnelRemoveMatter}));
-    tunnelLayout->add(tunnelClearControlPointButton);
-    tunnelLayout->add(tunnelWidthSlider);
-    tunnelLayout->add(tunnelHeightSlider);
-    tunnelLayout->add(startingShapeCombobox);
-    tunnelLayout->add(endingShapeCombobox);
-//    tunnelLayout->addWidget(createSliderGroup("Force", tunnelStrengthSlider));
-//    tunnelLayout->addWidget(tunnelDisplayButton);
+    auto startingShapeCombobox = new ComboboxElement("Inlet", shapes, startingShapeIndex);
+    auto endingShapeCombobox = new ComboboxElement("Outlet", shapes, endingShapeIndex);
 
 
-    tunnelWidthSlider->setOnValueChanged([&](float val) { this->setTunnelWidth(val); });
-    tunnelHeightSlider->setOnValueChanged([&](float val) { this->setTunnelHeight(val); });
-    tunnelStrengthSlider->setOnValueChanged([&](float val) { this->setErosionStrength(val); });
-
-    startingShapeCombobox->setOnSelectionChanged([&](int) { this->updateStartingShape(); });
-    endingShapeCombobox->setOnSelectionChanged([&](int) { this->updateEndingShape(); });
-
-//    QObject::connect(tunnelWidthSlider, &FancySlider::valueChanged, this, &TunnelInterface::setTunnelWidth);
-//    QObject::connect(tunnelHeightSlider, &FancySlider::valueChanged, this, &TunnelInterface::setTunnelHeight);
-//    QObject::connect(tunnelStrengthSlider, &FancySlider::floatValueChanged, this, &TunnelInterface::setErosionStrength);
-//    QObject::connect(tunnelCreateMatter, &QPushButton::pressed, this, [=](){ this->createTunnel(false); } );
-//    QObject::connect(tunnelRemoveMatter, &QPushButton::pressed, this, [=](){ this->createTunnel(true);  } );
-//    QObject::connect(tunnelCreateCrack, &QPushButton::pressed, this, [=](){ this->createCrack(true); } );
-//    QObject::connect(addControlPointButton, &QPushButton::pressed, this, [=](){this->setCurvesErosionConstructionMode(true); });
-//    QObject::connect(tunnelClearControlPointButton, &QPushButton::pressed, this, [=](){this->clearTunnelPoints(); /*computeTunnelPreview();*/ });
-//    QObject::connect(tunnelDisplayButton, &QCheckBox::toggled, this, &TunnelInterface::setVisibility );
-//    QObject::connect(startingShapeCombobox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](int x) {this->updateStartingShape(); });
-//    QObject::connect(endingShapeCombobox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](int x) {this->updateEndingShape(); });
+    UI->add(std::vector<UIElement*>{
+        tunnelCreateMatter,
+        tunnelRemoveMatter,
+        tunnelClearControlPointButton,
+        tunnelWidthSlider,
+        tunnelHeightSlider,
+        startingShapeCombobox,
+        endingShapeCombobox
+    });
 
 
-//    tunnelWidthSlider->setValue(tunnelWidth);
-//    tunnelHeightSlider->setValue(tunnelHeight);
-//    tunnelStrengthSlider->setfValue(erosionStrength);
+    tunnelWidthSlider->setOnValueChanged([=](float val) { this->setTunnelWidth(val); });
+    tunnelHeightSlider->setOnValueChanged([=](float val) { this->setTunnelHeight(val); });
+    tunnelStrengthSlider->setOnValueChanged([=](float val) { this->setErosionStrength(val); });
+
+    startingShapeCombobox->setOnSelectionChanged([=](int) { this->updateStartingShape(); });
+    endingShapeCombobox->setOnSelectionChanged([=](int) { this->updateEndingShape(); });
 
     this->updateStartingShape();
     this->updateEndingShape();
 
-    return tunnelLayout->get()->layout();
+    return UI;
 }
 
 
@@ -181,8 +141,8 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
             }
         }
         if (addTheNewPoint) {
-            this->controlPoints.push_back(std::make_unique<ControlPoint>(pos, 5.f, INACTIVE));
-            std::unique_ptr<ControlPoint>& newCtrl = this->controlPoints.back();
+            this->controlPoints.push_back(std::make_shared<ControlPoint>(pos, 5.f, INACTIVE));
+            std::shared_ptr<ControlPoint>& newCtrl = this->controlPoints.back();
             newCtrl->allowAllAxisTranslation(true);
             newCtrl->displayOnTop = true;
             newCtrl->debugID = 1;

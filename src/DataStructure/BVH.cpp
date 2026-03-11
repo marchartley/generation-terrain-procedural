@@ -19,7 +19,7 @@ BVHTree::BVHTree(const BVHTree &other) : SpacePartitioning(other), root(nullptr)
     memoryPool = new BVHMemoryPool(*other.memoryPool); // Deep copy
 }
 
-BVHTree &BVHTree::operator=(const BVHTree &other) {
+const BVHTree& BVHTree::operator=(const BVHTree &other) {
     if (this != &other) { // Protect against self-assignment
         /*SpacePartitioning::operator=(other);*/ // call the base class's assignment operator
 
@@ -34,7 +34,7 @@ BVHTree &BVHTree::operator=(const BVHTree &other) {
     return *this;
 }
 
-SpacePartitioning& BVHTree::build(const std::vector<Triangle> &triangles)
+const SpacePartitioning& BVHTree::build(const std::vector<Triangle> &triangles)
 {
     this->triangles = triangles;
     this->root = this->buildBVH(0, triangles.size());

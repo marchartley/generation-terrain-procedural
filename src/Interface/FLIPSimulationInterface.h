@@ -2,7 +2,7 @@
 #define FLIPSIMULATIONINTERFACE_H
 
 class FLIPSimulationInterface;
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/AbstractFluidSimulationInterface.h"
 #include "FluidSimulation/FLIPSimulation.h"
 
@@ -13,7 +13,7 @@ public:
     FLIPSimulationInterface(QWidget *parent = nullptr);
 
     void updateParticlesMesh();
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     void resetParticles();
 

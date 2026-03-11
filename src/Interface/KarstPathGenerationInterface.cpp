@@ -7,9 +7,9 @@ KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent)
     : ActionInterface("karstpeytavie", "Karts system (Peytavie)", "digging", "Create karsts with graphs", "karst_peytavie_button.png", parent)
 {
     this->karstCreator = new KarstPathsGeneration();
-    this->sourceControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
-    this->fractureVector = std::make_unique<InteractiveVector>();
-    this->waterHeightSlider = std::make_unique<Slider3D>(Vector3(), 1.0, 0.0, 0.0, 1.0, Slider3DOrientation::Z);
+    this->sourceControlPoint = std::make_shared<ControlPoint>(Vector3(), 5.f);
+    this->fractureVector = std::make_shared<InteractiveVector>();
+    this->waterHeightSlider = std::make_shared<Slider3D>(Vector3(), 1.0, 0.0, 0.0, 1.0, Slider3DOrientation::Z);
     this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
                                                                           {INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
                                                                           {ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
@@ -206,62 +206,43 @@ void KarstPathGenerationInterface::show()
 
 
 
-QLayout *KarstPathGenerationInterface::createGUI()
+InterfaceUI* KarstPathGenerationInterface::createGUI()
 {
-    this->karstCreationLayout = new QHBoxLayout;
+    auto UI = new InterfaceUI();
 
-    QPushButton* karstCreationPreviewButton = new QPushButton("Calculer");
-    QPushButton* karstCreationConfirmButton = new QPushButton("Creer le karst");
-    QCheckBox* karstCreationDisplay = new QCheckBox("Afficher");
-    QCheckBox* karstCreationChangeCam = new QCheckBox("Observer l'interieur");
-    FancySlider* karstCreationDistanceWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    FancySlider* karstCreationFractureWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    FancySlider* karstCreationWaterWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    FancySlider* karstCreationPorosityWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    FancySlider* karstCreationGamma = new FancySlider(Qt::Orientation::Horizontal, 1, 10, 0.1);
-    FancySlider* karstCreationTortuosity = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    karstCreationLayout->addWidget(createVerticalGroup({karstCreationPreviewButton, karstCreationConfirmButton}));
-    karstCreationLayout->addWidget(createMultipleSliderGroup({
-                                                           {"Distances", karstCreationDistanceWeights},
-                                                           {"Fractures", karstCreationFractureWeights},
-                                                           {"Porosite", karstCreationPorosityWeights},
-                                                           {"Niveau d'eau", karstCreationWaterWeights},
-                                                       }));
-    karstCreationLayout->addWidget(createVerticalGroup({
-                                                           createSliderGroup("Gamma", karstCreationGamma),
-                                                           createSliderGroup("Tortuosite (m)", karstCreationTortuosity)
-                                                       }));
-    karstCreationLayout->addWidget(createVerticalGroup({/*karstCreationDisplay, */karstCreationChangeCam}));
+    auto karstCreationPreviewButton = new ButtonElement("Calculer", [=](){ this->computeKarst(); });
+    auto karstCreationConfirmButton = new ButtonElement("Creer le karst", [=](){ this->createKarst(); });
+    auto karstCreationDisplay = new CheckboxElement("Afficher", [=](bool checked) { this->setVisibility(checked); });
+    auto karstCreationChangeCam = new CheckboxElement("Observer l'interieur", [=](bool display){ Q_EMIT this->useAsMainCamera(this->visitingCamera, display); });
+    auto karstCreationDistanceWeights = new SliderElement("Distances", 0, 10, 0.1, karstCreator->distanceWeight);
 
-    QObject::connect(karstCreationPreviewButton, &QPushButton::pressed, this, [=](){ this->computeKarst(); } );
-    QObject::connect(karstCreationConfirmButton, &QPushButton::pressed, this, [=](){ this->createKarst(); } );
-    QObject::connect(karstCreationDistanceWeights, &FancySlider::floatValueChanged, this, [=](float val){
-        this->karstCreator->distanceWeight = val; this->computeKarst(); } );
-    QObject::connect(karstCreationFractureWeights, &FancySlider::floatValueChanged, this, [=](float val){
-        this->karstCreator->fractureWeight = val; this->computeKarst(); } );
-    QObject::connect(karstCreationWaterWeights, &FancySlider::floatValueChanged, this, [=](float val){
-        this->karstCreator->waterHeightWeight = val; this->computeKarst(); } );
-    QObject::connect(karstCreationPorosityWeights, &FancySlider::floatValueChanged, this, [=](float val){
-        this->karstCreator->porosityWeight = val; this->computeKarst(); } );
-    QObject::connect(karstCreationGamma, &FancySlider::floatValueChanged, this, [=](float val){
-        this->karstCreator->gamma = val; this->computeKarst(); } );
-    QObject::connect(karstCreationTortuosity, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->updateTortuosity(val, {0}); this->updateKarstPath(); } );
-    QObject::connect(karstCreationDisplay, &QCheckBox::toggled, this, &KarstPathGenerationInterface::setVisibility);
-    QObject::connect(karstCreationChangeCam, &QCheckBox::toggled, this, [=](bool display){
-        Q_EMIT this->useAsMainCamera(this->visitingCamera, display);
-    } );
+    auto karstCreationFractureWeights = new SliderElement("Fractures", 0, 10, 0.1, karstCreator->fractureWeight);
+    auto karstCreationWaterWeights = new SliderElement("Porosite", 0, 10, 0.1, karstCreator->waterHeightWeight);
+    auto karstCreationPorosityWeights = new SliderElement("Niveau d'eau", 0, 10, 0.1, karstCreator->porosityWeight);
+    auto karstCreationGamma = new SliderElement("Gamma", 1, 10, 0.1, karstCreator->gamma);
+    auto karstCreationTortuosity = new SliderElement("Tortuosite (m)", 0, 10, 0.1);
 
+    karstCreationDistanceWeights->setOnValueChanged([=](float newValue) { this->computeKarst(); });
+    karstCreationFractureWeights->setOnValueChanged([=](float newValue) { this->computeKarst(); });
+    karstCreationWaterWeights->setOnValueChanged([=](float newValue) { this->computeKarst(); });
+    karstCreationPorosityWeights->setOnValueChanged([=](float newValue) { this->computeKarst(); });
+    karstCreationGamma->setOnValueChanged([=](float newValue) { this->computeKarst(); });
+    karstCreationTortuosity->setOnValueChanged([=](float newValue) { this->karstCreator->updateTortuosity(newValue, {0}); this->computeKarst(); });
 
-    if (this->karstCreator) {
-        karstCreationDistanceWeights->setfValue(this->karstCreator->distanceWeight);
-        karstCreationFractureWeights->setfValue(this->karstCreator->fractureWeight);
-        karstCreationWaterWeights->setfValue(this->karstCreator->waterHeightWeight);
-        karstCreationPorosityWeights->setfValue(this->karstCreator->porosityWeight);
-        karstCreationGamma->setfValue(this->karstCreator->gamma);
-    }
-    karstCreationTortuosity->setfValue(0.f);
     karstCreationDisplay->setChecked(!this->isHidden());
     karstCreationChangeCam->setChecked(false);
 
-    return this->karstCreationLayout;
+    UI->add(std::vector<UIElement*>{
+        karstCreationPreviewButton,
+        karstCreationConfirmButton,
+        karstCreationDistanceWeights,
+        karstCreationFractureWeights,
+        karstCreationPorosityWeights,
+        karstCreationWaterWeights,
+        karstCreationGamma,
+        karstCreationTortuosity,
+        karstCreationChangeCam
+    });
+
+    return UI;
 }

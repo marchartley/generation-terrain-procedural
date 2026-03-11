@@ -2,7 +2,7 @@
 #define SPHSIMULATIONINTERFACE_H
 
 class SPHSimulationInterface;
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/AbstractFluidSimulationInterface.h"
 #include "FluidSimulation/SPHSimulation.h"
 
@@ -18,7 +18,7 @@ public:
 
     void replay(nlohmann::json action);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     void updateSimulationMesh();
 

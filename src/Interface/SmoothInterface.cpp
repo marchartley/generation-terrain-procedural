@@ -37,20 +37,13 @@ void SmoothInterface::show()
     CustomInteractiveObject::show();
 }
 
-QLayout* SmoothInterface::createGUI()
+InterfaceUI* SmoothInterface::createGUI()
 {
-    this->smoothLayout = new QHBoxLayout;
+    auto UI = new InterfaceUI();
 
-    smoothComputeButton = new QPushButton("Calculer");
-//    smoothDisplayButton = new QCheckBox("Afficher");
-    smoothLayout->addWidget(smoothComputeButton);
-//    smoothLayout->addWidget(smoothDisplayButton);
+    auto smoothComputeButton = new ButtonElement("Calculer", [=]() { this->applySmooth(); });
+    UI->add(smoothComputeButton);
 
-//    smoothDisplayButton->setChecked(this->visible);
-
-//    QObject::connect(smoothDisplayButton, &QCheckBox::toggled, this, &SmoothInterface::setVisibility);
-    QObject::connect(smoothComputeButton, &QPushButton::pressed, this, &SmoothInterface::applySmooth);
-
-    return this->smoothLayout;
+    return UI;
 }
 

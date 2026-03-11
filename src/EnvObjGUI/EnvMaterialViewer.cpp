@@ -3,10 +3,8 @@
 #include "GUIElements/PainterToolsUI.h"
 #include "GUIElements/ImageViewerOptionsUI.h"
 
-EnvMaterialViewer::EnvMaterialViewer(const std::string& name, QWidget* parent) : EnvMaterialViewer(name, new ChartView(new Chart()), parent)
-{}
-EnvMaterialViewer::EnvMaterialViewer(const std::string& name, ChartView* chartView, QWidget* parent)
-    : ImageViewer(name, chartView, parent)
+EnvMaterialViewer::EnvMaterialViewer(const std::string& name, QWidget* parent)
+    : ImageViewer(name, parent)
 {
     painterParams.additiveMode = true;
     painterParams.RGBimage = false;
@@ -26,10 +24,10 @@ EnvMaterialViewer::EnvMaterialViewer(const std::string& name, ChartView* chartVi
     });
 }
 
-EnvMaterialViewer *EnvMaterialViewer::updateToolsInterface()
+EnvMaterialViewer& EnvMaterialViewer::updateToolsInterface()
 {
     this->toolsInterface->clear();
-    this->toolsInterface->add(PainterToolsUI::createPainterToolsUI(this->chartView, this->dataModel, &this->painterParams));
+    this->toolsInterface->add(PainterToolsUI::createPainterToolsUI(&this->painterParams));
     ImageViewer::updateToolsInterface();
-    return this;
+    return *this;
 }

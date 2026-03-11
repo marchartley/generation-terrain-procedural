@@ -14,8 +14,8 @@ InteractiveVector::InteractiveVector(const Vector3& end)
 }
 InteractiveVector::InteractiveVector(const Vector3& start, const Vector3& end)
 {
-    this->startingControlPoint = std::make_unique<ControlPoint>(start, 5.f);
-    this->endingControlPoint = std::make_unique<ControlPoint>(end, 3.f);
+    this->startingControlPoint = std::make_shared<ControlPoint>(start, 5.f);
+    this->endingControlPoint = std::make_shared<ControlPoint>(end, 3.f);
 //    this->endingControlPoint->mesh.shareShader(this->startingControlPoint->mesh);
     this->startingControlPoint->allowAllAxisRotations(true);
     this->startingControlPoint->allowAllAxisTranslation(true);

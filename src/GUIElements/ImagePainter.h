@@ -7,18 +7,17 @@
 class ImagePainter : public ImageViewer
 {
     Q_OBJECT
-protected: // Singleton
+public: // protected: // Singleton
     ImagePainter(const std::string& name, QWidget* parent = nullptr);
-    ImagePainter(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     // static ImagePainter* getInstance(const std::string& name = "");
     // static ImagePainter* get(const std::string& name = "") { return ImagePainter::getInstance(toLower(name)); }
-    // static ImagePainter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    // static ImagePainter* init(const std::string& name, std::shared_ptr<ChartView> chartView = nullptr, QWidget* parent = nullptr);
     DECLARE_PLOTTER_GETTER(ImagePainter)
 
-    virtual ImagePainter* updateToolsInterface();
-    virtual ImagePainter* updateViewOptionsInterface();
+    virtual ImagePainter& updateToolsInterface();
+    virtual ImagePainter& updateViewOptionsInterface();
 
     // void paintImage(const Vector3 &pos);
 

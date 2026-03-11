@@ -15,9 +15,9 @@ void ScreenshotInterface::replay(nlohmann::json action)
 
 }
 
-QLayout *ScreenshotInterface::createGUI()
+InterfaceUI* ScreenshotInterface::createGUI()
 {
-    return new QGridLayout;
+    return new InterfaceUI();
 }
 
 void ScreenshotInterface::takeScreenshots()

@@ -8,7 +8,7 @@ HeightmapErosionInterface::HeightmapErosionInterface(QWidget *parent)
     hydraulicMesh = Mesh({}, true, GL_LINES);
     hydraulicMesh.useIndices = false;
 
-    windDirectionSelector = std::make_unique<InteractiveVector>();
+    windDirectionSelector = std::make_shared<InteractiveVector>();
 }
 
 void HeightmapErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
@@ -113,161 +113,116 @@ void HeightmapErosionInterface::windErosion()
     }
 }
 
-QGroupBox *HeightmapErosionInterface::createHydraulicErosionGUI()
+InterfaceUI* HeightmapErosionInterface::createHydraulicErosionGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout;
+    auto UI = new InterfaceUI();
 
-    FancySlider* numIterationsSlider = new FancySlider(Qt::Horizontal, 0, 5000);
-    FancySlider* erosionRadiusSlider = new FancySlider(Qt::Horizontal, 0, 20);
-    FancySlider* dropletLifetimeSlider = new FancySlider(Qt::Horizontal, 0, 100);
-    FancySlider* erodingSpeedSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* depositSpeedSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* evaporationSpeedSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* gravitySlider = new FancySlider(Qt::Horizontal, 0, 10, .1f);
-    FancySlider* inertiaSlider = new FancySlider(Qt::Horizontal, 0, 1, .001f);
-    FancySlider* sedimentCapacityFactorSlider = new FancySlider(Qt::Horizontal, 0, 5, .1f);
-    QCheckBox* applyDepositCheckbox = new QCheckBox("With deposit");
-    QPushButton* hydraulicErosionButton = new QPushButton("Erosion hydraulique");
+    auto numIterationsSlider = new SliderElement("Iterations", 0, 5000, hydraulicNumIterations);
+    auto erosionRadiusSlider = new SliderElement("Rayon", 0, 20, hydraulicErosionRadius);
+    auto dropletLifetimeSlider = new SliderElement("Duree", 0, 100, hydraulicMaxDropletLifetime);
+    auto erodingSpeedSlider = new SliderElement("Erosion", 0, 1, .01f, hydraulicErodeSpeed);
+    auto depositSpeedSlider = new SliderElement("Depot", 0, 1, .01f, hydraulicDepositSpeed);
+    auto evaporationSpeedSlider = new SliderElement("Evaporation", 0, 1, .01f, hydraulicEvaporateSpeed);
+    auto gravitySlider = new SliderElement("Gravite", 0, 10, .1f, hydraulicGravity);
+    auto inertiaSlider = new SliderElement("Inertie", 0, 1, .001f, hydraulicInertia);
+    auto sedimentCapacityFactorSlider = new SliderElement("Capacite", 0, 5, .1f, hydraulicSedimentCapacityFactor);
+    auto applyDepositCheckbox = new CheckboxElement("With deposit", hydraulicApplyDeposit);
+    auto hydraulicErosionButton = new ButtonElement("Erosion hydraulique", [=]() { this->hydraulicErosion(); });
 
-    layout->addWidget(createMultipleSliderGroup({
-                                  { "Iterations", numIterationsSlider },
-                                  { "Rayon", erosionRadiusSlider },
-                                  { "Duree", dropletLifetimeSlider},
-                                  { "Erosion", erodingSpeedSlider },
-                                  { "Depot", depositSpeedSlider },
-                                  { "Evaporation", evaporationSpeedSlider },
-                                  { "Gravite", gravitySlider },
-                                  { "Inertie", inertiaSlider },
-                                  { "Capacite", sedimentCapacityFactorSlider }
-                              }));
-    layout->addWidget(applyDepositCheckbox);
-    layout->addWidget(hydraulicErosionButton);
 
-    numIterationsSlider->setfValue(hydraulicNumIterations);
-    erosionRadiusSlider->setfValue(hydraulicErosionRadius);
-    dropletLifetimeSlider->setfValue(hydraulicMaxDropletLifetime);
-    erodingSpeedSlider->setfValue(hydraulicErodeSpeed);
-    depositSpeedSlider->setfValue(hydraulicDepositSpeed);
-    evaporationSpeedSlider->setfValue(hydraulicEvaporateSpeed);
-    gravitySlider->setfValue(hydraulicGravity);
-    inertiaSlider->setfValue(hydraulicInertia);
-    sedimentCapacityFactorSlider->setfValue(hydraulicSedimentCapacityFactor);
-    applyDepositCheckbox->setChecked(hydraulicApplyDeposit);
+    UI->add(std::vector<UIElement*>{
+        numIterationsSlider,
+        erosionRadiusSlider,
+        dropletLifetimeSlider,
+        erodingSpeedSlider,
+        depositSpeedSlider,
+        evaporationSpeedSlider,
+        gravitySlider,
+        inertiaSlider,
+        sedimentCapacityFactorSlider,
+        applyDepositCheckbox,
+        hydraulicErosionButton
+    });
 
-    QObject::connect(numIterationsSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicNumIterations = val; });
-    QObject::connect(erosionRadiusSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicErosionRadius = val; });
-    QObject::connect(dropletLifetimeSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicMaxDropletLifetime = val; });
-    QObject::connect(erodingSpeedSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicErodeSpeed = val; });
-    QObject::connect(depositSpeedSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicDepositSpeed = val; });
-    QObject::connect(evaporationSpeedSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicEvaporateSpeed = val; });
-    QObject::connect(gravitySlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicGravity = val; });
-    QObject::connect(inertiaSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicInertia = val; });
-    QObject::connect(sedimentCapacityFactorSlider, &FancySlider::floatValueChanged, [&](float val) { hydraulicSedimentCapacityFactor = val; });
-    QObject::connect(applyDepositCheckbox, &QCheckBox::toggled, [&](bool val) { hydraulicApplyDeposit = val; });
-    QObject::connect(hydraulicErosionButton, &QPushButton::pressed, this, &HeightmapErosionInterface::hydraulicErosion);
 
-    QGroupBox* box = new QGroupBox("Erosion Hydraulique");
-    box->setLayout(layout);
-    return box;
+    return UI;
 }
 
-QGroupBox *HeightmapErosionInterface::createThermicErosionGUI()
+InterfaceUI* HeightmapErosionInterface::createThermicErosionGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout;
+    auto UI = new InterfaceUI();
 
-    FancySlider* erosionFactorSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* minSlopeSlider = new FancySlider(Qt::Horizontal, 0, 1, .001f);
-    QPushButton* thermalErosionButton = new QPushButton("Erosion thermique");
+    auto erosionFactorSlider = new SliderElement("Erosion", 0, 1, .01f, thermalErosionFactor);
+    auto minSlopeSlider = new SliderElement("Pente Min", 0, 1, .001f, thermalMinSlope);
+    auto thermalErosionButton = new ButtonElement("Erosion thermique", [=]() { this->thermalErosion(); });
 
-    layout->addWidget(createMultipleSliderGroup({
-                                  { "Erosion", erosionFactorSlider },
-                                  { "Pente min", minSlopeSlider }
-                              }));
-    layout->addWidget(thermalErosionButton);
 
-    erosionFactorSlider->setfValue(thermalErosionFactor);
-    minSlopeSlider->setfValue(thermalMinSlope);
+    UI->add(std::vector<UIElement*>{
+        erosionFactorSlider,
+        minSlopeSlider,
+        thermalErosionButton
+    });
 
-    QObject::connect(erosionFactorSlider, &FancySlider::floatValueChanged, [&](float val) { thermalErosionFactor = val; });
-    QObject::connect(minSlopeSlider, &FancySlider::floatValueChanged, [&](float val) { thermalMinSlope = val; });
-    QObject::connect(thermalErosionButton, &QPushButton::pressed, this, &HeightmapErosionInterface::thermalErosion);
 
-    QGroupBox* box = new QGroupBox("Erosion Thermique");
-    box->setLayout(layout);
-    return box;
+    return UI;
 }
 
-QGroupBox *HeightmapErosionInterface::createWindErosionGUI()
+InterfaceUI* HeightmapErosionInterface::createWindErosionGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout;
+    auto UI = new InterfaceUI();
 
-    FancySlider* numParticlesSlider = new FancySlider(Qt::Horizontal, 0, 5000);
-    FancySlider* bedrockSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* suspensionSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* abrasionSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* roughnessSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* settlingSlider = new FancySlider(Qt::Horizontal, 0, 1, .01f);
-    FancySlider* scaleSlider = new FancySlider(Qt::Horizontal, 0, 100, .1f);
-    FancySlider* dtSlider = new FancySlider(Qt::Horizontal, 0, 1, .001f);
-    QPushButton* windErosionButton = new QPushButton("Erosion de vent");
+    auto numParticlesSlider = new SliderElement("Particules", 0, 5000, windNumberOfParticles);
+    auto bedrockSlider = new SliderElement("Ratio roche/sable", 0, 1, .01f, windBedrocksProportionInGround);
+    auto suspensionSlider = new SliderElement("Suspension", 0, 1, .01f, windSuspension);
+    auto abrasionSlider = new SliderElement("Abrasion", 0, 1, .01f, windAbrasion);
+    auto roughnessSlider = new SliderElement("Rugosite", 0, 1, .01f, windRoughness);
+    auto settlingSlider = new SliderElement("Decantation", 0, 1, .01f, windSettling);
+    auto scaleSlider = new SliderElement("Echelle", 0, 100, .1f, windScale);
+    auto dtSlider = new SliderElement("delta-temps", 0, 1, .001f, windDt);
+    auto windErosionButton = new ButtonElement("Erosion de vent", [=]() { this->windErosion(); });
 
-    layout->addWidget(createMultipleSliderGroup({
-                                  { "Particules", numParticlesSlider },
-                                  { "Ratio roche/sable", bedrockSlider },
-                                  { "Suspension", suspensionSlider},
-                                  { "Abrasion", abrasionSlider },
-                                  { "Rugosite", roughnessSlider },
-                                  { "Decantation", settlingSlider },
-                                  { "Echelle", scaleSlider },
-                                  { "delta-temps", dtSlider },
-                              }));
-    layout->addWidget(windErosionButton);
 
-    numParticlesSlider->setfValue(windNumberOfParticles);
-    bedrockSlider->setfValue(windBedrocksProportionInGround);
-    suspensionSlider->setfValue(windSuspension);
-    abrasionSlider->setfValue(windAbrasion);
-    roughnessSlider->setfValue(windRoughness);
-    settlingSlider->setfValue(windSettling);
-    scaleSlider->setfValue(windScale);
-    dtSlider->setfValue(windDt);
+    UI->add(std::vector<UIElement*>{
+            numParticlesSlider,
+            bedrockSlider,
+            suspensionSlider,
+            abrasionSlider,
+            roughnessSlider,
+            settlingSlider,
+            scaleSlider,
+            dtSlider,
+            windErosionButton
+    });
 
-    QObject::connect(numParticlesSlider, &FancySlider::floatValueChanged, [&](float val) { windNumberOfParticles = val; });
-    QObject::connect(bedrockSlider, &FancySlider::floatValueChanged, [&](float val) { windBedrocksProportionInGround = val; });
-    QObject::connect(suspensionSlider, &FancySlider::floatValueChanged, [&](float val) { windSuspension = val; });
-    QObject::connect(abrasionSlider, &FancySlider::floatValueChanged, [&](float val) { windAbrasion = val; });
-    QObject::connect(roughnessSlider, &FancySlider::floatValueChanged, [&](float val) { windRoughness = val; });
-    QObject::connect(settlingSlider, &FancySlider::floatValueChanged, [&](float val) { windSettling = val; });
-    QObject::connect(scaleSlider, &FancySlider::floatValueChanged, [&](float val) { windScale = val; });
-    QObject::connect(dtSlider, &FancySlider::floatValueChanged, [&](float val) { windDt = val; });
-    QObject::connect(windErosionButton, &QPushButton::pressed, this, &HeightmapErosionInterface::windErosion);
-
-    QGroupBox* box = new QGroupBox("Erosion Aérienne");
-    box->setLayout(layout);
-    return box;
+    return UI;
 }
 
-QLayout *HeightmapErosionInterface::createGUI()
+InterfaceUI* HeightmapErosionInterface::createGUI()
 {
 //    if (this->erosionLayout != nullptr) return erosionLayout;
-    this->erosionLayout = new QHBoxLayout();
+    auto UI = new InterfaceUI();
 
 //    QPushButton* hydraulicErosionButton = new QPushButton("Erosion hydraulique");
 //    QPushButton* thermalErosionButton = new QPushButton("Erosion thermique");
 //    QPushButton* windErosionButton = new QPushButton("Erosion de vent");
-    erosionLayout->addWidget(createHydraulicErosionGUI());
-    erosionLayout->addWidget(createThermicErosionGUI());
-    erosionLayout->addWidget(createWindErosionGUI());
-    /*createVerticalGroup({
-                                                     hydraulicErosionButton,
-                                                     thermalErosionButton,
-                                                     windErosionButton
-                                                 }));*/
+    auto hydrauUI = createHydraulicErosionGUI();
+    auto thermalUI = createThermicErosionGUI();
+    auto windUI = createWindErosionGUI();
+    // UI->add(std::vector<UIElement*>{
+        // std::move(hydrauUI),
+        // std::move(thermalUI),
+        // std::move(windUI)
+    // });
+    UI->add(std::vector<UIElement*>{
+         hydrauUI,
+         thermalUI,
+         windUI
+    });
 
 //    QObject::connect(thermalErosionButton, &QPushButton::pressed, this, &HeightmapErosionInterface::thermalErosion);
 //    QObject::connect(windErosionButton, &QPushButton::pressed, this, &HeightmapErosionInterface::windErosion);
 
-    return erosionLayout;
+    return UI;
 }
 
 void HeightmapErosionInterface::show()

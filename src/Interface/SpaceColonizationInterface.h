@@ -5,11 +5,11 @@ class SpaceColonizationInterface;
 #include "GUIElements/ControlPoint.h"
 #include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
-#include "GUIElements/FancySlider.h"
+// #include "GUIElements/FancySlider.h"
 #include "Utils/BSpline.h"
-#include <QWidget>
+// #include <QWidget>
 #include "TreeColonisation/TreeColonisation.h"
-#include "TerrainGen/VoxelGrid.h"
+// #include "TerrainGen/VoxelGrid.h"
 #include "GUIElements/VisitingCamera.h"
 #include "GUIElements/PathCameraConstraint.h"
 #include "Interface/ActionInterface.h"
@@ -36,13 +36,13 @@ public:
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
     void afterTerrainUpdated();
 
-    std::unique_ptr<ControlPoint> startingPoint;
-    std::vector<std::unique_ptr<ControlPoint>> controlPoints;
+    std::shared_ptr<ControlPoint> startingPoint;
+    std::vector<std::shared_ptr<ControlPoint>> controlPoints;
     std::vector<BSpline> karstPaths;
     Mesh pathsMeshes;
 
-    QLayout* createGUI();
-    QHBoxLayout* spaceColonizationLayout;
+    InterfaceUI* createGUI();
+    // QHBoxLayout* spaceColonizationLayout;
 
 Q_SIGNALS:
     void useAsMainCamera(qglviewer::Camera* cam, bool useMyCamera);

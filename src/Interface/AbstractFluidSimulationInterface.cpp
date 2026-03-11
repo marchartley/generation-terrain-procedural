@@ -70,44 +70,30 @@ void AbstractFluidSimulationInterface::replay([[maybe_unused]] nlohmann::json ac
     // ActionInterface::replay(action);
 }
 
-QLayout *AbstractFluidSimulationInterface::createGUI()
+InterfaceUI* AbstractFluidSimulationInterface::createGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout();
+    auto UI = new InterfaceUI();
 
-    CheckboxElement* onlyAtSurfaceButton = new CheckboxElement("At surface", displayOnlyAtSurface);
-    CheckboxElement* displayBoundariesButton = new CheckboxElement("Display boundaries", displayBoundaries);
-    CheckboxElement* displayGridBoundariesButton = new CheckboxElement("Display boundaries (grid)", displayGridBoundaries);
-    CheckboxElement* displayParticlesButton = new CheckboxElement("Display particles", displayParticles);
-    CheckboxElement* displayVectorsButton = new CheckboxElement("Display vectors", displayVectors);
-    CheckboxElement* autoComputeButton = new CheckboxElement("Compute at each frame", computeAtEachFrame);
-    ButtonElement* computeButton = new ButtonElement("Compute", [&]() { computeSimulation(this->nbComputationsPerFrame); });
-    ButtonElement* updateMeshButton = new ButtonElement("Update terrain", [&]() { this->updateBoundariesMesh(); });
+    auto onlyAtSurfaceButton = new CheckboxElement("At surface", displayOnlyAtSurface);
+    auto displayBoundariesButton = new CheckboxElement("Display boundaries", displayBoundaries);
+    auto displayGridBoundariesButton = new CheckboxElement("Display boundaries (grid)", displayGridBoundaries);
+    auto displayParticlesButton = new CheckboxElement("Display particles", displayParticles);
+    auto displayVectorsButton = new CheckboxElement("Display vectors", displayVectors);
+    auto autoComputeButton = new CheckboxElement("Compute at each frame", computeAtEachFrame);
+    auto computeButton = new ButtonElement("Compute", [&]() { computeSimulation(this->nbComputationsPerFrame); });
+    auto updateMeshButton = new ButtonElement("Update terrain", [&]() { this->updateBoundariesMesh(); });
 
-    layout->addWidget(onlyAtSurfaceButton->get());
-    layout->addWidget(displayBoundariesButton->get());
-    layout->addWidget(displayGridBoundariesButton->get());
-    layout->addWidget(displayParticlesButton->get());
-    layout->addWidget(displayVectorsButton->get());
-    layout->addWidget(autoComputeButton->get());
-    layout->addWidget(createHorizontalGroupUI({
-                                                computeButton,
-                                                updateMeshButton
-                                            })->get());
+    UI->add(std::vector<UIElement*>{
+        onlyAtSurfaceButton,
+        displayBoundariesButton,
+        displayGridBoundariesButton,
+        displayParticlesButton,
+        displayVectorsButton,
+        autoComputeButton,
+        createHorizontalGroupUI({computeButton, updateMeshButton})
+    });
 
-    /*displayBoundariesButton->setChecked(this->displayBoundaries);
-    displayParticlesButton->setChecked(this->displayParticles);
-    displayVectorsButton->setChecked(this->displayVectors);
-    autoComputeButton->setChecked(this->computeAtEachFrame);
-
-    QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayBoundaries = checked; });
-    QObject::connect(displayGridBoundariesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayGridBoundaries = checked; });
-    QObject::connect(displayParticlesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayParticles = checked; });
-    QObject::connect(displayVectorsButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayVectors = checked; });
-    QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool checked) { this->computeAtEachFrame = checked; });*/
-//    QObject::connect(computeButton, &QPushButton::pressed, this, [=]() { computeSimulation(this->nbComputationsPerFrame); });
-//    QObject::connect(updateMeshButton, &QPushButton::pressed, this, &AbstractFluidSimulationInterface::updateBoundariesMesh);
-
-    return layout;
+    return UI;
 }
 
 void AbstractFluidSimulationInterface::updateVectorsMesh()

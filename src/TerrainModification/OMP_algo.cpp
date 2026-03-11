@@ -134,7 +134,7 @@ std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionaryFromFile(con
 
                 GridF img = data.subset(i * w, (i+1) * w, j * h, (j+1) * h).resize(highResSize, highResSize, 1).normalized();
                 // if (img.sum() / float(highResSize * highResSize) < 0.5f) continue;
-                // ImageViewer::get()->addImage(img)->exec();
+                // ImageViewer::get().addImage(img)->exec();
 
                 #pragma omp critical
                 images.push_back(img);

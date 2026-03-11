@@ -9,8 +9,8 @@ class KarstPathGenerationInterface;
 #include "Graphics/Mesh.h"
 #include "GUIElements/FancySlider.h"
 #include "Utils/BSpline.h"
-#include <QWidget>
-#include "TerrainGen/VoxelGrid.h"
+// #include <QWidget>
+// #include "TerrainGen/VoxelGrid.h"
 #include "GUIElements/PathCameraConstraint.h"
 #include <QGLViewer/manipulatedCameraFrame.h>
 #include "Interface/ActionInterface.h"
@@ -26,8 +26,8 @@ public:
     void display(const Vector3& camPos = Vector3::invalid);
     void replay(nlohmann::json action);
 
-    std::unique_ptr<InteractiveVector> fractureVector;
-    std::unique_ptr<Slider3D> waterHeightSlider;
+    std::shared_ptr<InteractiveVector> fractureVector;
+    std::shared_ptr<Slider3D> waterHeightSlider;
     Mesh waterLevelMesh;
 
 //    bool isHidden;
@@ -39,8 +39,8 @@ public:
 
     Mesh pathsMeshes;
 
-    QLayout* createGUI();
-    QHBoxLayout* karstCreationLayout;
+    InterfaceUI* createGUI();
+    // QHBoxLayout* karstCreationLayout;
 
 Q_SIGNALS:
     void useAsMainCamera(qglviewer::Camera* cam, bool useMyCamera);
@@ -62,7 +62,7 @@ public:
     Vector3 AABBoxMaxPos;
 
     KarstPathsGeneration* karstCreator = nullptr;
-    std::unique_ptr<ControlPoint> sourceControlPoint;
+    std::shared_ptr<ControlPoint> sourceControlPoint;
     qglviewer::Camera* visitingCamera = nullptr;
     PathCameraConstraint *cameraConstraint;
 };

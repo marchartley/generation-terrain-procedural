@@ -396,7 +396,7 @@ void Image::writeToFile(const std::string& filename, int desiredBitDepth) {
     fclose(fp);
 }
 
-Image &Image::setImage(const GridF &img)
+const Image& Image::setImage(const GridF &img)
 {
     this->colorImage.clear();
     this->bwImage = img;
@@ -404,7 +404,7 @@ Image &Image::setImage(const GridF &img)
     return *this;
 }
 
-Image &Image::setImage(const GridV3& img)
+const Image& Image::setImage(const GridV3& img)
 {
     this->bwImage.clear();
     this->colorImage = img;

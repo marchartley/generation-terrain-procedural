@@ -6,13 +6,14 @@
 class BiomeInterface;
 //#include "GUIElements/ControlPoint.h"
 //#include "GUIElements/InteractiveVector.h"
-#include "Utils/BSpline.h"
-#include <QWidget>
-#include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/Heightmap.h"
+// #include "Utils/BSpline.h"
+// #include <QWidget>
+// #include "TerrainGen/VoxelGrid.h"
+// #include "TerrainGen/Heightmap.h"
 #include "Interface/ActionInterface.h"
 #include "Karst/KarstHole.h"
-#include "GUIElements/HierarchicalListWidget.h"
+// #include "GUIElements/HierarchicalListWidget.h"
+// #include "GUIElements/CommonInterface.h"
 
 class BiomeReplacementDialog;
 class BiomeInterface : public ActionInterface
@@ -34,7 +35,7 @@ public:
     void wheelEvent(QWheelEvent* event);
     void mousePressEvent(QMouseEvent* event);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     std::vector<Mesh> selectionPlanes;
     BiomeModel biomeModel;
@@ -86,7 +87,7 @@ protected:
     std::vector<int> selectedBiomeIDs;
     std::vector<std::shared_ptr<BiomeInstance>> selectedBiomes;
 //    int selectedBiomeID = -1;
-    QLayout* layout = nullptr;
+    // QLayout* layout = nullptr;
 
     HierarchicalListWidget* biomeSelectionGui = nullptr;
 //    QLayout* biomeSelectionGuiLayout = nullptr;
@@ -114,8 +115,8 @@ public Q_SLOTS:
 
 public:
     HierarchicalListWidget* allAvailableBiomes;
-    QPushButton* cancelButton;
-    QPushButton* validButton;
+    // QPushButton* cancelButton;
+    // QPushButton* validButton;
     BiomeInterface* caller = nullptr;
     int selectedBiomeIndex = -1;
 };

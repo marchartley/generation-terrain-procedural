@@ -1,26 +1,16 @@
 #include "ChartView.h"
 
 
-ChartView::ChartView(QWidget *parent) : QChartView(nullptr, parent)
-{}
-
-ChartView::ChartView(QChart *chart, QWidget *parent) : QChartView(chart, parent)
+ChartView::ChartView(QWidget *parent) : QChartView(new Chart(nullptr), parent)
 {
-
+    // QObject::connect(this->chart(), &QChart::geometryChanged, this, &ChartView::updateLabelsPositions);
+    // QObject::connect(this->chart(), &QChart::plotAreaChanged, this, &ChartView::updateLabelsPositions);
+    // QObject::connect(this, &ChartView::updated, this, &ChartView::updateLabelsPositions);
 }
 
-ChartView::ChartView(Chart *chart, QWidget *parent) : QChartView((QChart*)chart, parent)
+ChartView& ChartView::setPlotModel(std::shared_ptr<PlotModel> dataModel, const std::string& title)
 {
-    this->_chart = chart;
-
-    QObject::connect(this->chart(), &QChart::geometryChanged, this, &ChartView::updateLabelsPositions);
-    QObject::connect(this->chart(), &QChart::plotAreaChanged, this, &ChartView::updateLabelsPositions);
-    QObject::connect(this, &ChartView::updated, this, &ChartView::updateLabelsPositions);
-}
-
-ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
-{
-    this->_dataModel = dataModel;
+    this->_dataModel = std::move(dataModel);
     this->chart()->removeAllSeries();
 
     if (!title.empty())
@@ -102,12 +92,12 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
     }
 
     this->chart()->createDefaultAxes();
-    return this;
+    return *this;
 }
 
-ChartView* ChartView::updateLabelsPositions()
+ChartView& ChartView::updateLabelsPositions()
 {
-    if (this->_dataModel == nullptr) return this;
+    if (this->_dataModel == nullptr) return *this;
     //    this->blockSignals(true);
     if (!this->_dataModel->selectedPlotData.empty() || !this->_dataModel->selectedScatterData.empty()) {
         QPointF qNewPoint = this->chart()->mapToValue(this->previousMousePos);
@@ -129,7 +119,7 @@ ChartView* ChartView::updateLabelsPositions()
         std::cout << "Removed a call to ImageViewer::draw() here..." << std::endl;
     }
     //    this->blockSignals(false);
-    return this;
+    return *this;
 }
 
 bool ChartView::selectData(const Vector3& pos)
@@ -166,7 +156,7 @@ bool ChartView::selectData(const Vector3& pos)
     // if (!this->_dataModel->displayedImage.empty()) {
     // Q_EMIT clickedOnImage(pos * this->_dataModel->displayedImage.getDimensions(), this->_dataModel->displayedImage(pos * this->_dataModel->displayedImage.getDimensions()));
     // }
-    // return this;
+    // return *this;
 }
 
 Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
@@ -181,13 +171,13 @@ Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
     return mousePos;
 }
 
-ChartView *ChartView::setOverlay(const GridV3 &image, std::string layerName, const GridF &alpha, int overlayLayer)
+const ChartView& ChartView::setOverlay(const GridV3 &image, std::string layerName, const GridF &alpha, int overlayLayer)
 {
     this->overlayColors[layerName] = image;
     this->overlayAlpha[layerName] = alpha;
     this->overlayDisplayed[layerName] = true;
     this->overlayLayer[layerName] = overlayLayer;
-    return this;
+    return *this;
 }
 
 bool ChartView::viewportEvent(QEvent *event)
@@ -274,15 +264,15 @@ PlotModel::PlotModel()
 
 }
 
-PlotModel *PlotModel::addPlot(const std::vector<Vector3>& data, const std::string& name, const QColor& color)
+PlotModel& PlotModel::addPlot(const std::vector<Vector3>& data, const std::string& name, const QColor& color)
 {
     this->plot_data.push_back(data);
     this->plot_names.push_back(name);
     this->plot_colors.push_back(color);
-    return this;
+    return *this;
 }
 
-PlotModel *PlotModel::addScatter(const std::vector<Vector3>& data, const std::string& name, const std::vector<std::string>& labels, std::vector<QColor> colors)
+PlotModel& PlotModel::addScatter(const std::vector<Vector3>& data, const std::string& name, const std::vector<std::string>& labels, std::vector<QColor> colors)
 {
     if (colors.size() == 0) {
         colors = std::vector<QColor>({Qt::blue});
@@ -294,28 +284,28 @@ PlotModel *PlotModel::addScatter(const std::vector<Vector3>& data, const std::st
     this->scatter_names.push_back(name);
     this->scatter_labels.push_back(labels);
     this->scatter_colors.push_back(colors);
-    return this;
+    return *this;
 }
 
-PlotModel *PlotModel::addImage(const GridV3& image/*, bool clamped, bool normalized, bool absolute, const Vector3 &minColors, const Vector3 &maxColors*/)
+PlotModel& PlotModel::addImage(const GridV3& image/*, bool clamped, bool normalized, bool absolute, const Vector3 &minColors, const Vector3 &maxColors*/)
 {
     this->imageData.setImage(image);
-    return this;
+    return *this;
 }
 
-PlotModel *PlotModel::addImage(const GridF &image)
+PlotModel& PlotModel::addImage(const GridF &image)
 {
     this->imageData.setImage(image);
-    return this;
+    return *this;
 }
 
-PlotModel *PlotModel::addVectorField(const GridV3 &field)
+PlotModel& PlotModel::addVectorField(const GridV3 &field)
 {
     this->vectorData.setField(field);
-    return this;
+    return *this;
 }
 
-PlotModel* PlotModel::reset()
+PlotModel& PlotModel::reset()
 {
     // this->backImage = nullptr;
     this->title = "";
@@ -333,7 +323,7 @@ PlotModel* PlotModel::reset()
 
     this->imageData = PlotImageData();
     this->vectorData = PlotVectorData();
-    return this;
+    return *this;
 }
 
 PlotImageData::PlotImageData() : PlotImageData(GridV3())
@@ -351,46 +341,46 @@ PlotImageData::PlotImageData(const GridF &img) : image(img)
 
 }
 
-PlotImageData *PlotImageData::setImage(const GridV3 &img)
+PlotImageData& PlotImageData::setImage(const GridV3 &img)
 {
     this->image.setImage(img);
-    return this;
+    return *this;
 }
 
-PlotImageData *PlotImageData::setImage(const GridF &img)
+PlotImageData& PlotImageData::setImage(const GridF &img)
 {
     this->image.setImage(img);
-    return this;
+    return *this;
 }
 
-PlotImageData *PlotImageData::setNormalized(bool normalize)
+PlotImageData& PlotImageData::setNormalized(bool normalize)
 {
     // this->normalized = normalize;
     this->displayParameters.normalized = normalize;
-    return this;
+    return *this;
 }
 
-PlotImageData *PlotImageData::setColorRanges(const Vector3 &minRange, const Vector3 &maxRange)
+PlotImageData& PlotImageData::setColorRanges(const Vector3 &minRange, const Vector3 &maxRange)
 {
     // this->colorRangeMin = minRange;
     // this->colorRangeMax = maxRange;
     this->displayParameters.colorRangeMin = minRange;
     this->displayParameters.colorRangeMax = maxRange;
-    return this;
+    return *this;
 }
 
-PlotImageData *PlotImageData::setAbsolute(bool absolute)
+PlotImageData& PlotImageData::setAbsolute(bool absolute)
 {
     // this->absolute = absolute;
     this->displayParameters.absolute = absolute;
-    return this;
+    return *this;
 }
 
-PlotImageData *PlotImageData::setClamped(bool clamp)
+PlotImageData& PlotImageData::setClamped(bool clamp)
 {
     // this->clamped = clamp;
     this->displayParameters.clamped = clamp;
-    return this;
+    return *this;
 }
 
 GridV3 PlotImageData::prepareImageForDisplay(const Image& img) const
@@ -449,50 +439,7 @@ QImage PlotImageData::computeDisplayedImage(const Vector3i& imgSize) const
     if (this->image.empty()) return emptyImg;
     auto displayedImage = this->image.getColorImage(); //.resize(imgSize);
     if (displayedImage.empty()) return emptyImg;
-    /*
-    if (this->displayParameters.clamped) {
-        displayedImage.iterateParallel([&](size_t i) {
-            for (int c = 0; c < 3; c++) {
-                displayedImage[i][c] = std::clamp(displayedImage[i][c], this->displayParameters.colorRangeMin[c], this->displayParameters.colorRangeMax[c]);
-            }
-        });
-    }
 
-    if (this->displayParameters.absolute) {
-        displayedImage = displayedImage.abs();
-    }
-
-    if (this->displayParameters.normalized) {
-        for (int c = 0; c < 3; c++) {
-            float min = std::numeric_limits<float>::max();
-            float max = std::numeric_limits<float>::lowest();
-            displayedImage.iterate([&](size_t i) {
-                min = std::min(displayedImage[i][c], min);
-                max = std::max(displayedImage[i][c], max);
-            });
-            float d = max - min;
-            if (d == 0) {
-                displayedImage.iterateParallel([&](size_t i) {
-                    displayedImage[i][c] = 0.f;
-                });
-            } else {
-                displayedImage.iterateParallel([&](size_t i) {
-                    displayedImage[i][c] = (displayedImage[i][c] - min) / d;
-                });
-            }
-        }
-    }
-
-    if (this->image.isColor()) {
-        displayedImage.iterateParallel([&](size_t i) {
-            displayedImage[i] *= this->displayParameters.displayedColors;
-        });
-    } else {
-        displayedImage.iterateParallel([&](size_t i) {
-            displayedImage[i] = colorPalette(displayedImage[i].x(), this->displayParameters.colorRamp.points);
-        });
-    }
-*/
     displayedImage = this->prepareImageForDisplay(this->image);
     unsigned char* data = new unsigned char[displayedImage.size() * 4];
 
@@ -571,10 +518,10 @@ PlotVectorData::PlotVectorData() : PlotVectorData(GridV3())
 PlotVectorData::PlotVectorData(const GridV3 &field) : field(field)
 {}
 
-PlotVectorData *PlotVectorData::setField(const GridV3 &field)
+PlotVectorData& PlotVectorData::setField(const GridV3 &field)
 {
     this->field = field;
-    return this;
+    return *this;
 }
 
 std::pair<GridV3, GridF> PlotVectorData::getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i& numberOfCells) const

@@ -7,8 +7,8 @@ FaultSlipInterface::FaultSlipInterface(QWidget *parent)
     : ActionInterface("faultslips", "Fault slips generation", "digging", "Fault slips random generation", "fault-slip_button.png", parent)
 {
     this->faultSlip = FaultSlip();
-    this->firstSlipControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
-    this->slipVector = std::make_unique<InteractiveVector>(Vector3(), Vector3());
+    this->firstSlipControlPoint = std::make_shared<ControlPoint>(Vector3(), 5.f);
+    this->slipVector = std::make_shared<InteractiveVector>(Vector3(), Vector3());
 //    this->createGUI();
 }
 
@@ -138,27 +138,21 @@ void FaultSlipInterface::show()
 }
 
 
-QLayout *FaultSlipInterface::createGUI()
+InterfaceUI* FaultSlipInterface::createGUI()
 {
-//    if (this->faultSlipLayout != nullptr) return faultSlipLayout;
+    auto UI = new InterfaceUI();
 
-    QHBoxLayout* faultSlipLayout = new QHBoxLayout;
-
-    QPushButton* faultApplyButton = new QPushButton("Chuter");
-    QCheckBox* faultSideApplied = new QCheckBox("Partie de droite chute");
-//    QCheckBox* faultDisplayButton = new QCheckBox("Afficher");
-    faultSlipLayout->addWidget(faultApplyButton);
-    faultSlipLayout->addWidget(faultSideApplied);
+    auto faultApplyButton = new ButtonElement("Chuter", [=](){ this->computeFaultSlip(); });
+    auto faultSideApplied = new CheckboxElement("Partie de droite chute", faultSlip.positiveSideFalling);
 
 
+    UI->add(std::vector<UIElement*>{
+        faultApplyButton,
+        faultSideApplied
+    });
 
-    faultSideApplied->setChecked(this->faultSlip.positiveSideFalling);
 
-    QObject::connect(faultApplyButton, &QPushButton::pressed, this, [=](){ this->computeFaultSlip(); } );
-    QObject::connect(faultSideApplied, &QCheckBox::toggled, this, &FaultSlipInterface::setSideAffected);
-//    QObject::connect(faultDisplayButton, &QCheckBox::toggled, this, &FaultSlipInterface::setVisibility);
-
-    return faultSlipLayout;
+    return UI;
 }
 
 

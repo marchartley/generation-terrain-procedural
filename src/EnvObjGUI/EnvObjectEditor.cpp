@@ -4,10 +4,8 @@
 
 #include "serialization/Serializer.h"
 
-EnvObjectEditor::EnvObjectEditor(const std::string& name, QWidget* parent) : EnvObjectEditor(name, new ChartView(new Chart()), parent)
-{}
-EnvObjectEditor::EnvObjectEditor(const std::string& name, ChartView* chartView, QWidget* parent)
-    : ImageViewer(name, chartView, parent)
+EnvObjectEditor::EnvObjectEditor(const std::string& name, QWidget* parent)
+    : ImageViewer(name, parent)
 {
     dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::red, Vector3::white, Vector3::green});
 
@@ -23,19 +21,23 @@ EnvObjectEditor::EnvObjectEditor(const std::string& name, ChartView* chartView, 
     animationTimer->start();
 }
 
-EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
+EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
 {
+    auto updateView = [=](const Vector3& mousePos, bool updateCurrentKelvinlet) { this->updateCurrentChartViewWithCurrentKelvinlets(mousePos, updateCurrentKelvinlet); };
+    auto updateField = [=](bool useCurrentKelvinlet) { validateEnvObject(useCurrentKelvinlet); return this->getVectorFieldWithRotation(useCurrentKelvinlet); };
     this->toolsInterface->clear();
-    this->toolsInterface->add(PainterToolsUI::createKelvinletToolsUI(this, this->chartView, this->dataModel, &this->kelvinletParams,
-        [=](const Vector3& mousePos, bool updateCurrentKelvinlet) { this->updateCurrentChartViewWithCurrentKelvinlets(mousePos, updateCurrentKelvinlet); },
-        [=](bool useCurrentKelvinlet) { validateEnvObject(useCurrentKelvinlet); return this->getVectorFieldWithRotation(useCurrentKelvinlet); }));
+    this->toolsInterface->add(std::move(PainterToolsUI::createKelvinletToolsUI(this, &this->kelvinletParams, updateView, updateField)));
 
-    InterfaceUI* bodyKelvinletUI = new InterfaceUI(new QVBoxLayout(), false, "Kelvinlet body editor");
+    auto bodyKelvinletUI = new InterfaceUI(new QVBoxLayout(), false, "Kelvinlet body editor");
 
     auto simulationModeCheckbox = new CheckboxElement("Simulation", depositionSimulationDisplay);
     auto animatedModeCheckbox = new CheckboxElement("Animate", animating);
 
     auto anchorSelectionCombobox = new ComboboxElement("Anchor");
+
+    auto angleInitialFlow = new AngleElement("Flow angle");
+    auto strengthInitialFlow = new SliderElement("Flow strength", 0.f, 3.f, .01f);
+
     if (this->currentObject) {
         if (this->currentObject->getDefinition()->isPoint()) {
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Center", MAIN), true);
@@ -50,10 +52,9 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
     this->currentAnchorPoint = anchorSelectionCombobox->getSelection<KELVINLET_ANCHOR_POINT>();
     this->kelvinletAnchors[kelvinletParams.currentKelvinlet] = currentAnchorPoint;
 
-    auto angleInitialFlow = new AngleElement("Flow angle");
-    auto strengthInitialFlow = (new SliderElement("Flow strength", 0.f, 3.f, .01f))->setValue(1.f);
+    strengthInitialFlow->setValue(1.f);
 
-    auto validationButton = new ButtonElement("Validate");
+    auto validationButton = new ButtonElement("Validate", [=]() { validateEnvObject(false); });
 
     if (this->currentObject->getDefinition()->isCurve() || this->currentObject->getDefinition()->isArea()) {
 
@@ -69,10 +70,11 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
             scaleForceSlider
         });
 
-        pinchForceSlider->setOnValueChanged([=](float newValue) {
-            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-        });
-
+        for (auto& slider : {pinchForceSlider, twistForceSlider, grabForceSlider, scaleForceSlider})
+            slider->setOnValueChanged([=](float newValue) {
+                this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+            });
+        /*
         twistForceSlider->setOnValueChanged([=](float newValue) {
             this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
         });
@@ -84,8 +86,10 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
         scaleForceSlider->setOnValueChanged([=](float newValue) {
             this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
         });
+        */
 
     }
+
     bodyKelvinletUI->add(std::vector<UIElement*>{
         anchorSelectionCombobox,
         createHorizontalGroupUI(std::vector<UIElement*>{simulationModeCheckbox, animatedModeCheckbox}),
@@ -94,7 +98,7 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
         validationButton,
     });
 
-    this->toolsInterface->add(bodyKelvinletUI);
+    this->toolsInterface->add(std::move(bodyKelvinletUI));
 
 
 
@@ -119,10 +123,6 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
         this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
     });
 
-    validationButton->setOnPressed([=]() {
-        validateEnvObject(false);
-    });
-
     kelvinletParams.setOnNewKelvinlet([=](Kelvinlet* k) {
         this->kelvinletAnchors[k] = currentAnchorPoint;
         if (kelvinletAnchors[k] == KELVINLET_ANCHOR_POINT::MAIN) {
@@ -141,10 +141,10 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
     });
 
 
-    return this;
+    return *this;
 }
 
-EnvObjectEditor *EnvObjectEditor::addEnvObject(EnvObject *envObj)
+EnvObjectEditor& EnvObjectEditor::addEnvObject(EnvObject *envObj)
 {
     this->currentObject = envObj->instantiate();
 
@@ -196,7 +196,7 @@ EnvObjectEditor *EnvObjectEditor::addEnvObject(EnvObject *envObj)
 
 
     this->addImage(displayEnvObject().first);
-    return this;
+    return *this;
 }
 
 std::pair<GridV3, GridF> EnvObjectEditor::displayEnvObject() const

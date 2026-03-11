@@ -1,10 +1,10 @@
 #ifndef ABSTRACTFLUIDSIMULATIONINTERFACE_H
 #define ABSTRACTFLUIDSIMULATIONINTERFACE_H
 
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/ActionInterface.h"
 #include "FluidSimulation/FluidSimulation.h"
-#include "TerrainGen/GlobalTerrainProperties.h"
+// #include "TerrainGen/GlobalTerrainProperties.h"
 
 class AbstractFluidSimulationInterface : public ActionInterface
 {
@@ -23,7 +23,7 @@ public:
 
     virtual void replay(nlohmann::json action);
 
-    virtual QLayout* createGUI();
+    virtual InterfaceUI* createGUI();
 
     virtual void updateSimulationMeshes();
 

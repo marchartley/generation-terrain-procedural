@@ -3,7 +3,7 @@
 
 
 class ErosionInterface;
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/ActionInterface.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/UnderwaterErosion.h"
@@ -23,7 +23,7 @@ public:
 
     void replay(nlohmann::json action);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, FROM_BIG_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
 
@@ -134,7 +134,7 @@ public:
 
     std::map<PARTICLE_INITIAL_LOCATION, std::vector<std::vector<std::pair<Vector3, Vector3>>>> initialPositionsAndDirections;
 
-    QHBoxLayout* erosionLayout = nullptr;
+    // QHBoxLayout* erosionLayout = nullptr;
 
     UnderwaterErosion erosionProcess;
     bool currentlyModifyingTerrain = false;

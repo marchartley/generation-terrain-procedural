@@ -26,12 +26,12 @@ public:
     ~BVHTree();
 
     BVHTree(const BVHTree& other);
-    BVHTree& operator=(const BVHTree& other);
+    const BVHTree& operator=(const BVHTree& other);
 
 //    static BVHTree aggregate(const BVHTree& A, const BVHTree& B); // Todo one day
 
 
-    virtual SpacePartitioning& build(const std::vector<Triangle>& triangles);
+    virtual const SpacePartitioning& build(const std::vector<Triangle>& triangles);
     BVHNode* root = nullptr;
 
     virtual std::set<size_t> getAllStoredTrianglesIndices() const;

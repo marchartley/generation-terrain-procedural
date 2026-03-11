@@ -49,37 +49,14 @@ void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vecto
     GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions().xy() + Vector3(0, 0, 1));
     gridHeights.raiseErrorOnBadCoord = false;
 
-    int sizeX = this->getSizeX();
-    int sizeY = this->getSizeY();
-    int sizeZ = this->getSizeZ();
+    size_t sizeZ = this->getSizeZ();
     float gridMaxHeight = grid.getMaxHeight();
-    // gridHeights.iterateParallel([&](int x, int y, int _z) {
-    // /*#pragma omp parallel for collapse(2)
-    // for (int x = 0; x < sizeX; x++) {
-    //     for (int y = 0; y < sizeY; y++) {*/
-    //         float grid_height = gridHeights.unsafe(x, y) * (sizeZ / gridMaxHeight);
-    //         if (gridMaxHeight < 1e-5) grid_height = 0;
-    //         int z = int(std::max(grid_height, 2.f));
-    //         // Positive values
-    //         for (int i = 0; i < int(z); i++) {
-    //             _cachedVoxelValues.unsafe(x, y, i) = .5f;
-    //         }
-    //         if (z < this->getSizeZ()) {
-    //             _cachedVoxelValues.unsafe(x, y, z) = interpolation::inv_linear(z - int(z), -.5f, .5f);
-    //             for (int i = z+1; i < this->getSizeZ(); i++) {
-    //                 _cachedVoxelValues.unsafe(x, y, i) = -.5f;
-    //             }
-    //         }
-    // });
-    //         /*
-    //     }
-    // }*/
 
     _cachedVoxelValues.iterateParallel([&](int x, int y, int z) {
         float grid_height = gridHeights.unsafe(x, y) * (sizeZ / gridMaxHeight);
         if (gridMaxHeight < 1e-5) grid_height = 0;
         float grid_z = std::max(grid_height, 2.f);
-        _cachedVoxelValues.unsafe(x, y, z) = interpolation::inv_linear(clamp(grid_z - z, -1.f, 1.f), -.5f, .5f);
+        _cachedVoxelValues.unsafe(x, y, z) = (z < grid_z ? 1.f : -1.f); //interpolation::inv_linear(clamp(grid_z - z, -1.f, 1.f), -.5f, .5f);
         /* // Positive values
         for (int i = 0; i < int(z); i++) {
             _cachedVoxelValues.unsafe(x, y, i) = .5f;
@@ -91,7 +68,7 @@ void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vecto
             }
         }*/
     });
-    _cachedVoxelValues = _cachedVoxelValues.meanSmooth(3, 3, 3, true).meanSmooth(3, 3, 3, true);
+    // _cachedVoxelValues = _cachedVoxelValues.meanSmooth(3, 3, 3, true).meanSmooth(3, 3, 3, true);
     this->fromCachedData();
 //    this->smoothVoxels();
 //    this->smoothVoxels();
@@ -103,7 +80,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
     this->smoothVoxels();
 }
 
-void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
+VoxelGrid& VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
 {
 //    this->setVoxelValues(implicitTerrain->getVoxelized(/*implicitTerrain->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? 40.f : fixedHeight)*/).meanSmooth(3, 3, 3, true));
     auto voxels = implicitTerrain->getVoxelized(this->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? getSizeZ() : fixedHeight)).meanSmooth(3, 3, 3, true);
@@ -116,9 +93,10 @@ void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
     }
     this->setVoxelValues(voxels);
 //    this->smoothVoxels();
+    return *this;
 }
 
-VoxelGrid* VoxelGrid::fromCachedData()
+VoxelGrid& VoxelGrid::fromCachedData()
 {
     this->voxelsValuesStack.clear();
     this->voxelsValuesAnchorStack.clear();
@@ -138,7 +116,7 @@ VoxelGrid* VoxelGrid::fromCachedData()
         this->_smoothingNeeded = false;
     }
     this->_cachedHistoryIndex = -1; // Force refresh of "getVoxelValues"
-    return this;
+    return *this;
 }
 
 void VoxelGrid::setVoxelValues(const GridF &values)

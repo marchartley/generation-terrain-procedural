@@ -2,7 +2,7 @@
 #define GRAVITYINTERFACE_H
 
 class GravityInterface;
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/ActionInterface.h"
 #include "TerrainGen/VoxelGrid.h"
 
@@ -20,7 +20,7 @@ public:
     bool createGlobalGravity();
     bool createSandGravity();
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     void show();
@@ -30,8 +30,8 @@ public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
 
 protected:
-    QHBoxLayout* gravityLayout;
-    QPushButton* gravityComputeButton;
+    // QHBoxLayout* gravityLayout;
+    // QPushButton* gravityComputeButton;
 //    QCheckBox* gravityDisplayButton;
 };
 

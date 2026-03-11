@@ -4,7 +4,7 @@
 
 class WarpFluidSimulationInterface;
 
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/AbstractFluidSimulationInterface.h"
 #include "EnvObject/EnvObject.h"
 
@@ -20,7 +20,7 @@ public:
 
     virtual void replay(nlohmann::json action);
 
-    virtual QLayout* createGUI();
+    virtual InterfaceUI* createGUI();
 
     virtual void updateSimulationMeshes();
 

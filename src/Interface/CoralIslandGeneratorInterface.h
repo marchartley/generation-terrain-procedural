@@ -3,9 +3,9 @@
 
 #include "TerrainModification/CoralGrowth.h"
 #include "TerrainModification/CoralIslandGenerator.h"
-#include <QWidget>
-#include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/Heightmap.h"
+// #include <QWidget>
+// #include "TerrainGen/VoxelGrid.h"
+// #include "TerrainGen/Heightmap.h"
 #include "Interface/ActionInterface.h"
 
 class CoralIslandGeneratorInterface : public ActionInterface
@@ -26,7 +26,7 @@ public:
     void wheelEvent(QWheelEvent* event);
     void mousePressEvent(QMouseEvent* event);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     void hide();

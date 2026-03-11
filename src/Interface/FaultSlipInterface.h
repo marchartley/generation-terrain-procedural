@@ -5,7 +5,7 @@ class FaultSlipInterface;
 #include "GUIElements/ControlPoint.h"
 #include "GUIElements/InteractiveVector.h"
 #include "Utils/BSpline.h"
-#include <QWidget>
+// #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/FaultSlip.h"
 #include "Interface/ActionInterface.h"
@@ -30,7 +30,7 @@ public:
 
     Mesh planeMesh;
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 Q_SIGNALS:
 //    void faultSlipApplied();
@@ -45,9 +45,9 @@ public Q_SLOTS:
     void show();
 
 protected:
-    std::unique_ptr<ControlPoint> firstSlipControlPoint;
+    std::shared_ptr<ControlPoint> firstSlipControlPoint;
 //    ControlPoint *secondSlipControlPoint;
-    std::unique_ptr<InteractiveVector> slipVector;
+    std::shared_ptr<InteractiveVector> slipVector;
 
 //    QHBoxLayout* faultSlipLayout = nullptr;
 //    QPushButton* faultApplyButton;

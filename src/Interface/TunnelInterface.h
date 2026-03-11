@@ -3,8 +3,8 @@
 
 class TunnelInterface;
 #include "Interface/ActionInterface.h"
-#include "TerrainGen/VoxelGrid.h"
-#include "GUIElements/FancySlider.h"
+// #include "TerrainGen/VoxelGrid.h"
+// #include "GUIElements/FancySlider.h"
 #include "GUIElements/ControlPoint.h"
 #include "Karst/KarstHole.h"
 
@@ -20,7 +20,7 @@ public:
     void replay(nlohmann::json action);
 
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 Q_SIGNALS:
     void needToClipView(const Vector3& direction, const Vector3& center, bool active);
@@ -47,7 +47,6 @@ public Q_SLOTS:
     void wheelEvent(QWheelEvent* event);
 
 public:
-//    std::shared_ptr<VoxelGrid> voxelGrid;
 
     KarstHolePredefinedShapes startingShape;
     KarstHolePredefinedShapes endingShape;
@@ -59,25 +58,12 @@ protected:
     void computeTunnelPreview();
 
     std::vector<Vector3> currentTunnelPoints;
-    std::vector<std::unique_ptr<ControlPoint>> controlPoints;
+    std::vector<std::shared_ptr<ControlPoint>> controlPoints;
     Mesh tunnelPreview;
 
     std::vector<ComboboxLineElement<KarstHolePredefinedShapes>*> shapes;
     int startingShapeIndex;
     int endingShapeIndex;
-//    QHBoxLayout* tunnelLayout;
-    /*QPushButton* addControlPointButton;
-    QPushButton* tunnelClearControlPointButton;
-    FancySlider* tunnelWidthSlider;
-    FancySlider* tunnelHeightSlider;
-    FancySlider* tunnelStrengthSlider;
-    QPushButton* tunnelCreateMatter;
-    QPushButton* tunnelRemoveMatter;
-    QPushButton* tunnelCreateCrack;
-    QCheckBox* tunnelDisplayButton;
-
-    QComboBox* startingShapeCombobox;
-    QComboBox* endingShapeCombobox;*/
 };
 
 #endif // TUNNELINTERFACE_H

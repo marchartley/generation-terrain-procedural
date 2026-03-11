@@ -3,9 +3,9 @@
 
 class TerrainGenerationInterface;
 #include "Interface/ActionInterface.h"
-#include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/Heightmap.h"
-#include "Interface/Viewer.h"
+// #include "TerrainGen/VoxelGrid.h"
+// #include "TerrainGen/Heightmap.h"
+// #include "Interface/Viewer.h"
 
 class TerrainGenerationInterface : public ActionInterface
 {
@@ -26,7 +26,7 @@ public:
 
     void replay(nlohmann::json action);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     void show();
@@ -90,7 +90,7 @@ public:
     std::map<std::string, int> displacementTexturesIndex;
 
     void setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles);
-    MapMode mapMode = MapMode::GRID_MODE; // MapMode::VOXEL_MODE;
+    MapMode mapMode = MapMode::VOXEL_MODE; // MapMode::GRID_MODE; //
     SmoothingAlgorithm smoothingAlgorithm = SmoothingAlgorithm::MARCHING_CUBES;
 //    bool displayParticles = false;
 

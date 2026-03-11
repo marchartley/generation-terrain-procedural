@@ -39,14 +39,12 @@ class ChartView : public QChartView {
     Q_OBJECT
 public:
     ChartView(QWidget *parent = nullptr);
-    ChartView(QChart *chart, QWidget *parent = nullptr);
-    ChartView(Chart *chart, QWidget *parent = nullptr);
 
     void lockView() { this->locked = true; }
     void unlockView() { this->locked = false; }
 
-    ChartView* setPlotModel(PlotModel* dataModel, std::string title = "");
-    ChartView* updateLabelsPositions();
+    ChartView& setPlotModel(std::shared_ptr<PlotModel> dataModel, const std::string& title = "");
+    ChartView& updateLabelsPositions();
 
     bool selectData(const Vector3& pos);
 
@@ -55,8 +53,8 @@ public:
     QPoint previousMousePos;
 
 
-    ChartView* setOverlay(const GridV3& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f), int overlayLayer = 0);
-    // ChartView* setOverlay(const GridF& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f));
+    const ChartView& setOverlay(const GridV3& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f), int overlayLayer = 0);
+    // const ChartView& setOverlay(const GridF& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f));
     std::map<std::string, GridV3> overlayColors;
     std::map<std::string, GridF>  overlayAlpha;
     std::map<std::string, bool>  overlayDisplayed;
@@ -73,8 +71,7 @@ protected:
     bool locked = false;
 
 public:
-    Chart* _chart = nullptr;
-    PlotModel* _dataModel = nullptr;
+    std::shared_ptr<PlotModel> _dataModel;
 
 Q_SIGNALS:
     void updated();
@@ -103,12 +100,12 @@ struct PlotImageData {
     PlotImageData(const GridV3& img);
     PlotImageData(const GridF& img);
 
-    PlotImageData* setImage(const GridV3& img);
-    PlotImageData* setImage(const GridF& img);
-    PlotImageData* setNormalized(bool normalize);
-    PlotImageData* setColorRanges(const Vector3& minRange, const Vector3& maxRange);
-    PlotImageData* setAbsolute(bool absolute);
-    PlotImageData* setClamped(bool clamp);
+    PlotImageData& setImage(const GridV3& img);
+    PlotImageData& setImage(const GridF& img);
+    PlotImageData& setNormalized(bool normalize);
+    PlotImageData& setColorRanges(const Vector3& minRange, const Vector3& maxRange);
+    PlotImageData& setAbsolute(bool absolute);
+    PlotImageData& setClamped(bool clamp);
 
     GridV3 getImage() const { return this->image.getColorImage(); }
     GridF getImageGrey() const { return this->image.getBwImage(); }
@@ -140,7 +137,7 @@ struct PlotVectorData {
     PlotVectorData();
     PlotVectorData(const GridV3& field);
 
-    PlotVectorData* setField(const GridV3 &field);
+    PlotVectorData& setField(const GridV3 &field);
 
     const GridV3& getField() const { return this->field; }
 
@@ -161,16 +158,16 @@ class PlotModel {
 public:
     PlotModel();
 
-    PlotModel* addPlot(const std::vector<Vector3>& data, const std::string& name = "", const QColor& color = Qt::gray);
+    PlotModel& addPlot(const std::vector<Vector3>& data, const std::string& name = "", const QColor& color = Qt::gray);
 
-    PlotModel* addScatter(const std::vector<Vector3>& data, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    PlotModel& addScatter(const std::vector<Vector3>& data, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    PlotModel* addImage(const GridV3& image);
-    PlotModel* addImage(const GridF& image);
+    PlotModel& addImage(const GridV3& image);
+    PlotModel& addImage(const GridF& image);
 
-    PlotModel* addVectorField(const GridV3& field);
+    PlotModel& addVectorField(const GridV3& field);
 
-    PlotModel* reset();
+    PlotModel& reset();
 
     std::vector<std::vector<Vector3>> plot_data;
     std::vector<std::string> plot_names;

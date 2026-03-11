@@ -192,30 +192,29 @@ public:
     std::string toString() const {return "Vec3 (" + std::to_string(x()) + ", " + std::to_string(y()) + ", " + std::to_string(z()) + ")" + (this->isValid() ? "" : "[INVALID]"); }
 //    const char* toHashString() const {return std::to_string(x()) + "," + std::to_string(y) + "," + std::to_string(z); }
 
-    Vec3 xxx() const { return Vec3(x(), x(), x()); }
-    Vec3 xx()  const { return Vec3(x(), x(), 0); }
-    Vec3 yyy() const { return Vec3(y(), y(), y()); }
-    Vec3 yy()  const { return Vec3(y(), y(), 0); }
-    Vec3 xy()  const { return Vec3(x(), y(), 0); }
-    Vec3 yz()  const { return Vec3(y(), z(), 0); }
-    Vec3 xz()  const { return Vec3(x(), z(), 0); }
-    Vec3 xyz() const { return Vec3(x(), y(), z()); }
-    Vec3 yxz() const { return Vec3(y(), x(), z()); }
-    Vec3 zyx() const { return Vec3(z(), y(), x()); }
-    Vec3 xzy() const { return Vec3(x(), z(), y()); }
-    T& x() { return v[0]; }
-    T& y() { return v[1]; }
-    T& z() { return v[2]; }
-    const T& x() const {return v[0]; }
-    const T& y() const {return v[1]; }
-    const T& z() const {return v[2]; }
-
-    T& r() { return v[0]; }
-    T& g() { return v[1]; }
-    T& b() { return v[2]; }
-    const T& r() const {return v[0]; }
-    const T& g() const {return v[1]; }
-    const T& b() const {return v[2]; }
+    inline Vec3 xxx() const { return Vec3(x(), x(), x()); }
+    inline Vec3 xx()  const { return Vec3(x(), x(), 0); }
+    inline Vec3 yyy() const { return Vec3(y(), y(), y()); }
+    inline Vec3 yy()  const { return Vec3(y(), y(), 0); }
+    inline Vec3 xy()  const { return Vec3(x(), y(), 0); }
+    inline Vec3 yz()  const { return Vec3(y(), z(), 0); }
+    inline Vec3 xz()  const { return Vec3(x(), z(), 0); }
+    inline Vec3 xyz() const { return Vec3(x(), y(), z()); }
+    inline Vec3 yxz() const { return Vec3(y(), x(), z()); }
+    inline Vec3 zyx() const { return Vec3(z(), y(), x()); }
+    inline Vec3 xzy() const { return Vec3(x(), z(), y()); }
+    inline T& x() { return v[0]; }
+    inline T& y() { return v[1]; }
+    inline T& z() { return v[2]; }
+    inline const T& x() const {return v[0]; }
+    inline const T& y() const {return v[1]; }
+    inline const T& z() const {return v[2]; }
+    inline T& r() { return v[0]; }
+    inline T& g() { return v[1]; }
+    inline T& b() { return v[2]; }
+    inline const T& r() const {return v[0]; }
+    inline const T& g() const {return v[1]; }
+    inline const T& b() const {return v[2]; }
 
 
 
@@ -237,32 +236,32 @@ public:
 
 };
 template <class T, class U>
-Vec3<T> operator+(const Vec3<T>& a, const Vec3<U>& b);
+Vec3<std::common_type_t<T, U>> operator+(const Vec3<T>& a, const Vec3<U>& b);
 template <class T, class U>
-Vec3<T> operator-(const Vec3<T>& a, const Vec3<U>& b);
+Vec3<std::common_type_t<T, U>> operator-(const Vec3<T>& a, const Vec3<U>& b);
 template <class T, class U>
-Vec3<T> operator*(const Vec3<T>& a, const Vec3<U>& b);
+Vec3<std::common_type_t<T, U>> operator*(const Vec3<T>& a, const Vec3<U>& b);
 template <class T, class U>
-Vec3<T> operator/(const Vec3<T>& a, const Vec3<U>& b);
+Vec3<std::common_type_t<T, U>> operator/(const Vec3<T>& a, const Vec3<U>& b);
 
 
+// template <class T, class U>
+// Vec3<T> operator+(U a, const Vec3<T>& b);
+// template <class T, class U>
+// Vec3<T> operator-(U a, const Vec3<T>& b);
 template <class T, class U>
-Vec3<T> operator+(U a, const Vec3<T>& b);
+Vec3<std::common_type_t<T, U>> operator*(U a, const Vec3<T>& b);
 template <class T, class U>
-Vec3<T> operator-(U a, const Vec3<T>& b);
-template <class T, class U>
-Vec3<T> operator*(U a, const Vec3<T>& b);
-template <class T, class U>
-Vec3<T> operator/(U a, const Vec3<T>& b);
+Vec3<std::common_type_t<T, U>> operator/(U a, const Vec3<T>& b);
 
+// template <class T, class U>
+// Vec3<T> operator+(const Vec3<T>& b, U a);
+// template <class T, class U>
+// Vec3<T> operator-(const Vec3<T>& b, U a);
 template <class T, class U>
-Vec3<T> operator+(const Vec3<T>& b, U a);
+Vec3<std::common_type_t<T, U>> operator*(const Vec3<T>& b, U a);
 template <class T, class U>
-Vec3<T> operator-(const Vec3<T>& b, U a);
-template <class T, class U>
-Vec3<T> operator*(const Vec3<T>& b, U a);
-template <class T, class U>
-Vec3<T> operator/(const Vec3<T>& b, U a);
+Vec3<std::common_type_t<T, U>> operator/(const Vec3<T>& b, U a);
 
 using Vector3 = Vec3<float>;
 using Vector3i = Vec3<int>;
@@ -973,33 +972,127 @@ Vec3<T> Vec3<T>::fromMatrix(Matrix mat)
 }
 
 template <class T, class U>
-Vec3<T> operator+(const Vec3<T>& a, const Vec3<U>& b) {
-    Vec3 res = a;
+Vec3<std::common_type_t<T, U>> operator+(const Vec3<T>& a, const Vec3<U>& b) {
+    using R = std::common_type_t<T, U>;
+    Vec3<R> res = a;
     res += b;
     return res;
 }
-template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator+=(const Vec3<U>& o) {
-    this->x() += o.x();
-    this->y() += o.y();
-    this->z() += o.z();
-    this->valid &= o.valid;
-    return *this;
-}
 template <class T, class U>
-Vec3<T> operator-(const Vec3<T>& a, const Vec3<U>& b) {
-    Vec3 res = a;
+Vec3<std::common_type_t<T, U>> operator-(const Vec3<T>& a, const Vec3<U>& b) {
+    using R = std::common_type_t<T, U>;
+    Vec3<R> res = a;
     res -= b;
     return res;
 }
+template <class T, class U>
+Vec3<std::common_type_t<T, U>> operator/(const Vec3<T>& a, const Vec3<U>& b) {
+    using R = std::common_type_t<T, U>;
+    Vec3<R> res = a;
+    res /= b;
+    return res;
+}
+template <class T, class U>
+Vec3<std::common_type_t<T, U>> operator*(const Vec3<T>& a, const Vec3<U>& b) {
+    using R = std::common_type_t<T, U>;
+    Vec3<R> res = a;
+    res *= b;
+    return res;
+}
+
+template <class T, class U>
+Vec3<std::common_type_t<T, U>> operator*(U a, const Vec3<T>& b) {
+    using R = std::common_type_t<T, U>;
+    Vec3<R> res = b;
+    res *= a;
+    return res;
+}
+
+template <class T, class U>
+Vec3<std::common_type_t<T, U>> operator/(U a, const Vec3<T>& b) {
+    using R = std::common_type_t<T, U>;
+    return Vec3<R>(static_cast<R>(a) / static_cast<R>(b.x()), static_cast<R>(a) / static_cast<R>(b.y()), static_cast<R>(a) / static_cast<R>(b.z()));
+}
+
+template <class T, class U>
+Vec3<std::common_type_t<T, U>> operator*(const Vec3<T>& b, U a) {
+    using R = std::common_type_t<T, U>;
+    Vec3<R> res = b;
+    res *= a;
+    return res;
+}
+template <class T, class U>
+Vec3<std::common_type_t<T, U>> operator/(const Vec3<T>& b, U a) {
+    using R = std::common_type_t<T, U>;
+    Vec3<R> res = b;
+    res /= a;
+    return res;
+}
+
+
+
 template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator-=(const Vec3<U>& o) {
-    this->x() -= o.x();
-    this->y() -= o.y();
-    this->z() -= o.z();
+Vec3<T>& Vec3<T>::operator+=(const Vec3<U>& o) {
+    this->x() += static_cast<T>(o.x());
+    this->y() += static_cast<T>(o.y());
+    this->z() += static_cast<T>(o.z());
     this->valid &= o.valid;
     return *this;
 }
+template <class T> template <class U>
+Vec3<T>& Vec3<T>::operator-=(const Vec3<U>& o) {
+    this->x() -= static_cast<T>(o.x());
+    this->y() -= static_cast<T>(o.y());
+    this->z() -= static_cast<T>(o.z());
+    this->valid &= o.valid;
+    return *this;
+}
+
+template <class T> template <class U>
+Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
+    this->x() *= static_cast<T>(o.x());
+    this->y() *= static_cast<T>(o.y());
+    this->z() *= static_cast<T>(o.z());
+    this->valid &= o.valid;
+    return *this;
+}
+template <class T> template <class U>
+Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
+    this->x() /= static_cast<T>(o.x());
+    this->y() /= static_cast<T>(o.y());
+    this->z() /= static_cast<T>(o.z());
+    this->valid &= o.valid;
+    return *this;
+}
+template <class T> template <class U>
+Vec3<T>& Vec3<T>::operator*=(U o) {
+    this->x() *= static_cast<T>(o);
+    this->y() *= static_cast<T>(o);
+    this->z() *= static_cast<T>(o);
+    return *this;
+}
+template <class T> template <class U>
+Vec3<T>& Vec3<T>::operator/=(U o) {
+    this->x() /= static_cast<T>(o);
+    this->y() /= static_cast<T>(o);
+    this->z() /= static_cast<T>(o);
+    return *this;
+}
+template <class T> template <class U>
+Vec3<T>& Vec3<T>::operator+=(U o) {
+    this->x() += static_cast<T>(o);
+    this->y() += static_cast<T>(o);
+    this->z() += static_cast<T>(o);
+    return *this;
+}
+template <class T> template <class U>
+Vec3<T>& Vec3<T>::operator-=(U o) {
+    this->x() -= static_cast<T>(o);
+    this->y() -= static_cast<T>(o);
+    this->z() -= static_cast<T>(o);
+    return *this;
+}
+
 
 template <class T>
 T &Vec3<T>::operator[](size_t i)
@@ -1011,86 +1104,10 @@ const T &Vec3<T>::operator[](size_t i) const
 {
     return ((T*)(this))[i];
 }
-template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
-    this->x() *= o.x();
-    this->y() *= o.y();
-    this->z() *= o.z();
-    this->valid &= o.valid;
-    return *this;
-}
-template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
-    this->x() /= o.x();
-    this->y() /= o.y();
-    this->z() /= o.z();
-    this->valid &= o.valid;
-    return *this;
-}
-template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator*=(U o) {
-    this->x() *= o;
-    this->y() *= o;
-    this->z() *= o;
-    return *this;
-}
-template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator/=(U o) {
-    this->x() /= o;
-    this->y() /= o;
-    this->z() /= o;
-    return *this;
-}
-template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator+=(U o) {
-    this->x() += o;
-    this->y() += o;
-    this->z() += o;
-    return *this;
-}
-template <class T> template <class U>
-Vec3<T>& Vec3<T>::operator-=(U o) {
-    this->x() -= o;
-    this->y() -= o;
-    this->z() -= o;
-    return *this;
-}
-template <class T, class U>
-Vec3<T> operator/(const Vec3<T>& a, const Vec3<U>& b) {
-    Vec3 res = a;
-    res /= b;
-    return res;
-}
-template <class T, class U>
-Vec3<T> operator*(const Vec3<T>& a, const Vec3<U>& b) {
-    Vec3 res = a;
-    res *= b;
-    return res;
-}
-template <class T, class U>
-Vec3<T> operator*(U a, const Vec3<T>& b) {
-    Vec3 res = b;
-    res *= a;
-    return res;
-}
 
-template <class T, class U>
-Vec3<T> operator/(U a, const Vec3<T>& b) {
-    return Vec3(a / b.x(), a / b.y(), a / b.z());
-}
 
-template <class T, class U>
-Vec3<T> operator*(const Vec3<T>& b, U a) {
-    Vec3 res = b;
-    res *= a;
-    return res;
-}
-template <class T, class U>
-Vec3<T> operator/(const Vec3<T>& b, U a) {
-    Vec3 res = b;
-    res /= a;
-    return res;
-}
+
+
 
 template <class T, class U>
 bool operator==(const Vec3<T>& a, const Vec3<U>& b)

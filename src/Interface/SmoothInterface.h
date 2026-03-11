@@ -16,7 +16,7 @@ public:
 
     bool applySmooth();
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     void show();
@@ -26,8 +26,8 @@ public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
 
 protected:
-    QHBoxLayout* smoothLayout;
-    QPushButton* smoothComputeButton;
+    // QHBoxLayout* smoothLayout;
+    // QPushButton* smoothComputeButton;
 };
 
 #endif // SMOOTHINTERFACE_H

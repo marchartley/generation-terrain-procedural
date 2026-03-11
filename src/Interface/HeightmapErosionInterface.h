@@ -3,13 +3,13 @@
 
 
 class HeightmapErosionInterface;
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/ActionInterface.h"
-#include "TerrainGen/VoxelGrid.h"
+// #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/UnderwaterErosion.h"
-#include "Interface/Viewer.h"
+// #include "Interface/Viewer.h"
 
-#include "GUIElements/FancySlider.h"
+// #include "GUIElements/FancySlider.h"
 #include "GUIElements/InteractiveVector.h"
 
 class HeightmapErosionInterface : public ActionInterface
@@ -26,7 +26,7 @@ public:
 
     void replay(nlohmann::json action);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
 public Q_SLOTS:
     void show();
@@ -42,11 +42,11 @@ public:
 
 protected:
     Mesh hydraulicMesh;
-    QHBoxLayout* erosionLayout = nullptr;
+    // QHBoxLayout* erosionLayout = nullptr;
 
-    QGroupBox* createHydraulicErosionGUI();
-    QGroupBox* createThermicErosionGUI();
-    QGroupBox* createWindErosionGUI();
+    InterfaceUI* createHydraulicErosionGUI();
+    InterfaceUI* createThermicErosionGUI();
+    InterfaceUI* createWindErosionGUI();
 
     // Hydraulic Erosion parameters
     int hydraulicNumIterations = 1000;
@@ -75,7 +75,7 @@ protected:
     float windScale = 40.f;
     float windDt = .1;
 
-    std::unique_ptr<InteractiveVector> windDirectionSelector;
+    std::shared_ptr<InteractiveVector> windDirectionSelector;
 };
 
 #endif // HEIGHTMAPEROSIONINTERFACE_H

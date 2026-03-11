@@ -4,7 +4,7 @@
 
 class WarpFluidSimulationInterface;
 
-#include <QWidget>
+// #include <QWidget>
 #include "Interface/AbstractFluidSimulationInterface.h"
 #include "FluidSimulation/WarpedFluidSimulation.h"
 

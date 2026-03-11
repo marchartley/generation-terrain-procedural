@@ -103,12 +103,12 @@ void RegularSimplicialComplex::display()
         }
     }
 
-    ImageViewer::get()->reset();
+    ImageViewer::get().reset();
     for (size_t iPlot = 0; iPlot < plots.size(); iPlot++)
-        ImageViewer::get()->addPlot(plots[iPlot], "", plots_colors[iPlot]);
+        ImageViewer::get().addPlot(plots[iPlot], "", plots_colors[iPlot]);
 //    plt.addScatter(scatter, "", scatter_labels, {PlotColor::GRAY});
 
-    ImageViewer::get()->show();
+    ImageViewer::get().show();
 }
 
 int RegularSimplicialComplex::maxNodesValues()

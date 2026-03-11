@@ -65,8 +65,8 @@ void TerrainComparatorInterface::keyPressEvent(QKeyEvent *event)
 
     if (event->key() == Qt::Key_0) {
         auto colors = this->extractDifferencesAsImage();
-        ImageViewer::get()->addImage(colors);
-        ImageViewer::get()->show();
+        ImageViewer::get().addImage(colors);
+        ImageViewer::get().show();
     }
     return ActionInterface::keyPressEvent(event);
 }
@@ -86,25 +86,31 @@ void TerrainComparatorInterface::mousePressEvent(QMouseEvent *event)
     return ActionInterface::mousePressEvent(event);
 }
 
-QLayout *TerrainComparatorInterface::createGUI()
+InterfaceUI* TerrainComparatorInterface::createGUI()
 {
-    QLayout* layout = new QVBoxLayout;
+    auto UI = new InterfaceUI();
 
     auto updateButton = new ButtonElement("Update", [&]() { this->updateStuff(); });
-    auto unionCheckbox = new RadioButtonElement("Union", displayUnion);
-    auto intersectionCheckbox = new RadioButtonElement("Intersection", displayIntersection);
-    auto substractionCheckbox = new RadioButtonElement("Substract A-B", displaySubstractionAB);
-    auto substraction2Checkbox = new RadioButtonElement("Substract B-A", displaySubstractionBA);
+    auto unionCheckbox = new RadioButtonElement("Union", DISPLAY_MODE::UNION, displayMode);
+    auto intersectionCheckbox = new RadioButtonElement("Intersection", DISPLAY_MODE::INTERSECTION, displayMode);
+    auto substractionCheckbox = new RadioButtonElement("Substract A-B", DISPLAY_MODE::SUBSTRACTION_AB, displayMode);
+    auto substraction2Checkbox = new RadioButtonElement("Substract B-A", DISPLAY_MODE::SUBSTRACTION_BA, displayMode);
     auto interpolationSlider = new SliderElement("Interpolate", 0.f, 1.f, 0.01f);
-    interpolationSlider->setOnValueChanged([&](float newValue) { interpolate(newValue); });
 
+    unionCheckbox->setOnChecked([=](bool) { updateStuff(); });
+    intersectionCheckbox->setOnChecked([=](bool) { updateStuff(); });
+    substractionCheckbox->setOnChecked([=](bool) { updateStuff(); });
+    substraction2Checkbox->setOnChecked([=](bool) { updateStuff(); });
+    interpolationSlider->setOnValueChanged([=](float newValue) { interpolate(newValue); });
+
+    /*
     unionCheckbox->setOnChecked([&](bool) { updateStuff(); });
     intersectionCheckbox->setOnChecked([&](bool) { updateStuff(); });
     substractionCheckbox->setOnChecked([&](bool) { updateStuff(); });
     substraction2Checkbox->setOnChecked([&](bool) { updateStuff(); });
+*/
 
-    auto ui = new InterfaceUI(new QVBoxLayout, "Form");
-    ui->add({
+    UI->add(std::vector<UIElement*>{
                 unionCheckbox,
                 intersectionCheckbox,
                 substractionCheckbox,
@@ -112,8 +118,7 @@ QLayout *TerrainComparatorInterface::createGUI()
                 interpolationSlider
 //                updateButton,
                  });
-    layout->addWidget(ui->get());
-    return layout;
+    return UI;
 }
 
 GridV3 TerrainComparatorInterface::extractDifferencesAsImage()
@@ -170,19 +175,19 @@ void TerrainComparatorInterface::updateStuff()
     displayedVoxels = voxelsFromHeightmap._cachedVoxelValues.binarize();
     GridF initial = voxelGrid->_cachedVoxelValues.binarize();
 
-    if (displayUnion) {
+    if (displayMode == DISPLAY_MODE::UNION) {
         displayedVoxels.iterateParallel([&](size_t i) {
             displayedVoxels[i] = std::max(displayedVoxels[i], initial[i]);
         });
-    } else if (displayIntersection) {
+    } else if (displayMode == DISPLAY_MODE::INTERSECTION) {
         displayedVoxels.iterateParallel([&](size_t i) {
             displayedVoxels[i] = (displayedVoxels[i] > 0 && initial[i] > 0 ? std::max(displayedVoxels[i], initial[i]) : std::min(displayedVoxels[i], initial[i]));
         });
-    } else if (displaySubstractionAB) {
+    } else if (displayMode == DISPLAY_MODE::SUBSTRACTION_AB) {
         displayedVoxels.iterateParallel([&](size_t i) {
             displayedVoxels[i] = (displayedVoxels[i] > 0 && initial[i] > 0 ? -std::max(std::abs(displayedVoxels[i] - initial[i]), 0.01f) : displayedVoxels[i]);
         });
-    } else if (displaySubstractionBA) {
+    } else if (displayMode == DISPLAY_MODE::SUBSTRACTION_BA) {
         displayedVoxels.iterateParallel([&](size_t i) {
             displayedVoxels[i] = (displayedVoxels[i] > 0 && initial[i] > 0 ? -std::max(std::abs(displayedVoxels[i] - initial[i]), 0.01f) : initial[i]);
         });

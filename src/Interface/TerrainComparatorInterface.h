@@ -1,9 +1,9 @@
 #ifndef TerrainComparatorInterface_H
 #define TerrainComparatorInterface_H
 
-#include <QWidget>
-#include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/Heightmap.h"
+// #include <QWidget>
+// #include "TerrainGen/VoxelGrid.h"
+// #include "TerrainGen/Heightmap.h"
 #include "Interface/ActionInterface.h"
 
 class TerrainComparatorInterface : public ActionInterface
@@ -24,7 +24,7 @@ public:
     void wheelEvent(QWheelEvent* event);
     void mousePressEvent(QMouseEvent* event);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     GridV3 extractDifferencesAsImage();
 
@@ -47,10 +47,8 @@ public:
     GridF displayedVoxels;
     Mesh terrainMesh;
 
-    bool displayUnion = true;
-    bool displayIntersection = false;
-    bool displaySubstractionAB = false;
-    bool displaySubstractionBA = false;
+    enum DISPLAY_MODE { UNION, INTERSECTION, SUBSTRACTION_AB, SUBSTRACTION_BA};
+    DISPLAY_MODE displayMode = UNION;
 
 };
 

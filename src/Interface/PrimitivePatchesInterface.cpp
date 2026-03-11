@@ -93,202 +93,69 @@ void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> height
 //    this->loadPatchesFromFile(this->mainFilename);
 }
 
-QLayout *PrimitivePatchesInterface::createGUI()
+InterfaceUI* PrimitivePatchesInterface::createGUI()
 {
-    QVBoxLayout* layout = new QVBoxLayout();
+    auto UI = new InterfaceUI();
 
-    QCheckBox* constructionModeButton = new QCheckBox("Construction mode");
+    auto constructionModeButton = new CheckboxElement("Construction mode", constructionMode);
 
-    QRadioButton* createSphereButton = new QRadioButton("Sphere");
-    QRadioButton* createBlockButton = new QRadioButton("Block");
-    QRadioButton* createGaussianButton = new QRadioButton("Gaussian");
-    QRadioButton* createCylinderButton = new QRadioButton("Cylinder");
-    QRadioButton* createRockButton = new QRadioButton("Rock");
-    QRadioButton* createMountainButton = new QRadioButton("Mountain");
-    QRadioButton* createDuneButton = new QRadioButton("Dune");
-    QRadioButton* createBasinButton = new QRadioButton("Basin");
-    QRadioButton* createCaveButton = new QRadioButton("Cave");
-    QRadioButton* createArchButton = new QRadioButton("Arch");
-    QRadioButton* createNoise2DButton = new QRadioButton("Noise");
-    QRadioButton* createMountainChainButton = new QRadioButton("Mountains");
-    QRadioButton* createPolygonButton = new QRadioButton("Polygon");
-    QRadioButton* createTunnelButton = new QRadioButton("Tunnel");
-    QRadioButton* createFromFileButton = new QRadioButton("...");
-    QRadioButton* createRippleButton = new QRadioButton("Ripple");
-
-//    FancySlider* densitySlider = new FancySlider(Qt::Orientation::Horizontal, -5.f, 5.f, .1f);
-
-    QRadioButton* stackingButton = new QRadioButton("Stack");
-    QRadioButton* blendingButton = new QRadioButton("Blend");
-    QRadioButton* replacingButton = new QRadioButton("Replace");
-    QRadioButton* oneSideBlendButton = new QRadioButton("1-blend");
-
-    QRadioButton* abovePosButton = new QRadioButton("Above");
-    QRadioButton* insideTopPosButton = new QRadioButton("Inside top");
-    QRadioButton* insideBottomPosButton = new QRadioButton("Inside bottom");
-    QRadioButton* fixedPosButton = new QRadioButton("Fixed");
-
-    FancySlider* blendingFactorSlider = new FancySlider(Qt::Orientation::Horizontal, 2.f, 10.f, .1f);
-
-    FancySlider* widthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
-    FancySlider* depthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
-    FancySlider* heightSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
-    FancySlider* sigmaSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 20.f, .1f);
-
-    QPushButton* addNoiseButton = new QPushButton("Add noise");
-    QPushButton* addDistoButton = new QPushButton("Distord");
-    QPushButton* addSpreadButton = new QPushButton("Spread");
-    QPushButton* addRipplesButton = new QPushButton("Ripples");
-    QPushButton* deformFromFlowButton = new QPushButton("Deform flow");
-
-    QPushButton* resetButton = new QPushButton("Reset");
-
-    QLabel* selectedFilenameLabel = new QLabel((this->mainFilename == "" ? "No file selected" : QString::fromStdString(this->mainFilename).split("/").back().split("\\").back()));
-    QPushButton* fileSelectionButton = new QPushButton("...");
-    QCheckBox* enableHotreloadButton = new QCheckBox("Hot reloading ?");
-
-    QLabel* patchesCounterLabel = new QLabel(QString::fromStdString("Prim: " + std::to_string(nbPrimitives) + ", Unary: " + std::to_string(nbUnaryOperators) + ", Binary: " + std::to_string(nbBinaryOperators) + ", N-ary: " + std::to_string(nbNaryOperators)));
-
-    QRadioButton* airDensityCheckbox = new QRadioButton("Air");
-    QRadioButton* waterDensityCheckbox = new QRadioButton("Water");
-    QRadioButton* coralDensityCheckbox = new QRadioButton("Coral");
-    QRadioButton* sandDensityCheckbox = new QRadioButton("Sand");
-    QRadioButton* dirtDensityCheckbox = new QRadioButton("Dirt");
-    QRadioButton* rockDensityCheckbox = new QRadioButton("Rock");
-    QRadioButton* bedrockDensityCheckbox = new QRadioButton("Bedrock");
-
-    QCheckBox* applyIntersectionButton = new QCheckBox("Intersection");
-
-    QPushButton* createStructureButton = new QPushButton("Auto gen.");
-
-//    if (primitiveSelectionGui != nullptr)
-//        delete primitiveSelectionGui;
-    primitiveSelectionGui = new HierarchicalListWidget(this);
-
-    layout->addWidget(constructionModeButton);
-    layout->addWidget(createMultiColumnGroup({
-                                                    createSphereButton,
-                                                    createBlockButton,
-//                                                    createGaussianButton,
-                                                    createCylinderButton,
-                                                    createRockButton,
-                                                    createMountainButton,
-//                                                    createDuneButton,
-//                                                    createBasinButton,
-                                                    createCaveButton,
-                                                    createArchButton,
-                                                    createNoise2DButton,
-                                                    createMountainChainButton,
-                                                    createPolygonButton,
-                                                    createTunnelButton,
-                                                    createFromFileButton,
-//                                                    createRippleButton
-                                          }));
-//    layout->addWidget(createSliderGroup("Density", densitySlider));
-    layout->addWidget(createMultiColumnGroup({
-                                                airDensityCheckbox,
-                                                waterDensityCheckbox,
-                                                coralDensityCheckbox,
-                                                sandDensityCheckbox,
-                                                dirtDensityCheckbox,
-                                                rockDensityCheckbox,
-                                                bedrockDensityCheckbox
-                                            }, 3));
-    layout->addWidget(createSliderGroup("Blend factor", blendingFactorSlider));
-    layout->addWidget(createHorizontalGroup({createVerticalGroup({
-                                              stackingButton,
-                                              blendingButton,
-                                              replacingButton,
-                                              oneSideBlendButton
-                                          }),
-                                             createVerticalGroup({
-                                                 abovePosButton,
-                                                 insideTopPosButton,
-                                                 insideBottomPosButton,
-                                                 fixedPosButton
-                                             })
-                                            }));
-    layout->addWidget(createMultipleSliderGroup({
-                                              {"Width / radius", widthSlider},
-                                                    {"Depth", depthSlider},
-                                                    {"Height", heightSlider},
-                                                    {"Sigma", sigmaSlider}
-                                          }));
-    layout->addWidget(createHorizontalGroup({applyIntersectionButton, createStructureButton}));
-    layout->addWidget(createHorizontalGroup({addNoiseButton, addDistoButton, addSpreadButton, addRipplesButton, deformFromFlowButton}));
-    layout->addWidget(resetButton);
-    layout->addWidget(primitiveSelectionGui);
-
-    layout->addWidget(createHorizontalGroup({selectedFilenameLabel, fileSelectionButton}));
-    layout->addWidget(enableHotreloadButton);
-    layout->addWidget(patchesCounterLabel);
-
-    QObject::connect(constructionModeButton, &QCheckBox::toggled, this, [=](bool checked) { this->constructionMode = checked; });
-
-    QObject::connect(createSphereButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Sphere); });
-    QObject::connect(createBlockButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Block); });
-    QObject::connect(createGaussianButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Gaussian); });
-    QObject::connect(createCylinderButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Cylinder); });
-    QObject::connect(createRockButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Rock); });
-    QObject::connect(createMountainButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Mountain); });
-    QObject::connect(createDuneButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Dune); });
-    QObject::connect(createBasinButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Basin); });
-    QObject::connect(createCaveButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Cave); });
-    QObject::connect(createArchButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Arch); });
-    QObject::connect(createNoise2DButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Noise2D); });
-    QObject::connect(createMountainChainButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::MountainChain); });
-    QObject::connect(createPolygonButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Polygon); });
-    QObject::connect(createTunnelButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::ParametricTunnel); });
-    QObject::connect(createFromFileButton, &QRadioButton::toggled, this, [=](bool checked) {
-        if (checked) {
-            this->setSelectedShape(ImplicitPatch::PredefinedShapes::ImplicitHeightmap);
+    auto shapeCombobox = new ComboboxElement("Shape");
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Sphere", ImplicitPatch::Sphere));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Block", ImplicitPatch::Block));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Gaussian", ImplicitPatch::Gaussian));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cylinder", ImplicitPatch::Cylinder));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Rock", ImplicitPatch::Rock));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountain", ImplicitPatch::Mountain));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Dune", ImplicitPatch::Dune));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Basin", ImplicitPatch::Basin));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cave", ImplicitPatch::Cave));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Arch", ImplicitPatch::Arch));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Noise", ImplicitPatch::Noise2D));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountains", ImplicitPatch::MountainChain));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Polygon", ImplicitPatch::Polygon));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Tunnel", ImplicitPatch::ParametricTunnel));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Ripple", ImplicitPatch::Ripple));
+    shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("...", ImplicitPatch::ImplicitHeightmap));
+    shapeCombobox->setOnSelectionChanged([=](int) {
+        auto shape = shapeCombobox->getSelection<ImplicitPatch::PredefinedShapes>();
+        this->setSelectedShape(shape);
+        if (shape == ImplicitPatch::ImplicitHeightmap) {
             this->openFileForNewPatch();
         }
     });
-    QObject::connect(createRippleButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Ripple); });
-//    QObject::connect(densitySlider, &FancySlider::floatValueChanged, this, [=](float newDensity) { this->selectedDensity = newDensity; });
 
-    QObject::connect(stackingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setCurrentOperation(ImplicitPatch::CompositionFunction::STACK); });
-    QObject::connect(blendingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setCurrentOperation(ImplicitPatch::CompositionFunction::BLEND); });
-    QObject::connect(replacingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setCurrentOperation(ImplicitPatch::CompositionFunction::REPLACE); });
-    QObject::connect(oneSideBlendButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setCurrentOperation(ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND); });
+    auto stackingButton = new RadioButtonElement("Stack", ImplicitPatch::CompositionFunction::STACK, currentOperation);
+    auto blendingButton = new RadioButtonElement("Blend", ImplicitPatch::CompositionFunction::BLEND, currentOperation);
+    auto replacingButton = new RadioButtonElement("Replace", ImplicitPatch::CompositionFunction::REPLACE, currentOperation);
+    auto oneSideBlendButton = new RadioButtonElement("1-blend", ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND, currentOperation);
 
-    QObject::connect(abovePosButton, &QRadioButton::toggled, this, [=]() { this->setCurrentPositioning(ImplicitPatch::PositionalLabel::ABOVE); });
-    QObject::connect(insideTopPosButton, &QRadioButton::toggled, this, [=]() { this->setCurrentPositioning(ImplicitPatch::PositionalLabel::INSIDE_TOP); });
-    QObject::connect(insideBottomPosButton, &QRadioButton::toggled, this, [=]() { this->setCurrentPositioning(ImplicitPatch::PositionalLabel::INSIDE_BOTTOM); });
-    QObject::connect(fixedPosButton, &QRadioButton::toggled, this, [=]() { this->setCurrentPositioning(ImplicitPatch::PositionalLabel::FIXED_POS); });
+    auto abovePosButton = new RadioButtonElement("Above", ImplicitPatch::PositionalLabel::ABOVE, currentPositioning);
+    auto insideTopPosButton = new RadioButtonElement("Inside top", ImplicitPatch::PositionalLabel::INSIDE_TOP, currentPositioning);
+    auto insideBottomPosButton = new RadioButtonElement("Inside bottom", ImplicitPatch::PositionalLabel::INSIDE_BOTTOM, currentPositioning);
+    auto fixedPosButton = new RadioButtonElement("Fixed", ImplicitPatch::PositionalLabel::FIXED_POS, currentPositioning);
 
+    auto blendingFactorSlider = new SliderElement("Blend factor", 2.f, 10.f, .1f, selectedBlendingFactor);
 
-    QObject::connect(widthSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { this->selectedWidth = newVal; });
-    QObject::connect(heightSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { this->selectedHeight = newVal; });
-    QObject::connect(depthSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { this->selectedDepth = newVal; });
-    QObject::connect(sigmaSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { this->selectedSigma = newVal; });
-    QObject::connect(blendingFactorSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { this->selectedBlendingFactor = newVal; });
+    auto widthSlider = new SliderElement("Width / radius", 0.f, 50.f, .1f, selectedWidth);
+    auto depthSlider = new SliderElement("Depth", 0.f, 50.f, .1f, selectedDepth);
+    auto heightSlider = new SliderElement("Height", 0.f, 50.f, .1f, selectedHeight);
+    auto sigmaSlider = new SliderElement("Sigma", 0.f, 20.f, .1f, selectedSigma);
 
-    QObject::connect(airDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->selectedTerrainType = AIR; });
-    QObject::connect(waterDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->selectedTerrainType = WATER; });
-    QObject::connect(coralDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->selectedTerrainType = CORAL; });
-    QObject::connect(sandDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->selectedTerrainType = SAND; });
-    QObject::connect(dirtDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->selectedTerrainType = DIRT; });
-    QObject::connect(rockDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->selectedTerrainType = ROCK; });
-    QObject::connect(bedrockDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->selectedTerrainType = BEDROCK; });
+    auto addNoiseButton = new ButtonElement("Add noise", [=]() { this->addNoiseOnSelectedPatch(); });
+    auto addDistoButton = new ButtonElement("Distord", [=]() { this->addDistortionOnSelectedPatch(); });
+    auto addSpreadButton = new ButtonElement("Spread", [=]() { this->addSpreadOnSelectedPatch(); });
+    auto addRipplesButton = new ButtonElement("Ripples", [=]() { this->rippleScene(); });
+    auto deformFromFlowButton = new ButtonElement("Deform flow", [=]() { this->deformationFromFlow(); });
 
-    QObject::connect(applyIntersectionButton, &QCheckBox::toggled, this, [=](bool checked) { this->applyIntersection = checked; });
+    auto resetButton = new ButtonElement("Reset", [=]() { this->resetPatch(); });
 
-    QObject::connect(addNoiseButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::addNoiseOnSelectedPatch);
-    QObject::connect(addDistoButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::addDistortionOnSelectedPatch);
-    QObject::connect(addSpreadButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::addSpreadOnSelectedPatch);
-    QObject::connect(addRipplesButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::rippleScene);
-    QObject::connect(deformFromFlowButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::deformationFromFlow);
-
-    QObject::connect(resetButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::resetPatch);
-
-    QObject::connect(fileSelectionButton, &QPushButton::pressed, this, [this, selectedFilenameLabel]() {
+    auto selectedFilenameLabel = new LabelElement((this->mainFilename == "" ? "No file selected" : split(split(this->mainFilename, "/").back(), "\\").back()));
+    auto fileSelectionButton = new ButtonElement("...", [&]() {
         std::string path = "saved_maps/";
         QString fileSelection = QFileDialog::getSaveFileName(this, "Saving file", QString::fromStdString(path), "*.json", nullptr, QFileDialog::DontConfirmOverwrite);
         if (!fileSelection.isEmpty()) {
             this->mainFilename = fileSelection.toStdString();
-            selectedFilenameLabel->setText(QString::fromStdString(this->mainFilename).split("/").back().split("\\").back());
+            selectedFilenameLabel->setText(split(split(this->mainFilename, "/").back(), "\\").back());
             if (QFileInfo::exists(QString::fromStdString(this->mainFilename))) {
                 this->loadPatchesFromFile(this->mainFilename);
             } else {
@@ -296,57 +163,57 @@ QLayout *PrimitivePatchesInterface::createGUI()
             }
         }
     });
-    QObject::connect(enableHotreloadButton, &QCheckBox::toggled, this, [=](bool checked) {
-        this->enableHotReloading = checked;
+    auto enableHotreloadButton = new CheckboxElement("Hot reloading ?", enableHotReloading);
+
+    auto patchesCounterLabel = new LabelElement("Prim: " + std::to_string(nbPrimitives) + ", Unary: " + std::to_string(nbUnaryOperators) + ", Binary: " + std::to_string(nbBinaryOperators) + ", N-ary: " + std::to_string(nbNaryOperators));
+
+    auto densityCombobox = new ComboboxElement("Density");
+    densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Air", TerrainTypes::AIR));
+    densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Water", TerrainTypes::WATER));
+    densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Coral", TerrainTypes::CORAL));
+    densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Sand", TerrainTypes::SAND));
+    densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Dirt", TerrainTypes::DIRT));
+    densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Rock", TerrainTypes::ROCK));
+    densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Bedrock", TerrainTypes::BEDROCK));
+    densityCombobox->setOnSelectionChanged([=](int) { this->selectedTerrainType = densityCombobox->getSelection<TerrainTypes>(); });
+
+    auto applyIntersectionButton = new CheckboxElement("Intersection", applyIntersection);
+
+    auto createStructureButton = new ButtonElement("Auto gen.", [=]() { this->structureAutoGeneration(); });
+
+    primitiveSelectionGui = new HierarchicalListWidget;
+
+
+    UI->add(std::vector<UIElement*>{
+        constructionModeButton,
+        shapeCombobox,
+        densityCombobox,
+        blendingFactorSlider,
+
+        stackingButton,
+        blendingButton,
+        replacingButton,
+        oneSideBlendButton,
+
+        abovePosButton,
+        insideTopPosButton,
+        insideBottomPosButton,
+        fixedPosButton,
+
+        widthSlider,
+        depthSlider,
+        heightSlider,
+        sigmaSlider,
+
+        createHorizontalGroupUI({applyIntersectionButton, createStructureButton}),
+        createHorizontalGroupUI({addNoiseButton, addDistoButton, addSpreadButton, addRipplesButton, deformFromFlowButton}),
+        resetButton,
+        new UIElement(primitiveSelectionGui),
+
+        createHorizontalGroupUI({selectedFilenameLabel, fileSelectionButton}),
+        enableHotreloadButton,
+        patchesCounterLabel
     });
-    QObject::connect(createStructureButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::structureAutoGeneration);
-
-    constructionModeButton->setChecked(this->constructionMode);
-
-    createSphereButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Sphere);
-    createBlockButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Block);
-    createGaussianButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Gaussian);
-    createCylinderButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Cylinder);
-    createRockButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Rock);
-    createMountainButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Mountain);
-    createDuneButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Dune);
-    createBasinButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Basin);
-    createCaveButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Cave);
-    createArchButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Arch);
-    createMountainChainButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::MountainChain);
-    createPolygonButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Polygon);
-    createTunnelButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::ParametricTunnel);
-    createNoise2DButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Noise2D);
-    createRippleButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Ripple);
-
-    stackingButton->setChecked(this->currentOperation == ImplicitPatch::CompositionFunction::STACK);
-    blendingButton->setChecked(this->currentOperation == ImplicitPatch::CompositionFunction::BLEND);
-    replacingButton->setChecked(this->currentOperation == ImplicitPatch::CompositionFunction::REPLACE);
-    oneSideBlendButton->setChecked(this->currentOperation == ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND);
-
-    abovePosButton->setChecked(this->currentPositioning == ImplicitPatch::PositionalLabel::ABOVE);
-    insideTopPosButton->setChecked(this->currentPositioning == ImplicitPatch::PositionalLabel::INSIDE_TOP);
-    insideBottomPosButton->setChecked(this->currentPositioning == ImplicitPatch::PositionalLabel::INSIDE_BOTTOM);
-    fixedPosButton->setChecked(this->currentPositioning == ImplicitPatch::PositionalLabel::FIXED_POS);
-
-    blendingFactorSlider->setfValue(this->selectedBlendingFactor);
-
-    airDensityCheckbox->setChecked(this->selectedTerrainType == AIR);
-    waterDensityCheckbox->setChecked(this->selectedTerrainType == WATER);
-    coralDensityCheckbox->setChecked(this->selectedTerrainType == CORAL);
-    sandDensityCheckbox->setChecked(this->selectedTerrainType == SAND);
-    dirtDensityCheckbox->setChecked(this->selectedTerrainType == DIRT);
-    rockDensityCheckbox->setChecked(this->selectedTerrainType == ROCK);
-    bedrockDensityCheckbox->setChecked(this->selectedTerrainType == BEDROCK);
-
-    widthSlider->setfValue(this->selectedWidth);
-    heightSlider->setfValue(this->selectedHeight);
-    depthSlider->setfValue(this->selectedDepth);
-    sigmaSlider->setfValue(this->selectedSigma);
-
-    applyIntersectionButton->setChecked(this->applyIntersection);
-
-    enableHotreloadButton->setChecked(this->enableHotReloading);
 
     this->updatePrimitiveList();
 
@@ -357,7 +224,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
 
     // This initialization should be in the constructor I guess...
-    this->primitiveControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
+    this->primitiveControlPoint = std::make_shared<ControlPoint>(Vector3(), 5.f);
     this->primitiveControlPoint->allowAllAxisRotations(true);
     this->primitiveControlPoint->allowAllAxisTranslation(true);
     this->primitiveControlPoint->hide();
@@ -365,43 +232,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::pointModified, this, &PrimitivePatchesInterface::moveDebugBoxWithControlPoint);
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::translationApplied, this, &PrimitivePatchesInterface::translatePatch);
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, &PrimitivePatchesInterface::rotatePatch);
-    /*
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, [=](const Vector3& rotation){
-        primitiveControlPoint->blockSignals(true);
-        primitiveSelectionGui->blockSignals(true);
-//        QObject::blockSignals(true);
-        // Get patch being manipulated
-        if (this->currentlySelectedPatch != nullptr) {
-            std::cout << "Modifying the terrain..." << std::endl;
-//            Vector3 initialControlPosition = currentlySelectedPatch->getBBox().first;
-//            Vector3 translation = primitiveControlPoint->getPosition() - initialControlPosition;
-            // When released, recreate patch + update terrain
-            //currentlySelectedPatch->position = primitiveControlPoint->getPosition() - (currentlySelectedPatch->getDimensions() * .5f).xy();
-            ImplicitUnaryOperator* rotate = new ImplicitUnaryOperator;
-            rotate->composableA = this->currentlySelectedPatch;
-            rotate->rotate(rotation.x, rotation.y, rotation.z);
-            rotate->name = "Rotation";
-            if (currentlySelectedPatch == this->implicitTerrain) {
-                this->implicitTerrain = rotate; // TODO : Not right, but for tests
-            } else {
-                ImplicitOperator* parent = (ImplicitOperator*)this->naiveApproachToGetParent(currentlySelectedPatch);
-                if (currentlySelectedPatch == parent->composableA) {
-                    parent->composableA = rotate;
-                } else {
-                    parent->composableB = rotate;
-                }
-            }
-            this->updateMapWithCurrentPatch();
-            this->storedPatches.push_back(rotate);
-            this->updatePrimitiveList();
-        }
-        primitiveControlPoint->blockSignals(false);
-        primitiveSelectionGui->blockSignals(false);
-    });
-    */
-
-
-    return layout;
+    return UI;
 }
 
 void PrimitivePatchesInterface::show()
@@ -559,6 +390,7 @@ void PrimitivePatchesInterface::setSelectedShape(ImplicitPatch::PredefinedShapes
     this->previewMesh.update();
 }
 
+/*
 void PrimitivePatchesInterface::setCurrentOperation(ImplicitPatch::CompositionFunction newOperation)
 {
     this->currentOperation = newOperation;
@@ -568,6 +400,7 @@ void PrimitivePatchesInterface::setCurrentPositioning(ImplicitPatch::PositionalL
 {
     this->currentPositioning = positioning;
 }
+*/
 
 void PrimitivePatchesInterface::resetPatch()
 {
@@ -1289,6 +1122,7 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
     bool newSelectionIsExisting = false;
     if (current) {
         auto selectedPatchItem = dynamic_cast<HierarchicalListWidgetItem<ImplicitPatch*>*>(current);
+        if (selectedPatchItem == nullptr) return;
         int selectedPatchID = selectedPatchItem->ID;
         auto newlySelectedPatch = this->findPrimitiveById(selectedPatchID);
         if (newlySelectedPatch != nullptr && newlySelectedPatch != currentlySelectedPatch) {
@@ -1311,15 +1145,9 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
 //            this->debuggingVoxelsPosition = this->selectedPatch()->getSupportBBox().min();
             this->debuggingVoxelsScale = ratio;
             debuggingVoxels = GridF(resolution);
-            debuggingVoxels.raiseErrorOnBadCoord = false;
-            for (int x = 0; x < resolution.x(); x++) {
-                for (int y = 0; y < resolution.y(); y++) {
-                    for (int z = 0; z < resolution.z(); z++) {
-                        Vector3 pos(x, y, z);
-                        debuggingVoxels.at(pos) = currentlySelectedPatch->evaluate((pos) * ratio + patchSupportedAABBox.min());
-                    }
-                }
-            }
+            debuggingVoxels.iterateParallel([&](const Vector3i& pos) {
+                debuggingVoxels.at(pos) = currentlySelectedPatch->evaluate((pos) * ratio + patchSupportedAABBox.min());
+            });
             this->debugMeshDisplayed = true;
             auto hierarchy = naiveApproachToGetAllParents(currentlySelectedPatch);
             for (auto& node : hierarchy) {
@@ -1522,7 +1350,7 @@ void PrimitivePatchesInterface::displayParametricCurve()
 
 void PrimitivePatchesInterface::displayPatchesTree()
 {
-    ImageViewer* plt = ImageViewer::get();
+    auto& plt = ImageViewer::get();
 
     std::vector<std::pair<ImplicitPatch*, std::vector<int>>> allPatchesAndDirections;
     std::vector<std::tuple<ImplicitPatch*, std::vector<int>, int>> queueWithDirections = {{implicitTerrain.get(), {}, -1}};
@@ -1573,14 +1401,14 @@ void PrimitivePatchesInterface::displayPatchesTree()
         positions.push_back(Vector3(x, y));
     }
     for (auto& [e0, e1] : edges) {
-        plt->addPlot({positions[e0], positions[e1]});
+        plt.addPlot({positions[e0], positions[e1]});
     }
-    plt->addScatter(positions, "", labels);
-    plt->draw();
-    plt->show();
+    plt.addScatter(positions, "", labels);
+    plt.draw();
+    plt.show();
 //    QObject::connect(plt, &ImageViewer::finished, this, [=](int result) {
 //        std::cout << "Closed with result " << result << std::endl;
-//        plt->close();
+//        plt.close();
     //    });
 }
 
@@ -1861,7 +1689,7 @@ void PrimitivePatchesInterface::updatePrimitiveList()
                     std::cout << current->toString() << " has no parent" << std::endl;
             bool childrenAreLocked = locked || (current->used_json_filename != "" && patchesCanBeLocked && current->used_json_filename != this->mainFilename);
             waitingPatches.pop_back();
-            primitiveSelectionGui->addItem(new HierarchicalListWidgetItem((locked ? "*" : "") + current->toString(), current->index, level));
+            primitiveSelectionGui->addItem(new HierarchicalListWidgetItem<ImplicitPatch*>((locked ? "*" : "") + current->toString(), current, current->index, level));
             this->storedPatches.push_back(current);
             ImplicitBinaryOperator* currentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(current);
             ImplicitUnaryOperator* currentAsUnary = dynamic_cast<ImplicitUnaryOperator*>(current);
@@ -2030,98 +1858,143 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
 {
     bool patchIsOperation = (dynamic_cast<ImplicitBinaryOperator*>(patch) != nullptr);
 
-    QVBoxLayout* layout = new QVBoxLayout();
+    auto UI = new InterfaceUI();
 
     if (patchIsOperation) {
         ImplicitBinaryOperator* patchAsBinary = dynamic_cast<ImplicitBinaryOperator*>(patch);
-        QRadioButton* stackingButton = new QRadioButton("Stack");
-        QRadioButton* blendingButton = new QRadioButton("Blend");
-        QRadioButton* replacingButton = new QRadioButton("Replace");
-        QRadioButton* oneSideBlendButton = new QRadioButton("1-blend");
+        auto stackingButton = new RadioButtonElement("Stack", ImplicitPatch::CompositionFunction::STACK, patchAsBinary->composeFunction);
+        auto blendingButton = new RadioButtonElement("Blend", ImplicitPatch::CompositionFunction::BLEND, patchAsBinary->composeFunction);
+        auto replacingButton = new RadioButtonElement("Replace", ImplicitPatch::CompositionFunction::REPLACE, patchAsBinary->composeFunction);
+        auto oneSideBlendButton = new RadioButtonElement("1-blend", ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND, patchAsBinary->composeFunction);
 
-        QRadioButton* abovePosButton = new QRadioButton("Above");
-        QRadioButton* insideTopPosButton = new QRadioButton("Inside top");
-        QRadioButton* insideBottomPosButton = new QRadioButton("Inside bottom");
-        QRadioButton* fixedPosButton = new QRadioButton("Fixed");
+        auto abovePosButton = new RadioButtonElement("Above", ImplicitPatch::PositionalLabel::ABOVE, patchAsBinary->positionalB);
+        auto insideTopPosButton = new RadioButtonElement("Inside top", ImplicitPatch::PositionalLabel::INSIDE_TOP, patchAsBinary->positionalB);
+        auto insideBottomPosButton = new RadioButtonElement("Inside bottom", ImplicitPatch::PositionalLabel::INSIDE_BOTTOM, patchAsBinary->positionalB);
+        auto fixedPosButton = new RadioButtonElement("Fixed", ImplicitPatch::PositionalLabel::FIXED_POS, patchAsBinary->positionalB);
 
-        FancySlider* blendingFactorSlider = new FancySlider(Qt::Orientation::Horizontal, 0.1f, 10.f, .1f);
-        QCheckBox* applyIntersectionButton = new QCheckBox("Intersection");
-        QPushButton* swapButton = new QPushButton("Swap A and B");
+        auto blendingFactorSlider = new SliderElement("Blend factor", 0.1f, 10.f, .1f, patchAsBinary->blendingFactor);
+        auto applyIntersectionButton = new CheckboxElement("Intersection", patchAsBinary->withIntersectionOnB);
+        auto swapButton = new ButtonElement("Swap A and B", [=]() { patchAsBinary->swapAB(); });
 
-        layout->addWidget(createSliderGroup("Blend factor", blendingFactorSlider));
-        layout->addWidget(createHorizontalGroup({createVerticalGroup({
-                                                  stackingButton,
-                                                  blendingButton,
-                                                  replacingButton,
-                                                  oneSideBlendButton,
-                                              }),
-                                                 createVerticalGroup({
-                                                     abovePosButton,
-                                                     insideTopPosButton,
-                                                     insideBottomPosButton,
-                                                     fixedPosButton
-                                                 })
-                                                }));
-        layout->addWidget(createHorizontalGroup({ applyIntersectionButton, swapButton }));
+        /*
+        stackingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::STACK).setOnChecked([=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::STACK; });
+        blendingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::BLEND).setOnChecked([=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::BLEND; });
+        replacingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::REPLACE).setOnChecked([=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::REPLACE; });
+        oneSideBlendButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND).setOnChecked([=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND; });
 
-        stackingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::STACK);
-        blendingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::BLEND);
-        replacingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::REPLACE);
-        oneSideBlendButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND);
 
-        abovePosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::ABOVE);
-        insideTopPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::INSIDE_TOP);
-        insideBottomPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::INSIDE_BOTTOM);
-        fixedPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::FIXED_POS);
+        abovePosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::ABOVE)
+            .setOnChecked([=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::ABOVE; });
+        insideTopPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::INSIDE_TOP)
+            .setOnChecked([=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::INSIDE_TOP; });
+        insideBottomPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::INSIDE_BOTTOM)
+            .setOnChecked([=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::INSIDE_BOTTOM; });
+        fixedPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::FIXED_POS)
+            .setOnChecked([=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::FIXED_POS; });
+        */
 
-        blendingFactorSlider->setfValue(patchAsBinary->blendingFactor);
-        applyIntersectionButton->setChecked(patchAsBinary->withIntersectionOnB);
+        UI->add({
+            blendingFactorSlider,
 
-        QObject::connect(stackingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::STACK; });
-        QObject::connect(blendingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::BLEND; });
-        QObject::connect(replacingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::REPLACE; });
-        QObject::connect(oneSideBlendButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND; });
+            stackingButton,
+            blendingButton,
+            replacingButton,
+            oneSideBlendButton,
 
-        QObject::connect(abovePosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::ABOVE; });
-        QObject::connect(insideTopPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::INSIDE_TOP; });
-        QObject::connect(insideBottomPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::INSIDE_BOTTOM; });
-        QObject::connect(fixedPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::FIXED_POS; });
-        QObject::connect(blendingFactorSlider, &FancySlider::floatValueChanged, this, [=](float newVal) {
-            patchAsBinary->blendingFactor = newVal;
+            abovePosButton,
+            insideTopPosButton,
+            insideBottomPosButton,
+            fixedPosButton,
+
+            createHorizontalGroupUI({ applyIntersectionButton, swapButton })
         });
-        QObject::connect(applyIntersectionButton, &QCheckBox::toggled, this, [=](bool checked) { patchAsBinary->withIntersectionOnB = checked; });
-        QObject::connect(swapButton, &QPushButton::pressed, this, [=]() { patchAsBinary->swapAB(); });
-
 
     } else {
         ImplicitPrimitive* patchAsPrimitive = dynamic_cast<ImplicitPrimitive*>(patch);
-        QRadioButton* createSphereButton = new QRadioButton("Sphere");
-        QRadioButton* createBlockButton = new QRadioButton("Block");
-        QRadioButton* createGaussianButton = new QRadioButton("Gaussian");
-        QRadioButton* createCylinderButton = new QRadioButton("Cylinder");
-        QRadioButton* createRockButton = new QRadioButton("Rock");
-        QRadioButton* createMountainButton = new QRadioButton("Mountain");
-        QRadioButton* createDuneButton = new QRadioButton("Dune");
-        QRadioButton* createBasinButton = new QRadioButton("Basin");
-        QRadioButton* createCaveButton = new QRadioButton("Cave");
-        QRadioButton* createArchButton = new QRadioButton("Arch");
-        QRadioButton* createNoise2DButton = new QRadioButton("Noise");
-        QRadioButton* createFromFileButton = new QRadioButton("From file");
 
-//        FancySlider* densitySlider = new FancySlider(Qt::Orientation::Horizontal, -5.f, 5.f, .1f);
 
-        QRadioButton* airDensityCheckbox = new QRadioButton("Air");
-        QRadioButton* waterDensityCheckbox = new QRadioButton("Water");
-        QRadioButton* coralDensityCheckbox = new QRadioButton("Coral");
-        QRadioButton* sandDensityCheckbox = new QRadioButton("Sand");
-        QRadioButton* dirtDensityCheckbox = new QRadioButton("Dirt");
-        QRadioButton* rockDensityCheckbox = new QRadioButton("Rock");
-        QRadioButton* bedrockDensityCheckbox = new QRadioButton("Bedrock");
+        auto shapeCombobox = new ComboboxElement("Shape");
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Sphere", ImplicitPatch::Sphere));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Block", ImplicitPatch::Block));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Gaussian", ImplicitPatch::Gaussian));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cylinder", ImplicitPatch::Cylinder));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Rock", ImplicitPatch::Rock));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountain", ImplicitPatch::Mountain));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Dune", ImplicitPatch::Dune));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Basin", ImplicitPatch::Basin));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cave", ImplicitPatch::Cave));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Arch", ImplicitPatch::Arch));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Noise", ImplicitPatch::Noise2D));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountains", ImplicitPatch::MountainChain));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Polygon", ImplicitPatch::Polygon));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Tunnel", ImplicitPatch::ParametricTunnel));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Ripple", ImplicitPatch::Ripple));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("...", ImplicitPatch::ImplicitHeightmap));
+        shapeCombobox->setOnSelectionChanged([=](int) {
+            auto shape = shapeCombobox->getSelection<ImplicitPatch::PredefinedShapes>();
+            // this->setSelectedShape(shape);
+            patchAsPrimitive->predefinedShape = shape;
+            if (shape == ImplicitPatch::ImplicitHeightmap) {
+                QString q_filename = QDir(QDir::currentPath()).relativeFilePath(QFileDialog::getOpenFileName(this, QString("Open a composition"), QString::fromStdString("saved_maps/")));
+                std::string filename = q_filename.toStdString();
+                if (!q_filename.isEmpty()) {
+                    patchAsPrimitive->used_json_filename = filename;
+                }
+            }
+        });
 
-        FancySlider* widthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
-        FancySlider* depthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
-        FancySlider* heightSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
-        FancySlider* sigmaSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 20.f, .1f);
+        auto widthSlider = new SliderElement("Width / radius", 0.f, 50.f, .1f, patchAsPrimitive->dimensions.x());
+        auto depthSlider = new SliderElement("Depth", 0.f, 50.f, .1f, patchAsPrimitive->dimensions.y());
+        auto heightSlider = new SliderElement("Height", 0.f, 50.f, .1f, patchAsPrimitive->dimensions.z());
+        auto sigmaSlider = new SliderElement("Sigma", 0.f, 20.f, .1f, patchAsPrimitive->parametersProvided[0]);
+
+        auto densityCombobox = new ComboboxElement("Density");
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Air", TerrainTypes::AIR));
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Water", TerrainTypes::WATER));
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Coral", TerrainTypes::CORAL));
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Sand", TerrainTypes::SAND));
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Dirt", TerrainTypes::DIRT));
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Rock", TerrainTypes::ROCK));
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Bedrock", TerrainTypes::BEDROCK));
+        densityCombobox->setOnSelectionChanged([=](int) { patchAsPrimitive->material = densityCombobox->getSelection<TerrainTypes>(); });
+
+
+        UI->add(std::vector<UIElement*>{
+            shapeCombobox,
+            densityCombobox,
+
+            widthSlider,
+            depthSlider,
+            heightSlider,
+            sigmaSlider
+        });
+
+        /*
+        auto createSphereButton = new RadioButtonElement("Sphere"));
+        auto createBlockButton = new RadioButtonElement("Block"));
+        auto createGaussianButton = new RadioButtonElement("Gaussian"));
+        auto createCylinderButton = new RadioButtonElement("Cylinder"));
+        auto createRockButton = new RadioButtonElement("Rock"));
+        auto createMountainButton = new RadioButtonElement("Mountain"));
+        auto createDuneButton = new RadioButtonElement("Dune"));
+        auto createBasinButton = new RadioButtonElement("Basin"));
+        auto createCaveButton = new RadioButtonElement("Cave"));
+        auto createArchButton = new RadioButtonElement("Arch"));
+        auto createNoise2DButton = new RadioButtonElement("Noise"));
+        auto createFromFileButton = new RadioButtonElement("From file"));
+
+        auto airDensityCheckbox = new RadioButtonElement("Air"));
+        auto waterDensityCheckbox = new RadioButtonElement("Water"));
+        auto coralDensityCheckbox = new RadioButtonElement("Coral"));
+        auto sandDensityCheckbox = new RadioButtonElement("Sand"));
+        auto dirtDensityCheckbox = new RadioButtonElement("Dirt"));
+        auto rockDensityCheckbox = new RadioButtonElement("Rock"));
+        auto bedrockDensityCheckbox = new RadioButtonElement("Bedrock"));
+
+        auto widthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
+        auto depthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
+        auto heightSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 50.f, .1f);
+        auto sigmaSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 20.f, .1f);
 
         layout->addWidget(createMultiColumnGroup({
                                                         createSphereButton,
@@ -2182,18 +2055,18 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         depthSlider->setfValue(patchAsPrimitive->dimensions.y());
         sigmaSlider->setfValue(patchAsPrimitive->parametersProvided[0]);
 
-        QObject::connect(createSphereButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Sphere; });
-        QObject::connect(createBlockButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Block; });
-        QObject::connect(createGaussianButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Gaussian; });
-        QObject::connect(createCylinderButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Cylinder; });
-        QObject::connect(createRockButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Rock; });
-        QObject::connect(createMountainButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Mountain; });
-        QObject::connect(createDuneButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Dune; });
-        QObject::connect(createBasinButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Basin; });
-        QObject::connect(createCaveButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Cave; });
-        QObject::connect(createArchButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Arch; });
-        QObject::connect(createNoise2DButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Noise2D; });
-        QObject::connect(createFromFileButton, &QRadioButton::toggled, this, [=](bool checked) {
+        QObject::connect(createSphereButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Sphere; });
+        QObject::connect(createBlockButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Block; });
+        QObject::connect(createGaussianButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Gaussian; });
+        QObject::connect(createCylinderButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Cylinder; });
+        QObject::connect(createRockButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Rock; });
+        QObject::connect(createMountainButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Mountain; });
+        QObject::connect(createDuneButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Dune; });
+        QObject::connect(createBasinButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Basin; });
+        QObject::connect(createCaveButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Cave; });
+        QObject::connect(createArchButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Arch; });
+        QObject::connect(createNoise2DButton, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::Noise2D; });
+        QObject::connect(createFromFileButton, &RadioButtonElement::toggled, this, [=](bool checked) {
             if (checked) {
                 patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::ImplicitHeightmap;
                 QString q_filename = QDir(QDir::currentPath()).relativeFilePath(QFileDialog::getOpenFileName(this, QString("Open a composition"), QString::fromStdString("saved_maps/")));
@@ -2205,31 +2078,30 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         });
 
 //        QObject::connect(densitySlider, &FancySlider::floatValueChanged, this, [=](float newDensity) { patchAsPrimitive->material.density = newDensity; });
-        QObject::connect(airDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = AIR; });
-        QObject::connect(waterDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = WATER; });
-        QObject::connect(coralDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = CORAL; });
-        QObject::connect(sandDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = SAND; });
-        QObject::connect(dirtDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = DIRT; });
-        QObject::connect(rockDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = ROCK; });
-        QObject::connect(bedrockDensityCheckbox, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = BEDROCK; });
+        QObject::connect(airDensityCheckbox, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = AIR; });
+        QObject::connect(waterDensityCheckbox, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = WATER; });
+        QObject::connect(coralDensityCheckbox, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = CORAL; });
+        QObject::connect(sandDensityCheckbox, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = SAND; });
+        QObject::connect(dirtDensityCheckbox, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = DIRT; });
+        QObject::connect(rockDensityCheckbox, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = ROCK; });
+        QObject::connect(bedrockDensityCheckbox, &RadioButtonElement::toggled, this, [=](bool checked) { if (checked) patchAsPrimitive->material = BEDROCK; });
 
 
         QObject::connect(widthSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { patchAsPrimitive->dimensions.x() = newVal; });
         QObject::connect(heightSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { patchAsPrimitive->dimensions.z() = newVal; });
         QObject::connect(depthSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { patchAsPrimitive->dimensions.y() = newVal; });
         QObject::connect(sigmaSlider, &FancySlider::floatValueChanged, this, [=](float newVal) { patchAsPrimitive->parametersProvided[0] = newVal; });
+        */
 
     }
 
 
 
-    cancelButton = new QPushButton("Annuler", this);
-    validButton = new QPushButton("Confirmer", this);
+    auto cancelButton = new ButtonElement("Annuler", [=]() { this->cancel(); });
+    auto validButton = new ButtonElement("Confirmer", [=]() { this->confirm(); });
 
-    layout->addWidget(createHorizontalGroup({cancelButton, validButton}));
-    QObject::connect(cancelButton, &QPushButton::pressed, this, &PatchReplacementDialog::cancel);
-    QObject::connect(validButton, &QPushButton::pressed, this, &PatchReplacementDialog::confirm);
-    setLayout(layout);
+    UI->add(createHorizontalGroupUI({cancelButton, validButton}));
+    setLayout(UI->get()->layout());
     setSizeGripEnabled(true);
 }
 

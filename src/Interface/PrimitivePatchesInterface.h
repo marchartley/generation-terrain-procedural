@@ -5,7 +5,7 @@ class ImplicitPatch;
 class PatchReplacementDialog;
 
 #include "ActionInterface.h"
-#include "GUIElements/HierarchicalListWidget.h"
+// #include "GUIElements/HierarchicalListWidget.h"
 #include "GUIElements/ControlPoint.h"
 
 
@@ -23,7 +23,7 @@ public:
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
-    QLayout* createGUI();
+    InterfaceUI* createGUI();
 
     void show();
     void hide();
@@ -38,8 +38,8 @@ public Q_SLOTS:
     void createPatchWithOperation(const Vector3& pos);
 
     void setSelectedShape(ImplicitPatch::PredefinedShapes newShape);
-    void setCurrentOperation(ImplicitPatch::CompositionFunction newOperation);
-    void setCurrentPositioning(ImplicitPatch::PositionalLabel positioning);
+    // void setCurrentOperation(ImplicitPatch::CompositionFunction newOperation);
+    // void setCurrentPositioning(ImplicitPatch::PositionalLabel positioning);
 
     void resetPatch();
 
@@ -137,7 +137,7 @@ protected:
 
     friend class PatchReplacementDialog;
 
-    std::unique_ptr<ControlPoint> primitiveControlPoint;
+    std::shared_ptr<ControlPoint> primitiveControlPoint;
 
     ImplicitPatch* currentlyManipulatedPatch = nullptr;
     ImplicitPatch* currentlySelectedPatch = nullptr;

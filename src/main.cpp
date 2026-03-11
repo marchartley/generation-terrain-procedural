@@ -66,6 +66,21 @@ std::map<std::string, std::string> getAllEnvironmentVariables() {
 int main(int argc, char *argv[])
 {
     /*
+    auto img = GridF::perlin(Vector3i(5000, 5000, 1));
+
+    std::cout << "Computing gradients 2D..." << std::flush << showTime(timeIt([=]() {
+        auto gradients = img.gradient();
+    }, 10)) << std::endl;
+
+    img = GridF::perlin(Vector3i(5000, 1000, 5));
+
+    std::cout << "Computing gradients 3D..." << std::flush << showTime(timeIt([=]() {
+        auto gradients = img.gradient();
+    }, 10)) << std::endl;
+
+    return 0;
+    */
+    /*
     EnvironmentalScene scene;
     auto initialMaterial = scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
     auto initialObjects = scene.readEnvObjectsFile("EnvObjects/primitives.json");
@@ -138,34 +153,49 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+
+    GridF imgOriginal = GridF::perlin(Vector3i(500, 500, 1));
+    auto resized = imgOriginal.resize(Vector3i(200, 200, 1));
+
+    // std::cout << imgOriginal << "\n" << resized << std::endl;
+    // ImageViewer::get().addImage(imgOriginal).exec();
+    // ImageViewer::get().addImage(resized).exec();
+    // ImageViewer::get().addImage(resized.resize(10, 10, 10)).exec();
+
+
+    auto FFT = resized.FFT();
+    auto iFFT = FFT.iFFT(resized.getDimensions());
+
+    std::cout << "FFT..." << std::flush << showTime(timeIt([&]() {
+        auto FFT2 = resized.FFT();
+    }, 100)) << std::endl;
+
+    std::cout << "iFFT..." << std::flush << showTime(timeIt([&]() {
+        auto iFFT2 = FFT.iFFT();
+    }, 100)) << std::endl;
+
+    GridF reconstruction(iFFT.getDimensions());
+    reconstruction.iterateParallel([&](size_t i) { reconstruction[i] = iFFT[i].real(); });
+
+    ImageViewer::get("Original").addImage(resized).show();
+    ImageViewer::get("FFT").addImage(reconstruction).show();
+    return ImageViewer::get().addImage(reconstruction - resized).exec();
+
     /*
     EnvironmentalScene scene;
     scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
     scene.readEnvObjectsFile("EnvObjects/primitives.json");
 
-
     // EnvObjectInstance* envObj = scene.instantiate("coralpolyp");
     // EnvObjectInstance* envObj = scene.instantiate("river");
     // EnvObjectInstance* envObj = scene.instantiate("island");
 
-    SnakeSegmentationEditor* viewer = SnakeSegmentationEditor::get()->associateEnvObject(scene.availableObjects["river"]);
+    // auto viewer = SnakeSegmentationEditor::get("1").associateEnvObject(scene.availableObjects["river"]);
+    // auto viewer2 = SnakeSegmentationEditor::get("2").associateEnvObject(scene.availableObjects["river"]);
 
-    viewer->exec();
+    SnakeSegmentationEditor::get("1").associateEnvObject(scene.availableObjects["river"]).exec();
+    return SnakeSegmentationEditor::get("2").associateEnvObject(scene.availableObjects["river"]).exec();
 
-    nlohmann::json j = scene.availableObjects["river"];
-    std::cout << j.dump(1) << std::endl;
-    from_json(j, scene.availableObjects["river2"]);
-
-    std::cout << scene.availableObjects["river2"]->snakeParameters->lengthCost << std::endl;
-
-    viewer->associateEnvObject(scene.availableObjects["island"]);
-
-    viewer->exec();
-
-    viewer->associateEnvObject(scene.availableObjects["river2"]);
-
-    return viewer->exec();
-    */
     /*
     BSpline s;
     for (int i = 0; i < 10; i++) {
@@ -180,7 +210,7 @@ int main(int argc, char *argv[])
         });
     });
 
-    return ImageViewer::get()->addImage(d)->exec();
+    return ImageViewer::get().addImage(d)->exec();
     */
     /*
     EnvironmentalScene scene;
@@ -219,7 +249,7 @@ int main(int argc, char *argv[])
 
     std::cout << j << std::endl;
 
-    // auto k2 = j.get<std::unique_ptr<Kelvinlet>>();
+    // auto k2 = j.get<std::shared_ptr<Kelvinlet>>();
     Kelvinlet* k3 = j.get<Kelvinlet*>();
     // k3 = j.get<Kelvinlet*>();
 
@@ -233,14 +263,14 @@ int main(int argc, char *argv[])
     GridF perlin = GridF::perlin({200, 200, 1});
     GridV3 currentFlow = perlin.grad();
 
-    auto viewer = WaterFlowViewer::get("Flow")->addImage(perlin)->addVectorField(currentFlow);
+    auto viewer = WaterFlowViewer::get("Flow").addImage(perlin)->addVectorField(currentFlow);
     WaterFlowViewer::get("Flow")->dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::FLOWLINES;
 
     viewer->exec();
 
     GridV3 newGrid = WaterFlowViewer::get("Flow")->kelvinletParams.getVectorField();
 
-    ImageViewer::get("Flow")->addVectorField(currentFlow)->show();
+    ImageViewer::get("Flow")->addVectorField(currentFlow).show();
     return ImageViewer::get("Initial")->addVectorField(newGrid)->exec();
     */
 
@@ -249,8 +279,8 @@ int main(int argc, char *argv[])
     // GridF img = GridF(100, 100, 1); img.iterateParallel([&](int x, int y, int z) { img(x, y, z) = x + y * 0.5f; });
     GridV3 img3(img.getDimensions()); img3.iterateParallel([&](size_t i){ img3[i] = Vector3(1, 1, 1) * img[i]; });
 
-    return ImageViewer::get()->setNormalizedModeImage(true)->addImage(img)->addVectorField(img.gradient())->exec();*/
-    // return ImagePainter::get()->addImage(img3)->exec();
+    return ImageViewer::get().setNormalizedModeImage(true).addImage(img)->addVectorField(img.gradient())->exec();*/
+    // return ImagePainter::get().addImage(img3)->exec();
 
     /*
     QProcess ganProc;
@@ -477,7 +507,7 @@ int main(int argc, char *argv[])
             return finalHeight;
         };
 
-        // ImageViewer::get("Distances")->addImage(distances);
+        // ImageViewer::get("Distances").addImage(distances);
         // return ImageViewer::get("Distances")->exec();
 
         displayProcessTime("Compute subduction... ", [&]() {
@@ -486,24 +516,24 @@ int main(int argc, char *argv[])
         return finalHeight;
     };
 
-    // ImageViewer::get()->animate([&]() {
+    // ImageViewer::get().animate([&]() {
         GridF result;
         displayProcessTime("Full time... ", [&]() {
             result = createCoralIsland();
         }, true);
-        ImageViewer::get()->addImage(result)->show();
+        ImageViewer::get().addImage(result).show();
         iteration++;
     // });
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
 
 
-    // ImageViewer::get("Distances")->addImage(distances);
+    // ImageViewer::get("Distances").addImage(distances);
     // return ImageViewer::get("Distances")->exec();
-    // ImageViewer::get("Labels")->addImage(labelMap);
+    // ImageViewer::get("Labels").addImage(labelMap);
     // return ImageViewer::get("Labels")->exec();
-    // ImageViewer::get("Resistance")->addImage(resistanceMap);
+    // ImageViewer::get("Resistance").addImage(resistanceMap);
     // return ImageViewer::get("Resistance")->exec();
-    // ImageViewer::get("Heights")->addImage(heightMap);
+    // ImageViewer::get("Heights").addImage(heightMap);
     // return ImageViewer::get("Heights")->exec();
     */
 
@@ -525,7 +555,7 @@ int main(int argc, char *argv[])
         });
         map = tmp;
     }
-    ImageViewer::get()->addImage(map)->setNormalizedModeImage(true)->exec();
+    ImageViewer::get().addImage(map)->setNormalizedModeImage(true)->exec();
 
     return 0;*/
 
@@ -610,7 +640,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    ImageViewer::get()->addImage(testGrid)->setNormalizedModeImage(true)->exec();
+    ImageViewer::get().addImage(testGrid)->setNormalizedModeImage(true)->exec();
     std::vector<BSpline> polylines = testGrid.binarize(0.1f).skeletonizeToBSplines();
     std::cout<<"NUMBER OF GENERATED POLYLINES : "<<polylines.size()<<std::endl;
     for (auto& s: polylines) {
@@ -634,7 +664,7 @@ int main(int argc, char *argv[])
     }
     std::cout<<"SAVING TEST POLYLINES IMAGE"<<std::endl;
     //testPolyline.toImageRGB("test_polylines.png");
-    ImageViewer::get()->addImage(testPolyline)->setNormalizedModeImage(true)->exec();
+    ImageViewer::get().addImage(testPolyline)->setNormalizedModeImage(true)->exec();
     return 0;
     //OpenFoamParser::createSimulationFile("OpenFOAM/simple", GridF());
     */
@@ -683,9 +713,9 @@ int main(int argc, char *argv[])
     }
     img.paste(GridF(used) - GridF(reconstructImage(coefficients, D, size, size, sparsity)));
     img.paste(GridF(used), Vector3((size+2), 0));
-    ImageViewer::get()->addImage(img);
-    ImageViewer::get()->setAbsoluteModeImage(true);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(img);
+    ImageViewer::get().setAbsoluteModeImage(true);
+    return ImageViewer::get().exec();
 
 
     */
@@ -712,12 +742,12 @@ int main(int argc, char *argv[])
         img(randomPoint * img.getDimensions()) = Vector3(1, 0, 0);
         img(point * img.getDimensions()) = Vector3(0, 1, 0);
 
-        ImageViewer::get()->addImage(img)->show();
+        ImageViewer::get().addImage(img).show();
     };
 
-    QObject::connect(ImageViewer::get()->chartView, &ChartView::mouseMoved, getPoint);
+    QObject::connect(ImageViewer::get().chartView, &ChartView::mouseMoved, getPoint);
     getPoint(Vector3(.5, .5, 0));
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -818,13 +848,13 @@ int main(int argc, char *argv[])
         }
         // std::cout << curve.length() << " / " << s.targetLength << std::endl;
         std::cout << ShapeCurve(curve).computeArea() << " / " << s.targetArea << std::endl;
-        ImageViewer::get()->addImage(img)->show();
-        ImageViewer::get()->addImage(initialImage);
+        ImageViewer::get().addImage(img).show();
+        ImageViewer::get().addImage(initialImage);
         return curve;
     };
 
-    QObject::connect(ImageViewer::get()->chartView, &ChartView::mouseMoved, findCurve);
-    return ImageViewer::get()->addImage(score)->exec();
+    QObject::connect(ImageViewer::get().chartView, &ChartView::mouseMoved, findCurve);
+    return ImageViewer::get().addImage(score)->exec();
     */
 
     /*
@@ -873,7 +903,7 @@ int main(int argc, char *argv[])
         // mask(p) = allDistancesSum;
     });
     mask = mask.resize(mask.getDimensions() * Vector3(2.f, 2.f, 1.f));
-    // ImageViewer::get()->addImage(mask)->exec();
+    // ImageViewer::get().addImage(mask)->exec();
     // return 0;
 
     displayProcessTime("Time to compute: ", [&]() {
@@ -915,8 +945,8 @@ int main(int argc, char *argv[])
     // GridF fullImage = reconstruction.resize(fullDim);
 
 
-    ImageViewer::get()->addImage(displayed);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(displayed);
+    return ImageViewer::get().exec();
     */
 
 
@@ -944,8 +974,8 @@ int main(int argc, char *argv[])
             std::cerr << "With duplicates, NaN found for t = " << t << std::endl;
         }
     }
-    ImageViewer::get()->addImage(vals);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(vals);
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -954,8 +984,8 @@ int main(int argc, char *argv[])
     colors.iterate([&] (const Vector3& p) {
         colors(p) = colorPalette(p.x() / colors.sizeX, {Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(1, 1, 0)});
     });
-    ImageViewer::get()->addImage(colors);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(colors);
+    return ImageViewer::get().exec();
     */
     /*
      * Unit test: divergence of a vector field
@@ -966,8 +996,8 @@ int main(int argc, char *argv[])
     });
     GridF divergence = vels.divergence();
 
-    ImageViewer::get()->addImage(divergence);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(divergence);
+    ImageViewer::get().exec();
     return 0;
     */
     /*
@@ -980,12 +1010,12 @@ int main(int argc, char *argv[])
         values.reset();
         values.addValueAt(1.f, clickPos);
         std::cout << values.displayValues() << std::endl;
-        ImageViewer::get()->addImage(values);
-        ImageViewer::get()->draw();
+        ImageViewer::get().addImage(values);
+        ImageViewer::get().draw();
     });
 
-    ImageViewer::get()->addImage(values);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(values);
+    ImageViewer::get().exec();
     return 0;
     */
     /*
@@ -999,8 +1029,8 @@ int main(int argc, char *argv[])
     VectorFieldDataFile data(input);
     data.write("test_vectors.raw");
 
-    ImageViewer::get()->addImage(input);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(input);
+    ImageViewer::get().exec();
 
     VectorFieldDataFile outData;
     outData.load("test_vectors.raw");
@@ -1009,8 +1039,8 @@ int main(int argc, char *argv[])
     output.iterateParallel([&](size_t i) {
         output[i].x() = (output[i].isValid() ? 1.f : 0.f);
     });
-    ImageViewer::get()->addImage(output);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(output);
+    ImageViewer::get().exec();
     return 0;
     */
     /*
@@ -1033,8 +1063,8 @@ int main(int argc, char *argv[])
     });
     for (size_t i = 0; i < vals.size(); i++)
         std::cout << vals[i] << "\n";
-    ImageViewer::get()->addImage(vals);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(vals);
+    ImageViewer::get().exec();
     auto FFT = vals.FFT();
     auto iFFT = FFT.iFFT();
 
@@ -1051,18 +1081,18 @@ int main(int argc, char *argv[])
     absolutes.iterateParallel([&](size_t i) {
         absolutes[i] = std::abs(FFT[i]);
     });
-    ImageViewer::get()->addImage(absolutes);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(absolutes);
+    ImageViewer::get().exec();
 
     absolutes.iterateParallel([&](size_t i) {
         absolutes[i] = iFFT[i].real();
     });
-    ImageViewer::get()->addImage(absolutes);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(absolutes);
+    ImageViewer::get().exec();
 
     GridF diff = absolutes - GridF(absolutes.getDimensions()).paste(vals);
-    ImageViewer::get()->addImage(diff);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(diff);
+    ImageViewer::get().exec();
     return 0;*/
 
 
@@ -1085,8 +1115,8 @@ int main(int argc, char *argv[])
         check(C_lerp * 50 + Vector3(50, 50)) = Vector3(0, t, 0);
     }
     std::cout << "Lerp : " << showTime(timeForLerp) << "\nSlerp: " << showTime(timeForSlerp) << std::endl;
-    ImageViewer::get()->addImage(check);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(check);
+    ImageViewer::get().exec();
     return 0;
     */
     /*
@@ -1104,8 +1134,8 @@ int main(int argc, char *argv[])
         std::cout << rad2deg(A.getAngleWith(B) * sign(A.cross(B).z)) << " deg from " << A << " to " << B << std::endl;
         check(B * 50 + Vector3(50, 50)) = rad2deg(A.getAngleWith(B) * sign(A.cross(B).z));
     }
-    ImageViewer::get()->addImage(check);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(check);
+    ImageViewer::get().exec();
     return 0;
     */
     /*
@@ -1293,8 +1323,8 @@ int main(int argc, char *argv[])
         std::cout << spline.getCurvature(t) << " " << spline.getDerivative(t) << " " << spline.getSecondDerivative(t) << std::endl;
     }
     std::cout << grid.displayAsPlot() << "\n" << spline << std::endl;
-    ImageViewer::get()->addImage(grid);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(grid);
+    ImageViewer::get().exec();
     return 0;
     */
     /*
@@ -1431,7 +1461,7 @@ int main(int argc, char *argv[])
     grid.removeUnavailableLinks();
     grid.display();
 
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -1444,12 +1474,12 @@ int main(int argc, char *argv[])
     g.debug();
     Graph<int> G = g.toGraph().forceDrivenPositioning();
     G.draw();
-    ImageViewer::get()->exec();
+    ImageViewer::get().exec();
     auto dual = g.dual(g.root->beta1->beta2);
     dual.debug();
     G = dual.toGraph().forceDrivenPositioning();
     G.draw();
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
     /*
      * Unit test: smoothing 1D data
@@ -1460,8 +1490,8 @@ int main(int argc, char *argv[])
     data[19] = 0;
     for (int _ = 0; _ < 20; _++) {
         data = data.meanSmooth(3, 3, 3, true);
-        ImageViewer::get()->addImage(data);
-        ImageViewer::get()->exec();
+        ImageViewer::get().addImage(data);
+        ImageViewer::get().exec();
     }
     std::cout << data.displayValues() << std::endl;
     return 0;
@@ -1475,8 +1505,8 @@ int main(int argc, char *argv[])
 //    }
 //    data[19] = 0;
     for (int _ = 0; _ < 20; _++) {
-        ImageViewer::get()->addImage(data);
-        ImageViewer::get()->exec();
+        ImageViewer::get().addImage(data);
+        ImageViewer::get().exec();
         data = data.medianBlur(3, 3, 3, true);
     }
     return 0;
@@ -1533,10 +1563,10 @@ int main(int argc, char *argv[])
         });
 
         std::cout << "Relaxation " << relax << std::endl;
-        ImageViewer::get()->addImage(screen);
-        ImageViewer::get()->exec();
+        ImageViewer::get().addImage(screen);
+        ImageViewer::get().exec();
     }
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -1555,9 +1585,9 @@ int main(int argc, char *argv[])
             }
         });
     });
-    ImageViewer::get()->addImage(screen);
-    ImageViewer::get()->setNormalizedModeImage(true);
-    return ImageViewer::get()->exec();*/
+    ImageViewer::get().addImage(screen);
+    ImageViewer::get().setNormalizedModeImage(true);
+    return ImageViewer::get().exec();*/
 
     /*
      * Unit test : Checking that sparse graphs are faster than matrix graphs
@@ -1716,12 +1746,12 @@ int main(int argc, char *argv[])
     }
     std::cout << std::endl;
     G.draw();
-    ImageViewer::get()->addPlot(pathDjikstra, "Djikstra", Qt::red);
-    ImageViewer::get()->addPlot(pathBellman, "Bellman", Qt::black);
-    ImageViewer::get()->addPlot(pathFloyd1, "Floyd", Qt::blue);
-    ImageViewer::get()->addPlot(pathFloyd2, "Floyd improved", Qt::green);
-    ImageViewer::get()->addPlot(pathJohnson, "Johnson", Qt::cyan);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addPlot(pathDjikstra, "Djikstra", Qt::red);
+    ImageViewer::get().addPlot(pathBellman, "Bellman", Qt::black);
+    ImageViewer::get().addPlot(pathFloyd1, "Floyd", Qt::blue);
+    ImageViewer::get().addPlot(pathFloyd2, "Floyd improved", Qt::green);
+    ImageViewer::get().addPlot(pathJohnson, "Johnson", Qt::cyan);
+    ImageViewer::get().exec();
     std::cout << "End." << std::endl;
     return 0;
     */
@@ -1807,8 +1837,8 @@ int main(int argc, char *argv[])
         displayProcessTime("Curl with radius " + std::to_string(radius) + " : ", [&]() {
             curl = cyclone.curl(radius).meanSmooth(30, 30, 1, true);
         });
-        ImageViewer::get()->addImage(curl);
-        ImageViewer::get()->exec();
+        ImageViewer::get().addImage(curl);
+        ImageViewer::get().exec();
     }
     return 0;
     */
@@ -1825,8 +1855,8 @@ int main(int argc, char *argv[])
             grid.gaussianSmooth(sigma, false);
         });
     }
-    ImageViewer::get()->addImage(grid.gaussianSmooth(50.f, true));
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(grid.gaussianSmooth(50.f, true));
+    ImageViewer::get().exec();
 
     return 0;
     */
@@ -1849,16 +1879,16 @@ int main(int argc, char *argv[])
             }
             res(p) = colorPalette(iter / float(maxIter), {Vector3(0, 0, 0), Vector3(1, 1, 1), Vector3(0, 0, 1)});
         });
-        ImageViewer::get()->addImage(res);
-        ImageViewer::get()->show();
+        ImageViewer::get().addImage(res);
+        ImageViewer::get().show();
     };
 
 
-    QObject::connect(ImageViewer::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+    QObject::connect(ImageViewer::get().chartView, &ChartView::mouseMoved, [&](Vector3 p) {
         recompute({(p.x() - .5f) * 2.f, (p.y() - .5f) * 2.f});
     });
     recompute({0.f, 0.f});
-    ImageViewer::get()->exec();
+    ImageViewer::get().exec();
     return 0;
     */
 
@@ -1875,9 +1905,9 @@ int main(int argc, char *argv[])
 
     curve = curve.resamplePoints(200).resamplePoints(10);
     auto path = curve.points; // curve.getPath(100, true);
-    ImageViewer::get()->addScatter(path);
-    ImageViewer::get()->addPlot(path);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addScatter(path);
+    ImageViewer::get().addPlot(path);
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -1896,8 +1926,8 @@ int main(int argc, char *argv[])
         points[i] = Vector3(r, std::sin(phi) * r).rotate(0, 0, initialAngle) + startPosition;
     }
 
-    ImageViewer::get()->addScatter(points);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addScatter(points);
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -1982,10 +2012,10 @@ int main(int argc, char *argv[])
 
             });
         });
-        ImageViewer::get()->addImage(img);
-        ImageViewer::get()->show();
+        ImageViewer::get().addImage(img);
+        ImageViewer::get().show();
     };
-    QObject::connect(ImageViewer::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+    QObject::connect(ImageViewer::get().chartView, &ChartView::mouseMoved, [&](Vector3 p) {
         float r = p.x() * 1.f * size.x;
         float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
@@ -1996,7 +2026,7 @@ int main(int argc, char *argv[])
 
     f(10, 0, center + Vector3(0, 10, 0));
 
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2041,10 +2071,10 @@ int main(int argc, char *argv[])
 
             });
         });
-        ImageViewer::get()->addImage(img);
-        ImageViewer::get()->show();
+        ImageViewer::get().addImage(img);
+        ImageViewer::get().show();
     };
-    QObject::connect(ImageViewer::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+    QObject::connect(ImageViewer::get().chartView, &ChartView::mouseMoved, [&](Vector3 p) {
         float r = p.x() * 1.f * size.x;
         float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
@@ -2055,7 +2085,7 @@ int main(int argc, char *argv[])
 
     f(10, 0, center + Vector3(0, 10, 0));
 
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2112,10 +2142,10 @@ int main(int argc, char *argv[])
                 img[i] *= colorPalette(divergence[i], {Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 0, 1)});
             });
         });
-        ImageViewer::get()->addImage(img);
-        ImageViewer::get()->show();
+        ImageViewer::get().addImage(img);
+        ImageViewer::get().show();
     };
-    QObject::connect(ImageViewer::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+    QObject::connect(ImageViewer::get().chartView, &ChartView::mouseMoved, [&](Vector3 p) {
         float r = p.x() * 1.f * size.x;
         float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
@@ -2126,7 +2156,7 @@ int main(int argc, char *argv[])
 
     f(10, 0, center + Vector3(0, 10, 0));
 
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2160,8 +2190,8 @@ int main(int argc, char *argv[])
     off << heightmap.getGeometry().toSTL();
     off.close();
 //    return 0;
-    ImageViewer::get()->addImage(img);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(img);
+    return ImageViewer::get().exec();
     */
 
 
@@ -2220,8 +2250,8 @@ int main(int argc, char *argv[])
         img(p) = initialImage(p + k1.evaluate(p + k2.evaluate(p))); // initialImage(p + k1.evaluate(p) + k2.evaluate(p));
     });
 
-    ImageViewer::get()->addImage(img);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(img);
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2314,8 +2344,8 @@ int main(int argc, char *argv[])
 //        imgV3(p0) = dd1;
     }
 
-    ImageViewer::get()->addImage(imgV3);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(imgV3);
+    return ImageViewer::get().exec();
                 */
 
     /*Vector3 size(400, 400, 1);
@@ -2353,11 +2383,11 @@ int main(int argc, char *argv[])
             img(path[i]) = colorPalette(float(i) / float(path.size() - 1));
         }
 
-        ImageViewer::get()->addImage(img);
-        ImageViewer::get()->show();
+        ImageViewer::get().addImage(img);
+        ImageViewer::get().show();
     });
-    ImageViewer::get()->addImage(heights);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(heights);
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2404,8 +2434,8 @@ int main(int argc, char *argv[])
         // }
     }
 
-    ImageViewer::get()->addImage(img);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(img);
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2420,8 +2450,8 @@ int main(int argc, char *argv[])
 
     gradients = gradients.gaussianSmooth(15.f, true, true);
 
-    ImageViewer::get()->addImage(gradients);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(gradients);
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2435,12 +2465,12 @@ int main(int argc, char *argv[])
         velocities(p) = Vector3(random_gen::generate_perlin(p.x() * (500.f / fieldSize.x), p.y() * (500.f / fieldSize.y)), random_gen::generate_perlin(p.x() * (500.f / fieldSize.x), p.y() * (500.f / fieldSize.y) + 10), 0);
     });
     displayProcessTime("Vector field... ", [&]() {
-        ImageViewer::get()->addVectorField(velocities, 1/10.f, resultImageSize);
+        ImageViewer::get().addVectorField(velocities, 1/10.f, resultImageSize);
     });
     displayProcessTime("Stream lines... ", [&]() {
-        ImageViewer::get()->addStreamLines(velocities, resultImageSize);
+        ImageViewer::get().addStreamLines(velocities, resultImageSize);
     });
-    return ImageViewer::get()->exec();
+    return ImageViewer::get().exec();
     */
 
     /*
@@ -2458,17 +2488,17 @@ int main(int argc, char *argv[])
         flow(p) = Vector3(20.f * normalizedGaussian(5.f, std::pow((p.y() - (size.y() * .5f)) * (100.f / size.x), 2)), 10.f * sin(p.x() * .1f * (100.f / size.x)), 0) * strength;
     });
 
-    ImageViewer::get()->setNormalizedModeImage(true);
+    ImageViewer::get().setNormalizedModeImage(true);
 
-    ImageViewer::get()->addImage(grid);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(grid);
+    ImageViewer::get().exec();
 
     for (int precision : {1, 5, 20, 100, 20}) {
         displayProcessTime("Time for precision = " + std::to_string(precision), [&]() {
             auto result = grid.warpWith(flow, precision);
-            ImageViewer::get()->addImage(result);
+            ImageViewer::get().addImage(result);
         });
-        ImageViewer::get()->exec();
+        ImageViewer::get().exec();
     }
     return 0;*/
 
@@ -2516,7 +2546,7 @@ int main(int argc, char *argv[])
     }
 
 
-    ImageViewer::get()->setNormalizedModeImage(true);
+    ImageViewer::get().setNormalizedModeImage(true);
 
     displayProcessTime("1) ", [&]() {
         int nbPathsPerRange = 5;
@@ -2531,8 +2561,8 @@ int main(int argc, char *argv[])
             heights = heights.meanSmooth(3, 3, 1);
         }
     });
-    ImageViewer::get()->addImage(heights);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(heights);
+    ImageViewer::get().exec();
 
     displayProcessTime("2) ", [&]() {
         heights.iterateParallel([&] (const Vector3& pos) {
@@ -2551,8 +2581,8 @@ int main(int argc, char *argv[])
         heights = heights.gaussianSmooth(2.f);
     });
 
-    ImageViewer::get()->addImage(heights);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(heights);
+    ImageViewer::get().exec();
     heights.reset();
     displayProcessTime("3) ", [&]() {
         heights.iterateParallel([&] (const Vector3& pos) {
@@ -2565,13 +2595,13 @@ int main(int argc, char *argv[])
         heights = heights.gaussianSmooth(2.f);
     });
 
-    ImageViewer::get()->addImage(heights);
-    ImageViewer::get()->exec();
+    ImageViewer::get().addImage(heights);
+    ImageViewer::get().exec();
 
     heights.reset();
 
 
-    ImageViewer::get()->setNormalizedModeImage(true);
+    ImageViewer::get().setNormalizedModeImage(true);
     float scale = 8;
     heights = GridF(size.x() / 8, size.y() / 8, 1);
     for (auto& path : randomPaths)
@@ -2600,8 +2630,8 @@ int main(int argc, char *argv[])
 
 
 
-    ImageViewer::get()->addImage(heights);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(heights);
+    return ImageViewer::get().exec();
 
     */
     /*
@@ -2615,8 +2645,8 @@ int main(int argc, char *argv[])
             img(p) = random_gen::generate_fbm(p.x, p.y, 0, octaves, gain, lacunarity);
         });
     });
-    ImageViewer::get()->addImage(img);
-    return ImageViewer::get()->exec();
+    ImageViewer::get().addImage(img);
+    return ImageViewer::get().exec();
     */
     // auto computeGreenCoordinates = [&](const Vector3& p, const ShapeCurve& polygon) -> std::vector<float> {
     //     std::vector<float> greenCoords;
@@ -2722,8 +2752,8 @@ int main(int argc, char *argv[])
     //         img(pp) = Vector3(1, 1, 1);
     // }
 
-    // ImageViewer::get()->addImage(img);
-    // return ImageViewer::get()->exec();
+    // ImageViewer::get().addImage(img);
+    // return ImageViewer::get().exec();
     // return 0;
 
 

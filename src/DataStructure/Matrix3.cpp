@@ -20,7 +20,7 @@ Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
     return returningGrid;
 }
 template <>
-Matrix3<Vector3> Matrix3<Vector3>::rot() const {
+inline Matrix3<Vector3> Matrix3<Vector3>::rot() const {
     return this->curl();
 }
 
@@ -319,7 +319,7 @@ std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
     while (grid.max() != 0) {
         std::vector<Vector3> contour;
         // Find the starting point (the first 1 encountered in the grid)
-        Vector3 start(false);
+        Vector3i start(false);
 
         grid.iterate([&] (size_t i) {
             if (!start.isValid() && grid[i] == 1) {
@@ -332,12 +332,12 @@ std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
         if (!start.isValid()) return curves;
 
         // Start from the initial point and do a simple DFS to find the contour
-        std::vector<Vector3> q;
+        std::vector<Vector3i> q;
         q.push_back(start);
         grid(start) = 0;  // Mark as visited
 
         while (!q.empty()) {
-            Vector3 current = q.back();
+            Vector3i current = q.back();
             q.pop_back();
             // Add to contour
             contour.push_back(current);
@@ -345,7 +345,7 @@ std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     if (!(dx == 0 || dy == 0)) continue;
-                    Vector3 nextPos(current.x() + dx, current.y() + dy);
+                    Vector3i nextPos(current.x() + dx, current.y() + dy);
                     if (grid(nextPos)) {
                         q.push_back(nextPos);
                         grid(nextPos) = 0;
@@ -390,7 +390,7 @@ Vector3 Matrix3<Vector3>::gradient(const Vector3& position) const
 }
 
 template <>
-Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ) const
+inline Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ) const
 {
     return gradient(Vector3(posX, posY, posZ));
 }
@@ -567,6 +567,7 @@ GridF loadGridF(const std::string &str, bool binaryMode)
         data.sizeX = width;
         data.sizeY = depth;
         data.sizeZ = height;
+        data._updateStrides();
     } else {
         inFile >> width >> depth >> height;
         data = GridF(width, depth, height);
@@ -604,6 +605,7 @@ GridV3 loadGridV3(const std::string &str, bool binaryMode)
         data.sizeX = width;
         data.sizeY = depth;
         data.sizeZ = height;
+        data._updateStrides();
     } else {
         inFile >> width >> depth >> height;
         data = GridF(width, depth, height);

@@ -58,7 +58,7 @@ public:
     void cleanLayer(int x, int y, float minLayerHeight = 0.f);
     void cleanLayers(float minLayerHeight = 0.f);
 
-    LayerBasedGrid *transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material);
+    LayerBasedGrid& transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material);
 
     void add(ImplicitPatch* patch);
 

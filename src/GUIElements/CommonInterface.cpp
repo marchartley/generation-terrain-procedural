@@ -8,7 +8,7 @@
 UIElement::UIElement(QWidget* widget)
     : element(widget)
 {
-
+    // element->setParent(this);
 }
 
 QWidget* UIElement::getWidget() const {
@@ -24,8 +24,10 @@ void UIElement::cleanupConnections() {
 
 void UIElement::update()
 {
+    element->update();
     return this->get()->update();
 }
+
 
 
 UIElement::~UIElement() {
@@ -33,11 +35,12 @@ UIElement::~UIElement() {
     element->deleteLater();
 }
 
-void UIElement::setName(const std::string& name)
+UIElement& UIElement::setName(const std::string& name)
 {
     this->name = name;
+    return *this;
 }
-const std::string &UIElement::getName() const
+const std::string& UIElement::getName() const
 {
     return name;
 }
@@ -52,10 +55,10 @@ QLabel* LabelElement::label()
     return qobject_cast<QLabel*>(getWidget());
 }
 
-LabelElement* LabelElement::setText(const std::string& newText)
+LabelElement& LabelElement::setText(const std::string& newText)
 {
     this->label()->setText(QString::fromStdString(newText));
-    return this;
+    return *this;
 }
 
 std::string LabelElement::getText()
@@ -86,7 +89,7 @@ QPushButton* ButtonElement::button() {
     return qobject_cast<QPushButton*>(getWidget());
 }
 
-ButtonElement* ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunction, int delay_ms)
+ButtonElement& ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunction, int delay_ms)
 {
     if (this->pressedTimer != nullptr) delete this->pressedTimer;
     this->pressedTimer = new QTimer(this);
@@ -106,7 +109,7 @@ ButtonElement* ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunctio
     this->setOnRelease([=]() {
         this->pressedTimer->stop();
     });
-    return this;
+    return *this;
 }
 
 
@@ -146,7 +149,7 @@ QLabel* SliderElement::label() const
     return this->_label;
 }
 
-SliderElement* SliderElement::bindTo(float &value) {
+SliderElement& SliderElement::bindTo(float &value) {
     _slider->setfValue(value);
     boundVariable = value;
     setOnValueChanged([this](float newValue) {
@@ -154,7 +157,7 @@ SliderElement* SliderElement::bindTo(float &value) {
             boundVariable->get() = newValue;
         }
     });
-    return this;
+    return *this;
 }
 
 void SliderElement::update()
@@ -188,7 +191,7 @@ QCheckBox* CheckboxElement::checkBox() {
     return qobject_cast<QCheckBox*>(getWidget());
 }
 
-CheckboxElement* CheckboxElement::bindTo(bool &value)
+CheckboxElement& CheckboxElement::bindTo(bool &value)
 {
     checkBox()->setChecked(value);
     boundVariable = value;
@@ -197,7 +200,7 @@ CheckboxElement* CheckboxElement::bindTo(bool &value)
             boundVariable->get() = newValue;
         }
     });
-    return this;
+    return *this;
 }
 
 void CheckboxElement::update()
@@ -207,9 +210,10 @@ void CheckboxElement::update()
     return UIElement::update();
 }
 
-InterfaceUI::InterfaceUI(QLayout* layout, bool tight, std::string title)
+InterfaceUI::InterfaceUI(QLayout* layout, bool tight, const std::string& title)
     : UIElement(new QGroupBox), title(title)
 {
+    if (layout == nullptr) layout = new QVBoxLayout;
     if (tight) {
         layout->setSpacing(0);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -221,9 +225,9 @@ InterfaceUI::InterfaceUI(QLayout* layout, bool tight, std::string title)
 
 InterfaceUI::~InterfaceUI()
 {
-    /*for (auto& child : elements) {
+    for (auto& child : elements) {
         child->deleteLater();
-    }*/
+    }
     elements.clear();
 }
 
@@ -232,7 +236,8 @@ QGroupBox* InterfaceUI::box() const
     return qobject_cast<QGroupBox*>(getWidget());
 }
 
-UIElement* InterfaceUI::add(UIElement* element, std::string name)
+
+UIElement* InterfaceUI::add(UIElement* element, const std::string& name)
 {
     box()->layout()->addWidget(element->get());
     element->setName(name);
@@ -241,119 +246,72 @@ UIElement* InterfaceUI::add(UIElement* element, std::string name)
     return element;
 }
 
-std::vector<UIElement*> InterfaceUI::add(std::vector<UIElement* > elements)
+void InterfaceUI::add(std::vector<UIElement*> elements)
 {
     for (auto& element : elements)
         this->add(element);
-    return elements;
 }
 
-std::vector<UIElement*> InterfaceUI::add(std::vector<std::pair<UIElement* , std::string> > elementsAndNames)
+void InterfaceUI::add(std::vector<std::pair<UIElement* , std::string> > elementsAndNames)
 {
-    std::vector<UIElement*> justElements(elementsAndNames.size());
     for (size_t i = 0; i < elementsAndNames.size(); i++) {
         auto& element = elementsAndNames[i].first;
         auto& name = elementsAndNames[i].second;
         this->add(element, name);
-        justElements[i] = element;
     }
-    return justElements;
 }
 
 UIElement* InterfaceUI::add(QLayout* layout, std::string name)
 {
-    InterfaceUI* interface = new InterfaceUI(layout, true, name);
+    auto interface = new InterfaceUI(layout, true, name);
     return this->add(interface, name);
 }
 
-UIElement* InterfaceUI::find(const std::string& name)
+/*
+UIElement& InterfaceUI::find(const std::string& name)
 {
     for (size_t i = 0; i < names.size(); i++)
         if (names[i] == name)
-            return elements[i];
+            return *(elements[i]);
     return nullptr;
 }
+*/
 
-InterfaceUI* InterfaceUI::clear()
+InterfaceUI& InterfaceUI::clear()
 {
     for (auto& child : this->elements) {// box()->children()) {
-        child->cleanupConnections();
-        child->deleteLater();
         if (auto interfaceChild = dynamic_cast<InterfaceUI*>(child))
             interfaceChild->clear();
+        child->cleanupConnections();
+        child->deleteLater();
     }
     this->elements.clear();
     this->names.clear();
-    return this;
+    return *this;
 }
 
 void InterfaceUI::update()
 {
     for (auto& child : this->elements) {// box()->children()) {
-        if (auto asUIElement = dynamic_cast<UIElement*>(child)) {
-            asUIElement->update();
-        }
+        child->update();
     }
-    return UIElement::update();
-}
-
-RadioButtonElement::RadioButtonElement(const std::string& label)
-    : UIElement(new QRadioButton(QString::fromStdString(label)))
-{
-
-}
-
-RadioButtonElement::RadioButtonElement(const std::string& label, bool &binded)
-    : RadioButtonElement(label)
-{
-    bindTo(binded);
-}
-
-RadioButtonElement::RadioButtonElement(const std::string& label, const std::function<void (bool)> &onCheck)
-    : RadioButtonElement(label)
-{
-    this->setOnChecked(onCheck);
-}
-
-
-QRadioButton* RadioButtonElement::radioButton() const
-{
-    return qobject_cast<QRadioButton*>(getWidget());
-}
-
-RadioButtonElement* RadioButtonElement::bindTo(bool &value)
-{
-    radioButton()->setChecked(value);
-    boundVariable = value;
-    setOnChecked([this](bool newValue) {
-        if (boundVariable) {
-            boundVariable->get() = newValue;
-        }
-    });
-    return this;
-}
-
-void RadioButtonElement::update()
-{
-    if (this->boundVariable.has_value())
-        radioButton()->setChecked(*this->boundVariable);
     return UIElement::update();
 }
 
 InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets)
 {
-    InterfaceUI* interface = new InterfaceUI(new QHBoxLayout);
-    for (UIElement*& w : widgets) {
-        interface->add(w);
+    auto interface = new InterfaceUI(new QHBoxLayout);
+    for (auto& w : widgets) {
+        interface->add(std::move(w));
     }
     return interface;
 }
 
 InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets)
 {
-    InterfaceUI* interface = new InterfaceUI(new QVBoxLayout);
-    for (UIElement*& w : widgets) {
-        interface->add(w);
+    auto interface = new InterfaceUI();
+    for (auto& w : widgets) {
+        interface->add(std::move(w));
     }
     return interface;
 }
@@ -361,17 +319,13 @@ InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets)
 InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns)
 {
     QGridLayout* layout = new QGridLayout;
-    // QGroupBox* group = new QGroupBox;
-    //    for (QWidget*& w : widgets)
     for (size_t i = 0; i < widgets.size(); i++) {
         auto& w = widgets[i];
         int row = int (i / nbColumns);
         int col = i % nbColumns;
 
         layout->addWidget(w->get(), row, col);
-        // layout->addWidget(w->get(), row, col);
     }
-    // group->setLayout(layout);
     return new InterfaceUI(layout); // group;
 }
 
@@ -400,24 +354,22 @@ QLineEdit* TextEditElement::lineEdit()
     return dynamic_cast<QLineEdit*>(_lineEdit);
 }
 
-TextEditElement *TextEditElement::setText(const std::string &newText)
+TextEditElement& TextEditElement::setText(const std::string &newText)
 {
-    /*if (boundVariable) {
-        *boundVariable = newText;
-    }*/
     lineEdit()->setText(QString::fromStdString(newText));
+    return *this;
 }
 
-TextEditElement* TextEditElement::setOnTextChange(std::function<void (const std::string&)> func)
+TextEditElement& TextEditElement::setOnTextChange(std::function<void (const std::string&)> func)
 {
 //    this->addConnection()
     QObject::connect(_lineEdit, &QLineEdit::textChanged, this, [=](QString newText){ // /!\ Capture function by value
         func(newText.toStdString());
     });
-    return this;
+    return *this;
 }
 
-TextEditElement* TextEditElement::bindTo(std::string& value)
+TextEditElement& TextEditElement::bindTo(std::string& value)
 {
     lineEdit()->setText(QString::fromStdString(value));
     boundVariable = value;
@@ -426,7 +378,7 @@ TextEditElement* TextEditElement::bindTo(std::string& value)
             boundVariable->get() = newValue;
         }
     });
-    return this;
+    return *this;
 }
 
 void TextEditElement::update()
@@ -462,7 +414,7 @@ QDial *AngleElement::dial() const
     return this->_dial;
 }
 
-AngleElement *AngleElement::bindTo(float &value)
+AngleElement& AngleElement::bindTo(float &value)
 {
     dial()->setValue((int)value);
     boundVariable = value;
@@ -471,7 +423,7 @@ AngleElement *AngleElement::bindTo(float &value)
             boundVariable->get() = newValue;
         }
     });
-    return this;
+    return *this;
 }
 
 void AngleElement::update()
@@ -512,7 +464,7 @@ QLabel* RangeSliderElement::label()
     return _label;
 }
 
-RangeSliderElement* RangeSliderElement::bindTo(float &valueMin, float &valueMax)
+RangeSliderElement& RangeSliderElement::bindTo(float &valueMin, float &valueMax)
 {
     slider()->setMinValue(valueMin);
     slider()->setMaxValue(valueMax);
@@ -526,7 +478,7 @@ RangeSliderElement* RangeSliderElement::bindTo(float &valueMin, float &valueMax)
             boundVariableMax->get() = newMax;
         }
     });
-    return this;
+    return *this;
 }
 
 void RangeSliderElement::update()
@@ -563,22 +515,22 @@ QtColorPicker* ColorPickerElement::colorPicker() const
     return _colorPicker;
 }
 
-ColorPickerElement* ColorPickerElement::setOnSelectionChanged(std::function<void (const Vector3&)> func)
+ColorPickerElement& ColorPickerElement::setOnSelectionChanged(std::function<void (const Vector3&)> func)
 {
     QObject::connect(_colorPicker, &QtColorPicker::colorChanged, this, [=](QColor color) {
         func(ColorPickerElement::qColorToVec3(color));
     });
-    return this;
+    return *this;
 }
 
-ColorPickerElement* ColorPickerElement::bindTo(Vector3& colorSelected)
+ColorPickerElement& ColorPickerElement::bindTo(Vector3& colorSelected)
 {
     boundColor = colorSelected;
     colorPicker()->setCurrentColor(ColorPickerElement::vec3ToQColor(colorSelected));
-    this->setOnSelectionChanged([&](Vector3 color) {
+    this->setOnSelectionChanged([=](Vector3 color) {
         this->boundColor->get() = color;
     });
-    return this;
+    return *this;
 }
 
 Vector3 ColorPickerElement::getSelection() const
@@ -612,32 +564,32 @@ HierarchicalListWidget *HierarchicalListUI::hierarchicalList()
     return qobject_cast<HierarchicalListWidget*>(this->getWidget());
 }
 
-HierarchicalListUI* HierarchicalListUI::setSelectionMode(QAbstractItemView::SelectionMode mode)
+HierarchicalListUI& HierarchicalListUI::setSelectionMode(QAbstractItemView::SelectionMode mode)
 {
     this->hierarchicalList()->setSelectionMode(mode);
-    return this;
+    return *this;
 }
 
 
-HierarchicalListUI* HierarchicalListUI::clear()
+HierarchicalListUI& HierarchicalListUI::clear()
 {
     this->hierarchicalList()->clear();
-    return this;
+    return *this;
 }
 
-HierarchicalListUI* HierarchicalListUI::addItem(HierarchicalListWidgetItemBase* item)
+HierarchicalListUI& HierarchicalListUI::addItem(HierarchicalListWidgetItemBase* item)
 {
     this->hierarchicalList()->addItem(item);
-    return this;
+    return *this;
 }
 
-HierarchicalListUI* HierarchicalListUI::setCurrentItems(std::vector<int> selectedIDs)
+HierarchicalListUI& HierarchicalListUI::setCurrentItems(std::vector<int> selectedIDs)
 {
     this->hierarchicalList()->setCurrentItems(selectedIDs);
-    return this;
+    return *this;
 }
 
-std::vector<HierarchicalListWidgetItemBase *> HierarchicalListUI::selectedItems()
+std::vector<HierarchicalListWidgetItemBase*> HierarchicalListUI::selectedItems()
 {
     auto qItems = this->hierarchicalList()->selectedItems();
     std::vector<HierarchicalListWidgetItemBase*> items;
@@ -677,14 +629,20 @@ FloatInputElement::FloatInputElement(const std::string& label, std::function<voi
     QObject::connect(_spinbox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [=](double newValue){ onChange(newValue); });
 }
 
-FloatInputElement *FloatInputElement::bindTo(float& value)
+FloatInputElement& FloatInputElement::setValue(float newValue)
+{
+    spinbox()->setValue(newValue);
+    return *this;
+}
+
+FloatInputElement& FloatInputElement::bindTo(float& value)
 {
     boundVariable = value;
     spinbox()->setValue(value);
-    this->setOnValueChange([&](float newValue) {
+    this->setOnValueChanged([=](float newValue) {
         this->boundVariable->get() = newValue;
     });
-    return this;
+    return *this;
 }
 
 void FloatInputElement::update()

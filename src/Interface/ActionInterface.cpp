@@ -39,8 +39,8 @@ void ActionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::
     this->affectImplicitTerrain(implicitPatch);
 }
 
-QLayout *ActionInterface::createGUI() {
-    return nullptr;
+InterfaceUI* ActionInterface::createGUI() {
+    return new InterfaceUI();
 }
 
 void ActionInterface::display([[maybe_unused]] const Vector3 &camPos) {

@@ -14,38 +14,49 @@ FLIPSimulationInterface::FLIPSimulationInterface(QWidget *parent)
     displayOnlyAtSurface = false;
 }
 
-QLayout *FLIPSimulationInterface::createGUI()
+InterfaceUI* FLIPSimulationInterface::createGUI()
 {
-    QLayout* layout = new QVBoxLayout();
-
-    InterfaceUI* ui = new InterfaceUI(new QVBoxLayout, "FLIP");
+    auto UI = new InterfaceUI();
 
 
     auto resetButton = new ButtonElement("Reset", [&](){ this->resetParticles(); });
     auto particleCountSlider = new SliderElement("# particles", 5, 10000, 1);
-    particleCountSlider->slider()->setfValue(this->simulation->maxParticles);
-    particleCountSlider->setOnValueChanged([&](float newValue) { this->simulation->maxParticles = newValue; });
     auto particleRadiusSlider = new SliderElement("Particle radius", .1f, 3.f, .01f);
-    particleRadiusSlider->slider()->setfValue(this->simulation->particleRadius);
-    particleRadiusSlider->setOnValueChanged([&](float newValue) { this->simulation->particleRadius = newValue; });
     auto particleDensitySlider = new SliderElement("Particle density", 1.f, 2000.f, 1.f);
-    particleDensitySlider->slider()->setfValue(this->simulation->density);
-    particleDensitySlider->setOnValueChanged([&](float newValue) { this->simulation->density = newValue; });
     auto particleFLIPRatioSlider = new SliderElement("FLIP ratio", 0.f, 1.f, .05f);
-    particleFLIPRatioSlider->slider()->setfValue(this->simulation->flipRatio);
-    particleFLIPRatioSlider->setOnValueChanged([&](float newValue) { this->simulation->flipRatio = newValue; });
     auto averagingSlider = new SliderElement("Averaging", 0.f, 100.f, 1.f);
-    averagingSlider->slider()->setfValue(this->simulation->averaging);
-    averagingSlider->setOnValueChanged([&](float newValue) { this->simulation->averaging = newValue; });
-    /*auto spacingSlider = new SliderElement("Spacing", 0.1f, 1.f, .01f);
-    spacingSlider->slider()->setfValue(1.f / this->simulation->fInvSpacing);
-    spacingSlider->setOnValueChanged([&](float newValue) { this->simulation->fInvSpacing = 1.f / newValue; });*/
+
     auto driftCheckbox = new CheckboxElement("Compensate drift?", simulation->compensateDrift);
     auto overrelaxationSlider = new SliderElement("Overrelaxation", 0.01f, 2.f, 0.01f, simulation->overRelaxation);
     auto numIterationsSlider = new SliderElement("Iterations", 0, 30, 1);
+
+
+
+
+
+    particleCountSlider->slider()->setfValue(this->simulation->maxParticles);
+    particleCountSlider->setOnValueChanged([=](float newValue) { this->simulation->maxParticles = newValue; });
+
+    particleRadiusSlider->slider()->setfValue(this->simulation->particleRadius);
+    particleRadiusSlider->setOnValueChanged([=](float newValue) { this->simulation->particleRadius = newValue; });
+
+    particleDensitySlider->slider()->setfValue(this->simulation->density);
+    particleDensitySlider->setOnValueChanged([=](float newValue) { this->simulation->density = newValue; });
+
+    particleFLIPRatioSlider->slider()->setfValue(this->simulation->flipRatio);
+    particleFLIPRatioSlider->setOnValueChanged([=](float newValue) { this->simulation->flipRatio = newValue; });
+
+    averagingSlider->slider()->setfValue(this->simulation->averaging);
+    averagingSlider->setOnValueChanged([=](float newValue) { this->simulation->averaging = newValue; });
+
     numIterationsSlider->slider()->setValue(simulation->numIterations);
-    numIterationsSlider->setOnValueChanged([&](float newVal) { simulation->numIterations = newVal; });
-    ui->add({
+    numIterationsSlider->setOnValueChanged([=](float newVal) { simulation->numIterations = newVal; });
+
+
+
+
+
+    UI->add(std::vector<UIElement*>{
                 resetButton,
                 particleCountSlider,
                 particleRadiusSlider,
@@ -57,11 +68,10 @@ QLayout *FLIPSimulationInterface::createGUI()
                 overrelaxationSlider,
                 numIterationsSlider
             });
-    ui->add(AbstractFluidSimulationInterface::createGUI()); // Still use the default system
 
-    layout->addWidget(ui->get());
+    UI->add(AbstractFluidSimulationInterface::createGUI()); // Still use the default system
 
-    return layout;
+    return UI;
 }
 
 void FLIPSimulationInterface::updateParticlesMesh()
@@ -159,9 +169,9 @@ void FLIPSimulationInterface::keyPressEvent(QKeyEvent *e)
     if (e->key() == Qt::Key_V) {
         GridF data(changesHistory.size(), 1, 1);
         data.data = changesHistory;
-        ImageViewer::get()->reset();
-        ImageViewer::get()->addPlot(data.medianBlur(20, 3, 3, true).data);
-        ImageViewer::get()->show();
+        ImageViewer::get().reset();
+        ImageViewer::get().addPlot(data.medianBlur(20, 3, 3, true).data);
+        ImageViewer::get().show();
         e->accept();
     }
     return AbstractFluidSimulationInterface::keyPressEvent(e);
