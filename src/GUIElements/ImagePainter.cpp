@@ -30,24 +30,7 @@ ImagePainter::ImagePainter(const std::string& name, QWidget* parent)
         this->show();
     });
 }
-/*
-ImagePainter *ImagePainter::getInstance(const std::string& name)
-{
-    if (name == "") name = ImagePainter::defaultName;
-    if (ImagePainter::instances.count(name) == 0) {
-        ImagePainter::init(name);
-    }
-    return dynamic_cast<ImagePainter*>(ImagePainter::instances[name]);
-}
 
-ImagePainter *ImagePainter::init(const std::string& name, ChartView *chartView, QWidget *parent)
-{
-    if (ImagePainter::instances.count(name))
-        delete ImagePainter::instances[name];
-    ImagePainter::instances[name] = new ImagePainter(name, chartView, parent);
-    return ImagePainter::getInstance(name);
-}
-*/
 ImagePainter& ImagePainter::updateToolsInterface()
 {
     this->toolsInterface->clear();
@@ -59,10 +42,7 @@ ImagePainter& ImagePainter::updateToolsInterface()
 
 ImagePainter& ImagePainter::updateViewOptionsInterface()
 {
-    // if (this->viewOptionsInterface != nullptr)
-        this->viewOptionsInterface->clear();
-    // else
-        // this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
+    this->viewOptionsInterface->clear();
 
     if (this->painterParams.RGBimage)
         this->viewOptionsInterface->add(std::move(ImageViewerOptionsUI::createRGBImageViewerOptions(this)));

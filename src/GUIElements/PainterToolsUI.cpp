@@ -5,7 +5,7 @@
 
 InterfaceUI* PainterToolsUI::createPainterToolsUI(PainterToolParams *params)
 {
-    auto UI = new InterfaceUI(); // (new QVBoxLayout(), true, "Painting tools");
+    auto UI = new InterfaceUI(InterfaceUI::VERTICAL, true, "Painting tools");
 
     auto radiusSlider = new SliderElement("Radius", params->minRadius, params->maxRadius, 1.f, params->radius);
     auto amountSlider = new SliderElement("Opacity", params->minOpacity, params->maxOpacity, 0.01f, params->opacity);
@@ -31,7 +31,7 @@ InterfaceUI* PainterToolsUI::createPainterToolsUI(PainterToolParams *params)
         amountSlider,
         falloffSlider,
         colorPicker,
-        createHorizontalGroupUI({addCheck, replaceCheck})
+        createHorizontalGroup({addCheck, replaceCheck})
     });
 
     return UI;
@@ -174,10 +174,10 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
         radialScaleSlider,
         muSlider,
         poissonSlider,
-        createHorizontalGroupUI(std::vector<UIElement*>{pinchRadio, twistRadio, grabRadio, scaleRadio}),
+        createHorizontalGroup(std::vector<UIElement*>{pinchRadio, twistRadio, grabRadio, scaleRadio}),
         kelvinletsHistory,
         deleteKelvinletButton,
-        createHorizontalGroupUI(std::vector<UIElement*>{displayAsArrowsCheckbox, displayAsFlowLinesCheckbox, displayNoDisplayCheckbox})
+        createHorizontalGroup(std::vector<UIElement*>{displayAsArrowsCheckbox, displayAsFlowLinesCheckbox, displayNoDisplayCheckbox})
     });
 
     radialScaleSlider->setOnValueChanged([=](float) {

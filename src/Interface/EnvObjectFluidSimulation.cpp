@@ -92,7 +92,7 @@ InterfaceUI* EnvObjectFluidSimulation::createGUI()
         displayParticlesButton,
         displayVectorsButton,
         autoComputeButton,
-        createHorizontalGroupUI({ computeButton, updateMeshButton })
+        createHorizontalGroup({ computeButton, updateMeshButton })
     });
     return UI;
 }

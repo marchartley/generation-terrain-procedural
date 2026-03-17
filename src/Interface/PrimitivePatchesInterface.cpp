@@ -205,12 +205,12 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
         heightSlider,
         sigmaSlider,
 
-        createHorizontalGroupUI({applyIntersectionButton, createStructureButton}),
-        createHorizontalGroupUI({addNoiseButton, addDistoButton, addSpreadButton, addRipplesButton, deformFromFlowButton}),
+        createHorizontalGroup({applyIntersectionButton, createStructureButton}),
+        createHorizontalGroup({addNoiseButton, addDistoButton, addSpreadButton, addRipplesButton, deformFromFlowButton}),
         resetButton,
         new UIElement(primitiveSelectionGui),
 
-        createHorizontalGroupUI({selectedFilenameLabel, fileSelectionButton}),
+        createHorizontalGroup({selectedFilenameLabel, fileSelectionButton}),
         enableHotreloadButton,
         patchesCounterLabel
     });
@@ -1906,7 +1906,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
             insideBottomPosButton,
             fixedPosButton,
 
-            createHorizontalGroupUI({ applyIntersectionButton, swapButton })
+            createHorizontalGroup({ applyIntersectionButton, swapButton })
         });
 
     } else {
@@ -2100,7 +2100,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
     auto cancelButton = new ButtonElement("Annuler", [=]() { this->cancel(); });
     auto validButton = new ButtonElement("Confirmer", [=]() { this->confirm(); });
 
-    UI->add(createHorizontalGroupUI({cancelButton, validButton}));
+    UI->add({createHorizontalGroup({cancelButton, validButton})});
     setLayout(UI->get()->layout());
     setSizeGripEnabled(true);
 }

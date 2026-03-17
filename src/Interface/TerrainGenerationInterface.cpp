@@ -519,9 +519,9 @@ InterfaceUI* TerrainGenerationInterface::createGUI()
 
 
     UI->add(std::vector<UIElement*>{
-        createHorizontalGroupUI({heightmapPathLabel, loadHeightmapButton}),
-        createHorizontalGroupUI({reloadButton, saveHeightmapButton}),
-        createHorizontalGroupUI({
+        createHorizontalGroup({heightmapPathLabel, loadHeightmapButton}),
+        createHorizontalGroup({reloadButton, saveHeightmapButton}),
+        createHorizontalGroup({
             widthEdit, new LabelElement("x"), depthEdit, new LabelElement("x"), heightEdit
         }),
         createFromNoiseButton,

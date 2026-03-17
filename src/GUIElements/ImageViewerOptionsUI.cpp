@@ -8,7 +8,7 @@ InterfaceUI* ImageViewerOptionsUI::createRGBImageViewerOptions(AbstractPlotter* 
     // auto& chartView = plotter->chartView;
     const GridV3 img = plotter->dataModel->imageData.image.getColorImage();
 
-    auto UI = new InterfaceUI(new QVBoxLayout(), true, "View options");
+    auto UI = new InterfaceUI(InterfaceUI::VERTICAL, true, "View options");
 
     auto normalizeModeButton = new CheckboxElement("Normalize");
     auto absoluteModeButton = new CheckboxElement("Absolute");
@@ -17,9 +17,9 @@ InterfaceUI* ImageViewerOptionsUI::createRGBImageViewerOptions(AbstractPlotter* 
     auto displayGButton = new CheckboxElement("");
     auto displayBButton = new CheckboxElement("");
 
-    auto rangeR = new RangeSliderElement("", 0, 1, 0.01f);
-    auto rangeG = new RangeSliderElement("", 0, 1, 0.01f);
-    auto rangeB = new RangeSliderElement("", 0, 1, 0.01f);
+    auto rangeR = new RangeSliderElement("", 0, 1, 0.01f, UIElement::VERTICAL);
+    auto rangeG = new RangeSliderElement("", 0, 1, 0.01f, UIElement::VERTICAL);
+    auto rangeB = new RangeSliderElement("", 0, 1, 0.01f, UIElement::VERTICAL);
 
     normalizeModeButton->setChecked(false);
     absoluteModeButton->setChecked(false);
@@ -69,12 +69,12 @@ InterfaceUI* ImageViewerOptionsUI::createRGBImageViewerOptions(AbstractPlotter* 
     UI->add(std::vector<UIElement*>{
         normalizeModeButton,
         absoluteModeButton,
-        createHorizontalGroupUI(std::vector<UIElement*>{
-            createVerticalGroupUI(std::vector<UIElement*>({new LabelElement("R"), new LabelElement(std::to_string(minColors.r())), rangeR, new LabelElement(std::to_string(maxColors.r())), displayRButton})),
-            createVerticalGroupUI(std::vector<UIElement*>({new LabelElement("G"), new LabelElement(std::to_string(minColors.g())), rangeG, new LabelElement(std::to_string(maxColors.g())), displayGButton})),
-            createVerticalGroupUI(std::vector<UIElement*>({new LabelElement("B"), new LabelElement(std::to_string(minColors.b())), rangeB, new LabelElement(std::to_string(maxColors.b())), displayBButton}))
+        createHorizontalGroup(std::vector<UIElement*>{
+            createVerticalGroup(std::vector<UIElement*>({new LabelElement("R"), new LabelElement(std::to_string(minColors.r())), rangeR, new LabelElement(std::to_string(maxColors.r())), displayRButton})),
+            createVerticalGroup(std::vector<UIElement*>({new LabelElement("G"), new LabelElement(std::to_string(minColors.g())), rangeG, new LabelElement(std::to_string(maxColors.g())), displayGButton})),
+            createVerticalGroup(std::vector<UIElement*>({new LabelElement("B"), new LabelElement(std::to_string(minColors.b())), rangeB, new LabelElement(std::to_string(maxColors.b())), displayBButton}))
         }),
-        createVerticalGroupUI(overlayCheckboxes)
+        createVerticalGroup(overlayCheckboxes)
     });
     return UI;
 }
@@ -88,12 +88,12 @@ InterfaceUI* ImageViewerOptionsUI::createGreyImageViewerOptions(AbstractPlotter*
     float mini = greyImg.min();
     float maxi = greyImg.max();
 
-    auto UI = new InterfaceUI(new QVBoxLayout(), true, "View options");
+    auto UI = new InterfaceUI(InterfaceUI::VERTICAL, true, "View options");
 
     auto normalizeModeButton = new CheckboxElement("Normalize");
     auto absoluteModeButton = new CheckboxElement("Absolute");
 
-    auto rangeSlider = new RangeSliderElement("", mini, maxi, 0.01f, Qt::Vertical);
+    auto rangeSlider = new RangeSliderElement("", mini, maxi, 0.01f, UIElement::VERTICAL);
 
 
 
@@ -127,14 +127,14 @@ InterfaceUI* ImageViewerOptionsUI::createGreyImageViewerOptions(AbstractPlotter*
     UI->add(std::vector<UIElement*>{
         normalizeModeButton,
         absoluteModeButton,
-        createHorizontalGroupUI({
-            createVerticalGroupUI(std::vector<UIElement*>{new LabelElement("Value"), rangeSlider}),
-            createVerticalGroupUI(std::vector<UIElement*>{
+        createHorizontalGroup({
+            createVerticalGroup(std::vector<UIElement*>{new LabelElement("Value"), rangeSlider}),
+            createVerticalGroup(std::vector<UIElement*>{
                                  new LabelElement("Min: " + std::to_string(mini)),
                                  new LabelElement("Max: " + std::to_string(maxi))
             })
         }),
-        createVerticalGroupUI(overlayCheckboxes)
+        createVerticalGroup(overlayCheckboxes)
     });
     return UI;
 }

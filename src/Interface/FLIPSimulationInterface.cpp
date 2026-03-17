@@ -69,7 +69,7 @@ InterfaceUI* FLIPSimulationInterface::createGUI()
                 numIterationsSlider
             });
 
-    UI->add(AbstractFluidSimulationInterface::createGUI()); // Still use the default system
+    UI->add({AbstractFluidSimulationInterface::createGUI()});
 
     return UI;
 }

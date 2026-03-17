@@ -8,7 +8,7 @@ class ComboboxLineElementBase;
 template <class T>
 class ComboboxLineElement;
 
-class ComboboxElement : public UIElement {
+class ComboboxElement : public InterfaceUI {
     Q_OBJECT
 public:
     ComboboxElement(const std::string& label);
@@ -42,7 +42,7 @@ public:
     std::optional<std::reference_wrapper<int>> boundIndex;
     //    std::optional<std::reference_wrapper<std::vector<std::string>>> boundValues;
 
-    QLabel* _label;
+    LabelElement* _label;
     QComboBox* _combobox;
 
     //    bool itemsAreImages = false;

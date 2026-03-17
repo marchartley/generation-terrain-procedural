@@ -51,7 +51,7 @@ InterfaceUI* SpheroidalErosionInterface::createGUI()
     auto UI = new InterfaceUI();
     auto applyButton = new ButtonElement("Apply", [=]() { this->applyWeatheringErosion(); });
 
-    UI->add(applyButton);
+    UI->add({applyButton});
 
     return UI;
 }
