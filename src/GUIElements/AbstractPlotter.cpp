@@ -23,19 +23,19 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
 
     this->dataModel = std::make_shared<PlotModel>();
 
-    auto layout = new InterfaceUI(new QVBoxLayout());
-    auto mainLayout = new InterfaceUI(new QHBoxLayout());
+    auto layout = new InterfaceUI(InterfaceUI::VERTICAL);
+    auto mainLayout = new InterfaceUI(InterfaceUI::HORIZONTAL);
 
-    mainInterface = new InterfaceUI(new QVBoxLayout(), "Main");
+    mainInterface = new InterfaceUI(InterfaceUI::VERTICAL, "Main");
     mainInterface->add(new UIElement(this->chartView));
-    toolsInterface = new InterfaceUI(new QVBoxLayout(), "Tools");
-    viewOptionsInterface = new InterfaceUI(new QVBoxLayout(), "View options");
-    saveCopyInterface = new InterfaceUI(new QVBoxLayout(), "Save/Copy");
-    infosInterface = new InterfaceUI(new QHBoxLayout(), "Infos");
+    toolsInterface = new InterfaceUI(InterfaceUI::VERTICAL, "Tools");
+    viewOptionsInterface = new InterfaceUI(InterfaceUI::VERTICAL, "View options");
+    saveCopyInterface = new InterfaceUI(InterfaceUI::VERTICAL, "Save/Copy");
+    infosInterface = new InterfaceUI(InterfaceUI::HORIZONTAL, "Infos");
 
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    viewAndCopyInterface = new InterfaceUI(new QVBoxLayout());
+    viewAndCopyInterface = new InterfaceUI(InterfaceUI::VERTICAL);
     viewAndCopyInterface->add(std::vector<UIElement*>({viewOptionsInterface, saveCopyInterface}));
     //    this->chartView->setMaximumSize(10000, 10000);
     //    this->chartView->chart()->setMaximumSize(10000, 10000);
@@ -67,8 +67,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
     });
     copyToClipboardButton->setOnClick([&]() { this->copyToClipboard(); });
 
-    saveCopyInterface->add(saveButton);
-    saveCopyInterface->add(copyToClipboardButton);
+    saveCopyInterface->add({saveButton, copyToClipboardButton});
 
     this->setLayout(layout->get()->layout());
 

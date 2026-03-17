@@ -85,7 +85,7 @@ InterfaceUI* TunnelInterface::createGUI()
 
     auto tunnelClearControlPointButton = new ButtonElement("Tout retirer", [&](){this->clearTunnelPoints(); /*computeTunnelPreview();*/ });
     auto tunnelWidthSlider = new SliderElement("Width", 1, 30, 1, tunnelWidth);
-    auto tunnelHeightSlider = new SliderElement("Height", 1, 30, 1, tunnelHeight, Qt::Orientation::Vertical);
+    auto tunnelHeightSlider = new SliderElement("Height", 1, 30, 1, tunnelHeight, UIElement::VERTICAL);
     auto tunnelStrengthSlider = new SliderElement("", 0.0f, 3.0f, 0.1f, erosionStrength);
     auto tunnelCreateMatter = new ButtonElement("Arche", [&]() { this->createTunnel(false); });
     auto tunnelRemoveMatter = new ButtonElement("Tunnel", [&]() { this->createTunnel(true); });

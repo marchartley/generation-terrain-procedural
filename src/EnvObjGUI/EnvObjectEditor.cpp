@@ -28,7 +28,7 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
     this->toolsInterface->clear();
     this->toolsInterface->add(std::move(PainterToolsUI::createKelvinletToolsUI(this, &this->kelvinletParams, updateView, updateField)));
 
-    auto bodyKelvinletUI = new InterfaceUI(new QVBoxLayout(), false, "Kelvinlet body editor");
+    auto bodyKelvinletUI = new InterfaceUI(InterfaceUI::VERTICAL, false, "Kelvinlet body editor");
 
     auto simulationModeCheckbox = new CheckboxElement("Simulation", depositionSimulationDisplay);
     auto animatedModeCheckbox = new CheckboxElement("Animate", animating);
@@ -70,29 +70,16 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
             scaleForceSlider
         });
 
-        for (auto& slider : {pinchForceSlider, twistForceSlider, grabForceSlider, scaleForceSlider})
+        for (auto& slider : {pinchForceSlider, twistForceSlider, grabForceSlider, scaleForceSlider}) {
             slider->setOnValueChanged([=](float newValue) {
                 this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
             });
-        /*
-        twistForceSlider->setOnValueChanged([=](float newValue) {
-            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-        });
-
-        grabForceSlider->setOnValueChanged([=](float newValue) {
-            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-        });
-
-        scaleForceSlider->setOnValueChanged([=](float newValue) {
-            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-        });
-        */
-
+        }
     }
 
     bodyKelvinletUI->add(std::vector<UIElement*>{
         anchorSelectionCombobox,
-        createHorizontalGroupUI(std::vector<UIElement*>{simulationModeCheckbox, animatedModeCheckbox}),
+        createHorizontalGroup(std::vector<UIElement*>{simulationModeCheckbox, animatedModeCheckbox}),
         angleInitialFlow,
         strengthInitialFlow,
         validationButton,

@@ -69,8 +69,9 @@ std::string LabelElement::getText()
 
 
 ButtonElement::ButtonElement(const std::string& label)
-    : UIElement(new QPushButton(QString::fromStdString(label))) {
-
+    : UIElement(new QPushButton(QString::fromStdString(label)))
+{
+    this->pressedTimer = new QTimer(this);
     QObject::connect(this->button(), &QObject::destroyed, this, [this](){
         if (pressedTimer) pressedTimer->stop();
     });
@@ -79,6 +80,7 @@ ButtonElement::ButtonElement(const std::string& label)
 ButtonElement::ButtonElement(const std::string& label, std::function<void ()> onClick)
     : UIElement(new QPushButton(QString::fromStdString(label)))
 {
+    this->pressedTimer = new QTimer(this);
     this->setOnClick(onClick);
     QObject::connect(this->button(), &QObject::destroyed, this, [this](){
         if (pressedTimer) pressedTimer->stop();
@@ -89,22 +91,17 @@ QPushButton* ButtonElement::button() {
     return qobject_cast<QPushButton*>(getWidget());
 }
 
-ButtonElement& ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunction, int delay_ms)
+ButtonElement& ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunction, int delay_ms, int startup_time)
 {
-    if (this->pressedTimer != nullptr) delete this->pressedTimer;
-    this->pressedTimer = new QTimer(this);
     this->pressedTimer->setInterval(delay_ms);
+    this->pressedTimer->setSingleShot(true);
     QObject::connect(this->pressedTimer, &QTimer::timeout, this, [=](){
-        if (this->currentRepeatFunctionFinished) {
-            this->currentRepeatFunctionFinished = false;
-            onRepeatFunction();
-            this->currentRepeatFunctionFinished = true;
-        }
-        if(this->button() && this->button()->isDown())
-            this->pressedTimer->setInterval(delay_ms);
+        if(!(this->button() && this->button()->isDown())) return;
+        onRepeatFunction();
+        this->pressedTimer->start(delay_ms);
     });
     this->setOnPressed([=]() {
-        this->pressedTimer->start(1000.f);
+        this->pressedTimer->start(startup_time);
     });
     this->setOnRelease([=]() {
         this->pressedTimer->stop();
@@ -113,27 +110,19 @@ ButtonElement& ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunctio
 }
 
 
-
-
-SliderElement::SliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
-    : UIElement(new QGroupBox)
+SliderElement::SliderElement(const std::string& label, float valMin, float valMax, float multiplier, UIElement::LAYOUT orientation)
+    : InterfaceUI(orientation)
 {
-    this->_slider = new FancySlider(orientation, valMin, valMax, multiplier);
-    this->_label = new QLabel(QString::fromStdString(label));
-
-    QBoxLayout* layout = new QHBoxLayout;
-    layout->setMargin(0);
-    if (!label.empty())
-        layout->addWidget(_label);
-    layout->addWidget(_slider);
-    getWidget()->setLayout(layout);
+    this->_slider = new FancySlider((orientation == HORIZONTAL ? Qt::Horizontal : Qt::Vertical), valMin, valMax, multiplier);
+    this->_label = new LabelElement(label);
+    this->add(std::vector<UIElement*>{_label, new UIElement(_slider)});
 
     defaultValue = valMin;
 
     QObject::connect(this->slider(), &FancySlider::doubleClicked, this, [=]() { this->setValue(defaultValue); });
 }
 
-SliderElement::SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float &binded, Qt::Orientation orientation)
+SliderElement::SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float &binded, UIElement::LAYOUT orientation)
     : SliderElement(label, valMin, valMax, multiplier, orientation)
 {
     bindTo(binded);
@@ -144,7 +133,7 @@ FancySlider* SliderElement::slider() const {
     return this->_slider;
 }
 
-QLabel* SliderElement::label() const
+LabelElement* SliderElement::label() const
 {
     return this->_label;
 }
@@ -172,7 +161,7 @@ void SliderElement::update()
 CheckboxElement::CheckboxElement(const std::string& label)
     : UIElement(new QCheckBox(QString::fromStdString(label)))
 {
-
+    get()->setProperty("class", "tight-element");
 }
 
 CheckboxElement::CheckboxElement(const std::string& label, bool &binded)
@@ -210,18 +199,25 @@ void CheckboxElement::update()
     return UIElement::update();
 }
 
-InterfaceUI::InterfaceUI(QLayout* layout, bool tight, const std::string& title)
+InterfaceUI::InterfaceUI(LAYOUT layout, bool tight, const std::string& title)
     : UIElement(new QGroupBox), title(title)
 {
-    if (layout == nullptr) layout = new QVBoxLayout;
+    QLayout* myLayout;
+    if (layout == VERTICAL) myLayout = new QVBoxLayout;
+    else if (layout == HORIZONTAL) myLayout = new QHBoxLayout;
+    else if (layout == GRID) myLayout = new QGridLayout;
+
     if (tight) {
-        layout->setSpacing(0);
-        layout->setContentsMargins(0, 0, 0, 0);
-        get()->setProperty("class", "tight");
+        myLayout->setSpacing(0);
+        myLayout->setContentsMargins(0, 0, 0, 0);
     }
-    box()->setStyleSheet("QGroupBox.tight{ border: none; }");
-    getWidget()->setLayout(layout);
+    this->setTight(tight);
+    box()->setStyleSheet(".tight-element{ border: none; }");
+    getWidget()->setLayout(myLayout);
 }
+InterfaceUI::InterfaceUI(LAYOUT layout, const std::string& title)
+    : InterfaceUI(layout, (title.empty()), title)
+{ }
 
 InterfaceUI::~InterfaceUI()
 {
@@ -252,31 +248,6 @@ void InterfaceUI::add(std::vector<UIElement*> elements)
         this->add(element);
 }
 
-void InterfaceUI::add(std::vector<std::pair<UIElement* , std::string> > elementsAndNames)
-{
-    for (size_t i = 0; i < elementsAndNames.size(); i++) {
-        auto& element = elementsAndNames[i].first;
-        auto& name = elementsAndNames[i].second;
-        this->add(element, name);
-    }
-}
-
-UIElement* InterfaceUI::add(QLayout* layout, std::string name)
-{
-    auto interface = new InterfaceUI(layout, true, name);
-    return this->add(interface, name);
-}
-
-/*
-UIElement& InterfaceUI::find(const std::string& name)
-{
-    for (size_t i = 0; i < names.size(); i++)
-        if (names[i] == name)
-            return *(elements[i]);
-    return nullptr;
-}
-*/
-
 InterfaceUI& InterfaceUI::clear()
 {
     for (auto& child : this->elements) {// box()->children()) {
@@ -290,6 +261,11 @@ InterfaceUI& InterfaceUI::clear()
     return *this;
 }
 
+InterfaceUI *InterfaceUI::setTight(bool tight)
+{
+    get()->setProperty("class", (tight ? "tight-element" : ""));
+}
+
 void InterfaceUI::update()
 {
     for (auto& child : this->elements) {// box()->children()) {
@@ -298,25 +274,25 @@ void InterfaceUI::update()
     return UIElement::update();
 }
 
-InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets)
+InterfaceUI* createHorizontalGroup(std::vector<UIElement*> widgets, bool tight)
 {
-    auto interface = new InterfaceUI(new QHBoxLayout);
+    auto interface = new InterfaceUI(InterfaceUI::HORIZONTAL, tight);
     for (auto& w : widgets) {
         interface->add(std::move(w));
     }
     return interface;
 }
 
-InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets)
+InterfaceUI* createVerticalGroup(std::vector<UIElement*> widgets, bool tight)
 {
-    auto interface = new InterfaceUI();
+    auto interface = new InterfaceUI(InterfaceUI::VERTICAL, tight);
     for (auto& w : widgets) {
         interface->add(std::move(w));
     }
     return interface;
 }
 
-InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns)
+InterfaceUI* createMultiColumnGroup(std::vector<UIElement*> widgets, int nbColumns, bool tight)
 {
     QGridLayout* layout = new QGridLayout;
     for (size_t i = 0; i < widgets.size(); i++) {
@@ -326,21 +302,24 @@ InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbCol
 
         layout->addWidget(w->get(), row, col);
     }
-    return new InterfaceUI(layout); // group;
+    auto ui = new InterfaceUI(InterfaceUI::GRID, tight);
+    ui->setLayout(layout);
+    return ui;
 }
 
 TextEditElement::TextEditElement(const std::string& text, std::string label)
-    : UIElement(new QGroupBox)
+    : InterfaceUI(HORIZONTAL) //UIElement(new QGroupBox)
 {
     this->_lineEdit = new QLineEdit(QString::fromStdString(text));
-    this->_label = new QLabel(QString::fromStdString(label));
+    this->_label = new LabelElement(label);
 
-    QBoxLayout* layout = new QHBoxLayout;
+    /*QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
     if (!label.empty())
         layout->addWidget(_label);
     layout->addWidget(_lineEdit);
-    getWidget()->setLayout(layout);
+    getWidget()->setLayout(layout);*/
+    this->add(std::vector<UIElement*>{_label, new UIElement(_lineEdit)});
 }
 
 TextEditElement::TextEditElement(const std::string& text, std::string label, std::string& binded)
@@ -389,18 +368,19 @@ void TextEditElement::update()
 
 
 AngleElement::AngleElement(const std::string& label)
-    : UIElement(new QGroupBox)
+    : InterfaceUI(HORIZONTAL) // UIElement(new QGroupBox)
 {
     this->_dial = new QDial();
     this->_dial->setWrapping(true); this->_dial->setMinimum(0); this->_dial->setMaximum(360);
-    this->_label = new QLabel(QString::fromStdString(label));
+    this->_label = new LabelElement(label);
 
-    QBoxLayout* layout = new QHBoxLayout;
+    /*QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
     if (!label.empty())
         layout->addWidget(_label);
     layout->addWidget(_dial);
-    getWidget()->setLayout(layout);
+    getWidget()->setLayout(layout);*/
+    this->add(std::vector<UIElement*>{_label, new UIElement(_dial)});
 }
 
 AngleElement::AngleElement(const std::string& label, float &binded)
@@ -433,22 +413,23 @@ void AngleElement::update()
 }
 
 
-RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
-    : UIElement(new QGroupBox)
+RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, UIElement::LAYOUT orientation)
+    : InterfaceUI(orientation) //UIElement(new QGroupBox)
 {
-    this->_slider = new RangeSlider(orientation, valMin, valMax, multiplier);
-    this->_label = new QLabel(QString::fromStdString(label));
+    this->_slider = new RangeSlider((orientation == HORIZONTAL ? Qt::Horizontal : Qt::Vertical), valMin, valMax, multiplier);
+    this->_label = new LabelElement(label);
 
-    QBoxLayout* layout = new QHBoxLayout;
+    /*QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
     if (!label.empty()) {
         layout->addWidget(_label);
     }
     layout->addWidget(_slider);
-    getWidget()->setLayout(layout);
+    getWidget()->setLayout(layout);*/
+    this->add(std::vector<UIElement*>{_label, new UIElement(_slider)});
 }
 
-RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float &bindedMin, float &bindedMax, Qt::Orientation orientation)
+RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float &bindedMin, float &bindedMax, UIElement::LAYOUT orientation)
     : RangeSliderElement(label, valMin, valMax, multiplier, orientation)
 {
     this->bindTo(bindedMin, bindedMax);
@@ -459,7 +440,7 @@ RangeSlider* RangeSliderElement::slider()
     return _slider;
 }
 
-QLabel* RangeSliderElement::label()
+LabelElement *RangeSliderElement::label()
 {
     return _label;
 }
@@ -491,17 +472,20 @@ void RangeSliderElement::update()
 
 
 ColorPickerElement::ColorPickerElement(const std::string& label)
-    : UIElement(new QGroupBox)
+    : InterfaceUI() // UIElement(new QGroupBox)
 {
     this->_colorPicker = new QtColorPicker(this->get());
-    this->_label = new QLabel(QString::fromStdString(label));
+    this->_label = new LabelElement(label);
 
+    /*
     QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
     if (!label.empty())
         layout->addWidget(_label);
     layout->addWidget(_colorPicker);
     getWidget()->setLayout(layout);
+    */
+    this->add(std::vector<UIElement*>{_label, new UIElement(_colorPicker)});
 }
 
 ColorPickerElement::ColorPickerElement(const std::string& label, Vector3 &currentSelection)
@@ -601,20 +585,23 @@ std::vector<HierarchicalListWidgetItemBase*> HierarchicalListUI::selectedItems()
 }
 
 FloatInputElement::FloatInputElement(const std::string &label)
-    : UIElement(new QGroupBox)
+    : InterfaceUI(HORIZONTAL) //UIElement(new QGroupBox)
 {
     this->_spinbox = new QDoubleSpinBox(this->get());
-    this->_label = new QLabel(QString::fromStdString(label));
+    this->_label = new LabelElement(label);
 
-    QBoxLayout* layout = new QHBoxLayout;
+    /*QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
     if (!label.empty())
         layout->addWidget(_label);
     layout->addWidget(_spinbox);
     getWidget()->setLayout(layout);
+    */
     _spinbox->setDecimals(5);
     _spinbox->setMaximum(100000);
     _spinbox->setMinimum(-100000);
+
+    this->add(std::vector<UIElement*>{_label, new UIElement(_spinbox)});
 }
 
 FloatInputElement::FloatInputElement(const std::string &label, float &binded)

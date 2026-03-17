@@ -163,6 +163,8 @@ public:
 
     float flowErosionFactor = 0.f;
 
+    float userFlowScale = 1.f;
+
     // std::string currentlyPreviewedObject;
 
     bool materialSimulationStable = false;

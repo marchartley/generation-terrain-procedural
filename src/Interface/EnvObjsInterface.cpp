@@ -205,6 +205,8 @@ InterfaceUI* EnvObjsInterface::createGUI()
 
     auto displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
 
+    auto userFlowScaleSlider = new SliderElement("User flow", 0.f, 100.f, .1f, this->userFlowScale);
+
 
     flowErosionSlider->setOnValueChanged([=](float newValue) {
         this->flowErosionFactor = newValue;
@@ -268,20 +270,21 @@ InterfaceUI* EnvObjsInterface::createGUI()
 
 
     UI->add(std::vector<UIElement*>{
-             createHorizontalGroupUI({newObjectCreationBox, waitAtEachFrameButton}),
-             createHorizontalGroupUI({spendTimeButton, nextStepButton, runButton}),
-             createMultiColumnGroupUI(materialsButtons, 2),
+             createHorizontalGroup({newObjectCreationBox, waitAtEachFrameButton}),
+             createHorizontalGroup({spendTimeButton, nextStepButton, runButton}),
+             createMultiColumnGroup(materialsButtons, 2),
              flowErosionSlider,
              objectCombobox,
-             createMultiColumnGroupUI({showButton, forceButton, editObjectKelvinletsButton, editObjectSnakeButton}, 2),
-             createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton, resetFlowfieldButton}),
+             createMultiColumnGroup({showButton, forceButton, editObjectKelvinletsButton, editObjectSnakeButton}, 2),
+             createHorizontalGroup({editFocusAreaButton, editFlowfieldButton, resetFlowfieldButton}),
              showElementsOnCanvasButton,
              objectsListWidget,
-             createVerticalGroupUI({testingFitnessFormula, testingFittingFormula}),
+             createVerticalGroup({testingFitnessFormula, testingFittingFormula}),
              resetButton,
              // addGroovesButton,
-             // createVerticalGroupUI({grabKelvinlet, scaleKelvinlet, pinchKelvinlet, twistKelvinlet}),
-             createHorizontalGroupUI({label, createFromFile, saveButton, displayCurrentsButton}),
+             // createVerticalGroup({grabKelvinlet, scaleKelvinlet, pinchKelvinlet, twistKelvinlet}),
+             userFlowScaleSlider,
+             createHorizontalGroup({label, createFromFile, saveButton, displayCurrentsButton}),
              saveForRendersButton
     });
 
@@ -466,7 +469,7 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
                 // k->radialScale = delta.norm();
             }
 
-            this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField);
+            this->scene->updateFlowfield(userFlowField * userFlowScale + this->computeUserKelvinletField(), simulationFlowField);
             this->updateVectorFieldVisu();
             // Q_EMIT this->updated();
         }
@@ -1748,7 +1751,7 @@ void EnvObjsInterface::openObjectKelvinletEditor(const std::string& objName)
 {
     auto& obj = scene->availableObjects[objName];
     auto& viewer = EnvObjectEditor::get();
-    viewer.addVectorField(userFlowField + this->computeUserKelvinletField() + simulationFlowField);
+    viewer.addVectorField(userFlowField * userFlowScale + this->computeUserKelvinletField() + simulationFlowField);
     viewer.addEnvObject(obj);
     viewer.show();
 }

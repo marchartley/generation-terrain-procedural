@@ -309,16 +309,17 @@ void ViewerInterface::setupUi()
     mainLayout->setColumnStretch(0, 99);
     mainLayout->setColumnStretch(1,  1);
 
-    this->displayModeLayout = new QHBoxLayout;
-    this->displayModeBox = new Spoiler("Affichage");
+    this->displayModeLayout = new InterfaceUI(UIElement::VERTICAL);
 
-//    this->LoDChooserLayout = new QHBoxLayout;
-    this->LoDChooserBox = new Spoiler("Niveau de détail");
-    this->mapSliceSliderX = new RangeSlider(Qt::Orientation::Horizontal, 0, 1, 0.01f);
-    this->mapSliceSliderY = new RangeSlider(Qt::Orientation::Horizontal, 0, 1, 0.01f);
-    this->mapSliceSliderZ = new RangeSlider(Qt::Orientation::Horizontal, 0, 1, 0.01f);
-    this->mapSliceSmooth = new QCheckBox("Shrink on borders");
-    mapSliceSmooth->setChecked(viewer->voxelsSmoothedOnBorders > 1);
+    this->mapSliceSliderX = new RangeSliderElement("X", 0.f, 1.f, 0.01f, this->viewer->minSliceMapX, this->viewer->maxSliceMapX, UIElement::VERTICAL);
+    this->mapSliceSliderY = new RangeSliderElement("Y", 0.f, 1.f, 0.01f, this->viewer->minSliceMapY, this->viewer->maxSliceMapY, UIElement::VERTICAL);
+    this->mapSliceSliderZ = new RangeSliderElement("Z", 0.f, 1.f, 0.01f, this->viewer->minSliceMapZ, this->viewer->maxSliceMapZ, UIElement::VERTICAL);
+    this->mapSliceSmooth = new CheckboxElement("Shrink on borders", [=](bool checked) { this->viewer->voxelsSmoothedOnBorders = (checked ? 5 : 1); viewer->update(); });
+
+    mapSliceSliderX->setOnValueChanged([=](float, float) { this->viewer->update(); });
+    mapSliceSliderY->setOnValueChanged([=](float, float) { this->viewer->update(); });
+    mapSliceSliderZ->setOnValueChanged([=](float, float) { this->viewer->update(); });
+    /*mapSliceSmooth->setChecked(viewer->voxelsSmoothedOnBorders > 1);
     QObject::connect(mapSliceSmooth, &QCheckBox::toggled, this, [&](bool active) {
         if (active) { this->viewer->voxelsSmoothedOnBorders = 5;}
         else { this->viewer->voxelsSmoothedOnBorders = 1; }
@@ -345,81 +346,76 @@ void ViewerInterface::setupUi()
         else        { this->viewer->minSliceMapZ = -10.f;                              this->viewer->maxSliceMapZ = 10.f; }
         this->viewer->update();
     });
-    displayModeLayout->addWidget(createVerticalGroup({createMultipleSliderGroupWithCheckbox({
+    displayModeLayout->add(createVerticalGroup({createMultipleSliderGroupWithCheckbox({
                                                                {"X", mapSliceSliderX, sliderXactivation},
                                                                {"Y", mapSliceSliderY, sliderYactivation},
                                                                {"Z", mapSliceSliderZ, sliderZactivation}
                                                            }),
                                                       mapSliceSmooth}));
+    */
+    displayModeLayout->add({createHorizontalGroup({mapSliceSliderX, mapSliceSliderY, mapSliceSliderZ}), mapSliceSmooth});
 
-    this->isolevelSelectionSlider = new RangeSlider(Qt::Orientation::Vertical, 0.f, 3.f, 0.1f);
-    QCheckBox* isolevelSelectionActivation = new QCheckBox("Activer");
+    this->isolevelSelectionSlider = new RangeSliderElement("Isolevel", 0.f, 3.f, 0.1f, terrainGenerationInterface->minIsoLevel, terrainGenerationInterface->maxIsoLevel, UIElement::VERTICAL);
+    /*QCheckBox* isolevelSelectionActivation = new QCheckBox("Activer");
     isolevelSelectionActivation->setChecked(true);
     QObject::connect(isolevelSelectionActivation, &QCheckBox::toggled, this, [&](bool active) {
         if (active) { terrainGenerationInterface->minIsoLevel = isolevelSelectionSlider->min_value(); terrainGenerationInterface->maxIsoLevel = isolevelSelectionSlider->max_value();}
         else { terrainGenerationInterface->minIsoLevel = -1000.f; terrainGenerationInterface->maxIsoLevel = 1000.f; }
         this->viewer->update();
-    });
+    });*/
     mainLayout->addWidget(viewer, 1, 0);
 
-    /*
     QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
 
-    auto displayOptionUI = new InterfaceUI(new QVBoxLayout, "Options");
+    auto displayOptionUI = new InterfaceUI(InterfaceUI::VERTICAL, "Options");
 
     for (int i = 0; i < 4; i++) {
-        auto viewerSetupExperimental = std::make_shared<ButtonElement>("Setup view " + std::to_string(i));
-        auto viewerSetupExperimental_save = std::make_shared<ButtonElement>("Save");
         std::string associatedFilename = "experiments_state" + std::to_string(i) + ".xml";
-        viewerSetupExperimental->setOnClick([=]() { this->viewer->setupViewFromFile(associatedFilename); });
-        viewerSetupExperimental_save->setOnClick([=]() { this->viewer->saveViewToFile(associatedFilename); });
+        auto viewerSetupExperimental = new ButtonElement("Setup view " + std::to_string(i), [=]() { this->viewer->setupViewFromFile(associatedFilename); });
+        auto viewerSetupExperimental_save = new ButtonElement("Save", [=]() { this->viewer->saveViewToFile(associatedFilename); });
+        // viewerSetupExperimental->setOnClick([=]() { this->viewer->setupViewFromFile(associatedFilename); });
+        // viewerSetupExperimental_save->setOnClick([=]() { this->viewer->saveViewToFile(associatedFilename); });
 
-        displayOptionUI->add(createHorizontalGroupUI({viewerSetupExperimental, viewerSetupExperimental_save}));
+        displayOptionUI->add(createHorizontalGroup({viewerSetupExperimental, viewerSetupExperimental_save}));
     }
 
-    CheckboxElement* displayAsComparisonTerrainButton = std::make_shared<CheckboxElement>("Comp.");
+    auto displayAsComparisonTerrainButton = new CheckboxElement("Comp.");
     displayAsComparisonTerrainButton->setChecked(terrainGenerationInterface->displayAsComparativeMode);
     displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});
 
-    CheckboxElement* displayWaterDepthButton = std::make_shared<CheckboxElement>("Depth");
+    auto displayWaterDepthButton = new CheckboxElement("Depth");
     displayWaterDepthButton->setChecked(terrainGenerationInterface->displayDepth);
     displayWaterDepthButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayDepthMode(check);});
 
-    CheckboxElement* displayShadowsButton = std::make_shared<CheckboxElement>("Shadows");
+    auto displayShadowsButton = new CheckboxElement("Shadows");
     displayShadowsButton->setChecked(terrainGenerationInterface->displayShadows);
     displayShadowsButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayShadowsMode(check);});
 
-    SliderElement* waterLevelSlider = std::make_shared<SliderElement>("Water", 0.f, 1.f, 0.01f, terrainGenerationInterface->waterLevel);
+    auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, terrainGenerationInterface->waterLevel);
     waterLevelSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });
-    SliderElement* ambiantOcclusionSlider = std::make_shared<SliderElement>("AO", 0.f, 1.f, 0.01f, terrainGenerationInterface->ambiantOcclusionFactor);
+    auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, terrainGenerationInterface->ambiantOcclusionFactor);
     ambiantOcclusionSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setAmbiantOcclusion(newValue); });
-    SliderElement* heightFactorSlider = std::make_shared<SliderElement>("Height", 0.01f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
+    auto heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
     heightFactorSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setHeightFactor(newValue); });
 
     displayOptionUI->add(displayModeLayout);
-    displayOptionUI->add(createVerticalGroupUI({
-                                                createHorizontalGroupUI({
-                                                    //createMultipleSliderGroupWithCheckboxUI({
-                                                    //    {"Density", isolevelSelectionSlider, isolevelSelectionActivation}
-                                                    //}),
+    displayOptionUI->add(createVerticalGroup({
                                                     waterLevelSlider,
                                                     ambiantOcclusionSlider,
                                                     heightFactorSlider,
-                                                }),
                                                 //reloadShadersButton,
-                                                   createHorizontalGroupUI({
-                                                       createVerticalGroupUI({
+                                                   createHorizontalGroup({
+                                                       createVerticalGroup({
                                                            displayAsComparisonTerrainButton,
-                                                           std::make_shared<CheckboxElement>("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
+                                                           new CheckboxElement("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
                                                        }),
-                                                       createVerticalGroupUI({
+                                                       createVerticalGroup({
                                                            displayShadowsButton,
                                                            displayWaterDepthButton
                                                        })
                                                    })
                                             }));
     displayOptionWidget->setWidget(displayOptionUI->getWidget());
-    */
 
     QWidget* mainFrame = new QWidget(this);
     mainFrame->setLayout(mainLayout);
@@ -441,7 +437,7 @@ void ViewerInterface::setupUi()
 void ViewerInterface::setupBindings()
 {
     auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
-    QObject::connect(mapSliceSliderX, &RangeSlider::alt_valueChanged, this, [=](float min, float max){this->viewer->minSliceMapX = min; viewer->maxSliceMapX = max; viewer->update(); });
+   /* QObject::connect(mapSliceSliderX, &RangeSlider::alt_valueChanged, this, [=](float min, float max){this->viewer->minSliceMapX = min; viewer->maxSliceMapX = max; viewer->update(); });
     QObject::connect(mapSliceSliderY, &RangeSlider::alt_valueChanged, this, [=](float min, float max){this->viewer->minSliceMapY = min; viewer->maxSliceMapY = max; viewer->update(); });
     QObject::connect(mapSliceSliderZ, &RangeSlider::alt_valueChanged, this, [=](float min, float max){this->viewer->minSliceMapZ = min; viewer->maxSliceMapZ = max; viewer->update(); });
 
@@ -449,7 +445,7 @@ void ViewerInterface::setupBindings()
         terrainGenerationInterface->minIsoLevel = min;
         terrainGenerationInterface->maxIsoLevel = max;
         viewer->update();
-    });
+    });*/
 
     QMetaObject::connectSlotsByName(this);
 } //setupBindings

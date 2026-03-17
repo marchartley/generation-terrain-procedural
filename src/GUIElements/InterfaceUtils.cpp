@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 
+/*
 QGroupBox* createSliderGroup(const std::string& label, QSlider* slider, bool makeItSmall)
 {
     QLabel* lab = new QLabel(QString::fromStdString(label));
@@ -47,56 +48,9 @@ QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets)
     group->setLayout(layout);
     return group;
 }
-/*
-QWidget *stickTo(QWidget* widget, QWidget *container, float x, float y, float w, float h, bool useAbsolutePosition)
-{
-    widget->setParent(container);
-    widget->installEventFilter(container);
-//    widget->eventFilter()
-}
-void clearLayout(QLayout* layout, bool deleteWidgets)
-{
-    while (QLayoutItem* item = layout->takeAt(0))
-    {
-        if (deleteWidgets)
-        {
-            if (QWidget* widget = item->widget())
-                widget->deleteLater();
-        }
-        if (QLayout* childLayout = item->layout())
-            clearLayout(childLayout, deleteWidgets);
-        delete item;
-    }
-}
-*/
 
 QGroupBox* createOptionalSlider(RangeSlider *slider, std::string checkboxLabel, bool activatedByDefault, std::function<void(bool, RangeSlider*)> onToggleCallback)
 {
-    /*
-    QHBoxLayout* layout = new QHBoxLayout();
-    QGroupBox* group = new QGroupBox;
-
-    QCheckBox* checkbox = new QCheckBox(QString::fromStdString(checkboxLabel));
-    checkbox->setChecked(activatedByDefault);
-    QObject::connect(checkbox, &QCheckBox::toggled,
-                     slider, [&](bool activation) { return onToggleCallback(activation, slider); });
-//    QObject::connect(checkbox, &QCheckBox::toggled, slider, [&](bool active) {
-//        if (active) {
-//            WidgetActivationEvent event;
-//            QApplication::postEvent(slider, &event);
-//        } else {
-//            WidgetDesactivationEvent event;
-//            QApplication::postEvent(slider, &event);
-//        }
-//    });
-
-    layout->addWidget(slider);
-    layout->addWidget(checkbox);
-
-    group->setLayout(layout);
-
-    return group;
-    */
 }
 
 QGroupBox *createMultipleSliderGroupWithCheckbox(std::vector<std::tuple<std::string, QSlider*, QCheckBox*>> labelsAndSlidersAndActivables)
@@ -142,3 +96,4 @@ QGroupBox *createMultiColumnGroup(std::vector<QWidget *> widgets, int nbColumns)
     group->setLayout(layout);
     return group;
 }
+*/

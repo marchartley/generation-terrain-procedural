@@ -2,17 +2,19 @@
 
 
 ComboboxElement::ComboboxElement(const std::string& label)
-    : UIElement(new QGroupBox)
+    : InterfaceUI(HORIZONTAL)
 {
     this->_combobox = new QComboBox();
-    this->_label = new QLabel(QString::fromStdString(label));
+    this->_label = new LabelElement(label);
 
+    /*
     QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
     if (!label.empty())
         layout->addWidget(_label);
     layout->addWidget(_combobox);
-    getWidget()->setLayout(layout);
+    getWidget()->setLayout(layout);*/
+    this->add({_label, new UIElement(_combobox)});
 }
 
 ComboboxElement::ComboboxElement(const std::string& label, std::vector<ComboboxLineElementBase*> choices)

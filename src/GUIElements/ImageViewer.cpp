@@ -31,10 +31,7 @@ ImageViewer& ImageViewer::setFilteredValuesImage(bool filtered)
 
 ImageViewer& ImageViewer::updateViewOptionsInterface()
 {
-    // if (this->viewOptionsInterface != nullptr)
     this->viewOptionsInterface->clear();
-    // else
-    // this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
 
     if (this->dataModel->imageData.image.isColor()) {
         this->viewOptionsInterface->add(std::move(ImageViewerOptionsUI::createRGBImageViewerOptions(this)));

@@ -170,7 +170,7 @@ InterfaceUI* MeshInstanceAmplificationInterface::createGUI()
     for (auto& meshType : meshesOptions) {
         auto displayElement = new CheckboxElement("Display " + meshType.name, meshType.displayed);
         displayElement->setOnChecked([&](bool check) { this->setDisplayingType(meshType, check); });
-        UI->add(displayElement);
+        UI->add({displayElement});
     }
 
     auto exportButton = new ButtonElement("Export", [&]() {

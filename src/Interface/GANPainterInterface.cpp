@@ -149,7 +149,7 @@ InterfaceUI* GANPainterInterface::createGUI()
     auto subsidenceSlider = new SliderElement("Subsidence", 0.01f, .97f, 0.01f, this->subsidence);
     subsidenceSlider->setOnValueChanged([=](float newVal) { this->runGANs(); this->computeNewHeightmap(); });
 
-    auto modelsUI = new InterfaceUI(new QVBoxLayout());
+    auto modelsUI = new InterfaceUI(InterfaceUI::VERTICAL);
 
     for (auto& [name, process] : ganProcesses) {
         auto slider = new SliderElement(name, 0.f, 1.f, 0.01f, ganModelWeights[name]);

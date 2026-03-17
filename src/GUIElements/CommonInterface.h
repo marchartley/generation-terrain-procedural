@@ -43,11 +43,6 @@ public:
     UIElement(QWidget* widget = nullptr);
     virtual ~UIElement();
 
-    // UIElement(const UIElement&) = delete;
-    // UIElement& operator=(const UIElement&) = delete;
-    // UIElement(UIElement&&) = delete;
-    // UIElement& operator=(UIElement&&) = delete;
-
     template <class WidgetType, typename SignalType, typename Functor>
     void addConnection(SignalType signal, Functor&& functor) {
         auto* w = qobject_cast<WidgetType*>(element);
@@ -74,6 +69,9 @@ public:
     QWidget* get() const { return getWidget(); }
     void cleanupConnections();
 
+
+    enum LAYOUT { HORIZONTAL, VERTICAL, GRID };
+
 public Q_SLOTS:
     virtual void update();
 
@@ -88,26 +86,12 @@ protected:
 class InterfaceUI : public UIElement {
     Q_OBJECT
 public:
-    InterfaceUI(QLayout* layout = nullptr, bool tight = true, const std::string& title = "");
+    InterfaceUI(LAYOUT layout = VERTICAL, const std::string& title = "");
+    InterfaceUI(LAYOUT layout, bool tight, const std::string& title = "");
     ~InterfaceUI();
-
-    // InterfaceUI(const InterfaceUI&) = delete;
-    // InterfaceUI& operator=(const InterfaceUI&) = delete;
-    // InterfaceUI(InterfaceUI&&) = delete;
-    // InterfaceUI& operator=(InterfaceUI&&) = delete;
 
     QGroupBox* box() const;
 
-    /*
-    InterfaceUI& add(std::vector<UIElement*> elems)
-    {
-        for (auto& elem : elems) {
-            box()->layout()->addWidget(elem->get());
-            elements.push_back(std::move(elem));
-        }
-        return *this;
-    }
-    */
     template<class T, class... Args>
     T& add(Args&&... args)
     {
@@ -117,72 +101,15 @@ public:
         auto element = new T(std::forward<Args>(args)...);
 
         T* raw = element;
-
-        // box()->layout()->addWidget(raw->get());
-
-        // elements.push_back(std::move(element));
-        // names.emplace_back("");
         this->add(raw);
 
         return *raw;
     }
-    /*
-    template <class T>
-    T& add(std::shared_ptr<T> element, std::string name = "")
-    {
-        T* raw = element.get();
-        box()->layout()->addWidget(raw->get());
-        raw->setName(name);
-        this->elements.push_back(std::move(element));
-        this->names.push_back(name);
-        return *raw;
-    }
-
-    template <class T>
-    T& addUI(std::shared_ptr<T> element, std::string name = "")
-    {
-        T* raw = element.get();
-        box()->layout()->addWidget(raw->get());
-        raw->setName(name);
-        this->elements.push_back(std::move(element));
-        this->names.push_back(name);
-        return *raw;
-    }
-
-    template <class T>
-    T& add(T&& element, std::string name = "")
-    {
-        box()->layout()->addWidget(element.get());
-        element.setName(name);
-        auto ptr = std::make_shared<std::decay_t<T>>(std::forward<T>(element));
-        T& ref = *ptr;
-        this->elements.push_back(std::move(ptr));
-        this->names.push_back(name);
-        return ref;
-    }
-    */
-
-    /*
-    // template <class T>
-    InterfaceUI& add(std::vector<UIElement*> _elements) {
-        for (auto& element : _elements) {
-            box()->layout()->addWidget(element->get());
-            // element.setName(name);
-            auto ptr = std::make_shared<UIElement>(element);
-            // T& ref = *ptr;
-            this->elements.push_back(std::move(ptr));
-            // this->names.push_back(name);
-        }
-        return *this;
-    }
-    */
-
     UIElement* add(UIElement* element, const std::string& name = "");
     void add(std::vector<UIElement*> elements);
-    void add(std::vector<std::pair<UIElement*, std::string>> elementsAndNames);
-    UIElement* add(QLayout* layout, std::string name = "");
-    // UIElement& find(const std::string& name);
     InterfaceUI& clear();
+
+    InterfaceUI* setTight(bool tight);
 
     std::vector<UIElement*> elements;
     std::vector<std::string> names;
@@ -191,12 +118,6 @@ public:
 public Q_SLOTS:
     void update();
 };
-
-
-#include "GUIElements/FancySlider.h"
-#include "GUIElements/HierarchicalListWidget.h"
-#include "GUIElements/ComboboxElement.h"
-
 
 class LabelElement : public UIElement {
 public:
@@ -208,6 +129,12 @@ public:
     std::string getText();
 };
 
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/HierarchicalListWidget.h"
+#include "GUIElements/ComboboxElement.h"
+
+
+
 class ButtonElement : public UIElement {
 public:
     ButtonElement(const std::string& label);
@@ -215,7 +142,7 @@ public:
 
     QPushButton* button();
 
-    ButtonElement& setOnRepeat(std::function<void(void)> onRepeatFunction, int delay_ms = 100);
+    ButtonElement& setOnRepeat(std::function<void(void)> onRepeatFunction, int delay_ms = 100, int startup_time = 1000);
 
     DEFINE_SET_ON_FUNCTION(setOnClick, QPushButton, clicked)
     DEFINE_SET_ON_FUNCTION(setOnPressed, QPushButton, pressed)
@@ -227,18 +154,18 @@ protected:
 };
 
 
-class SliderElement : public UIElement {
+class SliderElement : public InterfaceUI {
     Q_OBJECT
 public:
-    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
-    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& binded, Qt::Orientation orientation = Qt::Horizontal);
+    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, UIElement::LAYOUT orientation = HORIZONTAL);
+    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& binded, UIElement::LAYOUT orientation = HORIZONTAL);
 
     SliderElement& setValue(float newValue) { slider()->setfValue(newValue); return *this; }
     float value() const { return slider()->getfValue(); }
     float getValue() const { return value(); }
 
     FancySlider* slider() const;
-    QLabel* label() const;
+    LabelElement* label() const;
 
     DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, FancySlider, _slider, floatValueChanged)
 
@@ -248,7 +175,7 @@ public Q_SLOTS:
     void update();
 
 protected:
-    QLabel* _label = nullptr;
+    LabelElement* _label = nullptr;
     FancySlider* _slider = nullptr;
     std::optional<std::reference_wrapper<float>> boundVariable;
 
@@ -256,18 +183,18 @@ protected:
 };
 
 
-class RangeSliderElement : public UIElement {
+class RangeSliderElement : public InterfaceUI {
     Q_OBJECT
 public:
-    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
-    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, Qt::Orientation orientation = Qt::Horizontal);
+    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, UIElement::LAYOUT orientation = HORIZONTAL);
+    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, UIElement::LAYOUT orientation = HORIZONTAL);
 
     RangeSliderElement& setMinValue(float valueMin) { slider()->setMinValue(valueMin); return *this; }
     RangeSliderElement& setMaxValue(float valueMax) { slider()->setMaxValue(valueMax); return *this; }
     RangeSliderElement& setMinMaxValues(float valueMin, float valueMax) { return this->setMinValue(valueMin).setMaxValue(valueMax); }
 
     RangeSlider* slider();
-    QLabel* label();
+    LabelElement* label();
 
     DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, RangeSlider, _slider, alt_valueChanged)
 
@@ -277,7 +204,7 @@ public Q_SLOTS:
     void update();
 
 protected:
-    QLabel* _label = nullptr;
+    LabelElement* _label = nullptr;
     RangeSlider* _slider = nullptr;
     std::optional<std::reference_wrapper<float>> boundVariableMin;
     std::optional<std::reference_wrapper<float>> boundVariableMax;
@@ -305,33 +232,8 @@ public Q_SLOTS:
 protected:
     std::optional<std::reference_wrapper<bool>> boundVariable;
 };
-/*
-class RadioButtonElement : public UIElement {
-    Q_OBJECT
-public:
-    RadioButtonElement(const std::string& label);
-    RadioButtonElement(const std::string& label, bool& binded);
-    RadioButtonElement(const std::string& label, const std::function<void(bool)>& onCheck);
 
-    QRadioButton* radioButton() const;
-
-    RadioButtonElement& setChecked(bool checked) { radioButton()->setChecked(checked); return *this; }
-
-    DEFINE_SET_ON_FUNCTION(setOnChecked, QRadioButton, toggled)
-
-    RadioButtonElement& bindTo(bool& value);
-
-    bool checked() const { return radioButton()->isChecked(); }
-
-public Q_SLOTS:
-    void update();
-
-protected:
-    std::optional<std::reference_wrapper<bool>> boundVariable;
-};
-*/
-
-class TextEditElement : public UIElement {
+class TextEditElement : public InterfaceUI {
     Q_OBJECT
 public:
     TextEditElement(const std::string& text, std::string label = "");
@@ -350,13 +252,13 @@ public Q_SLOTS:
     void update();
 
 protected:
-    QLabel* _label = nullptr;
+    LabelElement* _label = nullptr;
     QLineEdit* _lineEdit = nullptr;
     std::optional<std::reference_wrapper<std::string>> boundVariable;
 };
 
 
-class FloatInputElement : public UIElement {
+class FloatInputElement : public InterfaceUI {
     Q_OBJECT
 public:
     FloatInputElement(const std::string& label = "");
@@ -384,7 +286,7 @@ public Q_SLOTS:
     void update();
 
 protected:
-    QLabel* _label = nullptr;
+    LabelElement* _label = nullptr;
     QDoubleSpinBox* _spinbox = nullptr;
     std::optional<std::reference_wrapper<float>> boundVariable;
 
@@ -392,7 +294,7 @@ protected:
 };
 
 
-class AngleElement : public UIElement {
+class AngleElement : public InterfaceUI {
     Q_OBJECT
 public:
     AngleElement(const std::string& label = "");
@@ -410,7 +312,7 @@ public Q_SLOTS:
     void update();
 
 protected:
-    QLabel* _label = nullptr;
+    LabelElement* _label = nullptr;
     QDial* _dial = nullptr;
     std::optional<std::reference_wrapper<float>> boundVariable;
 };
@@ -418,7 +320,7 @@ protected:
 
 #include "GUIElements/qtcolorpicker.h"
 #include "DataStructure/Vector3.h"
-class ColorPickerElement : public UIElement {
+class ColorPickerElement : public InterfaceUI {
     Q_OBJECT
 public:
     ColorPickerElement(const std::string& label);
@@ -439,7 +341,7 @@ public Q_SLOTS:
 public:
     std::optional<std::reference_wrapper<Vector3>> boundColor;
 
-    QLabel* _label;
+    LabelElement* _label;
     QtColorPicker* _colorPicker;
 
 protected:
@@ -471,9 +373,9 @@ public:
 };
 
 
-InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets);
-InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets);
-InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns = 2);
+InterfaceUI* createHorizontalGroup(std::vector<UIElement*> widgets, bool tight = true);
+InterfaceUI* createVerticalGroup(std::vector<UIElement*> widgets, bool tight = true);
+InterfaceUI* createMultiColumnGroup(std::vector<UIElement*> widgets, int nbColumns = 2, bool tight = true);
 
 
 

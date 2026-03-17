@@ -1,22 +1,22 @@
 <!DOCTYPE QGLVIEWER>
 <QGLViewer version="2.6.3">
   <State stereo="false">
-    <foregroundColor green="180" red="180" blue="180"/>
-    <backgroundColor green="127" red="127" blue="127"/>
+    <foregroundColor red="0" blue="0" green="0"/>
+    <backgroundColor red="127" blue="127" green="127"/>
   </State>
-  <Display axisIsDrawn="true" FPSIsDisplayed="false" gridIsDrawn="false" cameraIsEdited="false"/>
-  <Geometry posY="27" height="752" width="1386" posX="279" fullScreen="false"/>
+  <Display axisIsDrawn="false" FPSIsDisplayed="false" cameraIsEdited="false" gridIsDrawn="false"/>
+  <Geometry fullScreen="false" posY="27" posX="72" width="1848" height="1016"/>
   <Camera>
-    <Parameters fieldOfView="0.785398" zNearCoefficient="0.005" sceneRadius="500" zClippingCoefficient="1.73205" Type="PERSPECTIVE" orthoCoef="0">
-      <SceneCenter x="50" z="15" y="50"/>
+    <Parameters Type="PERSPECTIVE" orthoCoef="3.27045" sceneRadius="500" zNearCoefficient="0.005" fieldOfView="0.785398" zClippingCoefficient="1.73205">
+      <SceneCenter z="15" y="50" x="50"/>
     </Parameters>
     <Stereo focusDistance="1207.11" physScreenWidth="0.5" IODist="0.062"/>
     <ManipulatedCameraFrame>
-      <position x="58.6367" z="80.3499" y="126.525"/>
-      <orientation q2="-0.863969" q1="-0.460671" q0="-0.202641" q3="0.016647"/>
-      <ManipulatedParameters wheelSens="1" transSens="1" rotSens="1" spinSens="0.3" zoomSens="1"/>
-      <ManipulatedCameraParameters zoomsOnPivotPoint="false" rotatesAroundUpVector="false" flySpeed="5">
-        <sceneUpVector x="0" z="0" y="1"/>
+      <position z="107.446" y="72.7671" x="59.4667"/>
+      <orientation q2="0.961953" q1="0.205847" q3="0.0403753" q0="0.175052"/>
+      <ManipulatedParameters transSens="1" spinSens="0.3" rotSens="1" zoomSens="1" wheelSens="1"/>
+      <ManipulatedCameraParameters flySpeed="5" rotatesAroundUpVector="false" zoomsOnPivotPoint="false">
+        <sceneUpVector z="0" y="1" x="0"/>
       </ManipulatedCameraParameters>
     </ManipulatedCameraFrame>
   </Camera>

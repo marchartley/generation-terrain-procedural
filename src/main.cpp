@@ -154,33 +154,6 @@ int main(int argc, char *argv[])
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 
-    GridF imgOriginal = GridF::perlin(Vector3i(500, 500, 1));
-    auto resized = imgOriginal.resize(Vector3i(200, 200, 1));
-
-    // std::cout << imgOriginal << "\n" << resized << std::endl;
-    // ImageViewer::get().addImage(imgOriginal).exec();
-    // ImageViewer::get().addImage(resized).exec();
-    // ImageViewer::get().addImage(resized.resize(10, 10, 10)).exec();
-
-
-    auto FFT = resized.FFT();
-    auto iFFT = FFT.iFFT(resized.getDimensions());
-
-    std::cout << "FFT..." << std::flush << showTime(timeIt([&]() {
-        auto FFT2 = resized.FFT();
-    }, 100)) << std::endl;
-
-    std::cout << "iFFT..." << std::flush << showTime(timeIt([&]() {
-        auto iFFT2 = FFT.iFFT();
-    }, 100)) << std::endl;
-
-    GridF reconstruction(iFFT.getDimensions());
-    reconstruction.iterateParallel([&](size_t i) { reconstruction[i] = iFFT[i].real(); });
-
-    ImageViewer::get("Original").addImage(resized).show();
-    ImageViewer::get("FFT").addImage(reconstruction).show();
-    return ImageViewer::get().addImage(reconstruction - resized).exec();
-
     /*
     EnvironmentalScene scene;
     scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
