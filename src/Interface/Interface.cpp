@@ -48,26 +48,26 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
     std::vector<std::shared_ptr<ActionInterface>> interfacesList = {
         std::make_shared<KarstPathGenerationInterface>(this),
         std::make_shared<SpaceColonizationInterface>(this),
-//        std::make_shared<FaultSlipInterface>(this),
+       std::make_shared<FaultSlipInterface>(this),
         std::make_shared<StableFluidSimulationInterface>(this),
-//        std::make_shared<TunnelInterface>(this),
+       std::make_shared<TunnelInterface>(this),
         std::make_shared<ManualEditionInterface>(this),
-//        std::make_shared<GravityInterface>(this),
+       std::make_shared<GravityInterface>(this),
         std::make_shared<UndoRedoInterface>(this),
         std::make_shared<TerrainGenerationInterface>(this),
         std::make_shared<ErosionInterface>(this),
-//        std::make_shared<HeightmapErosionInterface>(this),
+       std::make_shared<HeightmapErosionInterface>(this),
         std::make_shared<BiomeInterface>(this),
         std::make_shared<SmoothInterface>(this),
         std::make_shared<PrimitivePatchesInterface>(this),
         std::make_shared<TerrainSavingInterface>(this),
         std::make_shared<MeshInstanceAmplificationInterface>(this),
-//        std::make_shared<SPHSimulationInterface>(this),
-//        std::make_shared<FLIPSimulationInterface>(this),
-//        std::make_shared<WarpFluidSimulationInterface>(this),
-//        std::make_shared<LBMFluidSimulationInterface>(this),
-//        std::make_shared<CoralIslandGeneratorInterface>(this),
-//        std::make_shared<SpheroidalErosionInterface>(this),
+       std::make_shared<SPHSimulationInterface>(this),
+       std::make_shared<FLIPSimulationInterface>(this),
+       std::make_shared<WarpFluidSimulationInterface>(this),
+       std::make_shared<LBMFluidSimulationInterface>(this),
+       std::make_shared<CoralIslandGeneratorInterface>(this),
+       std::make_shared<SpheroidalErosionInterface>(this),
         std::make_shared<EnvObjsInterface>(this),
         std::make_shared<EnvObjectFluidSimulation>(this),
         std::make_shared<TerrainComparatorInterface>(this),
@@ -81,8 +81,7 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         this->actionInterfaces[interf->actionType] = interf;
     }
 
-    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
-//    std::shared_ptr<CoralIslandGeneratorInterface> coralGenerationInterface = std::static_pointer_cast<CoralIslandGeneratorInterface>(actionInterfaces["coralisland"]);
+    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration"));
     std::shared_ptr<EnvObjsInterface> envObjectsInterface = std::static_pointer_cast<EnvObjsInterface>(actionInterfaces["envobjects"]);
 
     viewer->interfaces = this->actionInterfaces;
@@ -96,15 +95,6 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
         envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
         envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
-
-       // terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
-
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/test_openfoam.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
         if (preloaded_heightmap == "") {
            // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
             terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
@@ -112,41 +102,13 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
             terrainGenerationInterface->createTerrainFromFile(preloaded_heightmap);
         }
 
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmap2.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/slope_with_hole.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/_ToClassify/map_2023-08-19__20-31-35-voxels.stl");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/labyrinthe.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/gaussian.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano3_2.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/test.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/Pipes/map_2023-08-19__10-23-28-voxels.stl");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/one_slope_noisy_reinforced.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/corridor.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/Coral_basis.json");
-
-
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
-       // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_noise_with_obstacle.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-        // terrainGenerationInterface->waterLevel = .05f;
-        // terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
-        // terrainGenerationInterface->waterLevel = .0f;
-
-//        terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;
         this->viewer->heightmap = terrainGenerationInterface->heightmap;
         this->viewer->layerGrid = terrainGenerationInterface->layerGrid;
         this->viewer->implicitTerrain = terrainGenerationInterface->implicitTerrain;
 
         for (auto& actionInterface : this->actionInterfaces) {
+            std::cout << "Updating interface '" << actionInterface.first << "'" << std::endl;
             actionInterface.second->affectTerrains(viewer->heightmap, viewer->voxelGrid, viewer->layerGrid, viewer->implicitTerrain);
             actionInterface.second->reloadShaders();
 
@@ -178,23 +140,18 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
             }
         }
 
-        auto biomeInterface = std::static_pointer_cast<BiomeInterface>(actionInterfaces["biomes"]);
-        if (terrainGenerationInterface->biomeGenerationNeeded) {
-            biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
-            biomeInterface->generateBiomes();
+        if (auto biomeInterface = std::static_pointer_cast<BiomeInterface>(actionInterfaces.at("biomes"))) {
+            if (terrainGenerationInterface->biomeGenerationNeeded) {
+                biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
+                biomeInterface->generateBiomes();
+            }
+            QObject::connect(biomeInterface.get(), &BiomeInterface::terrainViewModified, terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
+        } else {
+            std::cout << "No biome interface connected" << std::endl;
         }
-
-//        envObjectsInterface->fromGanUI();
-
-//        float time = timeIt([&]() {
-//            std::string simFolder = "OpenFoam/OF_Sim_Marcos/"; //"OpenFOAM/simple/";
-//            OpenFoamParser::createSimulationFile(simFolder, viewer->voxelGrid->getVoxelValues().resize(Vector3(10, 10, 5)));
-//        });
-//        std::cout << "Time for mesh definition: " << showTime(time) << std::endl;
 
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
-        QObject::connect(biomeInterface.get(), &BiomeInterface::terrainViewModified, terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
 
         this->openInterface(envObjectsInterface);
     });
@@ -210,6 +167,7 @@ ViewerInterface::~ViewerInterface()
 
 void ViewerInterface::setupUi()
 {
+    std::cout << "Setting up main UI" << std::endl;
     QToolBar* toolbar = new QToolBar("Main tools");
     this->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolbar);
 
@@ -225,11 +183,11 @@ void ViewerInterface::setupUi()
         }
         interfacesToOpen.push_back({interface, interface->mainActionButtonLogo, interface->mainActionDescription, menus[interface->interfaceType]});
     }
-    auto undoRedoInterface = std::static_pointer_cast<UndoRedoInterface>(actionInterfaces["undoredo"]);
-    auto smoothInterface = std::static_pointer_cast<SmoothInterface>(actionInterfaces["smooth"]);
-    auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
-    auto erosionInterface = std::static_pointer_cast<ErosionInterface>(actionInterfaces["erosion"]);
-    auto screenshotInterface = std::static_pointer_cast<ScreenshotInterface>(actionInterfaces["screenshot"]);
+    auto undoRedoInterface = std::static_pointer_cast<UndoRedoInterface>(actionInterfaces.at("undoredo"));
+    auto smoothInterface = std::static_pointer_cast<SmoothInterface>(actionInterfaces.at("smooth"));
+    auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration"));
+    auto erosionInterface = std::static_pointer_cast<ErosionInterface>(actionInterfaces.at("erosion"));
+    auto screenshotInterface = std::static_pointer_cast<ScreenshotInterface>(actionInterfaces.at("screenshot"));
 
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, std::string, std::function<void(void)>>> actionsToUse = {
 //         Main interface     Button image                        Description                         Menu            Function to call
@@ -309,12 +267,18 @@ void ViewerInterface::setupUi()
     mainLayout->setColumnStretch(0, 99);
     mainLayout->setColumnStretch(1,  1);
 
+    std::cout << "BREAK 1" << std::endl;
+
     this->displayModeLayout = new InterfaceUI(UIElement::VERTICAL);
 
+    std::cout << "BREAK 1a" << std::endl;
     this->mapSliceSliderX = new RangeSliderElement("X", 0.f, 1.f, 0.01f, this->viewer->minSliceMapX, this->viewer->maxSliceMapX, UIElement::VERTICAL);
     this->mapSliceSliderY = new RangeSliderElement("Y", 0.f, 1.f, 0.01f, this->viewer->minSliceMapY, this->viewer->maxSliceMapY, UIElement::VERTICAL);
     this->mapSliceSliderZ = new RangeSliderElement("Z", 0.f, 1.f, 0.01f, this->viewer->minSliceMapZ, this->viewer->maxSliceMapZ, UIElement::VERTICAL);
     this->mapSliceSmooth = new CheckboxElement("Shrink on borders", [=](bool checked) { this->viewer->voxelsSmoothedOnBorders = (checked ? 5 : 1); viewer->update(); });
+
+
+    std::cout << "BREAK 2" << std::endl;
 
     mapSliceSliderX->setOnValueChanged([=](float, float) { this->viewer->update(); });
     mapSliceSliderY->setOnValueChanged([=](float, float) { this->viewer->update(); });
@@ -353,6 +317,8 @@ void ViewerInterface::setupUi()
                                                            }),
                                                       mapSliceSmooth}));
     */
+
+    std::cout << "BREAK 3" << std::endl;
     displayModeLayout->add({createHorizontalGroup({mapSliceSliderX, mapSliceSliderY, mapSliceSliderZ}), mapSliceSmooth});
 
     this->isolevelSelectionSlider = new RangeSliderElement("Isolevel", 0.f, 3.f, 0.1f, terrainGenerationInterface->minIsoLevel, terrainGenerationInterface->maxIsoLevel, UIElement::VERTICAL);
@@ -363,7 +329,12 @@ void ViewerInterface::setupUi()
         else { terrainGenerationInterface->minIsoLevel = -1000.f; terrainGenerationInterface->maxIsoLevel = 1000.f; }
         this->viewer->update();
     });*/
+
+    std::cout << "BREAK 4" << std::endl;
     mainLayout->addWidget(viewer, 1, 0);
+
+
+    std::cout << "BREAK 5" << std::endl;
 
     QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
 
@@ -391,18 +362,17 @@ void ViewerInterface::setupUi()
     displayShadowsButton->setChecked(terrainGenerationInterface->displayShadows);
     displayShadowsButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayShadowsMode(check);});
 
-    auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, terrainGenerationInterface->waterLevel);
-    waterLevelSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });
-    auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, terrainGenerationInterface->ambiantOcclusionFactor);
-    ambiantOcclusionSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setAmbiantOcclusion(newValue); });
-    auto heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
-    heightFactorSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setHeightFactor(newValue); });
+    auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });
+    auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setAmbiantOcclusion(newValue); });
+    auto heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setHeightFactor(newValue); });
+    auto ompFactorSlider = new SliderElement("OMP", 0.f, 1.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setOMPFactor(newValue); });
 
     displayOptionUI->add(displayModeLayout);
     displayOptionUI->add(createVerticalGroup({
                                                     waterLevelSlider,
                                                     ambiantOcclusionSlider,
                                                     heightFactorSlider,
+                                                    ompFactorSlider,
                                                 //reloadShadersButton,
                                                    createHorizontalGroup({
                                                        createVerticalGroup({
@@ -416,6 +386,8 @@ void ViewerInterface::setupUi()
                                                    })
                                             }));
     displayOptionWidget->setWidget(displayOptionUI->getWidget());
+
+    std::cout << "UI setup" << std::endl;
 
     QWidget* mainFrame = new QWidget(this);
     mainFrame->setLayout(mainLayout);
@@ -432,11 +404,12 @@ void ViewerInterface::setupUi()
     this->setAllValuesToFitViewerDefaults(this->viewer);
     this->setupBindings();
     this->retranslateUi();
+    std::cout << "End of SetupUI" << std::endl;
 } // setupUi
 
 void ViewerInterface::setupBindings()
 {
-    auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
+    // auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration"));
    /* QObject::connect(mapSliceSliderX, &RangeSlider::alt_valueChanged, this, [=](float min, float max){this->viewer->minSliceMapX = min; viewer->maxSliceMapX = max; viewer->update(); });
     QObject::connect(mapSliceSliderY, &RangeSlider::alt_valueChanged, this, [=](float min, float max){this->viewer->minSliceMapY = min; viewer->maxSliceMapY = max; viewer->update(); });
     QObject::connect(mapSliceSliderZ, &RangeSlider::alt_valueChanged, this, [=](float min, float max){this->viewer->minSliceMapZ = min; viewer->maxSliceMapZ = max; viewer->update(); });
@@ -539,8 +512,8 @@ std::map<std::string, float> generateRandomValuesFrom(std::map<std::string, std:
 
 void ViewerInterface::erosionsTests()
 {
-    auto erosionInterface = std::static_pointer_cast<ErosionInterface>(actionInterfaces["erosion"]);
-    auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
+    auto erosionInterface = std::static_pointer_cast<ErosionInterface>(actionInterfaces.at("erosion"));
+    auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration"));
     auto savingInterface = std::static_pointer_cast<TerrainSavingInterface>(actionInterfaces["terrainsaving"]);
 
     std::map<std::string, std::vector<float>> parameters = {

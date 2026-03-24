@@ -42,6 +42,7 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
     for (auto& obj : json) {
         std::string objName = toLower(obj["name"]);
         if (startsWith(objName, "--")) continue; // Ignore some objects if the name starts with "--"
+        std::cout << "Reading '" << objName << "'" << std::endl;
         if (!obj.contains("type")) {
             throw std::domain_error("No type given for Environmental Object defined as " + nlohmann::to_string(obj));
         }
@@ -62,6 +63,7 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
 
 
     for (auto& [name, obj] : this->availableObjects) {
+        std::cout << "Defining rules for " << name << std::endl;
         obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name, this);
         obj->fitnessFunction = EnvObject::parseFittingFunction(obj->s_FitnessFunction, obj->name, this);
         obj->updateFittingFunction();

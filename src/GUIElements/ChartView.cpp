@@ -253,7 +253,7 @@ bool Chart::sceneEvent(QEvent *event)
     return QChart::event(event);
 }
 
-bool Chart::gestureEvent([[maybe_unused]] QGestureEvent *event)
+bool Chart::gestureEvent(QGestureEvent *event)
 {
     return true;
 }

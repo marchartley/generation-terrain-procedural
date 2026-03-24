@@ -44,7 +44,7 @@ InterfaceUI* TerrainSavingInterface::createGUI()
     });
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         createHorizontalGroup({selectedFilenameLabel, fileSelectionButton}),
         saveHeightmapCheck,
         saveVoxelsCheck,

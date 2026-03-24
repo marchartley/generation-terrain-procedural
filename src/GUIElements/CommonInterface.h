@@ -106,7 +106,7 @@ public:
         return *raw;
     }
     UIElement* add(UIElement* element, const std::string& name = "");
-    void add(std::vector<UIElement*> elements);
+    void add(const std::vector<UIElement*>& elements);
     InterfaceUI& clear();
 
     InterfaceUI* setTight(bool tight);
@@ -159,6 +159,7 @@ class SliderElement : public InterfaceUI {
 public:
     SliderElement(const std::string& label, float valMin, float valMax, float multiplier, UIElement::LAYOUT orientation = HORIZONTAL);
     SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& binded, UIElement::LAYOUT orientation = HORIZONTAL);
+    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, std::function<void(float)> onValueChanged, UIElement::LAYOUT orientation = HORIZONTAL);
 
     SliderElement& setValue(float newValue) { slider()->setfValue(newValue); return *this; }
     float value() const { return slider()->getfValue(); }

@@ -2336,7 +2336,7 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
     float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
 
     auto dst = newMat.data.data();
-    const auto src = data.data();
+    //const auto src = data.data();
 
     if (mode == LINEAR) {
         newMat.iterateParallel([&](size_t x, size_t y, size_t z) {

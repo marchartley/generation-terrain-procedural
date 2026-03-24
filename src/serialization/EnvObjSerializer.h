@@ -6,6 +6,7 @@
 #include "EnvObject/EnvCurve.h"
 #include "EnvObject/EnvArea.h"
 #include "EnvObject/EnvMaterial.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 #include "Utils/json.h"
 

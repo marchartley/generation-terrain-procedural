@@ -33,7 +33,7 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
         // allAtOnce.display();
         // return;
         // Dirty, to remove one day :
-        float terrainHeightFactor = dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->heightFactor;
+        float terrainHeightFactor = dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->heightFactor;
 
         for (auto& meshType : meshesOptions) {
             if (!meshType.displayed) continue;
@@ -184,7 +184,7 @@ InterfaceUI* MeshInstanceAmplificationInterface::createGUI()
 
     auto recomputePositionsButton = new ButtonElement("Recompute positions", [&]() { this->afterTerrainUpdated(); });
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         exportButton,
         recomputePositionsButton
     });

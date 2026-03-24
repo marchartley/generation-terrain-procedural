@@ -4,184 +4,365 @@
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Image.h"
 
-using namespace std;
+#include "GUIElements/ImageViewer.h"
 
-// Orthogonal Matching Pursuit (OMP) function
-MatrixXd omp(const MatrixXd& D, const MatrixXd& X, const int sparsity) {
-    size_t numAtoms = D.cols();
-    size_t numSignals = X.cols();
-    Matrix coefficients(numAtoms, numSignals);
+inline double dot(const GridF& a, const GridF& b) {
+    return (a * b).sum();
+}
+inline double norm2(const GridF& a) {
+    return std::sqrt(dot(a, a));
+}
 
-    for (size_t k = 0; k < numSignals; ++k) {
-        vector<float> x(X.rows());
-        for (size_t i = 0; i < X.rows(); ++i) {
-            x[i] = X[i][k];
+OMP::OMP()
+{}
+
+GridF OMP::getLargeReconstruction(const GridF &input, const Vector3i &finalDimensions)
+{
+    int scaleX = input.sizeX / tileSize;
+    int scaleY = input.sizeY / tileSize;
+
+    // Running OMP process on each tile
+    std::vector<std::pair<Vector3, OMPResult>> results(scaleX * scaleY  * overlap  * overlap);
+    #pragma omp parallel for collapse(2)
+    for (int _i = 0; _i < scaleX  * overlap; _i++) {
+        for (int _j = 0; _j < scaleY  * overlap; _j++) {
+            float i = _i / float(overlap);
+            float j = _j / float(overlap);
+            auto targetPatch = input.subset(Vector3(tileSize * i, tileSize * j), Vector3(tileSize * (i + 1), tileSize * (j + 1)));
+            OMPResult res = orthogonalMatchingPursuit(targetPatch, this->smallDictionary, nbPrimitives, 1e-5f);
+            results[_i * scaleY * overlap + _j] = {Vector3(i, j), res};
         }
+    }
 
-        vector<float> residual = x;
-        vector<int> selectedAtoms;
-        Matrix A(X.rows(), sparsity);
-
-        vector<float> subCoefficients(sparsity, 0);
-        for (int j = 0; j < sparsity; ++j) {
-            // Compute correlations
-            vector<float> correlations(numAtoms, 0);
-            #pragma omp parallel for
-            for (size_t i = 0; i < numAtoms; ++i) {
-                if (isIn(int(i), selectedAtoms)) continue;
-                #pragma omp parallel for
-                for (size_t r = 0; r < residual.size(); ++r) {
-                    correlations[i] += D[r][i] * residual[r];
-                }
-            }
-
-            // Find the index of the atom with the maximum correlation
-            int maxIndex = distance(correlations.begin(), max_element(correlations.begin(), correlations.end()));
-            if (std::abs(correlations[maxIndex]) < 1e-5) break;
-            selectedAtoms.push_back(maxIndex);
-
-            // Update the matrix A with the selected atom
-            for (size_t i = 0; i < A.rows(); ++i) {
-                A[i][j] = D[i][maxIndex];
-            }
-
-            // Solve for the coefficients
-            subCoefficients = Matrix::solve(A.leftCols(j + 1), x);
-
-            // Update the residual
-            residual = x;
-            float sum = 0;
+    // Merge as a single image
+    auto img = GridF(tileSize * scaleX * upscaleFactor, tileSize * scaleY * upscaleFactor, 1);
+    GridF weights = GridF(img.getDimensions());
+    GridF mask = GridF(tileSize * upscaleFactor, tileSize * upscaleFactor, 1, 1.f);
+    Vector3 maskCenter = mask.getDimensions().xy() / 2.f;
+    float maxRadius = maskCenter.norm();
+    mask.iterateParallel([&](const Vector3& p) { mask[p] = std::clamp(1.f - interpolation::sigmoid((p - maskCenter).norm() / maxRadius), 0.01f, 1.f); });
+    for (int iOverlap = 0; iOverlap < overlap; iOverlap++) {
+        for (int jOverlap = 0; jOverlap < overlap; jOverlap++) {
             #pragma omp parallel for collapse(2)
-            for (size_t i = 0; i < A.rows(); ++i) {
-                for (int l = 0; l <= j; ++l) {
-                    residual[i] -= A[i][l] * subCoefficients[l];
-                    sum += residual[i];
+            for (int x = 0; x < scaleX; x++) {
+                for (int y = 0; y < scaleY; y++) {
+                    int idx = (x * overlap + iOverlap) * scaleY * overlap + (y * overlap + jOverlap);
+                    auto& [pos, res] = results[idx];
+                    // std::cout << idx << ": " << pos << " -> (" << x << " * " << overlap << " + " << iOverlap << ") * " << scaleY << " * " << overlap << " + (" << y << " * " << overlap << " + " << jOverlap << ")" << std::endl;
+                    GridF reconstruction = reconstructImage(res, this->bigDictionary);
+                    img.add(reconstruction * mask, pos * tileSize * upscaleFactor);
+                    weights.add(mask, pos * tileSize * upscaleFactor);
                 }
             }
-            // x = residual;
-            // if (std::abs(sum/float(residual.size())) < 1e-5) break;
-        }
-
-        // Fill the coefficients matrix
-        for (size_t i = 0; i < selectedAtoms.size(); ++i) {
-            coefficients[selectedAtoms[i]][k] = subCoefficients[i];
         }
     }
-
-    return coefficients;
+    img /= weights;
+    if (finalDimensions != Vector3i::invalid && finalDimensions != img.getDimensions())
+        return img.resize(finalDimensions);
+    return img;
 }
 
-std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionary(int nbSamples, int highResSize, int lowResSize) {
-    std::vector<GridF> images(nbSamples);
 
-    for (int i = 0; i < nbSamples; i++) {
-        float angle = 2.f * PI / float(nbSamples);
-        float size = highResSize;
-        GridF img(size, size);
-        Vector3 start = Vector3(-cos(angle), -sin(angle)) * size * .5f + Vector3(size, size) * .5f;
-        Vector3 end = Vector3(cos(angle), sin(angle)) * size * .5f + Vector3(size, size) * .5f;
-        img.iterateParallel([&] (const Vector3& p) {
-            Vector3 startToPoint = p - start;
-            Vector3 segment = end - start;
-            img(p) = 1.f - startToPoint.dot(segment) / segment.norm2();
-        });
-        images[i] = img;
-    }
-    images.push_back(GridF(1, 1, 1, 1.f));
+std::vector<double> OMP::solveLinearSystem(std::vector<std::vector<double>> M, std::vector<double> b)
+{
+    const int n = static_cast<int>(b.size());
 
-    std::vector<Matrix> bigDico(images.size());
-    std::vector<Matrix> smallDico(images.size());
-    #pragma omp parallel for
-    for (int i = 0; i < images.size(); i++) {
-        bigDico[i] = Matrix(highResSize, highResSize);
-        images[i].iterateParallel([&](int x, int y, int z) {
-            bigDico[i][y][x] = images[i](x, y);
-        });
-        smallDico[i] = Matrix(lowResSize, lowResSize);
-        images[i] = images[i].resize(lowResSize, lowResSize, 1);
-        images[i].iterateParallel([&](int x, int y, int z) {
-            smallDico[i][y][x] = images[i](x, y);
-        });
-    }
-
-    return {smallDico, bigDico};
-}
-
-std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionaryFromFile(const std::string& filename, int highResSize, int lowResSize) {
-    Image initialImage;
-    displayProcessTime("Reading... ", [&]() {
-        initialImage = Image::readFromFile(filename);
-    });
-    GridF data(initialImage.colorImage.getDimensions());
-    data.iterateParallel([&](size_t i) {
-        data[i] = initialImage.colorImage[i].x();
-    });
-    std::vector<GridF> images;
-    // int nbX = 200;
-    // int nbY = 100;
-
-    // int w = data.sizeX / nbX;
-    // int h = data.sizeY / nbY;
-
-    int w = highResSize, h = highResSize;
-    int nbX = data.sizeX / w, nbY = data.sizeY / h;
-
-    displayProcessTime("Splitting... ", [&]() {
-        #pragma omp parallel for collapse(2)
-        for (int i = 0; i < nbX; i++) {
-            for (int j = 0; j < nbY; j++) {
-                if (random_gen::generate() < .5f) continue;
-
-                GridF img = data.subset(i * w, (i+1) * w, j * h, (j+1) * h).resize(highResSize, highResSize, 1).normalized();
-                // if (img.sum() / float(highResSize * highResSize) < 0.5f) continue;
-                // ImageViewer::get().addImage(img)->exec();
-
-                #pragma omp critical
-                images.push_back(img);
+    for (int k = 0; k < n; ++k)
+    {
+        // Pivot
+        int pivot = k;
+        double maxAbs = std::fabs(M[k][k]);
+        for (int i = k + 1; i < n; ++i)
+        {
+            double v = std::fabs(M[i][k]);
+            if (v > maxAbs)
+            {
+                maxAbs = v;
+                pivot = i;
             }
         }
-    });
 
-    std::vector<Matrix> bigDico(images.size());
-    std::vector<Matrix> smallDico(images.size());
-    displayProcessTime("To dictionary (" + std::to_string(images.size()) + "... ", [&]() {
+        if (maxAbs < 1e-12f)
+            throw std::runtime_error("Singular system in OMP least-squares");
+
+        if (pivot != k)
+        {
+            std::swap(M[k], M[pivot]);
+            std::swap(b[k], b[pivot]);
+        }
+
+        // Elimination
+        for (int i = k + 1; i < n; ++i)
+        {
+            double factor = M[i][k] / M[k][k];
+            M[i][k] = 0.0f;
+            for (int j = k + 1; j < n; ++j)
+                M[i][j] -= factor * M[k][j];
+            b[i] -= factor * b[k];
+        }
+    }
+
+    // Back substitution
+    std::vector<double> x(n, 0.0f);
+    for (int i = n - 1; i >= 0; --i)
+    {
+        double sum = b[i];
+        for (int j = i + 1; j < n; ++j)
+            sum -= M[i][j] * x[j];
+        x[i] = sum / M[i][i];
+    }
+
+    return x;
+}
+
+GridF OMP::combineAtoms(const std::vector<GridF>& dictionary, const std::vector<int>& support, const std::vector<double>& coeffs)
+{
+    if (support.empty())
+        throw std::runtime_error("Support is empty");
+
+    GridF out = dictionary[support[0]] * 0.0f;
+    for (size_t i = 0; i < support.size(); ++i)
+        out += dictionary[support[i]] * coeffs[i];
+    return out;
+}
+
+std::vector<double> OMP::solveLeastSquaresActiveSet(const GridF& y, const std::vector<GridF>& dictionary, const std::vector<int>& support)
+{
+    const int m = static_cast<int>(support.size());
+
+    std::vector<std::vector<double>> G(m, std::vector<double>(m, 0.0f));
+    std::vector<double> rhs(m, 0.0f);
+    #pragma omp parallel for
+    for (int i = 0; i < m; ++i)
+    {
+        const GridF& ai = dictionary[support[i]];
+        rhs[i] = dot(ai, y);
         #pragma omp parallel for
-        for (int i = 0; i < images.size(); i++) {
-            bigDico[i] = Matrix(highResSize, highResSize);
-            images[i].iterateParallel([&](int x, int y, int z) {
-                bigDico[i][y][x] = images[i](x, y);
-            });
-            smallDico[i] = Matrix(lowResSize, lowResSize);
-            images[i] = images[i].resize(lowResSize, lowResSize, 1);
-            images[i].iterateParallel([&](int x, int y, int z) {
-                smallDico[i][y][x] = images[i](x, y);
-            });
-        }
-    });
-    return {bigDico, smallDico};
-}
-
-
-Matrix flattenDictionary(const std::vector<Matrix>& dictionaries) {
-    Matrix res = Matrix(dictionaries.size(), dictionaries[0].rows() * dictionaries[0].cols());
-
-    for (int i = 0; i < dictionaries.size(); i++) {
-        std::vector<float> flat = dictionaries[i].toStdVector();
-        res[i] = flat;
-    }
-    return res;
-}
-
-Matrix reconstructImage(const Matrix& coefficients, const Matrix& D, size_t imageHeight, size_t imageWidth, size_t patchSize) {
-    Matrix reconstructed(imageHeight, imageWidth);
-
-    auto prod = Matrix::matprod(D, coefficients).toStdVector();
-    for (int i = 0; i < reconstructed.size(); i++) {
-        for (int j = 0; j < reconstructed[i].size(); j++) {
-            reconstructed[j][i] = prod[j * imageHeight + i];
+        for (int j = 0; j < m; ++j)
+        {
+            const GridF& aj = dictionary[support[j]];
+            G[i][j] = dot(ai, aj);
         }
     }
-    return reconstructed;
+
+    return solveLinearSystem(G, rhs);
+}
+
+OMPResult OMP::orthogonalMatchingPursuit(const GridF& y, const std::vector<GridF>& dictionary, int maxAtoms, double residualTolerance, bool debug)
+{
+    if (dictionary.empty())
+        throw std::runtime_error("Dictionary is empty");
+    if (maxAtoms <= 0)
+        throw std::runtime_error("maxAtoms must be > 0");
+
+    OMPResult result;
+    result.residual = y;
+
+    std::vector<bool> selected(dictionary.size(), false);
+
+    for (int iter = 0; iter < maxAtoms; ++iter)
+    {
+        // 1) Select atom with maximum absolute correlation
+        int bestIdx = -1;
+        double bestCorr = -1.0f;
+
+        for (size_t j = 0; j < dictionary.size(); ++j)
+        {
+            if (selected[j])
+                continue;
+
+            auto normalizedResidual = result.residual;
+            double corr = std::fabs(dot(dictionary[j], normalizedResidual));
+            if (corr > bestCorr)
+            {
+                bestCorr = corr;
+                bestIdx = static_cast<int>(j);
+            }
+        }
+
+        if (bestIdx < 0)
+            break;
+
+        result.support.push_back(bestIdx);
+        selected[bestIdx] = true;
+
+        // 2) Solve least-squares on current support
+        result.coeffs = solveLeastSquaresActiveSet(y, dictionary, result.support);
+
+        // 3) Update approximation and residual
+        result.approximation = combineAtoms(dictionary, result.support, result.coeffs);
+        result.residual = y - result.approximation;
+
+        // 4) Stop if residual small enough
+        if (dot(result.residual, result.residual) <= residualTolerance * residualTolerance)
+            break;
+    }
+
+    return result;
+}
+
+/*
+void OMP::createDictionary(int width, int height, DictionaryType type)
+{
+    std::vector<GridF> dict;
+
+    switch (type)
+    {
+    case DictionaryType::Dirac:
+        dict = createDictionary_Dirac(width, height);
+        break;
+
+    case DictionaryType::DCT:
+        dict = createDictionary_DCT(width, height);
+        break;
+
+    case DictionaryType::Gaussian:
+        dict = createDictionary_Gaussian(width, height, {1.0f, 2.0f, 4.0f});
+        break;
+    }
+
+    normalizeDictionary(dict);
+    return dict;
+}
+
+std::vector<GridF> OMP::createDictionary_Dirac(int width, int height)
+{
+    std::vector<GridF> dict(width * height);
+
+    #pragma omp parallel for collapse(2)
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            GridF atom(width, height);
+            atom.reset(0.0f);
+
+            atom(x, y) = 1.0f;
+
+            dict[y * width + x] = atom;
+        }
+    }
+    return dict;
+}
+
+std::vector<GridF> OMP::createDictionary_DCT(int width, int height)
+{
+    std::vector<GridF> dict(width * height);
+
+    #pragma omp parallel for collapse(2)
+    for (int u = 0; u < width; ++u)
+    {
+        for (int v = 0; v < height; ++v)
+        {
+            GridF atom(width, height);
+
+            double alpha_u = (u == 0) ? std::sqrt(1.0f / width) : std::sqrt(2.0f / width);
+            double alpha_v = (v == 0) ? std::sqrt(1.0f / height) : std::sqrt(2.0f / height);
+
+            atom.iterateParallel([&](size_t x, size_t y, size_t) {
+                double value = alpha_u * alpha_v * std::cos((PI * (2 * x + 1) * u) / (2 * width)) * std::cos((PI * (2 * y + 1) * v) / (2 * height));
+
+                atom.unsafe(x, y) = value;
+            });
+
+            dict[u * height + v] = atom;
+        }
+    }
+    return dict;
+}
+std::vector<GridF> OMP::createDictionary_Gaussian(int width, int height, const std::vector<double>& sigmas)
+{
+    std::vector<GridF> dict(sigmas.size() * height * width);
+
+    #pragma omp parallel for collapse(3)
+    for (size_t iSigma = 0; iSigma < sigmas.size(); iSigma++)
+    {
+        for (int cy = 0; cy < height; ++cy)
+        {
+            for (int cx = 0; cx < width; ++cx)
+            {
+                auto& sigma = sigmas[iSigma];
+                GridF atom(width, height);
+                atom.iterateParallel([&](size_t x, size_t y, size_t) {
+                    double dx = x - cx;
+                    double dy = y - cy;
+
+                    double val = std::exp(-(dx * dx + dy * dy) / (2.0f * sigma * sigma));
+                    atom.unsafe(x, y) = val;
+                });
+
+                // normalize
+                double n = norm2(atom);
+                if (n > 1e-6f)
+                    atom *= (1.0f / n);
+
+                dict[iSigma * height * width + cx * height + cy] = atom;
+            }
+        }
+    }
+    return dict;
+}
+*/
+std::vector<GridF> OMP::createDictionaryFromImage(int width, int height, const GridF &image)
+{
+    size_t nX = image.sizeX / width;
+    size_t nY = image.sizeY / height;
+    std::vector<GridF> patches(nX * nY, GridF(width, height));
+#pragma omp parallel for collapse(2)
+    for (size_t i = 0; i < nX; i++) {
+        for (size_t j = 0; j < nY; j++) {
+            GridF patch = image.subset(i * width, (i + 1) * width, j * height, (j + 1) * height, 0, 1);
+            patches[i * nY + j].data = patch.data;
+        }
+    }
+    normalizeDictionary(patches);
+    return patches;
+}
+
+void OMP::createDictionaryFromImages(const std::vector<std::string>& paths)
+{
+    for (auto path : paths) {
+        GridF bigImage = Image::readFromFile(path).getBwImage().resize(Vector3i(400, 400, 1));
+        auto atoms = createDictionaryFromImage(tileSize * upscaleFactor, tileSize * upscaleFactor, bigImage);
+        bigDictionary.insert(bigDictionary.end(), atoms.begin(), atoms.end());
+    }
+    std::shuffle(bigDictionary.begin(), bigDictionary.end(), random_gen::random_generator);
+    bigDictionary.resize(std::min((int)bigDictionary.size(), maxAtoms));
+    smallDictionary = bigDictionary;
+    for (auto& data : smallDictionary) {
+        data = data.resize(Vector3i(tileSize, tileSize, 1));
+    }
+}
+
+void OMP::normalizeDictionary(std::vector<GridF>& dict)
+{
+    for (auto& atom : dict)
+    {
+        double n = norm2(atom);
+        if (n > 1e-12f)
+            atom *= (1.0f / n);
+    }
+}
+
+GridF OMP::reconstructImage(const OMPResult& result, const std::vector<GridF>& dictionary)
+{
+    if (result.support.empty())
+        throw std::runtime_error("OMPResult support is empty");
+
+    if (result.support.size() != result.coeffs.size())
+        throw std::runtime_error("support and coeffs size mismatch");
+
+    GridF image = dictionary[result.support[0]] * 0.0f;
+
+    for (size_t k = 0; k < result.support.size(); ++k)
+    {
+        int atomIndex = result.support[k];
+        double coeff = result.coeffs[k];
+
+        image += dictionary[atomIndex] * coeff;
+    }
+
+    return image;
 }
 
 

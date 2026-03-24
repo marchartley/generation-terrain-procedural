@@ -63,7 +63,7 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
         auto grabForceSlider = new SliderElement("Grab force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.grabK->force);
         auto scaleForceSlider = new SliderElement("Scale force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.scaleK->force);
 
-        bodyKelvinletUI->add(std::vector<UIElement*>{
+        bodyKelvinletUI->add({
             pinchForceSlider,
             twistForceSlider,
             grabForceSlider,
@@ -71,13 +71,13 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
         });
 
         for (auto& slider : {pinchForceSlider, twistForceSlider, grabForceSlider, scaleForceSlider}) {
-            slider->setOnValueChanged([=](float newValue) {
+            slider->setOnValueChanged([=](float) {
                 this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
             });
         }
     }
 
-    bodyKelvinletUI->add(std::vector<UIElement*>{
+    bodyKelvinletUI->add({
         anchorSelectionCombobox,
         createHorizontalGroup(std::vector<UIElement*>{simulationModeCheckbox, animatedModeCheckbox}),
         angleInitialFlow,
@@ -254,7 +254,7 @@ GridF& EnvObjectEditor::simulateDeposition(GridF &currentState, int iterations)
 }
 
 
-GridV3 EnvObjectEditor::getVectorFieldWithRotation(bool takeIntoAccountCurrentKelvinlet)
+GridV3 EnvObjectEditor::getVectorFieldWithRotation(bool)
 {
     this->validateEnvObject();
     GridV3 resultingVectorField = this->kelvinletParams.getInitialVectorField();
@@ -333,7 +333,7 @@ void EnvObjectEditor::animateEnvObject(bool animate)
     if (animate) {
         if (animationFrame == 0) {
             AABBox bounds(Vector3::origin, dataModel->vectorData.field.getDimensions().xy());
-            if (auto asPoint = dynamic_cast<EnvPointInstance*>(this->currentObject)) {
+            if (dynamic_cast<EnvPointInstance*>(this->currentObject)) {
                 verticesTargets = {Vector3::random(bounds)};
             }
             else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {

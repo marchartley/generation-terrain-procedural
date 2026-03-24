@@ -86,7 +86,7 @@ InterfaceUI* EnvObjectFluidSimulation::createGUI()
     auto computeButton = new ButtonElement("Compute", [=]() { this->computeSimulation(this->nbComputationsPerFrame); });
     auto updateMeshButton = new ButtonElement("Update terrain", [=]() { this->updateBoundariesMesh(); });
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         displayBoundariesButton,
         displayGridBoundariesButton,
         displayParticlesButton,

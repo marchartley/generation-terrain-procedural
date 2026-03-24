@@ -6,7 +6,7 @@
 BiomeInterface::BiomeInterface(QWidget* parent)
     : ActionInterface("biomes", "Biomes generation", "model", "Biotopes system", "biomes.png", parent)
 {
-    createGUI();
+    //createGUI();
 }
 
 void BiomeInterface::display([[maybe_unused]] const Vector3& camPos)
@@ -500,7 +500,7 @@ void BiomeInterface::mousePressEvent(QMouseEvent *event)
     ActionInterface::mousePressEvent(event);
 }
 
-void BiomeInterface::mouseDoubleClickOnMapEvent(const Vector3& mousePosition, bool mouseInMap, QMouseEvent *event, [[maybe_unused]] TerrainModel* model)
+void BiomeInterface::mouseDoubleClickOnMapEvent(const Vector3& mousePosition, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
 {
     if(this->isVisible() && mouseInMap) {
         // Zoom on the area if left click, zoom out with right click
@@ -539,7 +539,7 @@ void BiomeInterface::mouseDoubleClickEvent(QMouseEvent *event)
     ActionInterface::mouseDoubleClickEvent(event);
 }
 */
-void BiomeInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, [[maybe_unused]] QMouseEvent* event, TerrainModel* model)
+void BiomeInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
 {
     if (this->isVisible()) {
         if (!mouseInMap) return;
@@ -620,7 +620,7 @@ InterfaceUI* BiomeInterface::createGUI()
     auto interchangeBiomeButton = new ButtonElement("Changer le biome...", [=]() { this->interchangeBiomes(); });
     auto randomizeButton = new ButtonElement("Randomiser", [=]() { this->randomize(); });
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         new UIElement(biomeSelectionGui),
         seeAllBiomesButton,
         interchangeBiomeButton,
@@ -798,7 +798,7 @@ BiomeReplacementDialog::BiomeReplacementDialog(BiomeInterface* caller)
     auto validButton = new ButtonElement("Confirmer", [=]() { this->confirm(); });
 
     new UIElement(allAvailableBiomes);
-    UI->add(std::vector<UIElement*>{new UIElement(allAvailableBiomes), cancelButton, validButton});
+    UI->add({new UIElement(allAvailableBiomes), cancelButton, validButton});
 
     setLayout(UI->get()->layout());
     setSizeGripEnabled(true);

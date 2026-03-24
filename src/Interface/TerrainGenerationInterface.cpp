@@ -22,7 +22,58 @@
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
     : ActionInterface("terraingeneration", "Terrain generation", "model", "Terrain generation management", "terrain_generation_manager_button.png", parent)
 {
-//    this->createGUI();
+    omp = OMP();
+    omp.tileSize = 25;
+    omp.upscaleFactor = 2;
+    omp.nbPrimitives = 5;
+    omp.overlap = 2;
+    // omp.maxAtoms = 100000;
+
+    std::vector<std::string> paths = {
+        "Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png",
+        "Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png",
+        "Python_tests/random_heightmaps/gebco_2022_n7.192_s6.5475_w157.6276_e158.5111.png",
+        "Python_tests/random_heightmaps/gebco_2022_n29.2095_s26.9696_w-18.5535_e-15.0099.png",
+        "Python_tests/random_heightmaps/gebco_2022_n37.1705_s36.768_w-25.4598_e-24.8503.png",
+        "Python_tests/random_heightmaps/gebco_2022_n38.1118_s37.5071_w-26.0821_e-24.82.png",
+        "Python_tests/random_heightmaps/gebco_2022_n39.8172_s39.2518_w-31.4667_e-30.9152.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-1.3674_s-2.3083_w152.7035_e153.8301.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-4.8277_s-7.3806_w153.9789_e156.5584.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-9.16_s-9.5953_w45.9874_e46.7857.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-9.7602_s-10.6476_w145.0044_e146.0966.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-10.8852_s-12.8406_w42.5556_e44.7746.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.47_s-11.8862_w166.5637_e167.1771.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.0202_s-11.431_w166.2657_e166.7393.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.897_s-12.7918_w45.8971_e47.1172.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.3972_s-12.0058_w159.8594_e160.7478.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-12.1474_s-12.632_w43.4243_e44.0379.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-12.2419_s-13.5044_w44.4362_e45.8027.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-13.4048_s-14.0297_w167.2002_e167.9155.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-13.7444_s-14.1182_w146.3704_e146.8523.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-14.1031_s-14.4431_w167.2171_e167.7463.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-15.5213_s-20.003_w176.1055_e182.7477.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-19.9784_s-21.0759_w-36.4248_e-35.1872.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-20.1418_s-21.0496_w-35.1785_e-34.3203.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-20.2347_s-22.1362_w54.4421_e56.6905.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-20.8712_s-21.5611_w-160.1062_e-159.4069.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-21.7145_s-22.1624_w-158.1485_e-157.6264.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-22.2221_s-22.9127_w-151.7574_e-150.8075.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-22.9344_s-23.6643_w7.7665_e8.6813.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-23.625_s-24.1049_w-148.064_e-147.4093.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-23.0714_s-23.7406_w-150.0961_e-149.1318.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-26.9442_s-27.4812_w-109.8687_e-108.9947.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-33.4843_s-33.9468_w-79.2937_e-78.6375.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-33.6092_s-33.9772_w-81.0432_e-80.5068.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-35.5908_s-36.6167_w-125.9211_e-124.698.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-44.5092_s-47.7086_w48.0463_e53.2162.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-46.245_s-46.6022_w51.9649_e52.4313.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-46.532_s-51.2552_w65.4486_e73.1428.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-64.825_s-66.0811_w-91.4342_e-89.8037.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-68.0822_s-69.6977_w-91.7994_e-89.187.png"
+    };
+    displayProcessTime("Preparing OMP dictionary from files", [&]() {
+        omp.createDictionaryFromImages(paths);
+    });
 }
 
 void TerrainGenerationInterface::setWaterLevel(float newLevel)
@@ -518,7 +569,7 @@ InterfaceUI* TerrainGenerationInterface::createGUI()
     noiseFrequencySlider->setValue(.3f);
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         createHorizontalGroup({heightmapPathLabel, loadHeightmapButton}),
         createHorizontalGroup({reloadButton, saveHeightmapButton}),
         createHorizontalGroup({
@@ -1019,6 +1070,14 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
     float GLcallTime = 0;
     float realDisplayTime = 0;
 
+    GridF newHeightmap;
+    displayProcessTime("Computing OMP...", [&]() {
+        if (ompFactor == 0)
+            newHeightmap = heightmap->heights;
+        else
+            newHeightmap = omp.getLargeReconstruction(heightmap->heights.resize(Vector3i(50, 50, 1)), heightmap->heights.getDimensions()) * ompFactor + heightmap->heights * (1.f - ompFactor);
+    });
+
     displayProcessTime("Init frame buffers... ", [&]() {
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
@@ -1030,7 +1089,7 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
 
-        GridF heights = heightmap->getHeights();
+        GridF heights = newHeightmap.resize(Vector3i(heightmap->getSizeX(), heightmap->getSizeY(), 1)); //heightmap->getHeights();
 //        heights += EnvObject::materials["sand"].currentState * 1.f;
         maxHeight = heights.max();
         float *heightmapData = new float[heights.size() * 4];
@@ -1186,7 +1245,6 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
             } else {
                 GridF values;
                 values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
-    //            std::cout << values.sum() << std::endl;
                 implicitMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
                 implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
                 implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
@@ -1297,6 +1355,12 @@ void TerrainGenerationInterface::changeDisplayToComparativeMode(bool toComparati
 void TerrainGenerationInterface::setHeightFactor(float newHeightFactor)
 {
     this->heightFactor = newHeightFactor;
+    Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::setOMPFactor(float newOMPvalue)
+{
+    this->ompFactor = newOMPvalue;
     Q_EMIT updated();
 }
 

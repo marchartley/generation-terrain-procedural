@@ -26,7 +26,7 @@ InterfaceUI* PainterToolsUI::createPainterToolsUI(PainterToolParams *params)
     // addCheck->setChecked(params->additiveMode);
     // replaceCheck->setChecked(!params->additiveMode);
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         radiusSlider,
         amountSlider,
         falloffSlider,
@@ -170,7 +170,7 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
     auto kelvinletsHistory = new HierarchicalListUI();
     updateKelvinletList(kelvinletsHistory, params);
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         radialScaleSlider,
         muSlider,
         poissonSlider,

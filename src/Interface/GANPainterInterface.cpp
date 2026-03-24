@@ -157,7 +157,7 @@ InterfaceUI* GANPainterInterface::createGUI()
         modelsUI->add(slider);
     }
 
-    UI->add(std::vector<UIElement*>{drawButton, subsidenceSlider, randomButton, modelsUI});
+    UI->add({drawButton, subsidenceSlider, randomButton, modelsUI});
 
     return UI;
 }
