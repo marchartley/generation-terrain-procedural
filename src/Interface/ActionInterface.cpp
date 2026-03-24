@@ -118,19 +118,19 @@ void ActionInterface::afterWaterLevelChanged() {
 
 }
 
-void ActionInterface::mouseClickedOnMapEvent([[maybe_unused]] const Vector3 &mouseWorldPosition, [[maybe_unused]] bool mouseInMap, [[maybe_unused]] QMouseEvent *event, [[maybe_unused]] TerrainModel *model) {
+void ActionInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition, bool mouseInMap, QMouseEvent *event, TerrainModel *model) {
 
 }
 
-void ActionInterface::mouseDoubleClickedOnMapEvent([[maybe_unused]] const Vector3 &mouseWorldPosition, [[maybe_unused]] bool mouseInMap, [[maybe_unused]] QMouseEvent *event, [[maybe_unused]] TerrainModel *model) {
+void ActionInterface::mouseDoubleClickedOnMapEvent(const Vector3 &mouseWorldPosition, bool mouseInMap, QMouseEvent *event, TerrainModel *model) {
 
 }
 
-void ActionInterface::mouseReleasedOnMapEvent([[maybe_unused]] const Vector3 &mouseWorldPosition, [[maybe_unused]] bool mouseInMap, [[maybe_unused]] QMouseEvent *event, [[maybe_unused]] TerrainModel *model) {
+void ActionInterface::mouseReleasedOnMapEvent(const Vector3 &mouseWorldPosition, bool mouseInMap, QMouseEvent *event, TerrainModel *model) {
 
 }
 
-void ActionInterface::mouseMovedOnMapEvent([[maybe_unused]] const Vector3 &mouseWorldPosition, [[maybe_unused]] TerrainModel *model) {
+void ActionInterface::mouseMovedOnMapEvent(const Vector3 &mouseWorldPosition, TerrainModel *model) {
 
 }
 

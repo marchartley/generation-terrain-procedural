@@ -1141,7 +1141,7 @@ InterfaceUI* ErosionInterface::createGUI()
 
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         thermalButton,
         hydraulicButton,
         gobelinsButton,

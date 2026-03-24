@@ -66,7 +66,7 @@ InterfaceUI* ImageViewerOptionsUI::createRGBImageViewerOptions(AbstractPlotter* 
         overlayCheckboxes.push_back(checkOverlay);
     }
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         normalizeModeButton,
         absoluteModeButton,
         createHorizontalGroup(std::vector<UIElement*>{
@@ -124,7 +124,7 @@ InterfaceUI* ImageViewerOptionsUI::createGreyImageViewerOptions(AbstractPlotter*
         overlayCheckboxes.push_back(checkOverlay);
     }
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         normalizeModeButton,
         absoluteModeButton,
         createHorizontalGroup({

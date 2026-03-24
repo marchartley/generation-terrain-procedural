@@ -133,8 +133,8 @@ SnakeSegmentationEditor& SnakeSegmentationEditor::updateToolsInterface()
 
     nbCatapillarsInput->setValue(snakeParameters.params->nbCatapillars)
         .setOnValueChanged([=](float newVal) { snakeParameters.params->nbCatapillars = std::round(newVal);});
-    /*
-    UI->add(std::vector<UIElement*>{
+
+    UI->add({
         PainterToolsUI::createPainterToolsUI(&painterParameters),
         connectivityCostInput,
         curvatureCostInput,
@@ -151,7 +151,6 @@ SnakeSegmentationEditor& SnakeSegmentationEditor::updateToolsInterface()
         collapseFirstAndLastPointCheckbox,
         stepSizeSlider
     });
-    */
 
     this->toolsInterface->add(std::move(UI));
 

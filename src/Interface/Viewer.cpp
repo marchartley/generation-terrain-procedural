@@ -295,8 +295,8 @@ void Viewer::drawingProcess() {
         });
 
         if (this->interfaces.count("terraingeneration")) {
-            static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
-            interfacesTimings[this->interfaces["terraingeneration"]] = timeIt([&]() { this->interfaces["terraingeneration"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            static_cast<TerrainGenerationInterface*>(this->interfaces.at("terraingeneration").get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
+            interfacesTimings[this->interfaces.at("terraingeneration")] = timeIt([&]() { this->interfaces.at("terraingeneration")->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         }
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         if (mouseDown) {
@@ -310,7 +310,7 @@ void Viewer::drawingProcess() {
         }
 
         if (this->interfaces.count("terraingeneration")) {
-            interfacesTimings[this->interfaces["terraingeneration"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            interfacesTimings[this->interfaces.at("terraingeneration")] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces.at("terraingeneration").get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         }
 
         screenSavingTiming = timeIt([&]() {

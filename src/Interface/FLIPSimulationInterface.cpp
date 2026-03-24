@@ -56,7 +56,7 @@ InterfaceUI* FLIPSimulationInterface::createGUI()
 
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
                 resetButton,
                 particleCountSlider,
                 particleRadiusSlider,

@@ -25,7 +25,9 @@ EnvObjsInterface::EnvObjsInterface(QWidget *parent)
 {
     this->scene = std::make_shared<EnvironmentalScene>();
 
+    std::cout << "Reading materials..." << std::endl;
     this->scene->readEnvMaterialsFile("EnvObjects/envMaterials.json");
+    std::cout << "Reading objects..." << std::endl;
     this->scene->readEnvObjectsFile("EnvObjects/primitives.json");
 
     primitiveDefinitionFile.onChange([&](const std::string& newDefinitions) { updateObjectsDefinitions(newDefinitions); });
@@ -269,7 +271,7 @@ InterfaceUI* EnvObjsInterface::createGUI()
     });
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
              createHorizontalGroup({newObjectCreationBox, waitAtEachFrameButton}),
              createHorizontalGroup({spendTimeButton, nextStepButton, runButton}),
              createMultiColumnGroup(materialsButtons, 2),
@@ -722,7 +724,7 @@ void EnvObjsInterface::runScenario()
     Scenario& scenario = this->scene->scenario;
     this->forceScenarioInterruption = false;
     if (scenario.waterLevel >= 0) {
-        (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get()))->setWaterLevel(scenario.waterLevel);
+        (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get()))->setWaterLevel(scenario.waterLevel);
     } else {
         scenario.waterLevel = heightmap->properties->waterLevel;
     }
@@ -730,7 +732,7 @@ void EnvObjsInterface::runScenario()
     while (!scenario.finished() && !forceScenarioInterruption) {
         float time = scenario.currentTime();
         float waterLevel = scenario.computeWaterLevel();
-        (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get()))->setWaterLevel(waterLevel);
+        (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get()))->setWaterLevel(waterLevel);
         runNextStep();
     }
     this->forceScenarioInterruption = true;
@@ -928,7 +930,7 @@ void EnvObjsInterface::displayProbas(const std::string& objectName)
         });
     }
     ImageViewer::get("Object Preview").show();
-    dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(score);
+    dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->updateScalarFieldToDisplay(score);
     Q_EMIT updated();
 }
 
@@ -938,7 +940,7 @@ void EnvObjsInterface::displayMaterialDistrib(const std::string& materialName)
     GridF distribution = this->scene->materials[materialName].currentState;
     EnvMaterialViewer::get("Material").addImage(distribution);
     EnvMaterialViewer::get("Material").show();
-    dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(distribution);
+    dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->updateScalarFieldToDisplay(distribution);
     Q_EMIT updated();
 }
 
@@ -1204,7 +1206,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(const std::string&
         });
         ImageViewer::get("Fitness Function").addImage(eval);
         ImageViewer::get("Fitness Function").show();
-        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
+        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
         std::cerr << e.what() << std::endl;
@@ -1230,7 +1232,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(const std::string&
         });
         ImageViewer::get("Fitting Function").addImage(eval);
         ImageViewer::get("Fitting Function").show();
-        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
+        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
         std::cerr << e.what() << std::endl;
@@ -1257,7 +1259,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(const st
         });
         ImageViewer::get("Object Preview").addImage(eval);
         ImageViewer::get("Object Preview").show();
-        // dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
+        // dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
         std::cerr << e.what() << std::endl;
@@ -1537,7 +1539,7 @@ void EnvObjsInterface::loadScene(const std::string& filename)
 
     if (json.contains("waterlevel")) {
         float waterLevel = json["waterlevel"];
-        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->setWaterLevel(waterLevel);
+        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->setWaterLevel(waterLevel);
     }
     if (json.contains("heightmap")) {
         initialHeightmap = json["heightmap"]; // loadGridF(json["heightmap"], false);

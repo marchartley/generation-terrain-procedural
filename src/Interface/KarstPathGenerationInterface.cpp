@@ -232,7 +232,7 @@ InterfaceUI* KarstPathGenerationInterface::createGUI()
     karstCreationDisplay->setChecked(!this->isHidden());
     karstCreationChangeCam->setChecked(false);
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         karstCreationPreviewButton,
         karstCreationConfirmButton,
         karstCreationDistanceWeights,

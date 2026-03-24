@@ -115,7 +115,7 @@ SliderElement::SliderElement(const std::string& label, float valMin, float valMa
 {
     this->_slider = new FancySlider((orientation == HORIZONTAL ? Qt::Horizontal : Qt::Vertical), valMin, valMax, multiplier);
     this->_label = new LabelElement(label);
-    this->add(std::vector<UIElement*>{_label, new UIElement(_slider)});
+    this->add({_label, new UIElement(_slider)});
 
     defaultValue = valMin;
 
@@ -127,6 +127,12 @@ SliderElement::SliderElement(const std::string& label, float valMin, float valMa
 {
     bindTo(binded);
     this->defaultValue = binded;
+}
+
+SliderElement::SliderElement(const std::string &label, float valMin, float valMax, float multiplier, std::function<void (float)> onValueChanged, LAYOUT orientation)
+    : SliderElement(label, valMin, valMax, multiplier, orientation)
+{
+    this->setOnValueChanged(onValueChanged);
 }
 
 FancySlider* SliderElement::slider() const {
@@ -211,9 +217,10 @@ InterfaceUI::InterfaceUI(LAYOUT layout, bool tight, const std::string& title)
         myLayout->setSpacing(0);
         myLayout->setContentsMargins(0, 0, 0, 0);
     }
-    this->setTight(tight);
     box()->setStyleSheet(".tight-element{ border: none; }");
+    box()->setProperty("class", (tight ? "tight-element" : ""));
     getWidget()->setLayout(myLayout);
+    // this->setTight(tight);
 }
 InterfaceUI::InterfaceUI(LAYOUT layout, const std::string& title)
     : InterfaceUI(layout, (title.empty()), title)
@@ -242,7 +249,7 @@ UIElement* InterfaceUI::add(UIElement* element, const std::string& name)
     return element;
 }
 
-void InterfaceUI::add(std::vector<UIElement*> elements)
+void InterfaceUI::add(const std::vector<UIElement*>& elements)
 {
     for (auto& element : elements)
         this->add(element);
@@ -319,7 +326,7 @@ TextEditElement::TextEditElement(const std::string& text, std::string label)
         layout->addWidget(_label);
     layout->addWidget(_lineEdit);
     getWidget()->setLayout(layout);*/
-    this->add(std::vector<UIElement*>{_label, new UIElement(_lineEdit)});
+    this->add({_label, new UIElement(_lineEdit)});
 }
 
 TextEditElement::TextEditElement(const std::string& text, std::string label, std::string& binded)
@@ -380,7 +387,7 @@ AngleElement::AngleElement(const std::string& label)
         layout->addWidget(_label);
     layout->addWidget(_dial);
     getWidget()->setLayout(layout);*/
-    this->add(std::vector<UIElement*>{_label, new UIElement(_dial)});
+    this->add({_label, new UIElement(_dial)});
 }
 
 AngleElement::AngleElement(const std::string& label, float &binded)
@@ -426,7 +433,7 @@ RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, f
     }
     layout->addWidget(_slider);
     getWidget()->setLayout(layout);*/
-    this->add(std::vector<UIElement*>{_label, new UIElement(_slider)});
+    this->add({_label, new UIElement(_slider)});
 }
 
 RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float &bindedMin, float &bindedMax, UIElement::LAYOUT orientation)
@@ -485,7 +492,7 @@ ColorPickerElement::ColorPickerElement(const std::string& label)
     layout->addWidget(_colorPicker);
     getWidget()->setLayout(layout);
     */
-    this->add(std::vector<UIElement*>{_label, new UIElement(_colorPicker)});
+    this->add({_label, new UIElement(_colorPicker)});
 }
 
 ColorPickerElement::ColorPickerElement(const std::string& label, Vector3 &currentSelection)
@@ -601,7 +608,7 @@ FloatInputElement::FloatInputElement(const std::string &label)
     _spinbox->setMaximum(100000);
     _spinbox->setMinimum(-100000);
 
-    this->add(std::vector<UIElement*>{_label, new UIElement(_spinbox)});
+    this->add({_label, new UIElement(_spinbox)});
 }
 
 FloatInputElement::FloatInputElement(const std::string &label, float &binded)

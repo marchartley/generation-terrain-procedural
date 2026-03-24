@@ -104,7 +104,7 @@ InterfaceUI* TunnelInterface::createGUI()
     auto endingShapeCombobox = new ComboboxElement("Outlet", shapes, endingShapeIndex);
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         tunnelCreateMatter,
         tunnelRemoveMatter,
         tunnelClearControlPointButton,

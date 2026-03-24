@@ -130,7 +130,7 @@ InterfaceUI* HeightmapErosionInterface::createHydraulicErosionGUI()
     auto hydraulicErosionButton = new ButtonElement("Erosion hydraulique", [=]() { this->hydraulicErosion(); });
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         numIterationsSlider,
         erosionRadiusSlider,
         dropletLifetimeSlider,
@@ -157,7 +157,7 @@ InterfaceUI* HeightmapErosionInterface::createThermicErosionGUI()
     auto thermalErosionButton = new ButtonElement("Erosion thermique", [=]() { this->thermalErosion(); });
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         erosionFactorSlider,
         minSlopeSlider,
         thermalErosionButton
@@ -182,7 +182,7 @@ InterfaceUI* HeightmapErosionInterface::createWindErosionGUI()
     auto windErosionButton = new ButtonElement("Erosion de vent", [=]() { this->windErosion(); });
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
             numParticlesSlider,
             bedrockSlider,
             suspensionSlider,
@@ -208,12 +208,12 @@ InterfaceUI* HeightmapErosionInterface::createGUI()
     auto hydrauUI = createHydraulicErosionGUI();
     auto thermalUI = createThermicErosionGUI();
     auto windUI = createWindErosionGUI();
-    // UI->add(std::vector<UIElement*>{
+    // UI->add({
         // std::move(hydrauUI),
         // std::move(thermalUI),
         // std::move(windUI)
     // });
-    UI->add(std::vector<UIElement*>{
+    UI->add({
          hydrauUI,
          thermalUI,
          windUI

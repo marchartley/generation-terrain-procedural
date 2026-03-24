@@ -184,7 +184,7 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     primitiveSelectionGui = new HierarchicalListWidget;
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         constructionModeButton,
         shapeCombobox,
         densityCombobox,
@@ -1959,7 +1959,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         densityCombobox->setOnSelectionChanged([=](int) { patchAsPrimitive->material = densityCombobox->getSelection<TerrainTypes>(); });
 
 
-        UI->add(std::vector<UIElement*>{
+        UI->add({
             shapeCombobox,
             densityCombobox,
 

@@ -36,7 +36,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
     viewAndCopyInterface = new InterfaceUI(InterfaceUI::VERTICAL);
-    viewAndCopyInterface->add(std::vector<UIElement*>({viewOptionsInterface, saveCopyInterface}));
+    viewAndCopyInterface->add({viewOptionsInterface, saveCopyInterface});
     //    this->chartView->setMaximumSize(10000, 10000);
     //    this->chartView->chart()->setMaximumSize(10000, 10000);
     //    this->chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -44,7 +44,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
     //    this->mouseInfoLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
 
-    layout->add(std::vector<UIElement*>({mainLayout, infosInterface}));
+    layout->add({mainLayout, infosInterface});
 
     mainLayout->add({toolsInterface, mainInterface, viewAndCopyInterface});
 

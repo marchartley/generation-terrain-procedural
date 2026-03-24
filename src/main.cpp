@@ -30,6 +30,8 @@
 
 #include "EnvObject/EnvironmentalScene.h"
 
+#include "TerrainModification/OMP_algo.h"
+
 using namespace std;
 
 std::map<std::string, std::string> getAllEnvironmentVariables() {
@@ -155,6 +157,159 @@ int main(int argc, char *argv[])
 
 
     /*
+    OMP omp;
+    std::vector<std::string> paths = {
+        "Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png",
+        "Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png",
+        "Python_tests/random_heightmaps/gebco_2022_n7.192_s6.5475_w157.6276_e158.5111.png",
+        "Python_tests/random_heightmaps/gebco_2022_n29.2095_s26.9696_w-18.5535_e-15.0099.png",
+        "Python_tests/random_heightmaps/gebco_2022_n37.1705_s36.768_w-25.4598_e-24.8503.png",
+        "Python_tests/random_heightmaps/gebco_2022_n38.1118_s37.5071_w-26.0821_e-24.82.png",
+        "Python_tests/random_heightmaps/gebco_2022_n39.8172_s39.2518_w-31.4667_e-30.9152.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-1.3674_s-2.3083_w152.7035_e153.8301.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-4.8277_s-7.3806_w153.9789_e156.5584.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-9.16_s-9.5953_w45.9874_e46.7857.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-9.7602_s-10.6476_w145.0044_e146.0966.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-10.8852_s-12.8406_w42.5556_e44.7746.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.47_s-11.8862_w166.5637_e167.1771.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.0202_s-11.431_w166.2657_e166.7393.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.897_s-12.7918_w45.8971_e47.1172.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-11.3972_s-12.0058_w159.8594_e160.7478.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-12.1474_s-12.632_w43.4243_e44.0379.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-12.2419_s-13.5044_w44.4362_e45.8027.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-13.4048_s-14.0297_w167.2002_e167.9155.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-13.7444_s-14.1182_w146.3704_e146.8523.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-14.1031_s-14.4431_w167.2171_e167.7463.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-15.5213_s-20.003_w176.1055_e182.7477.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-19.9784_s-21.0759_w-36.4248_e-35.1872.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-20.1418_s-21.0496_w-35.1785_e-34.3203.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-20.2347_s-22.1362_w54.4421_e56.6905.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-20.8712_s-21.5611_w-160.1062_e-159.4069.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-21.7145_s-22.1624_w-158.1485_e-157.6264.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-22.2221_s-22.9127_w-151.7574_e-150.8075.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-22.9344_s-23.6643_w7.7665_e8.6813.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-23.625_s-24.1049_w-148.064_e-147.4093.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-23.0714_s-23.7406_w-150.0961_e-149.1318.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-26.9442_s-27.4812_w-109.8687_e-108.9947.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-33.4843_s-33.9468_w-79.2937_e-78.6375.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-33.6092_s-33.9772_w-81.0432_e-80.5068.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-35.5908_s-36.6167_w-125.9211_e-124.698.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-44.5092_s-47.7086_w48.0463_e53.2162.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-46.245_s-46.6022_w51.9649_e52.4313.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-46.532_s-51.2552_w65.4486_e73.1428.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-64.825_s-66.0811_w-91.4342_e-89.8037.png",
+        "Python_tests/random_heightmaps/gebco_2022_n-68.0822_s-69.6977_w-91.7994_e-89.187.png"
+    };
+    displayProcessTime("Dico from file", [&]() {
+        omp.createDictionaryFromImages(paths);
+    });
+
+    GridF target = Image::readFromFile("Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png").getBwImage();
+    target = target.resize(Vector3i(50, 50, 1));
+
+    GridF reconstruction;
+    displayProcessTime("OMP + upscale", [&]() {
+        reconstruction = omp.getLargeReconstruction(target);
+    });
+
+    ImageViewer::get("Original").addImage(target).show();
+    return ImageViewer::get("Reconstruction").addImage(reconstruction).exec();
+    */
+    /*int scaleX = target.sizeX / tileSize;
+    int scaleY = target.sizeY / tileSize;
+    target = target.resize(Vector3i((target.sizeX / scaleX) * scaleX, (target.sizeY / scaleY) * scaleY, 1));*/
+
+    /*
+    std::vector<GridF> dico, bigDico;
+    displayProcessTime("Dico from file", [&]() {
+        for (auto path : paths) {
+            GridF bigImage = Image::readFromFile(path).getBwImage().resize(Vector3i(400, 400, 1));
+            auto atoms = createDictionaryFromImage(tileSize * upscaleFactor, tileSize * upscaleFactor, bigImage);
+            bigDico.insert(bigDico.end(), atoms.begin(), atoms.end());
+        }
+        std::shuffle(bigDico.begin(), bigDico.end(), random_gen::random_generator);
+        bigDico.resize(std::min((int)bigDico.size(), maxAtoms));
+        dico = bigDico;
+        for (auto& data : dico) {
+            data = data.resize(Vector3i(tileSize, tileSize, 1));
+        }
+    });
+    */
+    /*
+    std::vector<std::pair<Vector3, OMPResult>> results(scaleX * scaleY  * overlap  * overlap);
+    displayProcessTime("OMP", [&]() {
+        // #pragma omp parallel for collapse(2)
+        for (int _i = 0; _i < scaleX  * overlap; _i++) {
+            for (int _j = 0; _j < scaleY  * overlap; _j++) {
+                float i = _i / float(overlap);
+                float j = _j / float(overlap);
+                auto targetPatch = target.subset(Vector3(tileSize * i, tileSize * j), Vector3(tileSize * (i + 1), tileSize * (j + 1)));
+                OMPResult res = orthogonalMatchingPursuit(targetPatch, dico, nbPrimitives, 1e-5f);
+                results[_i * scaleY * overlap + _j] = {Vector3(i, j), res};
+            }
+        }
+    });
+
+    std::cout << "Nb atomes: " << dico.size() << std::endl;
+    std::cout << "Nb patchs: " << results.size() << std::endl;
+
+    // for (float t = 0.f; t < 3.f; t += .1f) { std::cout << interpolation::sigmoid(t) << " " << std::flush; }
+    */
+    /*
+    displayProcessTime("Reconstruction", [&]() {
+        img = GridF(tileSize * scaleX, tileSize * scaleY, 1);
+        GridF weights = GridF(img.getDimensions());
+        GridF mask = GridF(tileSize, tileSize, 1);
+        Vector3 maskCenter = mask.getDimensions().xy() / 2.f;
+        float maxRadius = maskCenter.norm() * .5f;
+        mask.iterateParallel([&](const Vector3& p) { mask[p] = std::clamp(1.f - interpolation::sigmoid((p - maskCenter).norm() / maxRadius), 0.01f, 1.f); });
+        for (size_t i = 0; i < results.size(); i++) {
+            auto& posAndResult = results[i];
+            auto& pos = posAndResult.first;
+            auto& res = posAndResult.second;
+            GridF reconstruction = reconstructImage(res, dico);
+            img.add(reconstruction * mask, pos * tileSize);
+            weights.add(mask, pos * tileSize);
+        }
+        img /= weights;
+    });
+
+    ImageViewer::get("Original").addImage(target).dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::black, Vector3::white});
+    ImageViewer::get("Original").setNormalizedModeImage(true).show();
+    ImageViewer::get("Reconstruction").addImage(img).addImage(img).dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::black, Vector3::white});
+
+    displayProcessTime("Upscale", [&]() {
+        img = GridF(tileSize * scaleX * upscaleFactor, tileSize * scaleY * upscaleFactor, 1);
+        GridF weights = GridF(img.getDimensions());
+        GridF mask = GridF(tileSize * upscaleFactor, tileSize * upscaleFactor, 1, 1.f);
+        Vector3 maskCenter = mask.getDimensions().xy() / 2.f;
+        float maxRadius = maskCenter.norm();
+        mask.iterateParallel([&](const Vector3& p) { mask[p] = std::clamp(1.f - interpolation::sigmoid((p - maskCenter).norm() / maxRadius), 0.01f, 1.f); });
+        for (int iOverlap = 0; iOverlap < overlap; iOverlap++) {
+            for (int jOverlap = 0; jOverlap < overlap; jOverlap++) {
+                #pragma omp parallel for collapse(2)
+                for (int x = 0; x < scaleX; x++) {
+                    for (int y = 0; y < scaleY; y++) {
+                        int idx = (x * overlap + iOverlap) * scaleY * overlap + (y * overlap + jOverlap);
+                        auto& [pos, res] = results[idx];
+                        // std::cout << idx << ": " << pos << " -> (" << x << " * " << overlap << " + " << iOverlap << ") * " << scaleY << " * " << overlap << " + (" << y << " * " << overlap << " + " << jOverlap << ")" << std::endl;
+                        GridF reconstruction = reconstructImage(res, bigDico);
+                        img.add(reconstruction * mask, pos * tileSize * upscaleFactor);
+                        weights.add(mask, pos * tileSize * upscaleFactor);
+                    }
+                }
+            }
+        }
+        img /= weights;
+    });
+    // for (size_t i = 0; i < results.size(); i++) {
+        // std::cout << "Result #" << i << ": " << results[i].first << std::endl;
+    // }
+    ImageViewer::get("Upscale").addImage(img).dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::black, Vector3::white});
+    return ImageViewer::get("Upscale").setNormalizedModeImage(true).exec();
+    // return ImageViewer::get("Reconstruction").exec();
+    */
+    /*
     EnvironmentalScene scene;
     scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
     scene.readEnvObjectsFile("EnvObjects/primitives.json");
@@ -169,6 +324,7 @@ int main(int argc, char *argv[])
     SnakeSegmentationEditor::get("1").associateEnvObject(scene.availableObjects["river"]).exec();
     return SnakeSegmentationEditor::get("2").associateEnvObject(scene.availableObjects["river"]).exec();
 
+    */
     /*
     BSpline s;
     for (int i = 0; i < 10; i++) {
@@ -640,57 +796,6 @@ int main(int argc, char *argv[])
     ImageViewer::get().addImage(testPolyline)->setNormalizedModeImage(true)->exec();
     return 0;
     //OpenFoamParser::createSimulationFile("OpenFOAM/simple", GridF());
-    */
-/*
-    int size = 60;
-    int nbSamples = 100;
-    auto dico = createDictionary(size, nbSamples);
-    int sparsity = 4;
-
-    Matrix used = dico[0] * 0.f;
-    float sumCoef = 0.f;
-    for (int i = 0; i < 3; i++) {
-        float coef = random_gen::generate();
-        used += dico[i] * coef;
-        sumCoef += coef;
-    }
-    // used /= 2.f;
-    used /= sumCoef;
-    for (int i = 0; i < used.size(); i++) {
-        for (int j = 0; j < used[i].size(); j++) {
-            used[i][j] = std::pow(used[i][j] + 0.3f, 2.f) + 4.f;
-        }
-    }
-    Matrix D = flattenDictionary(dico).transpose();
-
-
-    Matrix X = Matrix(std::vector<std::vector<float>>{used.toStdVector()}).transpose();
-
-    Matrix coefficients;
-    displayProcessTime("Time to compute: ", [&]() {
-        coefficients = omp(D, X, sparsity);
-    });
-
-    // Print the coefficients
-    for (size_t i = 0; i < coefficients.rows(); ++i) {
-        for (size_t j = 0; j < coefficients.cols(); ++j) {
-            cout << coefficients[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
-
-    int maxDisplayedImages = 4;
-    GridF img((size + 2) * (std::min(nbSamples, maxDisplayedImages) + 2), size);
-    for (int i = 0; i < std::min(nbSamples, maxDisplayedImages); i++) {
-        img.paste(GridF(dico[i]), Vector3((size + 2) * (i + 2), 0));
-    }
-    img.paste(GridF(used) - GridF(reconstructImage(coefficients, D, size, size, sparsity)));
-    img.paste(GridF(used), Vector3((size+2), 0));
-    ImageViewer::get().addImage(img);
-    ImageViewer::get().setAbsoluteModeImage(true);
-    return ImageViewer::get().exec();
-
-
     */
 
     /*

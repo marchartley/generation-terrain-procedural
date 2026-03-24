@@ -143,8 +143,8 @@ GraphTemplate<T>& GraphTemplate<T>::forceDrivenPositioning(bool startWithCircula
 
     std::map<int, Vector3> initalPositions = solver.solve(false, 0.f, 0.f);
 
-    for (int iNode = 0; iNode < nodes.size(); iNode++) {
-        for (int jNode = iNode + 1; jNode < nodes.size(); jNode++) {
+    for (size_t iNode = 0; iNode < nodes.size(); iNode++) {
+        for (size_t jNode = iNode + 1; jNode < nodes.size(); jNode++) {
             if (connectionMatrix.at(iNode, jNode) == 1)
                 solver.addDistanceConstraint(iNode, jNode, adjencyMatrix.at(iNode, jNode));
         }
@@ -157,7 +157,7 @@ GraphTemplate<T>& GraphTemplate<T>::forceDrivenPositioning(bool startWithCircula
         // Wait... how... Maybe using the Voronoi algorithm
         break;
     }
-    for (int i = 0; i < nodes.size(); i++) {
+    for (size_t i = 0; i < nodes.size(); i++) {
         nodes[i]->pos = positions[i];
     }
     return *this;

@@ -251,7 +251,7 @@ InterfaceUI* SpaceColonizationInterface::createGUI()
     spaceColonizerTunnelWidth->setOnValueChanged([=](float) { this->computeKarst(); });
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         spaceColonizerPreviewButton,
         spaceColonizerConfirmButton,
         spaceColonizerQuickConfirmButton,

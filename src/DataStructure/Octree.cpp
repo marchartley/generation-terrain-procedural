@@ -350,7 +350,7 @@ bool Octree::insert(OctreeNode *node, const Vector3 &p1, const Vector3 &p2, cons
 //            std::cout << "Triangle " << pointIndex << "(" << p1 << " " << p2 << " " << p3 << ") rejected by root." << std::endl;
         return false;
     }
-    if (node->data.size() < maxDataCapacity && node->children[0] == nullptr) {
+    if ((int)node->data.size() < maxDataCapacity && node->children[0] == nullptr) {
         // If the node has no children and is not full, add the point here
         node->data.push_back(OctreeNodeData(p1, p2, p3, pointIndex));
         insertValidated = true;

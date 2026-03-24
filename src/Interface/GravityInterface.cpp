@@ -103,11 +103,11 @@ InterfaceUI* GravityInterface::createGUI()
     auto arrangingLayersButton = new ButtonElement("Rearrange layers");
     auto gravityLayersButton = new ButtonElement("Apply gravity on layers");
 
-    UI->add(std::vector<UIElement*>({
+    UI->add({
         gravityComputeButton,
         gravityLayersButton,
         arrangingLayersButton
-    }));
+    });
 
 
     gravityLayersButton->setOnPressed([&]() {

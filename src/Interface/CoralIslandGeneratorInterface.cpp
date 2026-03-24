@@ -72,7 +72,7 @@ InterfaceUI* CoralIslandGeneratorInterface::createGUI()
     horizontalScaleSlider->setOnValueChanged([=](float) { this->updateCoral(); });
     alphaSlider->setOnValueChanged([=](float) { this->updateCoral(); });
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         applyButton,
         subsidenceSlider,
         coralLevelsSlider,

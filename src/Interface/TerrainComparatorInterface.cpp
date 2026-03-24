@@ -110,7 +110,7 @@ InterfaceUI* TerrainComparatorInterface::createGUI()
     substraction2Checkbox->setOnChecked([&](bool) { updateStuff(); });
 */
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
                 unionCheckbox,
                 intersectionCheckbox,
                 substractionCheckbox,

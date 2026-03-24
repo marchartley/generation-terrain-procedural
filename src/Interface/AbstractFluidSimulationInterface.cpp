@@ -83,7 +83,7 @@ InterfaceUI* AbstractFluidSimulationInterface::createGUI()
     auto computeButton = new ButtonElement("Compute", [&]() { computeSimulation(this->nbComputationsPerFrame); });
     auto updateMeshButton = new ButtonElement("Update terrain", [&]() { this->updateBoundariesMesh(); });
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         onlyAtSurfaceButton,
         displayBoundariesButton,
         displayGridBoundariesButton,

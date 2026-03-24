@@ -48,6 +48,33 @@ public:
     //    bool itemsAreImages = false;
 };
 
+
+class ComboboxLineElementBase {
+public:
+    ComboboxLineElementBase();
+    ComboboxLineElementBase(const std::string& label);
+    ComboboxLineElementBase(const std::string& label, const std::string& iconPath);
+
+    virtual ~ComboboxLineElementBase() {}
+
+    std::string label;
+    std::string iconPath;
+};
+
+template <class T = int>
+class ComboboxLineElement : public ComboboxLineElementBase {
+public:
+    ComboboxLineElement();
+    ComboboxLineElement(const std::string& label);
+    ComboboxLineElement(const std::string& label, T value);
+    ComboboxLineElement(const std::string& label, const std::string& iconPath, T value);
+
+    T value;
+};
+
+
+
+
 template<class T>
 T ComboboxElement::getSelection() const
 {
@@ -82,28 +109,7 @@ ComboboxElement::ComboboxElement(const std::string &label, std::vector<ComboboxL
     this->bindTo(currentSelection);
 }
 
-class ComboboxLineElementBase {
-public:
-    ComboboxLineElementBase();
-    ComboboxLineElementBase(const std::string& label);
-    ComboboxLineElementBase(const std::string& label, const std::string& iconPath);
 
-    virtual ~ComboboxLineElementBase() {}
-
-    std::string label;
-    std::string iconPath;
-};
-
-template <class T = int>
-class ComboboxLineElement : public ComboboxLineElementBase {
-public:
-    ComboboxLineElement();
-    ComboboxLineElement(const std::string& label);
-    ComboboxLineElement(const std::string& label, T value);
-    ComboboxLineElement(const std::string& label, const std::string& iconPath, T value);
-
-    T value;
-};
 
 template <class T>
 ComboboxLineElement<T>::ComboboxLineElement()

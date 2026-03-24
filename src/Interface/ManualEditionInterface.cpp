@@ -182,7 +182,7 @@ InterfaceUI* ManualEditionInterface::createGUI()
     auto suppressModeButton = new RadioButtonElement("Detruire de la matière", false, addingMode);
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         manualEditSizeSlider,
         // manualEditStrengthSlider,
         addingModeButton,

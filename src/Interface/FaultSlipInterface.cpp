@@ -146,7 +146,7 @@ InterfaceUI* FaultSlipInterface::createGUI()
     auto faultSideApplied = new CheckboxElement("Partie de droite chute", faultSlip.positiveSideFalling);
 
 
-    UI->add(std::vector<UIElement*>{
+    UI->add({
         faultApplyButton,
         faultSideApplied
     });

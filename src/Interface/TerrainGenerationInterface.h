@@ -7,6 +7,8 @@ class TerrainGenerationInterface;
 // #include "TerrainGen/Heightmap.h"
 // #include "Interface/Viewer.h"
 
+#include "TerrainModification/OMP_algo.h"
+
 class TerrainGenerationInterface : public ActionInterface
 {
     Q_OBJECT
@@ -72,6 +74,7 @@ public Q_SLOTS:
 
     void changeDisplayToComparativeMode(bool toComparative);
     void setHeightFactor(float newHeightFactor);
+    void setOMPFactor(float newOMPvalue);
 
     void changeDisplayDepthMode(bool display);
     void changeDisplayShadowsMode(bool display);
@@ -132,8 +135,11 @@ public:
     float heightFactor = 1.f;
     bool displayDepth = false;
     bool displayShadows = false;
+    float ompFactor = .5f;
 
     GridF scalarFieldToDisplay = GridF(1, 1, 1, 0.5f); // Default to "nothing interesting"
+
+    OMP omp;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H
