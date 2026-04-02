@@ -135,6 +135,12 @@ SliderElement::SliderElement(const std::string &label, float valMin, float valMa
     this->setOnValueChanged(onValueChanged);
 }
 
+SliderElement::SliderElement(const std::string &label, float valMin, float valMax, float multiplier, float &binded, std::function<void (float)> onValueChanged, LAYOUT orientation)
+    : SliderElement(label, valMin, valMax, multiplier, binded, orientation)
+{
+    this->setOnValueChanged(onValueChanged);
+}
+
 FancySlider* SliderElement::slider() const {
     return this->_slider;
 }
@@ -182,6 +188,12 @@ CheckboxElement::CheckboxElement(const std::string& label, std::function<void (b
     this->setOnChecked(onCheck);
 }
 
+CheckboxElement::CheckboxElement(const std::string& label, bool& binded, std::function<void (bool)> onCheck)
+    : CheckboxElement(label, binded)
+{
+    this->setOnChecked(onCheck);
+}
+
 QCheckBox* CheckboxElement::checkBox() {
     return qobject_cast<QCheckBox*>(getWidget());
 }
@@ -219,7 +231,8 @@ InterfaceUI::InterfaceUI(LAYOUT layout, bool tight, const std::string& title)
     }
     box()->setStyleSheet(".tight-element{ border: none; }");
     box()->setProperty("class", (tight ? "tight-element" : ""));
-    getWidget()->setLayout(myLayout);
+    if (layout != GRID)
+        getWidget()->setLayout(myLayout);
     // this->setTight(tight);
 }
 InterfaceUI::InterfaceUI(LAYOUT layout, const std::string& title)
@@ -310,7 +323,7 @@ InterfaceUI* createMultiColumnGroup(std::vector<UIElement*> widgets, int nbColum
         layout->addWidget(w->get(), row, col);
     }
     auto ui = new InterfaceUI(InterfaceUI::GRID, tight);
-    ui->setLayout(layout);
+    ui->getWidget()->setLayout(layout);
     return ui;
 }
 
@@ -440,6 +453,17 @@ RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, f
     : RangeSliderElement(label, valMin, valMax, multiplier, orientation)
 {
     this->bindTo(bindedMin, bindedMax);
+}
+
+RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, std::function<void(float, float)> onChange, UIElement::LAYOUT orientation)
+    : RangeSliderElement(label, valMin, valMax, multiplier, orientation)
+{
+    this->setOnValueChanged(onChange);
+}
+RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, std::function<void(float, float)> onChange, UIElement::LAYOUT orientation)
+    : RangeSliderElement(label, valMin, valMax, multiplier, bindedMin, bindedMax, orientation)
+{
+    this->setOnValueChanged(onChange);
 }
 
 RangeSlider* RangeSliderElement::slider()

@@ -57,7 +57,7 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         std::make_shared<TerrainGenerationInterface>(this),
         std::make_shared<ErosionInterface>(this),
        std::make_shared<HeightmapErosionInterface>(this),
-        std::make_shared<BiomeInterface>(this),
+        // std::make_shared<BiomeInterface>(this),
         std::make_shared<SmoothInterface>(this),
         std::make_shared<PrimitivePatchesInterface>(this),
         std::make_shared<TerrainSavingInterface>(this),
@@ -81,8 +81,8 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         this->actionInterfaces[interf->actionType] = interf;
     }
 
-    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration"));
-    std::shared_ptr<EnvObjsInterface> envObjectsInterface = std::static_pointer_cast<EnvObjsInterface>(actionInterfaces["envobjects"]);
+    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = (actionInterfaces.count("terraingeneration") ? std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration")) : nullptr);
+    std::shared_ptr<EnvObjsInterface> envObjectsInterface = (actionInterfaces.count("envobjects") ? std::static_pointer_cast<EnvObjsInterface>(actionInterfaces.at("envobjects")) : nullptr);
 
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -91,10 +91,12 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
     }
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
-        envObjectsInterface->setMaterialsDefinitionFile("EnvObjects/envMaterials.json");
-        envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
-        envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
-        envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
+        if (envObjectsInterface) {
+            envObjectsInterface->setMaterialsDefinitionFile("EnvObjects/envMaterials.json");
+            envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
+            envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
+            envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
+        }
         if (preloaded_heightmap == "") {
            // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
             terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
@@ -108,39 +110,41 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         this->viewer->implicitTerrain = terrainGenerationInterface->implicitTerrain;
 
         for (auto& actionInterface : this->actionInterfaces) {
-            std::cout << "Updating interface '" << actionInterface.first << "'" << std::endl;
-            actionInterface.second->affectTerrains(viewer->heightmap, viewer->voxelGrid, viewer->layerGrid, viewer->implicitTerrain);
-            actionInterface.second->reloadShaders();
+            displayProcessTime("Updating interface '" + actionInterface.first + "'", [=]() {
+                actionInterface.second->affectTerrains(viewer->heightmap, viewer->voxelGrid, viewer->layerGrid, viewer->implicitTerrain);
+                actionInterface.second->reloadShaders();
 
-            QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
-                this->viewer->update();
-                qApp->processEvents();
+                QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
+                    this->viewer->update();
+                    qApp->processEvents();
+                });
+                QObject::connect(this->viewer, &Viewer::mouseClickOnMap, actionInterface.second.get(), &ActionInterface::mouseClickedOnMapEvent);
+                QObject::connect(this->viewer, &Viewer::mouseMovedOnMap, actionInterface.second.get(), &ActionInterface::mouseMovedOnMapEvent);
+                QObject::connect(this->viewer, &Viewer::mouseDoubleClickedOnMap, actionInterface.second.get(), &ActionInterface::mouseDoubleClickedOnMapEvent);
+                QObject::connect(this->viewer, &Viewer::mouseReleasedOnMap, actionInterface.second.get(), &ActionInterface::mouseReleasedOnMapEvent);
+
+                for (auto& otherActionInterface : this->actionInterfaces) {
+                    QObject::connect(actionInterface.second.get(), &ActionInterface::terrainUpdated, this, [&]() {
+                        QObject::blockSignals(true);
+                        displayProcessTime("Processing 'afterTerrainUpdate' from '" + otherActionInterface.first + "'... ", [&]() {
+                            otherActionInterface.second->afterTerrainUpdated();
+                        }, false);
+                        QObject::blockSignals(false);
+                        this->viewer->update();
+                    });
+
+                    QObject::connect(actionInterface.second.get(), &ActionInterface::waterLevelChanged, this, [&](float newLevel) {
+                        QObject::blockSignals(true);
+                        otherActionInterface.second->afterWaterLevelChanged();
+                        QObject::blockSignals(false);
+                        this->viewer->update();
+                    });
+                }
             });
-            QObject::connect(this->viewer, &Viewer::mouseClickOnMap, actionInterface.second.get(), &ActionInterface::mouseClickedOnMapEvent);
-            QObject::connect(this->viewer, &Viewer::mouseMovedOnMap, actionInterface.second.get(), &ActionInterface::mouseMovedOnMapEvent);
-            QObject::connect(this->viewer, &Viewer::mouseDoubleClickedOnMap, actionInterface.second.get(), &ActionInterface::mouseDoubleClickedOnMapEvent);
-            QObject::connect(this->viewer, &Viewer::mouseReleasedOnMap, actionInterface.second.get(), &ActionInterface::mouseReleasedOnMapEvent);
-
-            for (auto& otherActionInterface : this->actionInterfaces) {
-                QObject::connect(actionInterface.second.get(), &ActionInterface::terrainUpdated, this, [&]() {
-                    QObject::blockSignals(true);
-                    displayProcessTime("Processing 'afterTerrainUpdate' from '" + otherActionInterface.first + "'... ", [&]() {
-                        otherActionInterface.second->afterTerrainUpdated();
-                    }, false);
-                    QObject::blockSignals(false);
-                    this->viewer->update();
-                });
-
-                QObject::connect(actionInterface.second.get(), &ActionInterface::waterLevelChanged, this, [&](float newLevel) {
-                    QObject::blockSignals(true);
-                    otherActionInterface.second->afterWaterLevelChanged();
-                    QObject::blockSignals(false);
-                    this->viewer->update();
-                });
-            }
         }
 
-        if (auto biomeInterface = std::static_pointer_cast<BiomeInterface>(actionInterfaces.at("biomes"))) {
+        if (actionInterfaces.count("biomes")) {
+            auto biomeInterface = std::dynamic_pointer_cast<BiomeInterface>(actionInterfaces.at("biomes"));
             if (terrainGenerationInterface->biomeGenerationNeeded) {
                 biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
                 biomeInterface->generateBiomes();
@@ -153,7 +157,8 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
 
-        this->openInterface(envObjectsInterface);
+        // this->openInterface(envObjectsInterface);
+        this->openInterface(actionInterfaces.at("tunnel"));
     });
     viewer->installEventFilter(this);
     setupUi();
@@ -267,76 +272,18 @@ void ViewerInterface::setupUi()
     mainLayout->setColumnStretch(0, 99);
     mainLayout->setColumnStretch(1,  1);
 
-    std::cout << "BREAK 1" << std::endl;
-
     this->displayModeLayout = new InterfaceUI(UIElement::VERTICAL);
 
-    std::cout << "BREAK 1a" << std::endl;
-    this->mapSliceSliderX = new RangeSliderElement("X", 0.f, 1.f, 0.01f, this->viewer->minSliceMapX, this->viewer->maxSliceMapX, UIElement::VERTICAL);
-    this->mapSliceSliderY = new RangeSliderElement("Y", 0.f, 1.f, 0.01f, this->viewer->minSliceMapY, this->viewer->maxSliceMapY, UIElement::VERTICAL);
-    this->mapSliceSliderZ = new RangeSliderElement("Z", 0.f, 1.f, 0.01f, this->viewer->minSliceMapZ, this->viewer->maxSliceMapZ, UIElement::VERTICAL);
+    this->mapSliceSliderX = new RangeSliderElement("X", 0.f, 1.f, 0.01f, this->viewer->minSliceMapX, this->viewer->maxSliceMapX, [=](float, float) { this->viewer->update(); }, UIElement::VERTICAL);
+    this->mapSliceSliderY = new RangeSliderElement("Y", 0.f, 1.f, 0.01f, this->viewer->minSliceMapY, this->viewer->maxSliceMapY, [=](float, float) { this->viewer->update(); }, UIElement::VERTICAL);
+    this->mapSliceSliderZ = new RangeSliderElement("Z", 0.f, 1.f, 0.01f, this->viewer->minSliceMapZ, this->viewer->maxSliceMapZ, [=](float, float) { this->viewer->update(); }, UIElement::VERTICAL);
     this->mapSliceSmooth = new CheckboxElement("Shrink on borders", [=](bool checked) { this->viewer->voxelsSmoothedOnBorders = (checked ? 5 : 1); viewer->update(); });
 
-
-    std::cout << "BREAK 2" << std::endl;
-
-    mapSliceSliderX->setOnValueChanged([=](float, float) { this->viewer->update(); });
-    mapSliceSliderY->setOnValueChanged([=](float, float) { this->viewer->update(); });
-    mapSliceSliderZ->setOnValueChanged([=](float, float) { this->viewer->update(); });
-    /*mapSliceSmooth->setChecked(viewer->voxelsSmoothedOnBorders > 1);
-    QObject::connect(mapSliceSmooth, &QCheckBox::toggled, this, [&](bool active) {
-        if (active) { this->viewer->voxelsSmoothedOnBorders = 5;}
-        else { this->viewer->voxelsSmoothedOnBorders = 1; }
-        this->viewer->update();
-    });
-    QCheckBox* sliderXactivation = new QCheckBox("Activer");
-    sliderXactivation->setChecked(true);
-    QObject::connect(sliderXactivation, &QCheckBox::toggled, this, [&](bool active) {
-        if (active) { this->viewer->minSliceMapX = this->mapSliceSliderX->min_value(); this->viewer->maxSliceMapX = this->mapSliceSliderX->max_value(); }
-        else        { this->viewer->minSliceMapX = -10.f;                              this->viewer->maxSliceMapX = 10.f; }
-        this->viewer->update();
-    });
-    QCheckBox* sliderYactivation = new QCheckBox("Activer");
-    sliderYactivation->setChecked(true);
-    QObject::connect(sliderYactivation, &QCheckBox::toggled, this, [&](bool active) {
-        if (active) { this->viewer->minSliceMapY = this->mapSliceSliderY->min_value(); this->viewer->maxSliceMapY = this->mapSliceSliderY->max_value(); }
-        else        { this->viewer->minSliceMapY = -10.f;                              this->viewer->maxSliceMapY = 10.f; }
-        this->viewer->update();
-    });
-    QCheckBox* sliderZactivation = new QCheckBox("Activer");
-    sliderZactivation->setChecked(true);
-    QObject::connect(sliderZactivation, &QCheckBox::toggled, this, [&](bool active) {
-        if (active) { this->viewer->minSliceMapZ = this->mapSliceSliderZ->min_value(); this->viewer->maxSliceMapZ = this->mapSliceSliderZ->max_value(); }
-        else        { this->viewer->minSliceMapZ = -10.f;                              this->viewer->maxSliceMapZ = 10.f; }
-        this->viewer->update();
-    });
-    displayModeLayout->add(createVerticalGroup({createMultipleSliderGroupWithCheckbox({
-                                                               {"X", mapSliceSliderX, sliderXactivation},
-                                                               {"Y", mapSliceSliderY, sliderYactivation},
-                                                               {"Z", mapSliceSliderZ, sliderZactivation}
-                                                           }),
-                                                      mapSliceSmooth}));
-    */
-
-    std::cout << "BREAK 3" << std::endl;
     displayModeLayout->add({createHorizontalGroup({mapSliceSliderX, mapSliceSliderY, mapSliceSliderZ}), mapSliceSmooth});
 
-    this->isolevelSelectionSlider = new RangeSliderElement("Isolevel", 0.f, 3.f, 0.1f, terrainGenerationInterface->minIsoLevel, terrainGenerationInterface->maxIsoLevel, UIElement::VERTICAL);
-    /*QCheckBox* isolevelSelectionActivation = new QCheckBox("Activer");
-    isolevelSelectionActivation->setChecked(true);
-    QObject::connect(isolevelSelectionActivation, &QCheckBox::toggled, this, [&](bool active) {
-        if (active) { terrainGenerationInterface->minIsoLevel = isolevelSelectionSlider->min_value(); terrainGenerationInterface->maxIsoLevel = isolevelSelectionSlider->max_value();}
-        else { terrainGenerationInterface->minIsoLevel = -1000.f; terrainGenerationInterface->maxIsoLevel = 1000.f; }
-        this->viewer->update();
-    });*/
-
-    std::cout << "BREAK 4" << std::endl;
     mainLayout->addWidget(viewer, 1, 0);
 
-
-    std::cout << "BREAK 5" << std::endl;
-
-    QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
+    // QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
 
     auto displayOptionUI = new InterfaceUI(InterfaceUI::VERTICAL, "Options");
 
@@ -344,50 +291,13 @@ void ViewerInterface::setupUi()
         std::string associatedFilename = "experiments_state" + std::to_string(i) + ".xml";
         auto viewerSetupExperimental = new ButtonElement("Setup view " + std::to_string(i), [=]() { this->viewer->setupViewFromFile(associatedFilename); });
         auto viewerSetupExperimental_save = new ButtonElement("Save", [=]() { this->viewer->saveViewToFile(associatedFilename); });
-        // viewerSetupExperimental->setOnClick([=]() { this->viewer->setupViewFromFile(associatedFilename); });
-        // viewerSetupExperimental_save->setOnClick([=]() { this->viewer->saveViewToFile(associatedFilename); });
 
         displayOptionUI->add(createHorizontalGroup({viewerSetupExperimental, viewerSetupExperimental_save}));
     }
 
-    auto displayAsComparisonTerrainButton = new CheckboxElement("Comp.");
-    displayAsComparisonTerrainButton->setChecked(terrainGenerationInterface->displayAsComparativeMode);
-    displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});
-
-    auto displayWaterDepthButton = new CheckboxElement("Depth");
-    displayWaterDepthButton->setChecked(terrainGenerationInterface->displayDepth);
-    displayWaterDepthButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayDepthMode(check);});
-
-    auto displayShadowsButton = new CheckboxElement("Shadows");
-    displayShadowsButton->setChecked(terrainGenerationInterface->displayShadows);
-    displayShadowsButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayShadowsMode(check);});
-
-    auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });
-    auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setAmbiantOcclusion(newValue); });
-    auto heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setHeightFactor(newValue); });
-    auto ompFactorSlider = new SliderElement("OMP", 0.f, 1.f, 0.01f, [=](float newValue) { terrainGenerationInterface->setOMPFactor(newValue); });
-
     displayOptionUI->add(displayModeLayout);
-    displayOptionUI->add(createVerticalGroup({
-                                                    waterLevelSlider,
-                                                    ambiantOcclusionSlider,
-                                                    heightFactorSlider,
-                                                    ompFactorSlider,
-                                                //reloadShadersButton,
-                                                   createHorizontalGroup({
-                                                       createVerticalGroup({
-                                                           displayAsComparisonTerrainButton,
-                                                           new CheckboxElement("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
-                                                       }),
-                                                       createVerticalGroup({
-                                                           displayShadowsButton,
-                                                           displayWaterDepthButton
-                                                       })
-                                                   })
-                                            }));
+    displayOptionUI->add(terrainGenerationInterface->terrainViewerUI());
     displayOptionWidget->setWidget(displayOptionUI->getWidget());
-
-    std::cout << "UI setup" << std::endl;
 
     QWidget* mainFrame = new QWidget(this);
     mainFrame->setLayout(mainLayout);
@@ -397,14 +307,10 @@ void ViewerInterface::setupUi()
     frame = new StickyFrame(this->viewer, 0, -1, -1, 1, false);
     frame->hide();
 
-    // QObject::connect(reloadShadersButton, &QPushButton::pressed, this, [&]() {
-    //     this->viewer->reloadAllShaders();
-    // });
-
     this->setAllValuesToFitViewerDefaults(this->viewer);
     this->setupBindings();
     this->retranslateUi();
-    std::cout << "End of SetupUI" << std::endl;
+
 } // setupUi
 
 void ViewerInterface::setupBindings()

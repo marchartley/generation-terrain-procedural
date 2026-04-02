@@ -19,6 +19,8 @@ public:
     ComboboxElement(const std::string& label, std::vector<ComboboxLineElement<T>*> choices);
     template <class T>
     ComboboxElement(const std::string& label, std::vector<ComboboxLineElement<T>*> choices, int& currentSelection);
+    template <class T>
+    ComboboxElement(const std::string& label, std::vector<ComboboxLineElement<T>*> choices, int& currentSelection, std::function<void(int)> onSelectionChanged);
 
     QComboBox* combobox() const;
 
@@ -107,6 +109,12 @@ ComboboxElement::ComboboxElement(const std::string &label, std::vector<ComboboxL
     : ComboboxElement(label, choices)
 {
     this->bindTo(currentSelection);
+}
+template <class T>
+ComboboxElement::ComboboxElement(const std::string& label, std::vector<ComboboxLineElement<T>*> choices, int& currentSelection, std::function<void(int)> onSelectionChanged)
+    : ComboboxElement(label, choices, currentSelection)
+{
+    this->setOnSelectionChanged(onSelectionChanged);
 }
 
 

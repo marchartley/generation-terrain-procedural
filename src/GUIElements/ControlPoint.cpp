@@ -1,316 +1,130 @@
 #include "ControlPoint.h"
 
+
 #include "Utils/Collisions.h"
 
-
-std::shared_ptr<Shader> ControlPoint::base_shader = nullptr;
-std::map<GrabberState, std::vector<float>> ControlPoint::default_GrabberStateColor = {
-    {GrabberState::HIDDEN, {.0f, .0f, .0f, 0.f}},
-    {GrabberState::INACTIVE, {.3f, .0f, .0f, .5f}},
-    {GrabberState::ACTIVE, {.8f, .0f, .0f, .8f}},
-    {GrabberState::POSITIVE, {.2f, 1.f, .1f, .8f}},
-    {GrabberState::NEGATIVE, {1.f, .2f, .1f, 8.f}},
-    {GrabberState::NEUTRAL, {.8f, .8f, .8f, .8f}},
-};
-
-/*
-ControlPoint::ControlPoint()
-    : ControlPoint(Vector3())
-{}
-
-ControlPoint::ControlPoint(const Vector3& pos, float radius, GrabberState state, bool useTheManipulatedFrame)
-    : position(pos), radius(radius), currentState(state)
+ControlPoint3D::ControlPoint3D()
+    : ControlPoint3D(Vector3::origin)
 {
-    this->allowAllAxisTranslation(true);
-    this->allowAllAxisRotations(true);
-    this->allowAllAxisScaling(true);
-//    translationMesh.show();
-//    rotationMesh.show();
-//    scalingMesh.show();
-    this->addInMouseGrabberPool();
 
-    // Need to take into account "custom_constraint" for translations on specific axis
 }
 
-ControlPoint::~ControlPoint()
+ControlPoint3D::ControlPoint3D(const Vector3 &pos, float radius, GrabberState state, bool applyManipulations)
+    : Gizmo3D(applyManipulations)
 {
+    this->move(pos);
+    this->setRadius(radius);
+    this->setState(state);
+}
+
+Vector3 ControlPoint3D::getPosition() const {
+    return this->state().transform.position;
+}
+
+Vector3 ControlPoint3D::getRotation() const
+{
+    return this->state().transform.rotation.toVector3();
+}
+
+void ControlPoint3D::allowAllAxisRotations(bool allow)
+{
+    state().capabilities.allowRotateX = allow;
+    state().capabilities.allowRotateY = allow;
+    state().capabilities.allowRotateZ = allow;
+}
+
+void ControlPoint3D::allowAllAxisTranslation(bool allow)
+{
+    state().capabilities.allowTranslateX = allow;
+    state().capabilities.allowTranslateY = allow;
+    state().capabilities.allowTranslateZ = allow;
+}
+
+void ControlPoint3D::display()
+{
+    this->render();
+}
+
+void ControlPoint3D::hide()
+{
+    state().settings.visible = false;
     this->removeFromMouseGrabberPool();
 }
 
-void ControlPoint::display()
+void ControlPoint3D::show()
 {
-//    translationMesh.display();
-//    rotationMesh.display();
-//    scalingMesh.display();
+    state().settings.visible = true;
+    this->addInMouseGrabberPool();
 }
 
-void ControlPoint::move(const Vector3& newPos)
+void ControlPoint3D::setVisible(bool visibility)
 {
-    this->setPosition(newPos);
+    if (visibility) show();
+    else hide();
 }
 
-Vector3 ControlPoint::getPosition() const
+void ControlPoint3D::move(const Vector3 &newPos)
 {
-    return this->position;
+    state().transform.position = newPos;
+    Q_EMIT this->pointModified();
 }
 
-void ControlPoint::allowAllAxisTranslation(bool allowed)
+void ControlPoint3D::setGrabberStateColor(std::map<GrabberState, std::vector<float> > stateColorMap)
 {
-    this->allowedTranslations[X] = allowed;
-    this->allowedTranslations[Y] = allowed;
-    this->allowedTranslations[Z] = allowed;
-}
-
-void ControlPoint::allowAllAxisRotations(bool allowed)
-{
-    this->allowedRotations[X] = allowed;
-    this->allowedRotations[Y] = allowed;
-    this->allowedRotations[Z] = allowed;
-}
-
-void ControlPoint::allowAllAxisScaling(bool allowed)
-{
-    this->allowedScaling[X] = allowed;
-    this->allowedScaling[Y] = allowed;
-    this->allowedScaling[Z] = allowed;
-}
-
-void ControlPoint::mousePressEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
-{
-    if (this->grabsMouse()) {
-        std::cout << "Grabbed!" << std::endl;
-    }
-    // Check if visible
-    // Check grabMouse
-    // Get action
-    // Get axis
-    // Save "pressedPos"
-}
-
-void ControlPoint::mouseReleaseEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
-{
-//    Q_EMIT this->translationApplied();
-//    Q_EMIT this->rotationApplied();
-    Q_EMIT this->released();
-}
-
-void ControlPoint::mouseMoveEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
-{
-    Q_EMIT this->modified();
-}
-
-void ControlPoint::wheelEvent(QWheelEvent * const event, qglviewer::Camera * const camera)
-{
-    this->setRadius(radius - event->angleDelta().y()/10.f);
-    // Update meshes
-}
-
-void ControlPoint::hide()
-{
-//    translationMesh.hide();
-//    rotationMesh.hide();
-//    scalingMesh.hide();
-}
-
-void ControlPoint::show()
-{
-//    translationMesh.show();
-//    rotationMesh.show();
-//    scalingMesh.show();
-}
-
-void ControlPoint::setPosition(const Vector3& newPosition)
-{
-    this->position = newPosition;
-    // Update meshes?
-}
-
-void ControlPoint::setRadius(float newRadius)
-{
-    this->radius = std::max(newRadius, .5f);
-}
-
-void ControlPoint::setState(GrabberState newState)
-{
-    // Update meshes
-}
-
-Vector3 ControlPoint::getFluidTranslation() const
-{
-    return this->getCurrentTranslation();
-}
-
-Vector3 ControlPoint::getFluidRotation() const
-{
-    return this->getCurrentRotation();
-}
-
-Vector3 ControlPoint::getCurrentTranslation() const
-{
-
-}
-
-Vector3 ControlPoint::getCurrentRotation() const
-{
-
-}
-
-void ControlPoint::checkIfGrabsMouse(int x, int y, const qglviewer::Camera * const cam)
-{
-    // Check intersection with all widgets
-}
-
-Vector3 ControlPoint::intersectionWithTranslationWidget(const Vector3& rayOrigin, const Vector3& rayDir)
-{
-    // Check mouse-segments with X, Y, Z. return closest to cam
-    Vector3 intersectX = this->getIntersectionWithTranslationAxis(rayOrigin, rayDir, X);
-    Vector3 intersectY = this->getIntersectionWithTranslationAxis(rayOrigin, rayDir, Y);
-    Vector3 intersectZ = this->getIntersectionWithTranslationAxis(rayOrigin, rayDir, Z);
-    if (!intersectX.isValid() && !intersectY.isValid() && !intersectZ.isValid())
-        return Vector3::invalid();
-
-    float distX = (intersectX.isValid() ? (intersectX - rayOrigin).norm2() : std::numeric_limits<float>::max());
-    float distY = (intersectY.isValid() ? (intersectY - rayOrigin).norm2() : std::numeric_limits<float>::max());
-    float distZ = (intersectZ.isValid() ? (intersectZ - rayOrigin).norm2() : std::numeric_limits<float>::max());
-
-    float minDist = std::min({distX, distY, distZ});
-    if (distX == minDist) return intersectX;
-    else if (distY == minDist) return intersectY;
-    else return intersectZ;
-}
-
-Vector3 ControlPoint::intersectionWithRotationWidget(const Vector3& rayOrigin, const Vector3& rayDir)
-{
-    // Check mouse-plane
-    Vector3 intersectX = this->getIntersectionWithRotationAxis(rayOrigin, rayDir, X);
-    Vector3 intersectY = this->getIntersectionWithRotationAxis(rayOrigin, rayDir, Y);
-    Vector3 intersectZ = this->getIntersectionWithRotationAxis(rayOrigin, rayDir, Z);
-    if (!intersectX.isValid() && !intersectY.isValid() && !intersectZ.isValid())
-        return Vector3::invalid();
-
-    float distX = (intersectX.isValid() ? (intersectX - rayOrigin).norm2() : std::numeric_limits<float>::max());
-    float distY = (intersectY.isValid() ? (intersectY - rayOrigin).norm2() : std::numeric_limits<float>::max());
-    float distZ = (intersectZ.isValid() ? (intersectZ - rayOrigin).norm2() : std::numeric_limits<float>::max());
-
-    float minDist = std::min({distX, distY, distZ});
-    if (distX == minDist) return intersectX;
-    else if (distY == minDist) return intersectY;
-    else return intersectZ;
-}
-
-Vector3 ControlPoint::intersectionWithScalingWidget(const Vector3& rayOrigin, const Vector3& rayDir)
-{
-    // Check mouse-box
-    Vector3 intersectX = this->getIntersectionWithScalingAxis(rayOrigin, rayDir, X);
-    Vector3 intersectY = this->getIntersectionWithScalingAxis(rayOrigin, rayDir, Y);
-    Vector3 intersectZ = this->getIntersectionWithScalingAxis(rayOrigin, rayDir, Z);
-    if (!intersectX.isValid() && !intersectY.isValid() && !intersectZ.isValid())
-        return Vector3::invalid();
-
-    float distX = (intersectX.isValid() ? (intersectX - rayOrigin).norm2() : std::numeric_limits<float>::max());
-    float distY = (intersectY.isValid() ? (intersectY - rayOrigin).norm2() : std::numeric_limits<float>::max());
-    float distZ = (intersectZ.isValid() ? (intersectZ - rayOrigin).norm2() : std::numeric_limits<float>::max());
-
-    float minDist = std::min({distX, distY, distZ});
-    if (distX == minDist) return intersectX;
-    else if (distY == minDist) return intersectY;
-    else return intersectZ;
-}
-
-ControlPoint::ControlPointAction ControlPoint::hoveredAction(const Vector3& rayOrigin, const Vector3& rayDir)
-{
-    // Get intersection position with all widgets
-    // Select closest to cam
-}
-
-ControlPoint::Axis ControlPoint::hoveredAxis(const Vector3& rayOrigin, const Vector3& rayDir)
-{
-    // From hovered action, check each component individually
-}
-
-Vector3 ControlPoint::getIntersectionWithTranslationAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
-{
-    float tolerence = this->radius * .2f;
-    float arrowSize = this->radius * 2.f;
-    Vector3 widgetAxis = Vector3((axis == X ? 1.f : 0.f), (axis == Y ? 1.f : 0.f), (axis == Z ? 1.f : 0.f)) * arrowSize;
-
-    Vector3 intersection = Collision::intersectionBetweenTwoSegments(
-                rayOrigin,
-                rayOrigin + rayDir * std::max(arrowSize * 2.f, (this->getPosition() - rayOrigin).norm() * 2.f),
-                this->getPosition() - widgetAxis,
-                this->getPosition() + widgetAxis
-                );
-    if (intersection.isValid()) {
-        Vector3 projection = Collision::projectPointOnSegment(intersection, this->getPosition() - widgetAxis, this->getPosition() + widgetAxis);
-        if ((projection - intersection).norm2() > tolerence * tolerence)
-            return Vector3::invalid();
-        else
-            return projection;
-    } else {
-        return Vector3::invalid();
+    for (auto [s, color] : stateColorMap) {
+        this->stateColorMap[s] = color;
     }
 }
 
-Vector3 ControlPoint::getIntersectionWithRotationAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
+void ControlPoint3D::setState(GrabberState newState)
 {
-    float tolerence = this->radius * .2f;
-    float circleSize = this->radius * 2.f;
-    Vector3 widgetAxis = Vector3((axis == X ? 1.f : 0.f), (axis == Y ? 1.f : 0.f), (axis == Z ? 1.f : 0.f));
-
-    Vector3 intersection = Collision::intersectionRayPlane(
-                rayOrigin,
-                rayOrigin + rayDir * std::max(circleSize * 2.f, (this->getPosition() - rayOrigin).norm() * 2.f),
-                this->getPosition(),
-                widgetAxis
-                );
-    if (intersection.isValid()) {
-        Vector3 projection = Collision::projectPointOnSphere(intersection, this->getPosition(), circleSize);
-        if ((projection - intersection).norm2() > tolerence * tolerence)
-            return Vector3::invalid();
-        else
-            return projection;
-
-    } else {
-        return Vector3::invalid();
-    }
+    std::cout << "ControlPoint3D::setState not implemented" << std::endl;
 }
 
-Vector3 ControlPoint::getIntersectionWithScalingAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
+void ControlPoint3D::setRadius(float newRadius)
 {
-    float tolerence = this->radius * .2f;
-    float boxSize = this->radius * 2.f;
-    float boxDistance = this->radius * 2.f;
-    Vector3 widgetAxis = Vector3((axis == X ? 1.f : 0.f), (axis == Y ? 1.f : 0.f), (axis == Z ? 1.f : 0.f)) * boxDistance;
-
-    Vector3 intersection = Collision::intersectionRayAABBox(
-                rayOrigin,
-                rayOrigin + rayDir * std::max(boxSize * 2.f, (this->getPosition() - rayOrigin).norm() * 2.f),
-                this->getPosition() + widgetAxis - Vector3(boxSize, boxSize, boxSize) * .5f,
-                this->getPosition() + widgetAxis + Vector3(boxSize, boxSize, boxSize) * .5f
-                );
-    if (intersection.isValid()) {
-        return intersection;
-
-    } else {
-        return Vector3::invalid();
-    }
+    state().settings.radius = newRadius;
+    state().settings.ringRadius = 1.5f * newRadius;
+    state().settings.axisLength = 2.f * newRadius;
 }
 
-void ControlPoint::setGrabberStateColor(std::map<GrabberState, std::vector<float> > stateColorMap)
+void ControlPoint3D::setConstraint(qglviewer::Constraint *constraint)
 {
-    for (auto& tuple : stateColorMap) {
-        this->setGrabberStateColor(std::get<0>(tuple), std::get<1>(tuple));
-    }
+    std::cout << "ControlPoint3D::setConstraint not implemented" << std::endl;
 }
 
-void ControlPoint::setGrabberStateColor(GrabberState state, std::vector<float> color)
+// bool ControlPoint3D::grabsMouse() const
+// {
+    // std::cout << "ControlPoint3D::grabsMouse not implemented" << std::endl;
+    // return false;
+// }
+
+
+void ControlPoint3D::setDisplayOnTop(bool enable)
 {
-    this->GrabberStateColor[state] = color;
+    state().settings.displayOnTop = enable;
+}
+
+Vector3 ControlPoint3D::getFluidTranslation()
+{
+    std::cout << "ControlPoint3D::getFluidTranslation not implemented" << std::endl;
+    return Vector3::invalid;
 }
 
 
-*/
 
+
+
+
+std::shared_ptr<Shader> ControlPoint::base_shader = nullptr;
+std::map<ControlPoint::GrabberState, std::vector<float>> ControlPoint::default_GrabberStateColor = {
+    {ControlPoint::GrabberState::HIDDEN, {.0f, .0f, .0f, 0.f}},
+    {ControlPoint::GrabberState::INACTIVE, {.3f, .0f, .0f, .5f}},
+    {ControlPoint::GrabberState::ACTIVE, {.8f, .0f, .0f, .8f}},
+    {ControlPoint::GrabberState::POSITIVE, {.2f, 1.f, .1f, .8f}},
+    {ControlPoint::GrabberState::NEGATIVE, {1.f, .2f, .1f, .8f}},
+    {ControlPoint::GrabberState::NEUTRAL, {.8f, .8f, .8f, .8f}},
+    };
 
 ControlPoint::ControlPoint()
     : ControlPoint(Vector3())
@@ -323,11 +137,10 @@ ControlPoint::ControlPoint()
 }
 
 ControlPoint::ControlPoint(const Vector3& pos, float radius, GrabberState state, bool useTheManipulatedFrame)
-    : state(state), useManipFrame(useTheManipulatedFrame), shape(radius, getPosition(), 10, 10), radius(radius)
+    : state(state), useManipFrame(useTheManipulatedFrame), radius(radius)
 {
-    this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
+    this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(ControlPoint::base_shader->vertexShaderFilename, ControlPoint::base_shader->fragmentShaderFilename, ControlPoint::base_shader->geometryShaderFilename) : nullptr), true);
     this->move(pos);
-    this->stillOnInitialState = false; // true;
     this->prevPosition = pos;
     this->GrabberStateColor = ControlPoint::default_GrabberStateColor;
     this->currentlyManipulated = false;
@@ -365,11 +178,15 @@ void ControlPoint::setState(GrabberState newState)
     this->state = newState;
 }
 
+void ControlPoint::setVisible(bool visibility)
+{
+    this->visible = visibility;
+}
+
 void ControlPoint::updateStateDependingOnManipFrame()
 {
-    if (this->useManipFrame)
-        if (this->state != HIDDEN)
-            this->setState(this->isManipulated() ? ACTIVE : INACTIVE);
+    if (this->useManipFrame && this->visible)
+        this->setState(this->isManipulated() ? ACTIVE : INACTIVE);
 }
 
 void ControlPoint::checkIfGrabsMouse(int x, int y, const qglviewer::Camera * const cam)
@@ -379,7 +196,7 @@ void ControlPoint::checkIfGrabsMouse(int x, int y, const qglviewer::Camera * con
         setGrabsMouse(true);
         return;
     }
-    if (this->state == HIDDEN || this->mesh.isHidden()) {
+    if (!this->visible || this->mesh.isHidden()) {
         setGrabsMouse(false);
         return;
     }
@@ -392,51 +209,54 @@ void ControlPoint::checkIfGrabsMouse(int x, int y, const qglviewer::Camera * con
 
     if (this->mouseOnCentralSphere(rayOrigin, rayDir)) {
         setGrabsMouse(true);
-        this->currentAxis = NONE;
-        this->isApplyingFreeMove = true;
-        this->isApplyingRotation = false;
-        this->isApplyingTranslation = false;
+        this->interactionState.currentAxis = ControlPointAxis::NONE;
+        this->interactionState.isApplyingFreeMove = true;
+        this->interactionState.isApplyingRotation = false;
+        this->interactionState.isApplyingTranslation = false;
     }
     else if (this->mouseOnTranslationArrow(rayOrigin, rayDir)) {
         setGrabsMouse(true);
-        this->isApplyingFreeMove = false;
-        this->isApplyingRotation = false;
-        this->isApplyingTranslation = true;
-    } else if (rotationAxis != NONE) {
+        this->interactionState.isApplyingFreeMove = false;
+        this->interactionState.isApplyingRotation = false;
+        this->interactionState.isApplyingTranslation = true;
+    } else if (rotationAxis != ControlPointAxis::NONE) {
         setGrabsMouse(true);
-        this->isApplyingFreeMove = false;
-        this->isApplyingRotation = true;
-        this->isApplyingTranslation = false;
-        this->currentMousePosOnAction = intersectionPoint;
-        this->currentAxis = rotationAxis;
+        this->interactionState.isApplyingFreeMove = false;
+        this->interactionState.isApplyingRotation = true;
+        this->interactionState.isApplyingTranslation = false;
+        this->interactionState.currentMousePosOnAction = intersectionPoint;
+        this->interactionState.currentAxis = rotationAxis;
     } else {
         setGrabsMouse(false);
-        this->isApplyingFreeMove = false;
-        this->isApplyingRotation = false;
-        this->isApplyingTranslation = false;
+        this->interactionState.isApplyingFreeMove = false;
+        this->interactionState.isApplyingRotation = false;
+        this->interactionState.isApplyingTranslation = false;
     }
 
 
     // Constraints :
-    qglviewer::WorldConstraint* constraint = new qglviewer::WorldConstraint();
-    if (this->isApplyingFreeMove) {
+    if (this->default_constraint == nullptr)
+        this->default_constraint = new qglviewer::WorldConstraint();
+    auto& constraint = this->default_constraint;
+
+    if (this->interactionState.isApplyingFreeMove) {
         constraint->setTranslationConstraintType(qglviewer::AxisPlaneConstraint::FREE);
         constraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::FREE);
-    } else if (this->isApplyingRotation) {
+    } else if (this->interactionState.isApplyingRotation) {
         constraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::AXIS);
-        if (this->currentAxis == X)
+        if (this->interactionState.currentAxis == ControlPointAxis::X)
             constraint->setRotationConstraintDirection(Vector3(1.0, 0.0, 0.0));
-        else if (this->currentAxis == Y)
+        else if (this->interactionState.currentAxis == ControlPointAxis::Y)
             constraint->setRotationConstraintDirection(Vector3(0.0, 1.0, 0.0));
-        else if (this->currentAxis == Z)
+        else if (this->interactionState.currentAxis == ControlPointAxis::Z)
             constraint->setRotationConstraintDirection(Vector3(0.0, 0.0, 1.0));
-    } else if (this->isApplyingTranslation) {
+    } else if (this->interactionState.isApplyingTranslation) {
         constraint->setTranslationConstraintType(qglviewer::AxisPlaneConstraint::AXIS);
-        if (this->currentAxis == X)
+        if (this->interactionState.currentAxis == ControlPointAxis::X)
             constraint->setTranslationConstraintDirection(Vector3(1.0, 0.0, 0.0));
-        else if (this->currentAxis == Y)
+        else if (this->interactionState.currentAxis == ControlPointAxis::Y)
             constraint->setTranslationConstraintDirection(Vector3(0.0, 1.0, 0.0));
-        else if (this->currentAxis == Z)
+        else if (this->interactionState.currentAxis == ControlPointAxis::Z)
             constraint->setTranslationConstraintDirection(Vector3(0.0, 0.0, 1.0));
     }
     if (this->custom_constraint == nullptr) {
@@ -454,6 +274,23 @@ void ControlPoint::onUpdate(std::function<void ()> func)
 void ControlPoint::afterUpdate(std::function<void ()> func)
 {
     this->afterUpdateCallback = func;
+}
+
+void ControlPoint::updateInteractionState()
+{
+
+}
+
+void ControlPoint::updateGeometryIfNeeded()
+{
+    if (!geometryDirty) return;
+
+    Sphere s(this->radius, getPosition(), 10, 10);
+    s.buildVerticesFlat();
+    mesh.fromArray(s.mesh.vertexArrayFloat);
+    mesh.update();
+
+    geometryDirty = false;
 }
 
 void ControlPoint::updateSphere()
@@ -488,10 +325,10 @@ void ControlPoint::updateSphere()
     }
     this->currentlyManipulated = this->isManipulated();
 //    this->manipFrame.setPosition(this->getPosition());
-    this->shape.position = this->getPosition();
-    this->shape.radius = this->radius;
-    this->shape.buildVerticesFlat();
-    this->mesh.fromArray(this->shape.mesh.vertexArrayFloat);
+
+    Sphere s(this->radius, this->getPosition(), 6, 6);
+    s.buildVerticesFlat();
+    this->mesh.fromArray(s.mesh.vertexArrayFloat);
     this->mesh.update();
 
     this->arrowSize = 3 * this->radius;
@@ -500,92 +337,92 @@ void ControlPoint::updateSphere()
 
 void ControlPoint::display()
 {
-    if (this->state == HIDDEN || this->stillOnInitialState) return;
-    else {
-        GLboolean m_origin_blend, m_origin_depth, m_origin_cull;
-        glGetBooleanv(GL_BLEND, &m_origin_blend);
-        glGetBooleanv(GL_DEPTH_TEST,&m_origin_depth);
-        glGetBooleanv(GL_CULL_FACE, &m_origin_cull);
-        if (this->displayOnTop) {
-            glEnable(GL_BLEND);
-            glDisable(GL_DEPTH_TEST);
-            glDisable(GL_CULL_FACE);
-        }
-        float controlAxisSizeUnselected = 2.f;
-        float controlAxisSizeSelected = 4.f;
-        if (this->useManipFrame)
-            this->setState(this->isManipulated() ? ACTIVE : INACTIVE);
+    if (!this->visible) return;
 
-        if (this->mesh.shader != nullptr)
-            this->mesh.shader->setVector("color", ControlPoint::GrabberStateColor[this->state]);
+    this->updateGeometryIfNeeded();
 
-        if (this->translationMeshes.shader != nullptr) {
-            // Display X (red)
-            if (this->allowedTranslations[X]) {
-                this->translationMeshes.shader->setVector("color", std::vector<float>({1.0, 0.0, 0.0, 1.0}));
-                this->translationMeshes.fromArray({this->getPosition() - Vector3(1.0, 0.0, 0.0) * arrowSize, this->getPosition() + Vector3(1.0, 0.0, 0.0) * arrowSize});
-                this->translationMeshes.display(GL_LINES, (isApplyingTranslation && currentAxis == X ? controlAxisSizeSelected : controlAxisSizeUnselected));
-            }
-            // Display Y (green)
-            if (this->allowedTranslations[X]) {
-                this->translationMeshes.shader->setVector("color", std::vector<float>({0.0, 1.0, 0.0, 1.0}));
-                this->translationMeshes.fromArray({this->getPosition() - Vector3(0.0, 1.0, 0.0) * arrowSize, this->getPosition() + Vector3(0.0, 1.0, 0.0) * arrowSize});
-                this->translationMeshes.display(GL_LINES, (isApplyingTranslation && currentAxis == Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
-            }
-            // Display Z (blue)
-            if (this->allowedTranslations[X]) {
-                this->translationMeshes.shader->setVector("color", std::vector<float>({0.0, 0.0, 1.0, 1.0}));
-                this->translationMeshes.fromArray({this->getPosition() - Vector3(0.0, 0.0, 1.0) * arrowSize, this->getPosition() + Vector3(0.0, 0.0, 1.0) * arrowSize});
-                this->translationMeshes.display(GL_LINES, (isApplyingTranslation && currentAxis == Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
-            }
-        } else if (this->mesh.shader != nullptr ){
-            this->translationMeshes.shader = std::make_shared<Shader>(*this->mesh.shader);
-        }
-        if (this->rotationMeshes.shader != nullptr) {
-            // Display X (red)
-            if (this->allowedRotations[X]) {
-                this->rotationMeshes.shader->setVector("color", std::vector<float>({1.0, 0.0, 0.0, 1.0}));
-                this->rotationMeshes.fromArray(computeCircle(X));
-                this->rotationMeshes.display(GL_LINES, (isApplyingRotation && currentAxis == X ? controlAxisSizeSelected : controlAxisSizeUnselected));
-                if (isApplyingRotation && currentAxis == X) {
-//                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
-                    this->rotationHelperSphere.display();
-                }
-            }
-            // Display Y (green)
-            if (this->allowedRotations[Y]) {
-                this->rotationMeshes.shader->setVector("color", std::vector<float>({0.0, 1.0, 0.0, 1.0}));
-                this->rotationMeshes.fromArray(computeCircle(Y));
-                this->rotationMeshes.display(GL_LINES, (isApplyingRotation && currentAxis == Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
-                if (isApplyingRotation && currentAxis == Y) {
-//                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
-                    this->rotationHelperSphere.display();
-                }
-            }
-            // Display Z (blue)
-            if (this->allowedRotations[Z]) {
-                this->rotationMeshes.shader->setVector("color", std::vector<float>({0.0, 0.0, 1.0, 1.0}));
-                this->rotationMeshes.fromArray(computeCircle(Z));
-                this->rotationMeshes.display(GL_LINES, (isApplyingRotation && currentAxis == Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
-                if (isApplyingRotation && currentAxis == Z) {
-//                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
-                    this->rotationHelperSphere.display();
-                }
-            }
-        } else if (this->mesh.shader != nullptr ){
-            this->rotationMeshes.shader = std::make_shared<Shader>(*this->mesh.shader);
-            this->rotationHelperSphere.shareShader(rotationMeshes.shader);
-        }
-        this->updateSphere();
-        this->mesh.display();
-
-        if (m_origin_blend == GL_TRUE) glEnable(GL_BLEND);
-        else glDisable(GL_BLEND);
-        if (m_origin_depth == GL_TRUE) glEnable(GL_DEPTH_TEST);
-        else glDisable(GL_DEPTH_TEST);
-        if (m_origin_cull == GL_TRUE) glEnable(GL_CULL_FACE);
-        else glDisable(GL_CULL_FACE);
+    GLboolean m_origin_blend, m_origin_depth, m_origin_cull;
+    glGetBooleanv(GL_BLEND, &m_origin_blend);
+    glGetBooleanv(GL_DEPTH_TEST,&m_origin_depth);
+    glGetBooleanv(GL_CULL_FACE, &m_origin_cull);
+    if (this->displayOnTop) {
+        glEnable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
     }
+    float controlAxisSizeUnselected = 2.f;
+    float controlAxisSizeSelected = 4.f;
+    if (this->useManipFrame)
+        this->setState(this->isManipulated() ? ACTIVE : INACTIVE);
+
+    this->mesh.shader->setVector("color", ControlPoint::GrabberStateColor[this->state]);
+
+    if (this->translationMeshes.shader != nullptr) {
+        // Display X (red)
+        if (this->allowedTranslations[ControlPointAxis::X]) {
+            this->translationMeshes.shader->setVector("color", std::vector<float>({1.0, 0.0, 0.0, 1.0}));
+            this->translationMeshes.fromArray({this->getPosition() - Vector3(1.0, 0.0, 0.0) * arrowSize, this->getPosition() + Vector3(1.0, 0.0, 0.0) * arrowSize});
+            this->translationMeshes.display(GL_LINES, (this->interactionState.isApplyingTranslation && this->interactionState.currentAxis == ControlPointAxis::X ? controlAxisSizeSelected : controlAxisSizeUnselected));
+        }
+        // Display Y (green)
+        if (this->allowedTranslations[ControlPointAxis::Y]) {
+            this->translationMeshes.shader->setVector("color", std::vector<float>({0.0, 1.0, 0.0, 1.0}));
+            this->translationMeshes.fromArray({this->getPosition() - Vector3(0.0, 1.0, 0.0) * arrowSize, this->getPosition() + Vector3(0.0, 1.0, 0.0) * arrowSize});
+            this->translationMeshes.display(GL_LINES, (this->interactionState.isApplyingTranslation && this->interactionState.currentAxis == ControlPointAxis::Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
+        }
+        // Display Z (blue)
+        if (this->allowedTranslations[ControlPointAxis::Z]) {
+            this->translationMeshes.shader->setVector("color", std::vector<float>({0.0, 0.0, 1.0, 1.0}));
+            this->translationMeshes.fromArray({this->getPosition() - Vector3(0.0, 0.0, 1.0) * arrowSize, this->getPosition() + Vector3(0.0, 0.0, 1.0) * arrowSize});
+            this->translationMeshes.display(GL_LINES, (this->interactionState.isApplyingTranslation && this->interactionState.currentAxis == ControlPointAxis::Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
+        }
+    } else if (this->mesh.shader != nullptr ){
+        this->translationMeshes.shader = std::make_shared<Shader>(*this->mesh.shader);
+    }
+    if (this->rotationMeshes.shader != nullptr) {
+        // Display X (red)
+        if (this->allowedRotations[ControlPointAxis::X]) {
+            this->rotationMeshes.shader->setVector("color", std::vector<float>({1.0, 0.0, 0.0, 1.0}));
+            this->rotationMeshes.fromArray(computeCircle(ControlPointAxis::X));
+            this->rotationMeshes.display(GL_LINES, (this->interactionState.isApplyingRotation && this->interactionState.currentAxis == ControlPointAxis::X ? controlAxisSizeSelected : controlAxisSizeUnselected));
+            if (this->interactionState.isApplyingRotation && this->interactionState.currentAxis == ControlPointAxis::X) {
+//                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
+                this->rotationHelperSphere.display();
+            }
+        }
+        // Display Y (green)
+        if (this->allowedRotations[ControlPointAxis::Y]) {
+            this->rotationMeshes.shader->setVector("color", std::vector<float>({0.0, 1.0, 0.0, 1.0}));
+            this->rotationMeshes.fromArray(computeCircle(ControlPointAxis::Y));
+            this->rotationMeshes.display(GL_LINES, (this->interactionState.isApplyingRotation && this->interactionState.currentAxis == ControlPointAxis::Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
+            if (this->interactionState.isApplyingRotation && this->interactionState.currentAxis == ControlPointAxis::Y) {
+//                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
+                this->rotationHelperSphere.display();
+            }
+        }
+        // Display Z (blue)
+        if (this->allowedRotations[ControlPointAxis::Z]) {
+            this->rotationMeshes.shader->setVector("color", std::vector<float>({0.0, 0.0, 1.0, 1.0}));
+            this->rotationMeshes.fromArray(computeCircle(ControlPointAxis::Z));
+            this->rotationMeshes.display(GL_LINES, (this->interactionState.isApplyingRotation && this->interactionState.currentAxis == ControlPointAxis::Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
+            if (this->interactionState.isApplyingRotation && this->interactionState.currentAxis == ControlPointAxis::Z) {
+//                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
+                this->rotationHelperSphere.display();
+            }
+        }
+    } else if (this->mesh.shader != nullptr ){
+        this->rotationMeshes.shader = std::make_shared<Shader>(*this->mesh.shader);
+        this->rotationHelperSphere.shareShader(rotationMeshes.shader);
+    }
+    this->updateSphere();
+    this->mesh.display();
+
+    if (m_origin_blend == GL_TRUE) glEnable(GL_BLEND);
+    else glDisable(GL_BLEND);
+    if (m_origin_depth == GL_TRUE) glEnable(GL_DEPTH_TEST);
+    else glDisable(GL_DEPTH_TEST);
+    if (m_origin_cull == GL_TRUE) glEnable(GL_CULL_FACE);
+    else glDisable(GL_CULL_FACE);
 }
 
 void ControlPoint::hide()
@@ -621,27 +458,54 @@ void ControlPoint::setGrabberStateColor(GrabberState state, std::vector<float> c
     this->GrabberStateColor[state] = color;
 }
 
+void ControlPoint::setPosition(const Vector3& newPos)
+{
+    this->setPosition(newPos.x(), newPos.y(), newPos.z());
+}
+
+void ControlPoint::setPosition(float x, float y, float z)
+{
+    this->currentPosition = Vector3(x, y, z);
+    ManipulatedFrame::setPosition(x, y, z);
+}
+
 Vector3 ControlPoint::getRotation() const
 {
-    if (!this->pressedPosBeforeAction.isValid())
+    if (!this->interactionState.pressedPosBeforeAction.isValid())
         return Vector3(0.f, 0.f, 0.f);
-    Vector3 rotation = this->pressedPosBeforeAction.getAllAnglesWith(this->currentMousePosOnAction);
+    Vector3 rotation = this->interactionState.pressedPosBeforeAction.getAllAnglesWith(this->interactionState.currentMousePosOnAction);
     return rotation;
+}
+
+Vector3 ControlPoint::getPosition() const
+{
+    return this->position();
+    // return this->currentPosition;
+}
+
+Vector3 ControlPoint::getFluidTranslation() const {
+    if (positionsHistory.empty()) return Vector3();
+    return (this->getPosition() - this->positionsHistory.front()).normalize(); }
+
+Vector3 ControlPoint::getLastMovement() const
+{
+    return (this->getPosition() - this->prevPosition).normalize();
 }
 
 void ControlPoint::mousePressEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
 {
-    this->pressedPosBeforeAction.setValid(false);
+    std::cout << "ControlPoint::mousePressEvent triggered" << std::endl;
+    this->interactionState.pressedPosBeforeAction.setValid(false);
     if (this->grabsMouse()) {
-        if (this->isApplyingRotation) {
-            this->pressedPosBeforeAction = currentMousePosOnAction;
-            Sphere s(1.f, this->getPosition() + circleRadius * this->pressedPosBeforeAction.normalized(), 6, 6);
+        if (this->interactionState.isApplyingRotation) {
+            this->interactionState.pressedPosBeforeAction = interactionState.currentMousePosOnAction;
+            Sphere s(1.f, this->getPosition() + circleRadius * this->interactionState.pressedPosBeforeAction.normalized(), 6, 6);
             s.buildVerticesFlat();
             this->rotationHelperSphere.fromArray(s.mesh.vertexArray);
             this->startAction(QGLViewer::ROTATE);
-        } else if (this->isApplyingTranslation) {
+        } else if (this->interactionState.isApplyingTranslation) {
             this->startAction(QGLViewer::TRANSLATE);
-        } else if (this->isApplyingFreeMove) {
+        } else if (this->interactionState.isApplyingFreeMove) {
             this->startAction(QGLViewer::TRANSLATE); // force translation
         }
     }
@@ -650,19 +514,14 @@ void ControlPoint::mousePressEvent(QMouseEvent * const event, qglviewer::Camera 
 
 void ControlPoint::mouseReleaseEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
 {
+    this->currentlyManipulated = false;
     qglviewer::ManipulatedFrame::mouseReleaseEvent(event, cam);
 }
 
 void ControlPoint::mouseMoveEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
 {
-    QPoint mousePos = event->pos();
-    qglviewer::Vec orig, dir;
-    cam->convertClickToLine(mousePos, orig, dir);
-    Vector3 rayOrigin = Vector3(orig), rayDir = Vector3(dir);
-    this->currentMousePosOnAction = this->getIntersectionWithPlane(rayOrigin, rayDir, this->currentAxis) - this->getPosition();
-
-    if (this->isApplyingRotation) {
-        Sphere s(1.f, this->getPosition() + circleRadius * this->currentMousePosOnAction.normalized(), 6, 6);
+    if (this->interactionState.isApplyingRotation) {
+        Sphere s(1.f, this->getPosition() + circleRadius * this->interactionState.currentMousePosOnAction.normalized(), 6, 6);
         s.buildVerticesFlat();
         this->rotationHelperSphere.fromArray(s.mesh.vertexArray);
     }
@@ -672,48 +531,57 @@ void ControlPoint::mouseMoveEvent(QMouseEvent * const event, qglviewer::Camera *
 
 void ControlPoint::wheelEvent(QWheelEvent * const event, qglviewer::Camera * const camera)
 {
-    setSphereRadius(this->radius - event->angleDelta().y()/10.f);
+    setRadius(this->radius - event->angleDelta().y()/10.f);
     this->startAction(QGLViewer::MouseAction::NO_MOUSE_ACTION);
     qglviewer::ManipulatedFrame::wheelEvent(event, camera);
 }
 
-void ControlPoint::setSphereRadius(float newRadius)
+void ControlPoint::setRadius(float newRadius)
 {
-    if (minSphereRadius >= 0)
-        newRadius = std::max(minSphereRadius, newRadius);
-    if (maxSphereRadius >= 0)
-        newRadius = std::min(maxSphereRadius, newRadius);
-    this->radius = newRadius;
-    this->updateSphere();
+    if (minSphereRadius >= 0.0f) newRadius = std::max(minSphereRadius, newRadius);
+    if (maxSphereRadius >= 0.0f) newRadius = std::min(maxSphereRadius, newRadius);
+
+    if (radius != newRadius) {
+        radius = newRadius;
+        arrowSize = 3.0f * radius;
+        circleRadius = 2.0f * radius;
+        geometryDirty = true;
+    }
 }
 
 void ControlPoint::allowAllAxisTranslation(bool allow)
 {
-    this->allowedTranslations[X] = allow;
-    this->allowedTranslations[Y] = allow;
-    this->allowedTranslations[Z] = allow;
+    this->allowedTranslations[ControlPointAxis::X] = allow;
+    this->allowedTranslations[ControlPointAxis::Y] = allow;
+    this->allowedTranslations[ControlPointAxis::Z] = allow;
 }
 
 void ControlPoint::allowAllAxisRotations(bool allow)
 {
-    this->allowedRotations[X] = allow;
-    this->allowedRotations[Y] = allow;
-    this->allowedRotations[Z] = allow;
+    this->allowedRotations[ControlPointAxis::X] = allow;
+    this->allowedRotations[ControlPointAxis::Y] = allow;
+    this->allowedRotations[ControlPointAxis::Z] = allow;
 }
 
-std::vector<Vector3> ControlPoint::computeCircle(Axis axis)
+void ControlPoint::setConstraint(qglviewer::Constraint * const constraint)
+{
+    this->custom_constraint = constraint;
+    ManipulatedFrame::setConstraint(constraint);
+}
+
+std::vector<Vector3> ControlPoint::computeCircle(ControlPointAxis axis)
 {
     std::vector<Vector3> points;
     for (int i = 0; i <= 360; i += 5) {
         float angle = i * PI / 180.f;
         float nextAngle = (i + 5) * PI / 180.f;
-        if (axis == X) {
+        if (axis == ControlPointAxis::X) {
             points.push_back(this->getPosition() + Vector3(0.0, 1.0, 0.0).rotate(angle, 0, 0) * this->circleRadius);
             points.push_back(this->getPosition() + Vector3(0.0, 1.0, 0.0).rotate(nextAngle, 0, 0) * this->circleRadius);
-        } else if (axis == Y) {
+        } else if (axis == ControlPointAxis::Y) {
             points.push_back(this->getPosition() + Vector3(1.0, 0.0, 0.0).rotate(0, angle, 0) * this->circleRadius);
             points.push_back(this->getPosition() + Vector3(1.0, 0.0, 0.0).rotate(0, nextAngle, 0) * this->circleRadius);
-        } else if (axis == Z) {
+        } else if (axis == ControlPointAxis::Z) {
             points.push_back(this->getPosition() + Vector3(1.0, 0.0, 0.0).rotate(0, 0, angle) * this->circleRadius);
             points.push_back(this->getPosition() + Vector3(1.0, 0.0, 0.0).rotate(0, 0, nextAngle) * this->circleRadius);
         }
@@ -721,12 +589,12 @@ std::vector<Vector3> ControlPoint::computeCircle(Axis axis)
     return points;
 }
 
-Vector3 ControlPoint::getIntersectionWithPlane(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
+Vector3 ControlPoint::getIntersectionWithPlane(const Vector3& rayOrigin, const Vector3& rayDir, ControlPointAxis axis)
 {
     return Collision::intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(
-                                               (axis == X ? 1.f :  0.f),
-                                               (axis == Y ? 1.f :  0.f),
-                                               (axis == Z ? 1.f :  0.f)));
+                                               (axis == ControlPointAxis::X ? 1.f :  0.f),
+                                               (axis == ControlPointAxis::Y ? 1.f :  0.f),
+                                               (axis == ControlPointAxis::Z ? 1.f :  0.f)));
 }
 
 bool ControlPoint::mouseOnCentralSphere(const Vector3& rayOrigin, const Vector3& rayDir)
@@ -736,32 +604,43 @@ bool ControlPoint::mouseOnCentralSphere(const Vector3& rayOrigin, const Vector3&
 
 bool ControlPoint::mouseOnTranslationArrow(const Vector3& rayOrigin, const Vector3& rayDir)
 {
-    float tolerence = this->radius/5.f;
+    float distToCam = (this->getPosition() - rayOrigin).norm();
+    float tolerance = this->radius/(650.f / distToCam); // Magic number, I know...
+
     // X-axis
-    if (this->allowedTranslations[X] && Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
-                                        this->getPosition() - Vector3(1.0, 0.0, 0.0) * arrowSize,
-                                        this->getPosition() + Vector3(1.0, 0.0, 0.0) * arrowSize) < tolerence) {
-        this->currentAxis = X;
-        return true;
+    if (this->allowedTranslations[ControlPointAxis::X]) {
+        float distance = Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
+                                                                    this->getPosition() - Vector3(1.0, 0.0, 0.0) * arrowSize,
+                                                                    this->getPosition() + Vector3(1.0, 0.0, 0.0) * arrowSize);
+        if(distance < tolerance) {
+            this->interactionState.currentAxis = ControlPointAxis::X;
+            return true;
+        }
     }
     // Y-axis
-    if (this->allowedTranslations[Y] && Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
+    if (this->allowedTranslations[ControlPointAxis::Y]) {
+        float distance = Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
                                         this->getPosition() - Vector3(0.0, 1.0, 0.0) * arrowSize,
-                                        this->getPosition() + Vector3(0.0, 1.0, 0.0) * arrowSize) < tolerence) {
-        this->currentAxis = Y;
-        return true;
+                                        this->getPosition() + Vector3(0.0, 1.0, 0.0) * arrowSize);
+        if (distance < tolerance) {
+            this->interactionState.currentAxis = ControlPointAxis::Y;
+            return true;
+        }
     }
     // Z-axis
-    if (this->allowedTranslations[Z] && Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
+    if (this->allowedTranslations[ControlPointAxis::Z]) {
+        float distance = Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
                                         this->getPosition() - Vector3(0.0, 0.0, 1.0) * arrowSize,
-                                        this->getPosition() + Vector3(0.0, 0.0, 1.0) * arrowSize) < tolerence) {
-        this->currentAxis = Z;
-        return true;
+                                        this->getPosition() + Vector3(0.0, 0.0, 1.0) * arrowSize);
+        if (distance < tolerance) {
+            this->interactionState.currentAxis = ControlPointAxis::Z;
+            return true;
+        }
     }
     return false;
 }
 
-std::pair<ControlPoint::Axis, Vector3> ControlPoint::mouseOnRotationCircle(const Vector3& rayOrigin, const Vector3& rayDir)
+std::pair<ControlPointAxis, Vector3> ControlPoint::mouseOnRotationCircle(const Vector3& rayOrigin, const Vector3& rayDir)
 {
 //    float circleRadiusSq = this->circleRadius * this->circleRadius;
     float tolerence = this->radius / 5.f;
@@ -771,58 +650,50 @@ std::pair<ControlPoint::Axis, Vector3> ControlPoint::mouseOnRotationCircle(const
     Vector3 bestIntersection;
     float distanceToCamSq = std::numeric_limits<float>::max();
     float distanceToCenterSq;
-    Axis bestAxis = NONE;
+    ControlPointAxis bestAxis = ControlPointAxis::NONE;
 
     // X-axis
-    if (this->allowedRotations[X]) {
-        intersection = this->getIntersectionWithPlane(rayOrigin, rayDir, X);
+    if (this->allowedRotations[ControlPointAxis::X]) {
+        intersection = this->getIntersectionWithPlane(rayOrigin, rayDir, ControlPointAxis::X);
         if (intersection.isValid()) {
             distanceToCenterSq = (intersection - this->getPosition()).norm2();
             if (minCircleRadiusSq < distanceToCenterSq && distanceToCenterSq < maxCircleRadiusSq) {
                 if ((intersection - rayOrigin).norm2() < distanceToCamSq) {
                     distanceToCamSq = (intersection - rayOrigin).norm2();
-                    bestAxis = X;
+                    bestAxis = ControlPointAxis::X;
                     bestIntersection = intersection;
                 }
             }
         }
     }
     // Y-axis
-    if (this->allowedRotations[Y]) {
-        intersection = this->getIntersectionWithPlane(rayOrigin, rayDir, Y);
+    if (this->allowedRotations[ControlPointAxis::Y]) {
+        intersection = this->getIntersectionWithPlane(rayOrigin, rayDir, ControlPointAxis::Y);
         if (intersection.isValid()) {
             distanceToCenterSq = (intersection - this->getPosition()).norm2();
             if (minCircleRadiusSq < distanceToCenterSq && distanceToCenterSq < maxCircleRadiusSq) {
                 if ((intersection - rayOrigin).norm2() < distanceToCamSq) {
                     distanceToCamSq = (intersection - rayOrigin).norm2();
-                    bestAxis = Y;
+                    bestAxis = ControlPointAxis::Y;
                     bestIntersection = intersection;
                 }
             }
         }
     }
     // Z-axis
-    if (this->allowedRotations[Z]) {
-        intersection = this->getIntersectionWithPlane(rayOrigin, rayDir, Z);
+    if (this->allowedRotations[ControlPointAxis::Z]) {
+        intersection = this->getIntersectionWithPlane(rayOrigin, rayDir, ControlPointAxis::Z);
         if (intersection.isValid()) {
             distanceToCenterSq = (intersection - this->getPosition()).norm2();
             if (minCircleRadiusSq < distanceToCenterSq && distanceToCenterSq < maxCircleRadiusSq) {
                 if ((intersection - rayOrigin).norm2() < distanceToCamSq) {
-    //                distanceToCamSq = (intersection - rayOrigin).norm2();
-                    bestAxis = Z;
+                    distanceToCamSq = (intersection - rayOrigin).norm2();
+                    bestAxis = ControlPointAxis::Z;
                     bestIntersection = intersection;
                 }
             }
         }
     }
-/*
-    if (bestAxis == NONE) {
-        return false;
-    } else {
-        this->pressedPosBeforeAction = bestIntersection - this->getPosition();
-        this->currentAxis = bestAxis;
-        return true;
-    }*/
     return {bestAxis, bestIntersection - this->getPosition()};
 }
 
@@ -832,9 +703,8 @@ void ControlPoint::move(const Vector3& newPos)
         this->setPosition(newPos.x(), newPos.y(), newPos.z());
         this->updateSphere();
     }
-    this->stillOnInitialState = false;
+    this->currentPosition = newPos;
 }
-
 
 
 

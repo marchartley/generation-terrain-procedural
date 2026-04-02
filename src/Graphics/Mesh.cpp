@@ -454,7 +454,7 @@ void Mesh::setShaderToAllMeshesWithoutShader([[maybe_unused]] Shader newShader)
 
 void Mesh::update()
 {
-    if (!bufferReady)
+    if (!bufferReady || this->vao == 0)
     {
         GlobalsGL::f()->glGenVertexArrays(1, &this->vao);
         GlobalsGL::f()->glGenBuffers(4, this->vbo);

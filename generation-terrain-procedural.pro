@@ -121,6 +121,7 @@ SOURCES += \
     src/FluidSimulation/WarpedFluidSimulation.cpp \
     src/GUIElements/ChartView.cpp \
     src/GUIElements/ComboboxElement.cpp \
+    src/GUIElements/Gizmo3D.cpp \
     src/GUIElements/ImagePainter.cpp \
     src/GUIElements/ImageViewerOptionsUI.cpp \
     src/GUIElements/PainterToolsUI.cpp \
@@ -305,6 +306,7 @@ HEADERS += \
     src/FluidSimulation/WarpedFluidSimulation.h \
     src/GUIElements/ChartView.h \
     src/GUIElements/ComboboxElement.h \
+    src/GUIElements/Gizmo3D.h \
     src/GUIElements/ImagePainter.h \
     src/GUIElements/ImageViewerOptionsUI.h \
     src/GUIElements/PainterToolsUI.h \

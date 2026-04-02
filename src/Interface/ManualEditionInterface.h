@@ -45,7 +45,7 @@ public:
 
 //    std::shared_ptr<VoxelGrid> voxelGrid;
 
-    int manualEditionSize = 10;
+    float manualEditionSize = 10;
     float manualEditionStrength = 2.f;
     bool addingMode = false;
 

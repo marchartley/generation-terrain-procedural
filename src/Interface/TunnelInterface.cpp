@@ -26,8 +26,6 @@ void TunnelInterface::display(const Vector3& camPos)
         return;
 
     for (auto& ctrl : this->controlPoints) {
-//        std::cout << ctrl->
-//        ctrl->move(ctrl->getPosition());
         ctrl->display();
     }
     if (controlPoints.size() > 1) {
@@ -84,9 +82,9 @@ InterfaceUI* TunnelInterface::createGUI()
     auto UI = new InterfaceUI();
 
     auto tunnelClearControlPointButton = new ButtonElement("Tout retirer", [&](){this->clearTunnelPoints(); /*computeTunnelPreview();*/ });
-    auto tunnelWidthSlider = new SliderElement("Width", 1, 30, 1, tunnelWidth);
-    auto tunnelHeightSlider = new SliderElement("Height", 1, 30, 1, tunnelHeight, UIElement::VERTICAL);
-    auto tunnelStrengthSlider = new SliderElement("", 0.0f, 3.0f, 0.1f, erosionStrength);
+    auto tunnelWidthSlider = new SliderElement("Width", 1, 30, 1, tunnelWidth, [=](float) { computeTunnelPreview(); });
+    auto tunnelHeightSlider = new SliderElement("Height", 1, 30, 1, tunnelHeight, [=](float) { computeTunnelPreview();}, UIElement::VERTICAL);
+    auto tunnelStrengthSlider = new SliderElement("", 0.0f, 3.0f, 0.1f, erosionStrength, [=](float) { computeTunnelPreview(); });
     auto tunnelCreateMatter = new ButtonElement("Arche", [&]() { this->createTunnel(false); });
     auto tunnelRemoveMatter = new ButtonElement("Tunnel", [&]() { this->createTunnel(true); });
 //    CheckboxElement* tunnelDisplayButton = std::make_shared<CheckboxElement>("Afficher");
@@ -114,18 +112,20 @@ InterfaceUI* TunnelInterface::createGUI()
         endingShapeCombobox
     });
 
-
-    tunnelWidthSlider->setOnValueChanged([=](float val) { this->setTunnelWidth(val); });
-    tunnelHeightSlider->setOnValueChanged([=](float val) { this->setTunnelHeight(val); });
-    tunnelStrengthSlider->setOnValueChanged([=](float val) { this->setErosionStrength(val); });
-
-    startingShapeCombobox->setOnSelectionChanged([=](int) { this->updateStartingShape(); });
-    endingShapeCombobox->setOnSelectionChanged([=](int) { this->updateEndingShape(); });
-
-    this->updateStartingShape();
-    this->updateEndingShape();
+    startingShapeCombobox->setOnSelectionChanged([=](int) { this->startingShape = startingShapeCombobox->getSelection<KarstHolePredefinedShapes>(); this->computeTunnelPreview(); });
+    endingShapeCombobox->setOnSelectionChanged([=](int) { this->endingShape = endingShapeCombobox->getSelection<KarstHolePredefinedShapes>(); this->computeTunnelPreview(); });
 
     return UI;
+}
+
+void TunnelInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
+{
+    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
+    const char* vNoShader = "src/Shaders/no_shader.vert";
+    const char* fNoShader = "src/Shaders/no_shader.frag";
+
+    this->tunnelPreview = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
+    this->tunnelPreview.useIndices = false;
 }
 
 
@@ -141,12 +141,12 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
             }
         }
         if (addTheNewPoint) {
-            this->controlPoints.push_back(std::make_shared<ControlPoint>(pos, 5.f, INACTIVE));
-            std::shared_ptr<ControlPoint>& newCtrl = this->controlPoints.back();
+            this->controlPoints.push_back(std::make_shared<ControlPoint3D>(pos, 2.5f, ControlPoint3D::GrabberState::INACTIVE));
+            std::shared_ptr<ControlPoint3D>& newCtrl = this->controlPoints.back();
             newCtrl->allowAllAxisTranslation(true);
-            newCtrl->displayOnTop = true;
-            newCtrl->debugID = 1;
-            QObject::connect(newCtrl.get(), &ControlPoint::pointModified,
+            newCtrl->allowAllAxisRotations(true); // TODO : REMOVE
+            newCtrl->setDisplayOnTop(true);
+            QObject::connect(newCtrl.get(), &ControlPoint3D::pointModified,
                              this, [&](){
                 this->addCurvesControlPoint(Vector3(), true);
             });
@@ -163,7 +163,7 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
                         control->getPosition(),
                         true
                         );
-            QObject::connect(control.get(), &ControlPoint::pointReleased,
+            QObject::connect(control.get(), &ControlPoint3D::pointReleased,
                              this, [&]() -> void { Q_EMIT this->needToClipView(Vector3(), Vector3(), false); });
         }
     }
@@ -187,7 +187,7 @@ void TunnelInterface::updateEndingShape()
 void TunnelInterface::clearTunnelPoints()
 {
     this->currentTunnelPoints.clear();
-//    this->controlPoints.clear();
+    this->controlPoints.clear();
     this->tunnelPreview.clear();
 
     Q_EMIT updated();

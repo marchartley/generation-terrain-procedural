@@ -157,7 +157,7 @@ public:
 
     unsigned int frame_num = 0;
 
-    std::shared_ptr<ControlPoint> mainGrabber;
+    std::shared_ptr<ControlPoint3D> mainGrabber;
 
     bool displayParticles = false;
     float fogNear = 5.f; //1000.f;

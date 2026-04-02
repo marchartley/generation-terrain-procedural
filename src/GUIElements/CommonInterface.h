@@ -160,6 +160,7 @@ public:
     SliderElement(const std::string& label, float valMin, float valMax, float multiplier, UIElement::LAYOUT orientation = HORIZONTAL);
     SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& binded, UIElement::LAYOUT orientation = HORIZONTAL);
     SliderElement(const std::string& label, float valMin, float valMax, float multiplier, std::function<void(float)> onValueChanged, UIElement::LAYOUT orientation = HORIZONTAL);
+    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& binded, std::function<void(float)> onValueChanged, UIElement::LAYOUT orientation = HORIZONTAL);
 
     SliderElement& setValue(float newValue) { slider()->setfValue(newValue); return *this; }
     float value() const { return slider()->getfValue(); }
@@ -189,6 +190,8 @@ class RangeSliderElement : public InterfaceUI {
 public:
     RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, UIElement::LAYOUT orientation = HORIZONTAL);
     RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, UIElement::LAYOUT orientation = HORIZONTAL);
+    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, std::function<void(float, float)> onChange, UIElement::LAYOUT orientation = HORIZONTAL);
+    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, std::function<void(float, float)> onChange, UIElement::LAYOUT orientation = HORIZONTAL);
 
     RangeSliderElement& setMinValue(float valueMin) { slider()->setMinValue(valueMin); return *this; }
     RangeSliderElement& setMaxValue(float valueMax) { slider()->setMaxValue(valueMax); return *this; }
@@ -218,6 +221,7 @@ public:
     CheckboxElement(const std::string& label);
     CheckboxElement(const std::string& label, bool& binded);
     CheckboxElement(const std::string& label, std::function<void(bool)> onCheck);
+    CheckboxElement(const std::string& label, bool& binded, std::function<void(bool)> onCheck);
 
     QCheckBox* checkBox();
 

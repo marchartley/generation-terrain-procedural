@@ -81,6 +81,8 @@ public Q_SLOTS:
 
     void updateScalarFieldToDisplay(const GridF& scalarField, float min = 0.f, float max = 1.f);
 
+    InterfaceUI* terrainViewerUI();
+
 public:
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
