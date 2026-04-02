@@ -81,8 +81,8 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         this->actionInterfaces[interf->actionType] = interf;
     }
 
-    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = (actionInterfaces.count("terraingeneration") ? std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration")) : nullptr);
-    std::shared_ptr<EnvObjsInterface> envObjectsInterface = (actionInterfaces.count("envobjects") ? std::static_pointer_cast<EnvObjsInterface>(actionInterfaces.at("envobjects")) : nullptr);
+    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces.at("terraingeneration"));
+    std::shared_ptr<EnvObjsInterface> envObjectsInterface = std::static_pointer_cast<EnvObjsInterface>(actionInterfaces["envobjects"]);
 
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -91,12 +91,10 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
     }
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
-        if (envObjectsInterface) {
-            envObjectsInterface->setMaterialsDefinitionFile("EnvObjects/envMaterials.json");
-            envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
-            envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
-            envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
-        }
+        envObjectsInterface->setMaterialsDefinitionFile("EnvObjects/envMaterials.json");
+        envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
+        envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
+        envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
         if (preloaded_heightmap == "") {
            // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
             terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
@@ -110,7 +108,7 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         this->viewer->implicitTerrain = terrainGenerationInterface->implicitTerrain;
 
         for (auto& actionInterface : this->actionInterfaces) {
-            displayProcessTime("Updating interface '" + actionInterface.first + "'", [=]() {
+            displayProcessTime("[Initial timing] Updating interface '" + actionInterface.first + "'", [=]() {
                 actionInterface.second->affectTerrains(viewer->heightmap, viewer->voxelGrid, viewer->layerGrid, viewer->implicitTerrain);
                 actionInterface.second->reloadShaders();
 
@@ -157,8 +155,7 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
 
-        // this->openInterface(envObjectsInterface);
-        this->openInterface(actionInterfaces.at("tunnel"));
+        this->openInterface(envObjectsInterface);
     });
     viewer->installEventFilter(this);
     setupUi();

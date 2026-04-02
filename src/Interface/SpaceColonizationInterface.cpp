@@ -39,7 +39,7 @@ void SpaceColonizationInterface::display(const Vector3& camPos)
     }
 //        if (this->startingPoint->mesh.shader != nullptr)
 //            this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
-    this->startingPoint->setGrabberStateColor(INACTIVE, {100/255.f, 10/255.f, 255/255.f, 1.f});
+    this->startingPoint->setGrabberStateColor({{ControlPoint::INACTIVE, {100/255.f, 10/255.f, 255/255.f, 1.f}}});
     this->startingPoint->display();
     if (this->pathsMeshes.shader != nullptr)
         this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));

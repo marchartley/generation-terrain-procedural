@@ -21,6 +21,7 @@ public:
 
 
     InterfaceUI* createGUI();
+    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
 Q_SIGNALS:
     void needToClipView(const Vector3& direction, const Vector3& center, bool active);
@@ -58,7 +59,7 @@ protected:
     void computeTunnelPreview();
 
     std::vector<Vector3> currentTunnelPoints;
-    std::vector<std::shared_ptr<ControlPoint>> controlPoints;
+    std::vector<std::shared_ptr<ControlPoint3D>> controlPoints;
     Mesh tunnelPreview;
 
     std::vector<ComboboxLineElement<KarstHolePredefinedShapes>*> shapes;

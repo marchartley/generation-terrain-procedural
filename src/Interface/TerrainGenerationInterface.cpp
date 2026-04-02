@@ -31,7 +31,7 @@ TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
 
     std::vector<std::string> paths = {
         "Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png",
-        "Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png",
+        /*"Python_tests/random_heightmaps/gebco_2022_n0.2831_s-1.6312_w-91.9788_e-88.8112.png",
         "Python_tests/random_heightmaps/gebco_2022_n7.192_s6.5475_w157.6276_e158.5111.png",
         "Python_tests/random_heightmaps/gebco_2022_n29.2095_s26.9696_w-18.5535_e-15.0099.png",
         "Python_tests/random_heightmaps/gebco_2022_n37.1705_s36.768_w-25.4598_e-24.8503.png",
@@ -69,7 +69,7 @@ TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
         "Python_tests/random_heightmaps/gebco_2022_n-46.245_s-46.6022_w51.9649_e52.4313.png",
         "Python_tests/random_heightmaps/gebco_2022_n-46.532_s-51.2552_w65.4486_e73.1428.png",
         "Python_tests/random_heightmaps/gebco_2022_n-64.825_s-66.0811_w-91.4342_e-89.8037.png",
-        "Python_tests/random_heightmaps/gebco_2022_n-68.0822_s-69.6977_w-91.7994_e-89.187.png"
+        "Python_tests/random_heightmaps/gebco_2022_n-68.0822_s-69.6977_w-91.7994_e-89.187.png"*/
     };
     displayProcessTime("Preparing OMP dictionary from files", [&]() {
         omp.createDictionaryFromImages(paths);
@@ -1064,7 +1064,7 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 
 void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
 {
-    bool verbose = false;
+    const bool verbose = false;
     float maxHeight;
     float meshCreationTime = 0;
     float GLcallTime = 0;
@@ -1075,8 +1075,8 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
         if (ompFactor == 0)
             newHeightmap = heightmap->heights;
         else
-            newHeightmap = omp.getLargeReconstruction(heightmap->heights.resize(Vector3i(50, 50, 1)), heightmap->heights.getDimensions()) * ompFactor + heightmap->heights * (1.f - ompFactor);
-    });
+            newHeightmap = omp.getLargeReconstruction(heightmap->heights.resize(Vector3i(100, 100, 1)), heightmap->heights.getDimensions()) * ompFactor + heightmap->heights * (1.f - ompFactor);
+    }, verbose);
 
     displayProcessTime("Init frame buffers... ", [&]() {
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
@@ -1341,7 +1341,7 @@ void TerrainGenerationInterface::saveErosionDepositionTextureMasksOnMultiple()
             std::string folder = join(path, "/") + "/heightmapsAndMasks/";
             this->voxelGrid->setVoxelValues((GridF(Mesh().fromStl(filename).voxelize(voxelGrid->getDimensions())) - .5f).meanSmooth());
             this->saveErosionDepositionTextureMasks(folder, basename);
-            std::cout << "Saved " << basename << " (" << (i+1) << "/" << fileNames.size() << ")" << std::endl;
+            log("Saved " + basename + " (" + std::to_string(i+1) + "/" + std::to_string(fileNames.size()) + ")");
         }
     }
 }
@@ -1378,10 +1378,6 @@ void TerrainGenerationInterface::changeDisplayShadowsMode(bool display)
 
 void TerrainGenerationInterface::updateScalarFieldToDisplay(const GridF &scalarField, [[maybe_unused]] float min, [[maybe_unused]] float max)
 {
-    /*if (heightmapMesh.shader) {
-        std::cout << "Scalar field updated" << std::endl;
-        heightmapMesh.shader->setTexture3D("scalarFieldToDisplay", 4, scalarField);
-    }*/
     scalarFieldToDisplay = scalarField;
     float mini = scalarField.min(), maxi = scalarField.max();
     if (abs(mini - maxi) < 1e-5) {
@@ -1392,4 +1388,39 @@ void TerrainGenerationInterface::updateScalarFieldToDisplay(const GridF &scalarF
     scalarFieldToDisplay.iterateParallel([&] (size_t i) {
         scalarFieldToDisplay[i] = (scalarFieldToDisplay[i] < 0 ? (1.f - scalarFieldToDisplay[i] / mini) * .5f : (scalarFieldToDisplay[i] / maxi) * .5f + .5f);
     });
+}
+
+InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
+{
+    auto ui = new InterfaceUI;
+    auto displayAsComparisonTerrainButton = new CheckboxElement("Comp.", this->displayAsComparativeMode, [=](bool check) { this->changeDisplayToComparativeMode(check);});
+
+    auto displayWaterDepthButton = new CheckboxElement("Depth", this->displayDepth, [=](bool check) { this->changeDisplayDepthMode(check);});
+
+    auto displayShadowsButton = new CheckboxElement("Shadows", this->displayShadows,[=](bool check) { this->changeDisplayShadowsMode(check);});
+
+    auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, this->waterLevel, [=](float newValue) { this->setWaterLevel(newValue); });
+    auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, this->ambiantOcclusionFactor, [=](float newValue) { this->setAmbiantOcclusion(newValue); });
+    auto heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, this->heightFactor, [=](float newValue) { this->setHeightFactor(newValue); });
+    auto ompFactorSlider = new SliderElement("OMP", 0.f, 1.f, 0.01f, this->ompFactor, [=](float newValue) { this->setOMPFactor(newValue); });
+
+    // auto isolevelSelectionSlider = new RangeSliderElement("Isolevel", 0.f, 3.f, 0.1f, this->minIsoLevel, this->maxIsoLevel, UIElement::VERTICAL);
+
+    ui->add({
+        waterLevelSlider,
+        ambiantOcclusionSlider,
+        heightFactorSlider,
+        ompFactorSlider,
+        createHorizontalGroup({
+            createVerticalGroup({
+                displayAsComparisonTerrainButton,
+                new CheckboxElement("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
+            }),
+            createVerticalGroup({
+                displayShadowsButton,
+                displayWaterDepthButton
+            })
+        })
+    });
+    return ui;
 }

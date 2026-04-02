@@ -54,6 +54,7 @@ ComboboxElement& ComboboxElement::setOnSelectionChanged(std::function<void (int)
 
 ComboboxElement& ComboboxElement::bindTo(int &indexSelected)
 {
+    if (indexSelected < 0) indexSelected = combobox()->currentIndex();
     boundIndex = indexSelected;
     combobox()->setCurrentIndex(indexSelected);
     this->setOnSelectionChanged([=](int index) {

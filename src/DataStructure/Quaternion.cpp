@@ -9,6 +9,10 @@ Quaternion operator*(float s, const Quaternion &q) {
     return q * s;
 }
 
+Quaternion::Quaternion()
+    : Quaternion(1.f, 0.f, 0.f, 0.f)
+{}
+
 Quaternion::Quaternion(float w, float x, float y, float z)
     : w(w), x(x), y(y), z(z) {}
 

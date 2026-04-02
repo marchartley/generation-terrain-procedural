@@ -7,6 +7,7 @@
 namespace Collision {
 Vector3 intersectionBetweenTwoSegments(const Vector3& p1, const Vector3& p2, const Vector3& p3, const Vector3& p4, float epsilon = 1e-3);
 float shortestDistanceBetweenSegments(const Vector3& p11, const Vector3& p12, const Vector3& p21, const Vector3& p22);
+float shortestDistanceBetweenSegments(const Vector3& p11, const Vector3& p12, const Vector3& p21, const Vector3& p22, Vector3& posOnSegmentA, Vector3& posOnSegmentB);
 float tetrahedronSignedVolume(const Vector3& a, const Vector3& b, const Vector3& c, const Vector3& d);
 int sign(float a);
 Vector3 segmentToTriangleCollision(const Vector3& s1, const Vector3& s2, const Vector3& t1, const Vector3& t2, const Vector3& t3, bool strict = false);
@@ -18,6 +19,8 @@ bool intersectionAABBoxPlane(const Vector3& boxMin, const Vector3& boxMax, const
 Vector3 intersectionRayAABBox(const Vector3& orig, const Vector3& dir, const AABBox& box);
 Vector3 intersectionRayAABBox(const Vector3& orig, const Vector3& dir, const Vector3& boxMin, const Vector3& boxMax);
 
+float shortestDistanceSqrToSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);
+float shortestDistanceToSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);
 Vector3 projectPointOnSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);
 Vector3 projectPointOnSphere(const Vector3& point, const Vector3& sphereCenter, float sphereRadius);
 

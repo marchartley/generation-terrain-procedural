@@ -154,6 +154,10 @@ bool Shader::use(bool update_source_file)
     {
         this->compileShadersFromSource();
     }
+    if (programID == 0)
+    {
+        this->compileShadersFromSource();
+    }
 
     GlobalsGL::checkOpenGLError();
     if (programID > 0) {

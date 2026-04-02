@@ -115,8 +115,8 @@ public:
 
     static std::vector<Mesh*> all_meshes;
 
-    GLuint vao;
-    GLuint vbo[4];
+    GLuint vao = 0;
+    GLuint vbo[4] = {0};
 };
 
 #endif // MESH_H

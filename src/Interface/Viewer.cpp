@@ -54,7 +54,6 @@ Viewer::~Viewer()
 }
 
 void Viewer::init() {
-    QGLViewer::init();
     restoreStateFromFile();
     setSceneRadius(500.0);
     glEnable(GL_LIGHT0);
@@ -104,7 +103,7 @@ void Viewer::init() {
 //    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
-    this->mainGrabber = std::make_shared<ControlPoint>(Vector3(), 1.f, ACTIVE, false);
+    this->mainGrabber = std::make_shared<ControlPoint3D>(Vector3(), 1.f, ControlPoint3D::GrabberState::ACTIVE, false);
 
 
     this->light = PositionalLight(
@@ -141,6 +140,8 @@ void Viewer::init() {
     this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
 
     this->setUpdatesEnabled(true);
+
+    QGLViewer::init();
 }
 
 void Viewer::draw() {
@@ -515,9 +516,9 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
         if (this->checkMouseOnVoxel())
         {
             this->mainGrabber->move(this->mousePosWorld);
-            this->mainGrabber->setState(ACTIVE);
+            this->mainGrabber->setVisible(true);
         } else {
-            this->mainGrabber->setState(HIDDEN);
+            this->mainGrabber->setVisible(false);
         }
 
         Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;

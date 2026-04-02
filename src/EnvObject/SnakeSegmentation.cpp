@@ -13,7 +13,7 @@ SnakeSegmentation::SnakeSegmentation(const BSpline &curve)
 }
 
 SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const BSpline& curve)
-    : params(params), field(fields), contour(curve)
+    : contour(curve), params(params), field(fields)
 {
 
 }

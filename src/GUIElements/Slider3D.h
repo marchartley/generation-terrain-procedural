@@ -4,6 +4,7 @@
 #include "GUIElements/ControlPoint.h"
 #include "Interface/CustomInteractiveObject.h"
 #include "DataStructure/Vector3.h"
+#include "Graphics/Mesh.h"
 
 enum Slider3DOrientation {
     X = 0b001,

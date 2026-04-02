@@ -54,10 +54,45 @@ float Collision::shortestDistanceBetweenSegments(const Vector3& p11, const Vecto
         float t2 = (p11 - p21).dot(n1)/d2.dot(n1);
         t2 = std::max(std::min(t2, 1.f), 0.f);
         c2 = p21 + d2 * t2;
-
     }
     return (c2 - c1).norm();
 }
+
+
+float Collision::shortestDistanceBetweenSegments(const Vector3 &p11, const Vector3 &p12, const Vector3 &p21, const Vector3 &p22, Vector3 &posOnSegmentA, Vector3 &posOnSegmentB)
+{
+    Vector3 d1 = p12 - p11;
+    Vector3 d2 = p22 - p21;
+
+    Vector3 c1, c2;
+    // Extreme case, same first point
+    if (p11 == p21)
+        return 0;
+    // Case of parallel lines
+    else if (std::abs(d1.dot(d2)) == (d1.norm() * d2.norm())) {
+        Vector3 v = d1.normalized();
+        c1 = p11 - v * (p11.dot(v));
+        c2 = p21 - v * (p21.dot(v));
+        //return (p21 - p11).cross(d1).norm();
+    } else {
+        Vector3 n = d1.cross(d2);
+        Vector3 n1 = d1.cross(n);
+        Vector3 n2 = d2.cross(n);
+
+        // Closest point on line p11-p12
+        float t1 = (p21 - p11).dot(n2)/d1.dot(n2);
+        t1 = std::max(std::min(t1, 1.f), 0.f);
+        c1 = p11 + d1 * t1;
+        // Closest point on line p21-p22
+        float t2 = (p11 - p21).dot(n1)/d2.dot(n1);
+        t2 = std::max(std::min(t2, 1.f), 0.f);
+        c2 = p21 + d2 * t2;
+    }
+    posOnSegmentA = c1;
+    posOnSegmentB = c2;
+    return (c2 - c1).norm();
+}
+
 float Collision::tetrahedronSignedVolume(const Vector3& a, const Vector3& b, const Vector3& c, const Vector3& d) {
     return (1.f/6.f) * (c-a).cross((b-a)).dot((d-a));
 }
@@ -523,4 +558,13 @@ bool Collision::intersectionAABBoxPlane(const Vector3 &boxMin, const Vector3 &bo
 Vector3 Collision::intersectionRayAABBox(const Vector3 &orig, const Vector3 &dir, const AABBox &box)
 {
     return intersectionRayAABBox(orig, dir, box.min(), box.max());
+}
+
+float Collision::shortestDistanceSqrToSegment(const Vector3 &point, const Vector3 &segmentStart, const Vector3 &segmentEnd)
+{
+    return (Collision::projectPointOnSegment(point, segmentStart, segmentEnd) - point).norm2();
+}
+float Collision::shortestDistanceToSegment(const Vector3 &point, const Vector3 &segmentStart, const Vector3 &segmentEnd)
+{
+    return std::sqrt(Collision::shortestDistanceSqrToSegment(point, segmentStart, segmentEnd));
 }

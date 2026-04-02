@@ -8,9 +8,11 @@
 ManualEditionInterface::ManualEditionInterface(QWidget *parent)
     : ActionInterface("manualedit", "Manual edit", "digging", "Manual editing", "manual-edit_button.png", parent)
 {
-    this->grabber = std::make_shared<ControlPoint>(Vector3(), this->manualEditionSize/2.f, NEUTRAL, false);
-    this->grabber->setGrabberStateColor(POSITIVE, std::vector<float>({.1f, .9f, .1f, .2f}));
-    this->grabber->setGrabberStateColor(NEGATIVE, std::vector<float>({.9f, .1f, .1f, .2f}));
+    this->grabber = std::make_shared<ControlPoint>(Vector3(), this->manualEditionSize/2.f, ControlPoint::NEUTRAL, false);
+    this->grabber->setGrabberStateColor({
+        { ControlPoint::POSITIVE, {.1f, .9f, .1f, .2f} },
+        { ControlPoint::NEGATIVE, {.9f, .1f, .1f, .2f}}
+    });
     setAddingMode(addingMode);
 }
 
@@ -21,9 +23,9 @@ void ManualEditionInterface::display(const Vector3& camPos)
 
 //    std::cout << (readyToModify ? "modif" : "not modif") << std::endl;
     if (this->readyToModify) {
-        this->grabber->setState((this->addingMode ? POSITIVE : NEGATIVE));
+        this->grabber->setState((this->addingMode ? ControlPoint::POSITIVE : ControlPoint::NEGATIVE));
     } else {
-        this->grabber->setState(NEUTRAL);
+        this->grabber->setState(ControlPoint::NEUTRAL);
     }
     grabber->display();
 }
@@ -176,7 +178,7 @@ InterfaceUI* ManualEditionInterface::createGUI()
 {
     auto UI = new InterfaceUI();
     // Manual rock erosion layout
-    auto manualEditSizeSlider = new SliderElement("Taille", 1, 200, 1, this->manualEditionStrength);
+    auto manualEditSizeSlider = new SliderElement("Taille", 1, 200, 1, this->manualEditionSize, [=](int newSize) { this->grabber->setRadius(newSize/2.f); });
     auto manualEditStrengthSlider = new SliderElement("Force", 0.0, 3.0, 0.1, this->manualEditionStrength);
     auto addingModeButton = new RadioButtonElement("Ajouter de la matière", true, addingMode);
     auto suppressModeButton = new RadioButtonElement("Detruire de la matière", false, addingMode);

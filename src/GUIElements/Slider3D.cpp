@@ -30,7 +30,7 @@ void Slider3D::setPosition(const Vector3& newPos)
     this->minPos += movement;
     this->maxPos += movement;
     this->sliderControlPoint->move(this->sliderControlPoint->getPosition() + movement);
-    this->sliderControlPoint->custom_constraint = new SliderConstraint(minPos, maxPos);
+    this->sliderControlPoint->setConstraint(new SliderConstraint(minPos, maxPos));
     this->sliderMesh.fromArray({minPos, maxPos});
 }
 
@@ -41,7 +41,7 @@ void Slider3D::setPositions(const Vector3& newStart, const Vector3& newEnd)
     this->maxPos = newEnd;
     this->sliderControlPoint->move(Vector3::lerp(currentValue, newStart, newEnd));
     this->constraint = new SliderConstraint(minPos, maxPos);
-    this->sliderControlPoint->custom_constraint = constraint;
+    this->sliderControlPoint->setConstraint(constraint);
     this->sliderMesh.fromArray({minPos, maxPos});
 }
 
@@ -91,7 +91,7 @@ void Slider3D::init(const Vector3& positionMin, const Vector3& positionMax, floa
     this->maxValue = maxValue;
     this->sliderControlPoint = std::make_shared<ControlPoint>(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
     this->constraint = new SliderConstraint(positionMin, positionMax);
-    this->sliderControlPoint->custom_constraint = constraint;
+    this->sliderControlPoint->setConstraint(constraint);
     this->sliderMesh.fromArray({minPos, maxPos});
 //    this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
 
