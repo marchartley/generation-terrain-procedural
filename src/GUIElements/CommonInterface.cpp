@@ -414,6 +414,14 @@ QDial *AngleElement::dial() const
     return this->_dial;
 }
 
+AngleElement& AngleElement::setAngle(float newAngle)
+{
+    dial()->setValue((int) newAngle);
+    if (boundVariable.has_value())
+        boundVariable->get() = newAngle;
+    return *this;
+}
+
 AngleElement& AngleElement::bindTo(float &value)
 {
     dial()->setValue((int)value);

@@ -2,7 +2,7 @@
 #define SPACECOLONIZATIONINTERFACE_H
 
 class SpaceColonizationInterface;
-#include "GUIElements/ControlPoint.h"
+#include "GUI3DElements/ControlPoint.h"
 #include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
 // #include "GUIElements/FancySlider.h"
@@ -10,8 +10,8 @@ class SpaceColonizationInterface;
 // #include <QWidget>
 #include "TreeColonisation/TreeColonisation.h"
 // #include "TerrainGen/VoxelGrid.h"
-#include "GUIElements/VisitingCamera.h"
-#include "GUIElements/PathCameraConstraint.h"
+#include "GUI3DElements/VisitingCamera.h"
+#include "GUI3DElements/PathCameraConstraint.h"
 #include "Interface/ActionInterface.h"
 
 using namespace TreeColonisationAlgo;

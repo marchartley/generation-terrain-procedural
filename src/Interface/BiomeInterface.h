@@ -4,8 +4,8 @@
 
 #include "Biomes/BiomeInstance.h"
 class BiomeInterface;
-//#include "GUIElements/ControlPoint.h"
-//#include "GUIElements/InteractiveVector.h"
+//#include "GUI3DElements/ControlPoint.h"
+//#include "GUI3DElements/InteractiveVector.h"
 // #include "Utils/BSpline.h"
 // #include <QWidget>
 // #include "TerrainGen/VoxelGrid.h"

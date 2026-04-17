@@ -308,6 +308,7 @@ public:
     QDial* dial() const;
     float getAngle() const { return this->value(); }
     float value() const { return (float) dial()->value(); }
+    AngleElement& setAngle(float newAngle);
 
     DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, QDial, _dial, valueChanged)
 

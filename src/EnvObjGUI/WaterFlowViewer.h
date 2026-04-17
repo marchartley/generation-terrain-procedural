@@ -18,7 +18,9 @@ public:
     // PainterToolParams painterParams;
     KelvinletToolParams kelvinletParams;
 
-Q_SIGNALS:
+    DECLARE_EVENT(OnVectorFieldModified, (), ())
+// Q_SIGNALS:
+    // void vectorFieldModified();
     // void imagePainted(const GridF& newImage);
 };
 

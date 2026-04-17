@@ -137,7 +137,7 @@ public:
     float heightFactor = 1.f;
     bool displayDepth = false;
     bool displayShadows = false;
-    float ompFactor = .5f;
+    float ompFactor = 0.f;
 
     GridF scalarFieldToDisplay = GridF(1, 1, 1, 0.5f); // Default to "nothing interesting"
 

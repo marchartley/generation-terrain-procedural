@@ -166,6 +166,8 @@ public:
 
     bool isValid() const { return this->valid && std::isfinite(x()) && std::isfinite(y()) && std::isfinite(z()); }
     void setValid(bool newValidValue) { this->valid = newValidValue; }
+    Vec3 validated() const { return Vec3(x(), y(), z(), true); }
+    Vec3 invalidated() const { return Vec3(x(), y(), z(), false); }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x(), this->y(), this->z()); }
     T* data() { return v; }
     const T* data() const { return v; }
@@ -467,7 +469,7 @@ bool Vec3<T>::isAlmostVertical()
 template <class T>
 Matrix Vec3<T>::toMatrix() const
 {
-    return Matrix(3, 1, this->data());
+    return Matrix(1, 3, this->data());
 }
 
 template <class T>
@@ -906,9 +908,9 @@ Vec3<T>& Vec3<T>::applyTransform(Matrix transformMatrix)
     // this->z() = newCoords[2][0];
     // return *this;
     const Vec3 newP(
-        x() * transformMatrix[0][0] + y() * transformMatrix[0][1] + z() * transformMatrix[0][2],
-        x() * transformMatrix[1][0] + y() * transformMatrix[1][1] + z() * transformMatrix[1][2],
-        x() * transformMatrix[2][0] + y() * transformMatrix[2][1] + z() * transformMatrix[2][2]
+        x() * transformMatrix(0, 0) + y() * transformMatrix(0, 1) + z() * transformMatrix(0, 2),
+        x() * transformMatrix(1, 0) + y() * transformMatrix(1, 1) + z() * transformMatrix(1, 2),
+        x() * transformMatrix(2, 0) + y() * transformMatrix(2, 1) + z() * transformMatrix(2, 2)
         );
     this->x() = newP.x(); this->y() = newP.y(); this->z() = newP.z();
     return *this;
@@ -962,13 +964,9 @@ Vec3<T> Vec3<T>::fromPolar()
 template <class T>
 Vec3<T> Vec3<T>::fromMatrix(Matrix mat)
 {
-    if (mat.size() == 1) {
-        return Vec3(mat[0][0], mat[0][1], mat[0][2]);
-    } else if (mat[0].size() == 1) {
-        return Vec3(mat[0][0], mat[1][0], mat[2][0]);
-    } else {
+    if (mat.data().size() != 3)
         throw std::domain_error("Cannot transform Matrix " + mat.toString() + " to Vec3");
-    }
+    return Vec3(mat.data()[0], mat.data()[1], mat.data()[2]);
 }
 
 template <class T, class U>

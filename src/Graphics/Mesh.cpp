@@ -1125,8 +1125,13 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
     sqrMagnitudeField.iterateParallel([&](size_t i) { sqrMagnitudeField[i] = field[i].norm(); });
     float minMag = sqrMagnitudeField.min(); //std::sqrt(sqrMagnitudeField.min());
     float maxMag = sqrMagnitudeField.max(); //std::sqrt(sqrMagnitudeField.max());
-    if (maxMag < 1e-7)
+    if (maxMag < 1e-7) {
+        if (mesh != nullptr) {
+            mesh->clear();
+            return *mesh;
+        }
         return Mesh();
+    }
 
     if (normalize && maxMag > 0) {
         if (minMag == maxMag) {
@@ -1167,45 +1172,14 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
             std::vector<Vector3> colorArray(dataSize, colorPalette(relativeMag, colorScale));
             std::copy(arrowPoints.begin(), arrowPoints.end(), positions.begin() + i * dataSize);
             std::copy(colorArray.begin(), colorArray.end(), colors.begin() + i * dataSize);
-            // positions.insert(positions.end(), arrowPoints.begin(), arrowPoints.end());
-            // colors.insert(colors.end(), colorArray.begin(), colorArray.end());
         } else {
             std::vector<Vector3> colorArray(2, colorPalette(relativeMag, colorScale));
             positions[2 * i + 0] = pos + offsetToCenter;
             positions[2 * i + 1] = pos + offsetToCenter + value;
             colors[2 * i + 0] = colorArray[0];
             colors[2 * i + 1] = colorArray[1];
-            // positions.push_back(pos + offsetToCenter);
-            // positions.push_back(pos + offsetToCenter + value);
-            // colors.insert(colors.end(), colorArray.begin(), colorArray.end());
         }
     });
-/*
-    for (int x = 0; x < field.sizeX; x++) {
-        for (int y = 0; y < field.sizeY; y++) {
-            for (int z = 0; z < field.sizeZ; z++) {
-                Vector3 pos(x, y, z);
-                Vector3 value = field.at(pos);
-                float mag = 0.f, relativeMag = .5f; // Default values
-                if (minMag != maxMag) {
-                    mag = sqrMagnitudeField(pos);
-                    relativeMag = (mag - minMag) / (maxMag - minMag);
-                }
-                if (displayArrow) {
-                    auto arrowPoints = Mesh::getPointsForArrow(pos + offsetToCenter, pos + offsetToCenter + value);
-                    positions.insert(positions.end(), arrowPoints.begin(), arrowPoints.end());
-                    std::vector<Vector3> colorArray(arrowPoints.size(), colorPalette(relativeMag, colorScale));
-                    colors.insert(colors.end(), colorArray.begin(), colorArray.end());
-                } else {
-                    positions.push_back(pos + offsetToCenter);
-                    positions.push_back(pos + offsetToCenter + value);
-                    std::vector<Vector3> colorArray(2, colorPalette(relativeMag, colorScale));
-                    colors.insert(colors.end(), colorArray.begin(), colorArray.end());
-                }
-            }
-        }
-    }
-*/
     if (finalDimensions.isValid()) {
         Vector3 ratio = finalDimensions / field.getDimensions();
         for (auto& n : positions) {

@@ -12,13 +12,17 @@
 
 #include "Interface/CustomInteractiveObject.h"
 #include <QGLViewer/manipulatedFrame.h>
-#include "GUIElements/Gizmo3D.h"
+#include "GUI3DElements/Gizmo3D.h"
 
-class ControlPoint3D : public Gizmo3D {
-Q_OBJECT
+class ControlPoint : public Gizmo3D {
+// Q_OBJECT
 public:
-    ControlPoint3D();
-    ControlPoint3D(const Vector3& pos, float radius = 1.f, GrabberState state = INACTIVE, bool applyManipulations = true);
+    enum GrabberState {
+        HIDDEN, DEFAULT, POSITIVE, NEGATIVE, NEUTRAL, CUSTOM_STATE_0, CUSTOM_STATE_1, CUSTOM_STATE_2, CUSTOM_STATE_3, CUSTOM_STATE_4, CUSTOM_STATE_5, CUSTOM_STATE_6, CUSTOM_STATE_7, CUSTOM_STATE_8, CUSTOM_STATE_9
+    };
+
+    ControlPoint();
+    ControlPoint(const Vector3& pos, float radius = 1.f, GrabberState state = DEFAULT, bool applyManipulations = true);
 
     Vector3 getPosition() const;
     Vector3 getRotation() const;
@@ -35,7 +39,8 @@ public:
     void move(const Vector3& newPos);
     inline void setPosition(const Vector3& newPos) { move(newPos); }
 
-    void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
+    void setGrabberStateColor(GrabberState state, Vector3 color);
+    void setGrabberStateColor(std::map<GrabberState, Vector3> stateColorMap);
 
     void setState(GrabberState newState);
 
@@ -48,13 +53,17 @@ public:
     Vector3 getFluidTranslation();
 
 protected:
-    std::map<GrabberState, std::vector<float>> stateColorMap;
+    std::map<GrabberState, Vector3> stateColorMap;
+
+
+protected:
+    static std::map<GrabberState, Vector3> default_GrabberStateColor;
 };
 
 
 
 
-
+/*
 struct InteractionState;
 struct RenderState;
 struct ConstraintState;
@@ -71,7 +80,7 @@ struct InteractionState {
     Vector3 currentMousePosOnAction;
 };
 
-class ControlPoint : public qglviewer::ManipulatedFrame
+class ControlPoint__ : public qglviewer::ManipulatedFrame
 {
     Q_OBJECT
 public:
@@ -80,9 +89,9 @@ public:
         HIDDEN, INACTIVE, ACTIVE, POSITIVE, NEGATIVE, NEUTRAL, CUSTOM_STATE_0, CUSTOM_STATE_1, CUSTOM_STATE_2, CUSTOM_STATE_3, CUSTOM_STATE_4, CUSTOM_STATE_5, CUSTOM_STATE_6, CUSTOM_STATE_7, CUSTOM_STATE_8, CUSTOM_STATE_9
     };
 
-    ControlPoint();
-    ControlPoint(const Vector3& pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
-    ~ControlPoint();
+    ControlPoint__();
+    ControlPoint__(const Vector3& pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
+    ~ControlPoint__();
 
     void setState(GrabberState newState);
     void setVisible(bool visibility);
@@ -196,6 +205,21 @@ protected:
 };
 
 
+
+struct RenderState {
+    float radius = 1.f;
+    float arrowSize = 1.f;
+    float circleRadius = 1.f;
+    bool geometryDirty = true;
+};
+
+struct ConstraintState {
+    std::unique_ptr<qglviewer::WorldConstraint> hoverConstraint;
+    qglviewer::Constraint* customConstraint = nullptr;
+};
+*/
+
+
 class CustomConstraint : public qglviewer::Constraint
 {
 public:
@@ -208,18 +232,6 @@ private:
     qglviewer::WorldConstraint* constraint;
 
     bool useTranslation;
-};
-
-struct RenderState {
-    float radius = 1.f;
-    float arrowSize = 1.f;
-    float circleRadius = 1.f;
-    bool geometryDirty = true;
-};
-
-struct ConstraintState {
-    std::unique_ptr<qglviewer::WorldConstraint> hoverConstraint;
-    qglviewer::Constraint* customConstraint = nullptr;
 };
 
 #endif // CONTROLPOINT_H

@@ -350,6 +350,7 @@ void main(void)
         discard;
 
 
+
     if (displayingIgnoredVoxels) {
         fragColor = vec4(0, 0, 0, 0.1);
         return;

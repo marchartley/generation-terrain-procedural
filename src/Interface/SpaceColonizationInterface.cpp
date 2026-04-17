@@ -39,7 +39,7 @@ void SpaceColonizationInterface::display(const Vector3& camPos)
     }
 //        if (this->startingPoint->mesh.shader != nullptr)
 //            this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
-    this->startingPoint->setGrabberStateColor({{ControlPoint::INACTIVE, {100/255.f, 10/255.f, 255/255.f, 1.f}}});
+    this->startingPoint->setGrabberStateColor(ControlPoint::DEFAULT, Vector3(100/255.f, 10/255.f, 255/255.f));
     this->startingPoint->display();
     if (this->pathsMeshes.shader != nullptr)
         this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
@@ -109,7 +109,8 @@ void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Heightmap> heigh
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     Vector3 startPos(0, 0, 0);
     this->startingPoint = std::make_shared<ControlPoint>(startPos, 5.f);
-    QObject::connect(this->startingPoint.get(), &ControlPoint::pointModified, this, &SpaceColonizationInterface::computeKarst);
+    // QObject::connect(this->startingPoint.get(), &ControlPoint3D::pointModified, this, &SpaceColonizationInterface::computeKarst);
+    startingPoint->setOnPointModified([=]() { computeKarst(); });
 
     this->visitingCamera = new VisitingCamera();
 
@@ -151,8 +152,9 @@ void SpaceColonizationInterface::initSpaceColonizer()
     for (size_t i = 0; i < keyPoints.size(); i++) {
         this->controlPoints.push_back(std::make_shared<ControlPoint>(keyPoints[i], 5.f));
         this->controlPoints.back()->allowAllAxisTranslation(true);
-        QObject::connect(this->controlPoints.back().get(), &ControlPoint::pointModified,
-                         this, &SpaceColonizationInterface::computeKarst);
+        this->controlPoints.back()->setOnPointModified([=]() { computeKarst(); });
+        // QObject::connect(this->controlPoints.back().get(), &ControlPoint3D::pointModified,
+                         // this, &SpaceColonizationInterface::computeKarst);
     }
 }
 

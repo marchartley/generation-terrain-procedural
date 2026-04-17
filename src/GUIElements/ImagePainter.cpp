@@ -12,7 +12,7 @@ ImagePainter::ImagePainter(const std::string& name, QWidget* parent)
 
     // dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::white, Vector3::green});
 
-    QObject::connect(this, &ImagePainter::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
+    setOnMouseMoved([=](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;

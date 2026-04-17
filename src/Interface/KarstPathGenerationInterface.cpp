@@ -10,11 +10,9 @@ KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent)
     this->sourceControlPoint = std::make_shared<ControlPoint>(Vector3(), 5.f);
     this->fractureVector = std::make_shared<InteractiveVector>();
     this->waterHeightSlider = std::make_shared<Slider3D>(Vector3(), 1.0, 0.0, 0.0, 1.0, Slider3DOrientation::Z);
-    this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
-                                                                          {ControlPoint::INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
-                                                                          {ControlPoint::ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
-                                                                      });
-    QObject::connect(this->sourceControlPoint.get(), &ControlPoint::pointModified, this, &KarstPathGenerationInterface::computeKarst);
+    this->waterHeightSlider->sliderControlPoint->setGrabberStateColor(ControlPoint::DEFAULT, Vector3(0.f, 0.f, 1.f));
+    // QObject::connect(this->sourceControlPoint.get(), &ControlPoint3D::pointModified, this, &KarstPathGenerationInterface::computeKarst);
+    sourceControlPoint->setOnPointModified([=]() { computeKarst(); });
     QObject::connect(this->fractureVector.get(), &InteractiveVector::modified, this, &KarstPathGenerationInterface::updateFracture);
     QObject::connect(this->waterHeightSlider.get(), &Slider3D::valueChanged, this, &KarstPathGenerationInterface::updateWaterHeight);
 }
@@ -58,10 +56,7 @@ void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> hei
     this->AABBoxMaxPos = voxelGrid->getDimensions(); // Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ); // * voxelGrid->blockSize;
     this->fractureVector->setPositions(AABBoxMinPos, Vector3(AABBoxMinPos.x(), AABBoxMinPos.y(), AABBoxMaxPos.z()));
     this->waterHeightSlider->setPositions(AABBoxMinPos + Vector3(-10, -10, 0), Vector3(AABBoxMinPos.x(), AABBoxMinPos.y(), AABBoxMaxPos.z()) + Vector3(-10, -10, 0));
-    this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
-                                                                          {ControlPoint::INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
-                                                                          {ControlPoint::ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
-                                                                      });
+    this->waterHeightSlider->sliderControlPoint->setGrabberStateColor(ControlPoint::DEFAULT, Vector3(0/255.f, 0/255.f, 255/255.f));
 
     Vector3 offX = Vector3(AABBoxMaxPos.x() - AABBoxMinPos.x(), 0, 0);
     Vector3 offY = Vector3(0, AABBoxMaxPos.y() - AABBoxMinPos.y(), 0);

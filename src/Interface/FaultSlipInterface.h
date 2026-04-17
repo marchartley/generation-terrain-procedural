@@ -2,8 +2,8 @@
 #define FAULTSLIPINTERFACE_H
 
 class FaultSlipInterface;
-#include "GUIElements/ControlPoint.h"
-#include "GUIElements/InteractiveVector.h"
+#include "GUI3DElements/ControlPoint.h"
+#include "GUI3DElements/InteractiveVector.h"
 #include "Utils/BSpline.h"
 // #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
@@ -46,7 +46,7 @@ public Q_SLOTS:
 
 protected:
     std::shared_ptr<ControlPoint> firstSlipControlPoint;
-//    ControlPoint *secondSlipControlPoint;
+//    ControlPoint3D *secondSlipControlPoint;
     std::shared_ptr<InteractiveVector> slipVector;
 
 //    QHBoxLayout* faultSlipLayout = nullptr;

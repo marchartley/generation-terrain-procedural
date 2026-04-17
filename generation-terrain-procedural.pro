@@ -121,10 +121,14 @@ SOURCES += \
     src/FluidSimulation/WarpedFluidSimulation.cpp \
     src/GUIElements/ChartView.cpp \
     src/GUIElements/ComboboxElement.cpp \
-    src/GUIElements/Gizmo3D.cpp \
+    src/GUI3DElements/Gizmo3D.cpp \
+    src/GUIElements/ImageData.cpp \
     src/GUIElements/ImagePainter.cpp \
     src/GUIElements/ImageViewerOptionsUI.cpp \
     src/GUIElements/PainterToolsUI.cpp \
+    src/GUIElements/PlottingData.cpp \
+    src/GUIElements/PlottingUtils.cpp \
+    src/GUIElements/VectorFieldData.cpp \
     src/GUIElements/qtcolorpicker.cpp \
     src/Graph/Graph.cpp \
     src/Graph/FastPoissonGraph.cpp \
@@ -153,7 +157,7 @@ SOURCES += \
     src/Interface/ActionInterface.cpp \
     src/Interface/BiomeInterface.cpp \
     src/GUIElements/CommonInterface.cpp \
-    src/GUIElements/ControlPoint.cpp \
+    src/GUI3DElements/ControlPoint.cpp \
     src/Interface/CoralIslandGeneratorInterface.cpp \
     src/Interface/CustomInteractiveObject.cpp \
     src/Interface/EnvObjectFluidSimulation.cpp \
@@ -166,19 +170,19 @@ SOURCES += \
     src/Interface/GravityInterface.cpp \
     src/Interface/HeightmapErosionInterface.cpp \
     src/GUIElements/HierarchicalListWidget.cpp \
-    src/GUIElements/InteractiveVector.cpp \
+    src/GUI3DElements/InteractiveVector.cpp \
     src/Interface/Interface.cpp \
     src/GUIElements/InterfaceUtils.cpp \
     src/Interface/KarstPathGenerationInterface.cpp \
     src/Interface/LBMFluidSimulationInterface.cpp \
     src/Interface/ManualEditionInterface.cpp \
     src/Interface/MeshInstanceAmplificationInterface.cpp \
-    src/GUIElements/PathCameraConstraint.cpp \
+    src/GUI3DElements/PathCameraConstraint.cpp \
     src/Interface/PrimitivePatchesInterface.cpp \
     src/GUIElements/RangeSlider.cpp \
     src/Interface/SPHSimulationInterface.cpp \
     src/Interface/ScreenshotInterface.cpp \
-    src/GUIElements/Slider3D.cpp \
+    src/GUI3DElements/Slider3D.cpp \
     src/Interface/SmoothInterface.cpp \
     src/Interface/SpaceColonizationInterface.cpp \
     src/Interface/SpheroidalErosionInterface.cpp \
@@ -191,11 +195,12 @@ SOURCES += \
     src/Interface/TunnelInterface.cpp \
     src/Interface/UndoRedoInterface.cpp \
     src/Interface/Viewer.cpp \
-    src/GUIElements/VisitingCamera.cpp \
+    src/GUI3DElements/VisitingCamera.cpp \
     src/Interface/WarpFluidSimulationInterface.cpp \
     src/Karst/KarstHole.cpp \
     src/Karst/KarstHoleProfile.cpp \
     src/Karst/KarstPathsGeneration.cpp \
+    src/Learning/Neat.cpp \
     src/TerrainGen/GlobalTerrainProperties.cpp \
     src/TerrainGen/Heightmap.cpp \
     src/TerrainGen/ImplicitPatch.cpp \
@@ -224,8 +229,10 @@ SOURCES += \
     src/Utils/PSO.cpp \
     src/Utils/PbmReader.cpp \
     src/Utils/RadialShape.cpp \
+    src/Utils/Random.cpp \
     src/Utils/RewritableFile.cpp \
     src/Utils/ShapeCurve.cpp \
+    src/Utils/Signals.cpp \
     src/Utils/Skeletonize.cpp \
     src/Utils/Table.cpp \
     src/Utils/Utils.cpp \
@@ -306,10 +313,14 @@ HEADERS += \
     src/FluidSimulation/WarpedFluidSimulation.h \
     src/GUIElements/ChartView.h \
     src/GUIElements/ComboboxElement.h \
-    src/GUIElements/Gizmo3D.h \
+    src/GUI3DElements/Gizmo3D.h \
+    src/GUIElements/ImageData.h \
     src/GUIElements/ImagePainter.h \
     src/GUIElements/ImageViewerOptionsUI.h \
     src/GUIElements/PainterToolsUI.h \
+    src/GUIElements/PlottingData.h \
+    src/GUIElements/PlottingUtils.h \
+    src/GUIElements/VectorFieldData.h \
     src/GUIElements/qtcolorpicker.h \
     src/Graph/Graph.h \
     src/Graph/FastPoissonGraph.h \
@@ -338,7 +349,7 @@ HEADERS += \
     src/Interface/ActionInterface.h \
     src/Interface/BiomeInterface.h \
     src/GUIElements/CommonInterface.h \
-    src/GUIElements/ControlPoint.h \
+    src/GUI3DElements/ControlPoint.h \
     src/Interface/CoralIslandGeneratorInterface.h \
     src/Interface/CustomInteractiveObject.h \
     src/Interface/EnvObjectFluidSimulation.h \
@@ -351,19 +362,19 @@ HEADERS += \
     src/Interface/GravityInterface.h \
     src/Interface/HeightmapErosionInterface.h \
     src/GUIElements/HierarchicalListWidget.h \
-    src/GUIElements/InteractiveVector.h \
+    src/GUI3DElements/InteractiveVector.h \
     src/Interface/Interface.h \
     src/GUIElements/InterfaceUtils.h \
     src/Interface/KarstPathGenerationInterface.h \
     src/Interface/LBMFluidSimulationInterface.h \
     src/Interface/ManualEditionInterface.h \
     src/Interface/MeshInstanceAmplificationInterface.h \
-    src/GUIElements/PathCameraConstraint.h \
+    src/GUI3DElements/PathCameraConstraint.h \
     src/Interface/PrimitivePatchesInterface.h \
     src/GUIElements/RangeSlider.h \
     src/Interface/SPHSimulationInterface.h \
     src/Interface/ScreenshotInterface.h \
-    src/GUIElements/Slider3D.h \
+    src/GUI3DElements/Slider3D.h \
     src/Interface/SmoothInterface.h \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/SpheroidalErosionInterface.h \
@@ -376,10 +387,11 @@ HEADERS += \
     src/Interface/TunnelInterface.h \
     src/Interface/UndoRedoInterface.h \
     src/Interface/Viewer.h \
-    src/GUIElements/VisitingCamera.h \
+    src/GUI3DElements/VisitingCamera.h \
     src/Interface/WarpFluidSimulationInterface.h \
     src/Karst/KarstHole.h \
     src/Karst/KarstHoleProfile.h \
+    src/Learning/Neat.h \
     src/TerrainGen/GlobalTerrainProperties.h \
     src/TerrainGen/Heightmap.h \
     src/TerrainGen/ImplicitPatch.h \
@@ -410,8 +422,10 @@ HEADERS += \
     src/Utils/PSO.h \
     src/Utils/PbmReader.h \
     src/Utils/RadialShape.h \
+    src/Utils/Random.h \
     src/Utils/RewritableFile.h \
     src/Utils/ShapeCurve.h \
+    src/Utils/Signals.h \
     src/Utils/Skeletonize.h \
     src/Utils/Table.h \
     src/Utils/Utils.h \

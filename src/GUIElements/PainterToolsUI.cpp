@@ -149,7 +149,7 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
     auto twistRadio = new RadioButtonElement<int>("Twist", [=] (bool checked) { if (checked) updateKelvinletType(new TwistKelvinlet); });
     auto grabRadio = new RadioButtonElement<int>("Grab", [=] (bool checked) { if (checked) updateKelvinletType(new GrabKelvinlet); });
     auto scaleRadio = new RadioButtonElement<int>("Scale", [=] (bool checked) { if (checked) updateKelvinletType(new ScaleKelvinlet); });
-    pinchRadio->setChecked(true);
+    grabRadio->setChecked(true);
 
     auto displayAsArrowsCheckbox = new RadioButtonElement("Arrows", DisplayedVectorFieldParameters::ARROWS, dataModel->vectorData.displayParameters.displayMode);
     auto displayAsFlowLinesCheckbox = new RadioButtonElement("Flow lines", DisplayedVectorFieldParameters::FLOWLINES, dataModel->vectorData.displayParameters.displayMode);
@@ -157,16 +157,6 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
 
     auto deleteKelvinletButton = new ButtonElement("Delete");
 
-    /*
-    pinchRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(PinchKelvinlet));
-    twistRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(TwistKelvinlet));
-    grabRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(GrabKelvinlet));
-    scaleRadio->setChecked(typeid(*(params->currentKelvinlet)) == typeid(ScaleKelvinlet));
-
-    displayAsArrowsCheckbox->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::ARROWS);
-    displayAsFlowLinesCheckbox->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::FLOWLINES);
-    displayNoDisplayCheckbox->setChecked(dataModel->vectorData.displayParameters.displayMode == DisplayedVectorFieldParameters::NONE);
-    */
     auto kelvinletsHistory = new HierarchicalListUI();
     updateKelvinletList(kelvinletsHistory, params);
 
@@ -189,54 +179,6 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
     poissonSlider->setOnValueChanged([=](float) {
         onUpdateCallback(Vector3::invalid, true);
     });
-
-    /*
-    pinchRadio->setOnChecked([=](bool checked) {
-        if (!checked) return;
-        if (params->currentKelvinlet)
-            delete params->currentKelvinlet;
-        params->currentKelvinlet = new PinchKelvinlet();
-        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
-    });
-    twistRadio->setOnChecked([=](bool checked) {
-        if (!checked) return;
-        if (params->currentKelvinlet)
-            delete params->currentKelvinlet;
-        params->currentKelvinlet = new TwistKelvinlet();
-        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
-    });
-    grabRadio->setOnChecked([=](bool checked) {
-        if (!checked) return;
-        if (params->currentKelvinlet)
-            delete params->currentKelvinlet;
-        params->currentKelvinlet = new GrabKelvinlet();
-        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
-    });
-    scaleRadio->setOnChecked([=](bool checked) {
-        if (!checked) return;
-        if (params->currentKelvinlet)
-            delete params->currentKelvinlet;
-        params->currentKelvinlet = new ScaleKelvinlet();
-        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
-    });
-
-    displayAsArrowsCheckbox->setOnChecked([=](bool checked) {
-        if (!checked) return;
-        dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::ARROWS;
-        onUpdateCallback(Vector3::invalid, false);
-    });
-    displayAsFlowLinesCheckbox->setOnChecked([=](bool checked) {
-        if (!checked) return;
-        dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::FLOWLINES;
-        onUpdateCallback(Vector3::invalid, false);
-    });
-    displayNoDisplayCheckbox->setOnChecked([=](bool checked) {
-        if (!checked) return;
-        dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::NONE;
-        onUpdateCallback(Vector3::invalid, false);
-    });
-    */
-
 
     kelvinletsHistory->setOnItemSelectionChanged([=]() {
         if (kelvinletsHistory->selectedItems().empty()) {
@@ -354,8 +296,8 @@ std::pair<GridV3, GridF> PainterToolsUI::getKelvinletParametersImage(GridV3& img
             else if (auto asTwist= dynamic_cast<TwistKelvinlet*>(k)) force = Vector3(asTwist->force.z(), asTwist->force.z(), 0);
             else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(k)) force = Vector3(asScale->force, asScale->force, 0);
 
-            img = PlotVectorData::drawLine(img, Vector3(0, 0, 1), kCenter.xy() * imgScale, (kCenter + force).xy() * imgScale);
-            alpha = PlotVectorData::drawLine(alpha, 1.f, kCenter.xy() * imgScale, (kCenter + force).xy() * imgScale);
+            img = PlottingUtils::drawLine(img, Vector3(0, 0, 1), kCenter.xy() * imgScale, (kCenter + force).xy() * imgScale);
+            alpha = PlottingUtils::drawLine(alpha, 1.f, kCenter.xy() * imgScale, (kCenter + force).xy() * imgScale);
         }
     }
     return {img, alpha};
@@ -391,7 +333,8 @@ void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter
     chartView->setPlotModel(dataModel);
     chartView->update();
     dataModel->vectorData.field = vectorFieldFunction(true);
-    Q_EMIT plotter->updated();
+    // Q_EMIT plotter->updated();
+    plotter->emitOnUpdate();
 }
 
 Kelvinlet *PainterToolsUI::updateCurrentKelvinlet(KelvinletToolParams *params, const Vector3 &mousePos)
@@ -418,30 +361,6 @@ Kelvinlet *PainterToolsUI::updateCurrentKelvinlet(KelvinletToolParams *params, c
     k->v = params->poisson;
     return k;
 }
-/*
-Kelvinlet *PainterToolsUI::updateSelectedKelvinlet(KelvinletToolParams *params, Kelvinlet* k, const Vector3 &mousePos)
-{
-    if (mousePos.isValid()) {
-        if (auto asPoint = dynamic_cast<KelvinletPoint*>(k)) {
-            Vector3 force = mousePos - asPoint->pos;
-            if (auto asPinch = dynamic_cast<PinchKelvinlet*>(asPoint)) {
-                asPinch->force = force;
-            } else if (auto asTwist = dynamic_cast<TwistKelvinlet*>(asPoint)) {
-                asTwist->force = Vector3(0, 0, sign(force.x()) * force.norm());
-            } else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(asPoint)) {
-                asGrab->force = force;
-            } else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(asPoint)) {
-                asScale->force = sign(force.x()) * force.norm();
-            }
-        }
-    }
-
-    k->mu = params->mu;
-    k->radialScale = params->radialScale;
-    k->v = params->poisson;
-    return k;
-}
-*/
 
 GridV3 KelvinletToolParams::getVectorField(bool takeIntoAccountCurrentKelvinlet) const
 {

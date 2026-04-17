@@ -86,7 +86,10 @@ bool EnvPointInstance::placeInTerrain(const BSpline &seedCurve)
 
 void EnvPointInstance::improvePositionning(float maxDistance)
 {
-    this->position += gradientFromFieldFunction(this->getDefinition()->fitnessFunction)(this->position).normalize() * maxDistance;
+    Vector3 newPosition = this->position + gradientFromFieldFunction(this->getDefinition()->fitnessFunction)(this->position).normalize() * maxDistance;
+    if (evaluate(newPosition) >= evaluate(this->position)) {
+        this->position = newPosition;
+    }
 }
 
 void EnvPointInstance::recomputeEvaluationPoints()
@@ -111,14 +114,6 @@ void EnvPointInstance::applyDeposition(EnvMaterial& material)
         deposition.at(pos) = amount;
     });
     material.currentState.add(deposition * depositionProperties.rate, box.min().xy());
-
-    // if (toLower(this->name) == "coralpolyp") std::cout << "Deposing " << material.name << "? " << (this->materialDepositionRate[material.name] == 0 ? "No" : "Yes") << std::endl;
-    /*if (this->materialDepositionRate[material.name].rate == 0) return;
-    float growingState = this->computeGrowingState2();
-    // float growingState = this->computeGrowingState();
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name].rate * growingState;
-    material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
-    */
 }
 
 void EnvPointInstance::applyAbsorption(EnvMaterial& material)
@@ -138,23 +133,7 @@ void EnvPointInstance::applyAbsorption(EnvMaterial& material)
         absorption.at(pos) = amount;
     });
     material.currentState.add(absorption * absorptionProperties.rate * -1.f, box.min().xy());
-    material.currentState.iterateParallel([&] (size_t i) { material.currentState[i] = std::max(material.currentState[i], 0.f); });
-    /*
-    if (this->materialAbsorptionRate[material.name].rate == 0) return;
-    if (this->needsForGrowth.count(material.name) == 0) return;
-
-    float growingState = this->computeGrowingState2();
-    // float growingState = this->computeGrowingState();
-    float sandMissing = (needsForGrowth[material.name] - currentSatisfaction[material.name]) * (growingState + .01f) / (1.01f);
-
-    GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
-    Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
-    Vector3 subsetEnd = (this->position + sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
-    GridF currentSand = material.currentState.subset(subsetStart, subsetEnd);
-    sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
-    this->currentSatisfaction[material.name] += sandAbsorbed.sum();
-    material.currentState.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
-    */
+    // material.currentState.iterateParallel([&] (size_t i) { material.currentState[i] = std::max(material.currentState[i], 0.f); });
 }
 
 void EnvPointInstance::applyDepositionOnDeath()
@@ -167,12 +146,13 @@ void EnvPointInstance::applyDepositionOnDeath()
     }
 }
 
-GridV3& EnvPointInstance::computeFlowModification(GridV3& waterFlow)
+GridV3& EnvPointInstance::computeFlowModification(GridV3& waterFlow, float scale)
 {
     std::vector<RelativeKelvinlet> relativeFlows;
     for (size_t i = 0; i < this->getDefinition()->mainKelvinlets.size(); i++) {
-        if (this->getDefinition()->mainKelvinlets[i]->valid())
-            relativeFlows.push_back(RelativeKelvinlet(this->getDefinition()->mainKelvinlets[i], this->position));
+        if (this->getDefinition()->mainKelvinlets[i]->valid()) {
+            relativeFlows.push_back(RelativeKelvinlet(this->getDefinition()->mainKelvinlets[i], this->position, scale));
+        }
     }
 
     const Vector3 initialFlow = waterFlow.interpolate(this->position);

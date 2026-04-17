@@ -165,7 +165,7 @@ void EnvAreaInstance::applyDepositionOnDeath()
     }
 }
 
-GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow)
+GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow, float scale)
 {
     std::vector<KelvinletCurve*> evaluatedCurveKelvinlets;
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
@@ -176,7 +176,7 @@ GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow)
             }
         }
     }
-    this->scene->flowfield.iterateParallel([&](const Vector3& p) {
+    waterFlow.iterateParallel([&](const Vector3& p) {
         for (const auto& k : evaluatedCurveKelvinlets) {
             waterFlow[p] += k->evaluate(p) * waterFlow[p].norm();
         }

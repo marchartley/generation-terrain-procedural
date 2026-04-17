@@ -85,17 +85,17 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
     std::shared_ptr<EnvObjsInterface> envObjectsInterface = (actionInterfaces.count("envobjects") ? std::static_pointer_cast<EnvObjsInterface>(actionInterfaces.at("envobjects")) : nullptr);
 
     viewer->interfaces = this->actionInterfaces;
-    for (auto& actionInterface : this->actionInterfaces) {
-        actionInterface.second->hide();
-        actionInterface.second->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
+    if (envObjectsInterface) {
+        envObjectsInterface->setMaterialsDefinitionFile("EnvObjects/envMaterials.json");
+        envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
+        envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
+        envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
     }
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
-        if (envObjectsInterface) {
-            envObjectsInterface->setMaterialsDefinitionFile("EnvObjects/envMaterials.json");
-            envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
-            envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
-            envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
+        for (auto& actionInterface : actionInterfaces) {
+            actionInterface.second->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
         }
         if (preloaded_heightmap == "") {
            // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
@@ -109,10 +109,15 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         this->viewer->layerGrid = terrainGenerationInterface->layerGrid;
         this->viewer->implicitTerrain = terrainGenerationInterface->implicitTerrain;
 
+        for (auto& actionInterface : actionInterfaces) {
+            actionInterface.second->affectTerrains(viewer->heightmap, viewer->voxelGrid, viewer->layerGrid, viewer->implicitTerrain);
+            actionInterface.second->onOpenGLReady();
+            actionInterface.second->reloadShaders();
+        }
+
         for (auto& actionInterface : this->actionInterfaces) {
             displayProcessTime("Updating interface '" + actionInterface.first + "'", [=]() {
-                actionInterface.second->affectTerrains(viewer->heightmap, viewer->voxelGrid, viewer->layerGrid, viewer->implicitTerrain);
-                actionInterface.second->reloadShaders();
+                actionInterface.second->hide();
 
                 QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
                     this->viewer->update();
@@ -157,8 +162,7 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
 
-        // this->openInterface(envObjectsInterface);
-        this->openInterface(actionInterfaces.at("tunnel"));
+        this->openInterface(envObjectsInterface);
     });
     viewer->installEventFilter(this);
     setupUi();

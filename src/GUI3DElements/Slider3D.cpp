@@ -95,7 +95,8 @@ void Slider3D::init(const Vector3& positionMin, const Vector3& positionMax, floa
     this->sliderMesh.fromArray({minPos, maxPos});
 //    this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
 
-    QObject::connect(this->sliderControlPoint.get(), &ControlPoint::pointModified, this, [=]() { Q_EMIT this->valueChanged(this->getValue()); });
+    // QObject::connect(this->sliderControlPoint.get(), &ControlPoint3D::pointModified, this, [=]() { Q_EMIT this->valueChanged(this->getValue()); });
+    sliderControlPoint->setOnPointModified([=]() { Q_EMIT this->valueChanged(this->getValue()); });
 }
 
 

@@ -5,7 +5,7 @@ class TunnelInterface;
 #include "Interface/ActionInterface.h"
 // #include "TerrainGen/VoxelGrid.h"
 // #include "GUIElements/FancySlider.h"
-#include "GUIElements/ControlPoint.h"
+#include "GUI3DElements/ControlPoint.h"
 #include "Karst/KarstHole.h"
 
 class TunnelInterface : public ActionInterface
@@ -59,7 +59,7 @@ protected:
     void computeTunnelPreview();
 
     std::vector<Vector3> currentTunnelPoints;
-    std::vector<std::shared_ptr<ControlPoint3D>> controlPoints;
+    std::vector<std::shared_ptr<ControlPoint>> controlPoints;
     Mesh tunnelPreview;
 
     std::vector<ComboboxLineElement<KarstHolePredefinedShapes>*> shapes;

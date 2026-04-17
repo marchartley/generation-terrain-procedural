@@ -3,36 +3,31 @@
 
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
-// #include<QtCharts>
-// #include<QChartView>
-// #include<QLineSeries>
-// #include <QPixmap>
-// #include <QSizePolicy>
-// #include <iostream>
-//#include <QButton>
 #include <vector>
 
 #include "GUIElements/CommonInterface.h"
 #include "Utils/Utils.h"
 #include "DataStructure/Image.h"
-#include "ChartView.h"
+#include "GUIElements/ChartView.h"
 
-#define DECLARE_PLOTTER_GETTER(Type)                                   \
-public:                                                               \
-    static Type& get(const std::string& name = "") {                      \
-        return AbstractPlotter::getInstance<Type>(                         \
-           [](const std::string& name, QWidget* p) {       \
-                   return new Type(name, p);                \
-           },                                                             \
-           toLower(name));                                                \
-}                                                                      \
-    static Type& reset(const std::string& name = "") {                     \
-        AbstractPlotter::init<Type>(                                       \
-           [](const std::string& name, QWidget* p) {       \
-                   return new Type(name, p);                \
-           },                                                             \
-           toLower(name));                                                \
-        return Type::get(name);                                            \
+#include "GUIElements/PlottingUtils.h"
+
+#define DECLARE_PLOTTER_GETTER(Type)                    \
+public:                                                 \
+    static Type& get(const std::string& name = "") {    \
+        return AbstractPlotter::getInstance<Type>(      \
+           [](const std::string& name, QWidget* p) {    \
+                   return new Type(name, p);            \
+           },                                           \
+           toLower(name));                              \
+}                                                       \
+    static Type& reset(const std::string& name = "") {  \
+        AbstractPlotter::init<Type>(                    \
+           [](const std::string& name, QWidget* p) {    \
+                   return new Type(name, p);            \
+           },                                           \
+           toLower(name));                              \
+        return Type::get(name);                         \
 }
 
 class AbstractPlotter : public QDialog {
@@ -72,12 +67,13 @@ public:
     }
     DECLARE_PLOTTER_GETTER(AbstractPlotter)
 
-    AbstractPlotter& addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
-    AbstractPlotter& addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
+    AbstractPlotter& addPlot(const std::vector<float>& data, std::string name = "", QColor color = Qt::gray);
+    AbstractPlotter& addPlot(const std::vector<Vector3>& data, std::string name = "", QColor color = Qt::gray);
     AbstractPlotter& addPlot(const BSpline& data, std::string name = "", QColor color = Qt::gray);
 
-    AbstractPlotter& addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
-    AbstractPlotter& addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    AbstractPlotter& addScatter(const std::vector<float>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    AbstractPlotter& addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), const std::vector<QColor>& colors = std::vector<QColor>());
+    AbstractPlotter& addScatter(const std::vector<Vector3>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
     AbstractPlotter& addImage(const GridV3 &image);
     AbstractPlotter& addImage(const GridF& image);
@@ -103,14 +99,18 @@ public:
     void showEvent(QShowEvent* event);
     void hideEvent(QHideEvent *event);
 
-    QTimer *animate(std::function<void()> callback, int interval_ms = 30);
+    QTimer *animate(std::function<bool()> callback, int interval_ms = 30);
 
     // AbstractPlotter& reset();
 
-    bool hasPlotValues() const { return !this->dataModel->plot_data.empty(); }
-    bool hasScatterValues() const { return !this->dataModel->scatter_data.empty(); }
+    bool hasPlotValues() const { return !this->dataModel->plotLineData.plot_data.empty(); }
+    bool hasScatterValues() const { return !this->dataModel->scatterData.scatter_data.empty(); }
     bool hasImage() const { return !this->dataModel->getImage().empty(); }
     bool hasVectorField() const { return !this->dataModel->vectorData.field.empty(); }
+
+
+    // void setOnMousePressed(const std::function<void(const Vector3&, Vector3, bool, bool)>& callback) { this->onMousePressedCallbacks.push_back(callback); }
+    // void setOnMouseMoved(const std::function<void(const Vector3&, const Vector3&, QMouseEvent*)>& callback) { this->onMouseMovedCallbacks.push_back(callback); }
 
     ChartView* chartView;
     std::shared_ptr<PlotModel> dataModel;
@@ -137,19 +137,28 @@ protected:
     static std::string defaultName;
     static std::map<std::string, AbstractPlotter*> instances;
     static std::string id_name;
-    //    QValueAxis* m_axisX;
-    //    QValueAxis* m_axisY;
+
+
+    // void callOnMouseMovedCallbacks(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event) { for (const auto& func : onMouseMovedCallbacks) func(pos, previousPos, event); }
+    // void callOnMousePressedCallbacks(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick) { for (const auto& func : onMousePressedCallbacks) func(pos, value, leftClick, rightClick); }
+
+    // std::vector<std::function<void(const Vector3&, const Vector3&, QMouseEvent*)>> onMouseMovedCallbacks;
+    // std::vector<std::function<void(const Vector3&, Vector3, bool, bool)>> onMousePressedCallbacks;
+
+    DECLARE_EVENT(OnMouseMoved, (const Vector3& mousePos, const Vector3& previousPos, QMouseEvent* event), (mousePos, previousPos, event))
+    DECLARE_EVENT(OnMousePressed, (const Vector3& mousePos, Vector3 value, bool leftClick, bool rightClick), (mousePos, value, leftClick, rightClick))
+    DECLARE_EVENT(OnMouseReleased, (const Vector3& mousePos), (mousePos))
+    DECLARE_EVENT(OnUpdate, (), ())
+
 public Q_SLOTS:
-    // AbstractPlotter& updateLabelsPositions();
-    // AbstractPlotter& selectData(const Vector3& pos);
     virtual void draw();
     virtual void show();
 
 
-Q_SIGNALS:
-    void clickedOnImage(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick);
-    void movedOnImage(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event);
-    void updated();
+// Q_SIGNALS:
+    // void clickedOnImage(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick);
+    // void movedOnImage(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event);
+    // void updated();
 };
 
 
@@ -168,84 +177,5 @@ private:
     QRectF _textRect;
     QPointF _anchor;
 };
-
-
-
-
-
-
-
-
-
-template <class T>
-Matrix3<T>& PlotVectorData::drawLine(Matrix3<T>& img, const T& color, const Vector3& start, const Vector3& end) {
-    auto line = (end - start);
-    int dx = line.x();
-    int dy = line.y();
-
-    // calculate steps required for generating pixels
-    int steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
-
-    // calculate increment in x & y for each steps
-    float Xinc = dx / (float)steps;
-    float Yinc = dy / (float)steps;
-
-    // Put pixel for each step
-    auto p = start;
-    for (int i = 0; i <= steps; i++) {
-        img[p] = color;
-        p.x() += Xinc;
-        p.y() += Yinc;
-    }
-
-    return img;
-}
-
-
-
-template<class T>
-Matrix3<T> &PlotVectorData::drawCircle(Matrix3<T> &img, const T &color, const Vector3 &center, float radius)
-{
-    // Function to put pixels
-    // at subsequence points
-    auto drawCircle = [&](int xc, int yc, int x, int y){
-        img(Vector3i(xc+x, yc+y)) = color;
-        img(Vector3i(xc-x, yc+y)) = color;
-        img(Vector3i(xc+x, yc-y)) = color;
-        img(Vector3i(xc-x, yc-y)) = color;
-        img(Vector3i(xc+y, yc+x)) = color;
-        img(Vector3i(xc-y, yc+x)) = color;
-        img(Vector3i(xc+y, yc-x)) = color;
-        img(Vector3i(xc-y, yc-x)) = color;
-    };
-
-    int xc = center.x();
-    int yc = center.y();
-    int r = radius;
-    // Function for circle-generation
-    // using Bresenham's algorithm
-    int x = 0, y = r;
-    int d = 3 - 2 * r;
-    drawCircle(xc, yc, x, y);
-    while (y >= x){
-
-        // check for decision parameter
-        // and correspondingly
-        // update d, y
-        if (d > 0) {
-            y--;
-            d = d + 4 * (x - y) + 10;
-        }
-        else
-            d = d + 4 * x + 6;
-
-        // Increment x after updating decision parameter
-        x++;
-
-        // Draw the circle using the new coordinates
-        drawCircle(xc, yc, x, y);
-    }
-    return img;
-}
 
 #endif // ABSTRACTPLOTTER_H

@@ -92,6 +92,8 @@ public:
     ShapeCurve computeNewObjectsShapeAtPositionForceCircle(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
     ShapeCurve computeNewObjectsShapeAtPositionForceCircleOptimizedArea(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float targetArea);
 
+    void updateSceneFlowfieldWithUserFlow();
+
     void runPerformanceTest();
 
     void resetScene();

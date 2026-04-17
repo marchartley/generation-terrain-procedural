@@ -419,9 +419,9 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                     FastNoiseLite noise;
                     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
                     float minDurability = .0f, maxDurability = 1.f;
-                    for (int x = 0; x < densityField.sizeX; x++) {
-                        for (int y = 0; y < densityField.sizeY; y++) {
-                            for (int z = 0; z < densityField.sizeZ; z++) {
+                    for (size_t x = 0; x < densityField.sizeX; x++) {
+                        for (size_t y = 0; y < densityField.sizeY; y++) {
+                            for (size_t z = 0; z < densityField.sizeZ; z++) {
                                 float noiseVal = noise.GetNoise(float(x * 4.f), float(y * 4.f), float(z * 4.f));
                                 float alt = std::pow(float(z) / densityField.sizeZ - .5f, 2.f);
                                 densityField.at(x, y, z) = noiseVal + alt;
@@ -430,10 +430,10 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                         }
                     }
                     densityField = densityField.normalize();
-                    for (int x = 0; x < densityField.sizeX; x++) {
-                        for (int y = 0; y < densityField.sizeY; y++) {
-                            for (int z = 0; z < densityField.sizeZ; z++) {
-                                Vector3 pos(x, y, z);
+                    for (size_t x = 0; x < densityField.sizeX; x++) {
+                        for (size_t y = 0; y < densityField.sizeY; y++) {
+                            for (size_t z = 0; z < densityField.sizeZ; z++) {
+                                Vector3i pos(x, y, z);
                                 for (const auto& [obstaclePos, obstacleRadius] : randomObstacles)
                                     if ((obstaclePos.xy() - pos.xy()).norm2() < obstacleRadius * obstacleRadius)
                                         densityField.at(x, y, z) = .1f;
@@ -453,9 +453,9 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                     FastNoiseLite noise;
                     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
                     float minDurability = 0.f, maxDurability = 1.f;
-                    for (int x = 0; x < densityField.sizeX; x++) {
-                        for (int y = 0; y < densityField.sizeY; y++) {
-                            for (int z = 0; z < densityField.sizeZ; z++) {
+                    for (size_t x = 0; x < densityField.sizeX; x++) {
+                        for (size_t y = 0; y < densityField.sizeY; y++) {
+                            for (size_t z = 0; z < densityField.sizeZ; z++) {
                                 float noiseVal = noise.GetNoise((float) z * 1.f, x*y/100.f);
                                 noiseVal = (noiseVal + 1.f) * .5f;
                                 densityField.at(x, y, z) = (noiseVal * (maxDurability - minDurability)) + minDurability;

@@ -6,7 +6,7 @@ class PatchReplacementDialog;
 
 #include "ActionInterface.h"
 // #include "GUIElements/HierarchicalListWidget.h"
-#include "GUIElements/ControlPoint.h"
+#include "GUI3DElements/ControlPoint.h"
 
 
 class PrimitivePatchesInterface : public ActionInterface

@@ -67,6 +67,7 @@ struct GizmoCapabilities {
 struct GizmoVisualState {
     GizmoHandleType hovered = GizmoHandleType::None;
     GizmoHandleType active = GizmoHandleType::None;
+    Vector3 body_color;
 
     bool isDragging = false;
 };
@@ -153,15 +154,10 @@ private:
 
 
 
-class Gizmo3D : public QObject, public qglviewer::MouseGrabber {
-Q_OBJECT
+class Gizmo3D : /*public QObject,*/ public qglviewer::MouseGrabber {
+// Q_OBJECT
 public:
     Gizmo3D(bool applyManipulations = true, QObject* parent = nullptr);
-    ~Gizmo3D() = default;
-
-    enum GrabberState {
-        HIDDEN, INACTIVE, ACTIVE, POSITIVE, NEGATIVE, NEUTRAL, CUSTOM_STATE_0, CUSTOM_STATE_1, CUSTOM_STATE_2, CUSTOM_STATE_3, CUSTOM_STATE_4, CUSTOM_STATE_5, CUSTOM_STATE_6, CUSTOM_STATE_7, CUSTOM_STATE_8, CUSTOM_STATE_9
-    };
 
     GizmoState& state();
     const GizmoState& state() const;
@@ -178,13 +174,20 @@ public:
 
     void checkIfGrabsMouse(int x, int y, const qglviewer::Camera* const);
 
+    // void setOnPressed(const std::function<void(void)>& onPress) { this->onPointPressedCallbacks.push_back(onPress); }
+    // void setOnModified(const std::function<void(void)>& onModified) { this->onPointModifiedCallbacks.push_back(onModified); }
+    // void setOnReleased(const std::function<void(void)>& onRelease) { this->onPointReleasedCallbacks.push_back(onRelease); }
+    // void setOnTranslation(const std::function<void(void)>& onTranslation) { this->onPointTranslatedCallbacks.push_back(onTranslation); }
+    // void setOnRotation(const std::function<void(void)>& onRotation) { this->onPointRotatedCallbacks.push_back(onRotation); }
 
-Q_SIGNALS:
-    void pointModified();
-    void pointReleased();
 
-    void translationApplied(const Vector3& translation);
-    void rotationApplied(const Vector3& rotation);
+
+// Q_SIGNALS:
+    // void pointModified();
+    // void pointReleased();
+
+    // void translationApplied(const Vector3& translation);
+    // void rotationApplied(const Vector3& rotation);
 
 protected:
     GizmoState state_;
@@ -193,8 +196,17 @@ protected:
 
     bool applyManipulations;
 
-protected:
-    static std::map<GrabberState, std::vector<float>> default_GrabberStateColor;
+    DECLARE_EVENT(OnPointPressed, (), ())
+    DECLARE_EVENT(OnPointModified, (), ())
+    DECLARE_EVENT(OnPointReleased, (), ())
+    DECLARE_EVENT(OnPointTranslated, (), ())
+    DECLARE_EVENT(OnPointRotated, (), ())
+
+    // void emitPressedEvent() { for (auto& fn : onPointPressedCallbacks) { fn(); } }
+    // void emitModifiedEvent() { for (auto& fn : onPointModifiedCallbacks) { fn(); } }
+    // void emitReleasedEvent() { for (auto& fn : onPointReleasedCallbacks) { fn(); } }
+    // void emitTranslatedEvent() { for (auto& fn : onPointTranslatedCallbacks) { fn(); } }
+    // void emitRotatedEvent() { for (auto& fn : onPointRotatedCallbacks) { fn(); } }
 };
 
 #endif // Gizmo3D_H

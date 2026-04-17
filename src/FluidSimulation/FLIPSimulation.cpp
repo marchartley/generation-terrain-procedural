@@ -228,7 +228,7 @@ void FLIPSimulation::transferVelocities(bool toGrid, float flipRatio)
                 w(pos) = prevW(pos);
         });*/
     } else {
-#pragma omp parallel for
+        #pragma omp parallel for
         for (size_t i = 0; i < numParticles; i++) {
             auto& p = particles[i];
 
