@@ -21,14 +21,14 @@ GanUIPainter::GanUIPainter(const std::string& name, QWidget *parent) : AbstractP
     });
 
     this->addImage(GridV3(256, 256, 1, Vector3(1.f, 0.f, 0.f)));
-    QObject::connect(this, &GanUIPainter::clickedOnImage, this, [&](const Vector3& pos, Vector3 value) {
+    setOnMousePressed([&](const Vector3& pos, Vector3 value, bool, bool) {
         if (pos.isValid()) {
             Vector3i p = pos * this->dataModel->getImage().getDimensions();
             this->drawStroke(p, p);
             this->draw();
         }
     });
-    QObject::connect(this, &GanUIPainter::movedOnImage, this, [&](const Vector3& pos, const Vector3& previousPos, QMouseEvent* event) {
+    setOnMouseMoved([&](const Vector3& pos, const Vector3& previousPos, QMouseEvent* event) {
         this->currentColor = this->getColorFromIndex(this->colorIndex);
         if (event->buttons().testFlag(Qt::LeftButton)) {
             displayProcessTime("Brushing... ", [&]() {

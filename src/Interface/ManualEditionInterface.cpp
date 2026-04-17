@@ -8,10 +8,14 @@
 ManualEditionInterface::ManualEditionInterface(QWidget *parent)
     : ActionInterface("manualedit", "Manual edit", "digging", "Manual editing", "manual-edit_button.png", parent)
 {
+}
+
+void ManualEditionInterface::reloadShaders()
+{
     this->grabber = std::make_shared<ControlPoint>(Vector3(), this->manualEditionSize/2.f, ControlPoint::NEUTRAL, false);
     this->grabber->setGrabberStateColor({
-        { ControlPoint::POSITIVE, {.1f, .9f, .1f, .2f} },
-        { ControlPoint::NEGATIVE, {.9f, .1f, .1f, .2f}}
+        { ControlPoint::POSITIVE, Vector3(.1f, .9f, .1f) },
+        { ControlPoint::NEGATIVE, Vector3(.9f, .1f, .1f)}
     });
     setAddingMode(addingMode);
 }

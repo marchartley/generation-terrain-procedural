@@ -23,14 +23,10 @@
 
 #include "Interface/Interface.h"
 
-#include "EnvObjGUI/WaterFlowViewer.h"
-#include "EnvObjGUI/EnvMaterialViewer.h"
+#include "GUIElements/ImageViewer.h"
+
+// #include "EnvObjGUI/SnakeSegmentationEditor.h"
 #include "EnvObjGUI/EnvObjectEditor.h"
-#include "EnvObjGUI/SnakeSegmentationEditor.h"
-
-#include "EnvObject/EnvironmentalScene.h"
-
-#include "TerrainModification/OMP_algo.h"
 
 using namespace std;
 
@@ -155,7 +151,99 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+    /*
 
+    Matrix m1 = Matrix(100, 100);
+    Matrix m2 = Matrix(1000, 100);
+    Matrix res;
+    displayProcessTime("Mat mult...", [&]() {
+        res = Matrix::matprod(m1, m2);
+    }, true, 100);
+
+    m1 = Matrix(3, 2, std::vector<float>{1, 2, 3, 4, 5, 6});
+    m2 = Matrix(3, 3, std::vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9});
+    std::cout << m1.toString() << "\n" << m2.toString() << "\n" << m1.product(m2).toString() << std::endl;
+    return 0;
+    */
+
+    /*
+    EnvironmentalScene scene;
+    scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
+    scene.readEnvObjectsFile("EnvObjects/primitives.json");
+
+    // EnvObject* envObj = scene.instantiate("coralpolyp");
+    // EnvObjectInstance* envObj = scene.instantiate("river");
+    // EnvObject* envObj = scene.instantiate("island");
+
+    auto& viewer = EnvObjectEditor::get("Object edition");
+
+    viewer.addEnvObject(scene.instantiate("island")->definition);
+    viewer.addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
+    viewer.exec();
+
+    viewer.addEnvObject(scene.instantiate("coralpolyp")->definition);
+    viewer.addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
+    viewer.exec();
+
+    viewer.addEnvObject(scene.instantiate("river")->definition);
+    viewer.addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
+    return viewer.exec();
+
+    */
+
+    /*
+    size_t dataset_size = 100;
+    std::vector<std::pair<std::vector<float>, std::vector<float>>> dataset(dataset_size);
+    std::vector<float> Xs(dataset_size);
+    std::vector<float> Ys(dataset_size);
+    std::vector<float> preds(dataset_size);
+
+    for (size_t i = 0; i < dataset_size; i++) {
+        float x = (float(i) / float(dataset_size)) * 4.0 - 2.0;
+        float out = cos(x * 2.0);
+        dataset[i] = std::make_pair<std::vector<float>, std::vector<float>>(std::vector<float>{x}, std::vector<float>{out});
+        Xs[i] = x;
+        Ys[i] = out;
+    }
+    Population pop;
+    pop.population_size = 200;
+    pop.elite_fraction = 0.25;
+    pop.add_connection_rate = 0.5;
+    pop.add_node_rate = 0.5;
+    pop.generations = 1000;
+    pop.init(dataset[0].first.size(), dataset[0].second.size());
+
+    auto fitness_function = [&](Genome& genome) -> float {
+        float err = 0;
+        for (auto& [ins, outs] : dataset) {
+            std::vector<float> out = genome.activate_network(ins);
+            float diff = out[0] - outs[0];
+            err += abs(diff) * abs(diff);
+        }
+        return -(err / float(dataset.size())); // * std::pow(1.01, genome.topological_order().size());
+    };
+
+    auto& view = AbstractPlotter::get();
+    Genome best;
+    view.animate([&]() {
+        best = pop.run_once(fitness_function);
+
+        for (size_t i = 0; i < dataset.size(); i++) {
+            preds[i] = best.activate_network(dataset[i].first)[0];
+        }
+        view.dataModel->reset();
+        view.addScatter(Xs, Ys, "GT", {}, {Qt::red});
+        view.addScatter(Xs, preds, "Preds", {}, {Qt::blue});
+        std::cout << "(Gen " << pop.current_generation-1 << ") Formula: " << best.get_symbolic_formula({"x", "x^2"}) << std::endl;
+        view.show();
+        if (pop.current_generation > pop.generations)
+            return false;
+        return true;
+    });
+
+    view.exec();
+    return 0;
+    */
     /*
     OMP omp;
     std::vector<std::string> paths = {
@@ -309,6 +397,7 @@ int main(int argc, char *argv[])
     return ImageViewer::get("Upscale").setNormalizedModeImage(true).exec();
     // return ImageViewer::get("Reconstruction").exec();
     */
+
     /*
     EnvironmentalScene scene;
     scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
@@ -341,32 +430,7 @@ int main(int argc, char *argv[])
 
     return ImageViewer::get().addImage(d)->exec();
     */
-    /*
-    EnvironmentalScene scene;
-    scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
-    scene.readEnvObjectsFile("EnvObjects/primitives.json");
 
-    // EnvObject* envObj = scene.instantiate("coralpolyp");
-    EnvObject* envObj = scene.instantiate("river");
-    // EnvObject* envObj = scene.instantiate("island");
-
-    auto viewer = EnvObjectEditor::get("Object edition");
-    viewer->addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
-    viewer->addEnvObject(envObj);
-
-    viewer->exec();
-
-    viewer = EnvObjectEditor::reset("Object edition");
-    viewer->addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
-    viewer->addEnvObject(scene.instantiate("coralpolyp"));
-
-    viewer->exec();
-
-    viewer = EnvObjectEditor::reset("Object edition");
-    viewer->addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
-    viewer->addEnvObject(scene.instantiate("island"));
-    return viewer->exec();
-    */
     /*
     GrabKelvinlet* k;
 
@@ -1083,7 +1147,7 @@ int main(int argc, char *argv[])
     GridF values(10, 10);
     values.addValueAt(1.f, Vector3(1.5f, 1.5f));
     std::cout << values.displayValues() << std::endl;
-    QObject::connect(ImageViewer::get(), &ImageViewer::clickedOnImage, ImageViewer::get(), [&](const Vector3& clickPos, Vector3 value) {
+    ImageViewer::get().setOnMousePressed([&](const Vector3& clickPos, Vector3 value) {
         std::cout << "Adding at " << clickPos << std::endl;
         values.reset();
         values.addValueAt(1.f, clickPos);
@@ -2098,7 +2162,7 @@ int main(int argc, char *argv[])
         float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
     });
-    QObject::connect(ImageViewer::get(), &ImageViewer::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
+    ImageViewer::get().setOnMousePressed([&](const Vector3& clickPos, Vector3 value) {
         center = clickPos;
     });
 
@@ -2157,7 +2221,7 @@ int main(int argc, char *argv[])
         float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
     });
-    QObject::connect(ImageViewer::get(), &ImageViewer::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
+    ImageViewer::get().setOnMousePressed([&](const Vector3& clickPos, Vector3 value) {
         center = clickPos;
     });
 
@@ -2228,7 +2292,7 @@ int main(int argc, char *argv[])
         float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
     });
-    QObject::connect(ImageViewer::get(), &ImageViewer::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
+    ImageViewer::get().setOnMousePressed([&](const Vector3& clickPos, Vector3 value) {
         center = clickPos;
     });
 
@@ -2430,7 +2494,7 @@ int main(int argc, char *argv[])
     GridF heights = GridF::perlin(size, 3.f * Vector3(1, 1) / (size * .01f)) * .6f + GridF::perlin(size, 5.f * Vector3(1, 1) / (size * .01f)) * .3f + GridF::perlin(size, 10.f * Vector3(1, 1) / (size * .01f)) * .1f;
     heights.raiseErrorOnBadCoord = false;
     heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-    QObject::connect(ImageViewer::get(), &ImageViewer::movedOnImage, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _e) {
+    ImageViewer::get().setOnMouseMoved([&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _e) {
         Vector3 pos = clickPos;
 
         auto gradients = heights.gradient();

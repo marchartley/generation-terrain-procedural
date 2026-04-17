@@ -64,6 +64,8 @@ public:
 
     BSpline& scale(float factor);
     BSpline& scale(const Vector3& factor);
+    BSpline scaled(float factor);
+    BSpline scaled(const Vector3& factor);
 
 //    BSpline& grow(float increase);
 //    BSpline& shrink(float decrease);

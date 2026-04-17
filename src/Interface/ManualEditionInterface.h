@@ -7,13 +7,15 @@ class ManualEditionInterface;
 // #include <QObject>
 // #include "TerrainGen/VoxelGrid.h"
 // #include "GUIElements/FancySlider.h"
-#include "GUIElements/ControlPoint.h"
+#include "GUI3DElements/ControlPoint.h"
 
 class ManualEditionInterface : public ActionInterface
 {
     Q_OBJECT
 public:
     ManualEditionInterface(QWidget *parent = nullptr);
+
+    void reloadShaders() override;
 
     void display(const Vector3& camPos = Vector3::invalid);
     void replay(nlohmann::json action);

@@ -12,13 +12,14 @@ FocusAreaViewer::FocusAreaViewer(const std::string& name, QWidget* parent)
 
     dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::red, Vector3::white, Vector3::green});
 
-    QObject::connect(this, &FocusAreaViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
+    setOnMouseMoved([=](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
         GridF img = this->dataModel->getImageGrey();
         PainterToolsUI::paintImage(img, clickPos, painterParams, rightPressed);
-        Q_EMIT this->imagePainted(img);
+        // Q_EMIT this->imagePainted(img);
+        emitOnImagePainted(img);
         this->addImage(img);
         this->show();
     });

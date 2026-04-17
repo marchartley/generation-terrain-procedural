@@ -4,15 +4,6 @@
 #include "Graphics/Sphere.h"
 
 
-std::map<Gizmo3D::GrabberState, std::vector<float>> Gizmo3D::default_GrabberStateColor = {
-    {Gizmo3D::GrabberState::HIDDEN, {.0f, .0f, .0f, 0.f}},
-    {Gizmo3D::GrabberState::INACTIVE, {.3f, .0f, .0f, .5f}},
-    {Gizmo3D::GrabberState::ACTIVE, {.8f, .0f, .0f, .8f}},
-    {Gizmo3D::GrabberState::POSITIVE, {.2f, 1.f, .1f, .8f}},
-    {Gizmo3D::GrabberState::NEGATIVE, {1.f, .2f, .1f, .8f}},
-    {Gizmo3D::GrabberState::NEUTRAL, {.8f, .8f, .8f, .8f}},
-    };
-
 GizmoAxis axisFromHandle(GizmoHandleType h) {
     switch (h) {
     case GizmoHandleType::TranslateX:
@@ -376,8 +367,9 @@ void GizmoRenderer::renderCenter(const GizmoState &state)
         Sphere s(state.settings.radius, state.transform.position, 10, 10);
         centerMesh.fromArray(s.mesh.vertexArrayFloat);
     }
-    std::vector<float> color = (state.visual.hovered == GizmoHandleType::Center ? std::vector<float>{1.f, 0.f, 0.f, 1.f} : std::vector<float>{.8f, 0.f, 0.f, 1.f});
-    centerMesh.shader->setVector("color", color);
+    Vector3 color = state.visual.body_color;
+    // std::cout << "Color for Gizmo : " << color << std::endl;
+    centerMesh.shader->setVector("color", std::vector<float>{color.r(), color.g(), color.b(), state.visual.hovered == GizmoHandleType::Center ? 1.f : .8f});
     centerMesh.display();
 }
 
@@ -495,7 +487,7 @@ std::vector<float> GizmoRenderer::colorForHandle(const GizmoState &state, GizmoH
 
 
 Gizmo3D::Gizmo3D(bool applyManipulations, QObject* parent)
-    : QObject(parent), applyManipulations(applyManipulations)
+    : /*QObject(parent),*/ applyManipulations(applyManipulations)
 {
     if (applyManipulations) {
         this->addInMouseGrabberPool();
@@ -535,10 +527,23 @@ void Gizmo3D::checkIfGrabsMouse(int x, int y, const qglviewer::Camera* const cam
     this->setGrabsMouse(grabbed);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 void Gizmo3D::mousePressEvent(QMouseEvent* const event, qglviewer::Camera* const camera)
 {
     Vector3 mousePos(event->x(), event->y());
-    this->interactor_.beginDrag(state(), mousePos, camera);
+    if(this->interactor_.beginDrag(state(), mousePos, camera))
+        emitOnPointPressed();
     qglviewer::MouseGrabber::mousePressEvent(event, camera);
 }
 
@@ -547,7 +552,7 @@ void Gizmo3D::mouseMoveEvent(QMouseEvent* const event, qglviewer::Camera* const 
     if (isManipulated()) {
         Vector3 mousePos(event->x(), event->y());
         this->interactor_.updateDrag(state(), mousePos, camera);
-        Q_EMIT this->pointModified();
+        emitOnPointModified();
     }
     qglviewer::MouseGrabber::mouseMoveEvent(event, camera);
 }
@@ -555,22 +560,26 @@ void Gizmo3D::mouseMoveEvent(QMouseEvent* const event, qglviewer::Camera* const 
 void Gizmo3D::mouseReleaseEvent(QMouseEvent* const event, qglviewer::Camera* const camera)
 {
     if (this->isManipulated()) {
+        if (state().drag.mode == DragMode::TranslateAxis || state().drag.mode == DragMode::FreeMove) {
+            emitOnPointTranslated();
+        } else if (state().drag.mode == DragMode::RotateAxis) {
+            emitOnPointRotated();
+        }
+        emitOnPointReleased();
         this->interactor_.endDrag(state());
-        Q_EMIT this->pointReleased();
-        Q_EMIT this->pointModified();
     }
     qglviewer::MouseGrabber::mouseReleaseEvent(event, camera);
 }
 
 void Gizmo3D::mouseDoubleClickEvent(QMouseEvent * const event, qglviewer::Camera * const camera)
 {
-    std::cout << "Mouse double-click" << std::endl;
+    // std::cout << "Mouse double-click" << std::endl;
     qglviewer::MouseGrabber::mouseDoubleClickEvent(event, camera);
 }
 
 void Gizmo3D::wheelEvent(QWheelEvent * const event, qglviewer::Camera * const camera)
 {
-    std::cout << "Mouse wheel event" << std::endl;
+    // std::cout << "Mouse wheel event" << std::endl;
     qglviewer::MouseGrabber::wheelEvent(event, camera);
 }
 

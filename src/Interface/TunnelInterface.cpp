@@ -141,13 +141,13 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
             }
         }
         if (addTheNewPoint) {
-            this->controlPoints.push_back(std::make_shared<ControlPoint3D>(pos, 2.5f, ControlPoint3D::GrabberState::INACTIVE));
-            std::shared_ptr<ControlPoint3D>& newCtrl = this->controlPoints.back();
+            this->controlPoints.push_back(std::make_shared<ControlPoint>(pos, 2.5f));
+            std::shared_ptr<ControlPoint>& newCtrl = this->controlPoints.back();
             newCtrl->allowAllAxisTranslation(true);
-            newCtrl->allowAllAxisRotations(true); // TODO : REMOVE
             newCtrl->setDisplayOnTop(true);
-            QObject::connect(newCtrl.get(), &ControlPoint3D::pointModified,
-                             this, [&](){
+            // QObject::connect(newCtrl.get(), &ControlPoint3D::pointModified,
+                             // this, [=](){
+            newCtrl->setOnPointModified([=]() {
                 this->addCurvesControlPoint(Vector3(), true);
             });
         }
@@ -163,8 +163,9 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
                         control->getPosition(),
                         true
                         );
-            QObject::connect(control.get(), &ControlPoint3D::pointReleased,
-                             this, [&]() -> void { Q_EMIT this->needToClipView(Vector3(), Vector3(), false); });
+            // QObject::connect(control.get(), &ControlPoint3D::pointReleased,
+                             // this, [&]() -> void { Q_EMIT this->needToClipView(Vector3(), Vector3(), false); });
+            control->setOnPointReleased([=]() { Q_EMIT this->needToClipView(Vector3(), Vector3(), false); });
         }
     }
     this->computeTunnelPreview();

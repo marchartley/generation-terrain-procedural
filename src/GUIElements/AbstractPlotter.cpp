@@ -80,23 +80,29 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
     QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e){
         this->displayInfoUnderMouse(pos);
         if (this->hasImage()) {
-            Q_EMIT this->movedOnImage(pos * dataModel->getImage().getDimensions(), prevPos * dataModel->getImage().getDimensions(), e);
+            Vector3 scale = dataModel->getImage().getDimensions();
+            this->emitOnMouseMoved(pos * scale, prevPos * scale, e);
+            emitOnMouseMoved(pos * scale, prevPos * scale, e);
         }
         else if (this->hasVectorField()) {
-            Q_EMIT this->movedOnImage(pos * dataModel->vectorData.field.getDimensions(), prevPos * dataModel->vectorData.field.getDimensions(), e);
+            Vector3 scale = dataModel->vectorData.field.getDimensions();
+            this->emitOnMouseMoved(pos * scale, prevPos * scale, e);
+            emitOnMouseMoved(pos * scale, prevPos * scale, e);
         }
     });
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &AbstractPlotter::draw);
     QObject::connect(this->chartView, &ChartView::clickedOnValue, this, [&](const Vector3& pos, bool leftClick, bool rightClick) {
-        if (this->hasImage()) {
-            Q_EMIT this->clickedOnImage(pos, this->dataModel->getImage().at(pos * this->dataModel->getImage().getDimensions()), leftClick, rightClick);
-        } else if (this->hasVectorField()) {
-            Q_EMIT this->clickedOnImage(pos, Vector3::invalid, leftClick, rightClick);
+        if (pos.isValid()) {
+            Vector3 imageValue = (this->hasImage() ? this->dataModel->getImage().at(pos * this->dataModel->getImage().getDimensions()) : Vector3::invalid);
+            emitOnMousePressed(pos, imageValue, leftClick, rightClick);
+            // Q_EMIT this->clickedOnImage(pos, imageValue, leftClick, rightClick);
+        } else {
+            emitOnMouseReleased(pos.validated());
         }
     });
 }
 
-AbstractPlotter& AbstractPlotter::addPlot(std::vector<float> data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(const std::vector<float>& data, std::string name, QColor color)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
@@ -105,7 +111,7 @@ AbstractPlotter& AbstractPlotter::addPlot(std::vector<float> data, std::string n
     return this->addPlot(_data, name, color);
 }
 
-AbstractPlotter& AbstractPlotter::addPlot(std::vector<Vector3> data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(const std::vector<Vector3>& data, std::string name, QColor color)
 {
     this->dataModel->addPlot(data, name, color);
     return *this;
@@ -116,7 +122,7 @@ AbstractPlotter& AbstractPlotter::addPlot(const BSpline &data, std::string name,
     return this->addPlot(data.points, name, color);
 }
 
-AbstractPlotter& AbstractPlotter::addScatter(std::vector<float> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
@@ -125,7 +131,16 @@ AbstractPlotter& AbstractPlotter::addScatter(std::vector<float> data, std::strin
     return this->addScatter(_data, name, labels, colors);
 }
 
-AbstractPlotter& AbstractPlotter::addScatter(std::vector<Vector3> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+AbstractPlotter &AbstractPlotter::addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name, const std::vector<std::string>& labels, const std::vector<QColor>& colors)
+{
+    std::vector<Vector3> _data;
+    for (size_t i = 0; i < dataX.size(); i++) {
+        _data.push_back(Vector3(dataX[i], dataY[i]));
+    }
+    return this->addScatter(_data, name, labels, colors);
+}
+
+AbstractPlotter& AbstractPlotter::addScatter(const std::vector<Vector3>& data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
 {
     this->dataModel->addScatter(data, name, labels, colors);
     return *this;
@@ -325,14 +340,14 @@ void AbstractPlotter::hideEvent(QHideEvent *event)
     // Flag the Chartview updater
 }
 
-QTimer *AbstractPlotter::animate(std::function<void ()> callback, int interval_ms)
+QTimer *AbstractPlotter::animate(std::function<bool ()> callback, int interval_ms)
 {
     QTimer* t = new QTimer(this);
     t->setInterval(interval_ms);
     t->setSingleShot(true);
     QObject::connect(t, &QTimer::timeout, [t, callback, interval_ms]() {
-        callback();
-        t->start(interval_ms);
+        if (callback())
+            t->start(interval_ms);
     });
     t->start();
     return t;

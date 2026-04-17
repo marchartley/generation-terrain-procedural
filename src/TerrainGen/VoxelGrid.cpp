@@ -22,19 +22,13 @@ VoxelGrid::~VoxelGrid()
 //    this->chunks.clear();
 }
 void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
-    float zScale = 1.f;
     float height = this->getSizeZ();
-    // std::cout << "Voxels height: " << height << std::endl;
-    this->_cachedVoxelValues = GridF(grid.getSizeX(), grid.getSizeY(), height/*grid.getSizeZ() * zScale*/);
 
     this->initMap();
     if (subsectionEnd == subsectionStart) {
         // If they are not set, we want the entire map
         subsectionStart = Vector3();
         subsectionEnd = Vector3(grid.getSizeX(), grid.getSizeY());
-//        this->getSizeX() = grid.getSizeX();
-//        this->getSizeY() = grid.getSizeY();
-//        this->getSizeZ() = grid.getMaxHeight() * 2;
     } else {
         // Otherwise, we want a subset of the map, we just need to clamp the dimensions
         subsectionStart.x() = std::max(subsectionStart.x(), 0.f);
@@ -43,7 +37,6 @@ void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vecto
         subsectionEnd.y() = std::min(subsectionEnd.y(), (float)grid.getSizeY());
     }
     this->_cachedVoxelValues = GridF((subsectionEnd.x() - subsectionStart.x()) * scaleFactor, (subsectionEnd.y() - subsectionStart.y()) * scaleFactor, height, 0.f);
-    // this->_cachedVoxelValues = GridF((subsectionEnd.x() - subsectionStart.x) * scaleFactor, (subsectionEnd.y() - subsectionStart.y) * scaleFactor, std::max(1.f, grid.getMaxHeight()), 0.f);
     this->initMap();
 
     GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions().xy() + Vector3(0, 0, 1));
@@ -53,25 +46,12 @@ void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vecto
     float gridMaxHeight = grid.getMaxHeight();
 
     _cachedVoxelValues.iterateParallel([&](int x, int y, int z) {
-        float grid_height = gridHeights.unsafe(x, y) * (sizeZ / gridMaxHeight);
+        float grid_height = gridHeights.unsafe(x, y) * (sizeZ / float(gridMaxHeight - 1));
         if (gridMaxHeight < 1e-5) grid_height = 0;
         float grid_z = std::max(grid_height, 2.f);
         _cachedVoxelValues.unsafe(x, y, z) = (z < grid_z ? 1.f : -1.f); //interpolation::inv_linear(clamp(grid_z - z, -1.f, 1.f), -.5f, .5f);
-        /* // Positive values
-        for (int i = 0; i < int(z); i++) {
-            _cachedVoxelValues.unsafe(x, y, i) = .5f;
-        }
-        if (z < this->getSizeZ()) {
-            _cachedVoxelValues.unsafe(x, y, z) = interpolation::inv_linear(z - int(z), -.5f, .5f);
-            for (int i = z+1; i < this->getSizeZ(); i++) {
-                _cachedVoxelValues.unsafe(x, y, i) = -.5f;
-            }
-        }*/
     });
-    // _cachedVoxelValues = _cachedVoxelValues.meanSmooth(3, 3, 3, true).meanSmooth(3, 3, 3, true);
     this->fromCachedData();
-//    this->smoothVoxels();
-//    this->smoothVoxels();
 }
 
 void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)

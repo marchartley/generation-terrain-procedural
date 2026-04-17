@@ -4,15 +4,15 @@
 			{
 				"blendingFactor": 10.0,
 				"composableA": {
-					"densityValue": 0.75,
+					"densityValue": 1.5,
 					"dimensions": {
 						"x": 100.0,
 						"y": 100.0,
-						"z": 29.0
+						"z": 30.0
 					},
 					"filename": "",
 					"index": 5,
-					"material": "DIRT",
+					"material": "ROCK",
 					"mirrored": false,
 					"name": "Heightmap",
 					"optionalCurve": {
@@ -35,51 +35,67 @@
 				},
 				"composableB": {
 					"composableA": {
-						"densityValue": 1.5,
-						"dimensions": {
-							"x": 20.0,
-							"y": 20.0,
-							"z": 4.700000286102295
+						"composableA": {
+							"densityValue": 1.5,
+							"dimensions": {
+								"x": 20.0,
+								"y": 20.0,
+								"z": 20.0
+							},
+							"filename": "",
+							"index": 4,
+							"material": "ROCK",
+							"mirrored": false,
+							"name": "Block",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"position": {
+								"x": 59.229400634765625,
+								"y": 49.287452697753906,
+								"z": 0.0
+							},
+							"shape": "Block",
+							"sigmaValue": 5.0,
+							"supportDimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "primitive"
 						},
-						"filename": "",
-						"index": 4,
-						"material": "ROCK",
+						"index": 3,
 						"mirrored": false,
-						"name": "Gaussian",
+						"name": "Translation",
 						"optionalCurve": {
 							"closed": false,
 							"points": []
 						},
-						"position": {
-							"x": 11.52540397644043,
-							"y": 29.328304290771484,
-							"z": 0.0
-						},
-						"shape": "Gaussian",
-						"sigmaValue": 5.0,
-						"supportDimensions": {
+						"spreadFactor": 0.0,
+						"translation": {
 							"x": 0.0,
 							"y": 0.0,
-							"z": 0.0
+							"z": 11.643914222717285
 						},
-						"type": "primitive"
+						"type": "unary"
 					},
-					"index": 3,
+					"index": 2,
 					"mirrored": false,
-					"name": "Translation",
+					"name": "Rotation",
 					"optionalCurve": {
 						"closed": false,
 						"points": []
 					},
-					"spreadFactor": 0.0,
-					"translation": {
+					"rotation": {
 						"x": 0.0,
-						"y": 0.0,
-						"z": 18.190433502197266
+						"y": -0.6796702146530151,
+						"z": 0.0
 					},
+					"spreadFactor": 0.0,
 					"type": "unary"
 				},
-				"index": 2,
+				"index": 1,
 				"mirrored": false,
 				"name": "Blend",
 				"operator": "Blend",
@@ -90,17 +106,6 @@
 				"positionalB": "FIXED_POS",
 				"type": "compose",
 				"useIntersection": false
-			},
-			{
-				"composables": [],
-				"index": 1,
-				"mirrored": false,
-				"name": "",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"type": "nary"
 			}
 		],
 		"index": 0,

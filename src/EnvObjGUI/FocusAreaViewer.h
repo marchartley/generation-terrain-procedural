@@ -16,8 +16,7 @@ public:
     virtual FocusAreaViewer& updateToolsInterface();
     PainterToolParams painterParams;
 
-Q_SIGNALS:
-    void imagePainted(const GridF& newImage);
+    DECLARE_EVENT(OnImagePainted, (const GridF& newImage), (newImage))
 };
 
 

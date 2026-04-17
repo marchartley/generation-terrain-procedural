@@ -10,7 +10,7 @@ class HeightmapErosionInterface;
 // #include "Interface/Viewer.h"
 
 // #include "GUIElements/FancySlider.h"
-#include "GUIElements/InteractiveVector.h"
+#include "GUI3DElements/InteractiveVector.h"
 
 class HeightmapErosionInterface : public ActionInterface
 {

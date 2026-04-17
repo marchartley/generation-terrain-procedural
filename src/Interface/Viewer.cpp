@@ -9,7 +9,7 @@
 #include "DataStructure/Matrix.h"
 #include "Utils/Utils.h"
 #include "Interface/TerrainGenerationInterface.h"
-#include "GUIElements/VisitingCamera.h"
+#include "GUI3DElements/VisitingCamera.h"
 #include <QTemporaryDir>
 #include "Graphics/RayMarching.h"
 
@@ -103,7 +103,7 @@ void Viewer::init() {
 //    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
-    this->mainGrabber = std::make_shared<ControlPoint3D>(Vector3(), 1.f, ControlPoint3D::GrabberState::ACTIVE, false);
+    this->mainGrabber = std::make_shared<ControlPoint>(Vector3(), 1.f, ControlPoint::GrabberState::DEFAULT, false);
 
 
     this->light = PositionalLight(
@@ -260,6 +260,7 @@ void Viewer::drawingProcess() {
                             1.f);
             Vector4 globalAmbiant = {.10, .10, .10, 1.0};
 
+            auto normMatrix = Matrix(4, 4, mvMatrix).transpose().inverse();
             Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
                 shader->setMatrix("proj_matrix", pMatrix);
                 shader->setMatrix("mv_matrix", mvMatrix);
@@ -267,7 +268,7 @@ void Viewer::drawingProcess() {
                 shader->setMaterial("ground_material", ground_material);
                 shader->setMaterial("grass_material", grass_material);
                 shader->setVector("globalAmbiant", globalAmbiant);
-                shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+                shader->setMatrix("norm_matrix", &(normMatrix.data()[0]), 4, 4);
                 shader->setBool("isSpotlight", this->usingSpotlight);
                 if (this->usingSpotlight) {
                     shader->setVector("light.position", this->camera()->position());
@@ -462,8 +463,10 @@ void Viewer::resetScreenshotFolderName()
     tm *gmtm = std::gmtime(&now);
     char s_time[80];
     std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
-    this->screenshotFolder = "screenshots/" + std::string(s_time) + "/";
-    makedir(this->main_screenshotFolder);
+    this->screenshotFolder = main_screenshotFolder + "/" + std::string(s_time) + "/";
+    this->screenshotIndex = 0;
+    this->isTakingScreenshots = false;
+    // makedir(this->main_screenshotFolder);
 }
 
 
@@ -509,30 +512,26 @@ void Viewer::keyReleaseEvent(QKeyEvent *e)
 }
 void Viewer::mouseMoveEvent(QMouseEvent* e)
 {
-    float processTime = timeIt([&]() {
+    this->mousePos = e->pos();
 
-        this->mousePos = e->pos();
+    if (this->checkMouseOnVoxel())
+    {
+        this->mainGrabber->move(this->mousePosWorld);
+        this->mainGrabber->setVisible(true);
+    } else {
+        this->mainGrabber->setVisible(false);
+    }
 
-        if (this->checkMouseOnVoxel())
-        {
-            this->mainGrabber->move(this->mousePosWorld);
-            this->mainGrabber->setVisible(true);
-        } else {
-            this->mainGrabber->setVisible(false);
-        }
+    Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
+    Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
+    try {
+        QGLViewer::mouseMoveEvent(e);
+    }  catch (const std::exception&) {
+        std::cout << "Catched this f***ing exception!" << std::endl;
+    }
+    Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3::invalid), this->getCurrentTerrainModel());
 
-        Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
-        Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
-        try {
-            QGLViewer::mouseMoveEvent(e);
-        }  catch (std::exception) {
-            std::cout << "Catched this f***ing exception!" << std::endl;
-        }
-        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3::invalid), this->getCurrentTerrainModel());
-
-        update();
-    });
-//    std::cout << "Total time on MouseMoveEvent : " << showTime(processTime) << std::endl;
+    update();
 }
 
 void Viewer::mouseDoubleClickEvent(QMouseEvent *e)
@@ -671,21 +670,22 @@ bool Viewer::stopRecording()
             std::cerr << "Oups, the command `" << command2 << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
         }
     }
-    // this->screenshotFolder += "__next-take/";
 
+    this->resetScreenshotFolderName();
+    /*
     // New folder to save next recording
     time_t now = std::time(0);
     tm *gmtm = std::gmtime(&now);
     char s_time[80];
     std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
 
-
     this->main_screenshotFolder = "screenshots/";
     this->screenshotFolder = main_screenshotFolder + "/" + std::string(s_time) + "/";
     this->screenshotIndex = 0;
 
     this->isTakingScreenshots = false;
-    return this->isTakingScreenshots;
+    return this->isTakingScreenshots;*/
+    return false;
 }
 
 bool Viewer::startStopRecording()

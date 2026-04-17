@@ -43,7 +43,7 @@ enum DebugMeshesNames {
 #include "Karst/KarstPathsGeneration.h"
 #include "Utils/BSpline.h"
 #include "TreeColonisation/TreeColonisation.h"
-#include "GUIElements/ControlPoint.h"
+#include "GUI3DElements/ControlPoint.h"
 #include "Interface/ActionInterface.h"
 
 
@@ -157,7 +157,7 @@ public:
 
     unsigned int frame_num = 0;
 
-    std::shared_ptr<ControlPoint3D> mainGrabber;
+    std::shared_ptr<ControlPoint> mainGrabber;
 
     bool displayParticles = false;
     float fogNear = 5.f; //1000.f;

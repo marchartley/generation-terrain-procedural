@@ -1,111 +1,131 @@
 #include "ControlPoint.h"
 
 
-#include "Utils/Collisions.h"
+// #include "Utils/Collisions.h"
 
-ControlPoint3D::ControlPoint3D()
-    : ControlPoint3D(Vector3::origin)
+
+std::map<ControlPoint::GrabberState, Vector3> ControlPoint::default_GrabberStateColor = {
+    {ControlPoint::GrabberState::HIDDEN, Vector3(.0f, .0f, .0f)},
+    // {ControlPoint::GrabberState::INACTIVE, Vector3(.8f, .0f, .0f)},
+    // {ControlPoint::GrabberState::ACTIVE, Vector3(.8f, .0f, .0f)},
+    {ControlPoint::GrabberState::POSITIVE, Vector3(.2f, 1.f, .1f)},
+    {ControlPoint::GrabberState::NEGATIVE, Vector3(1.f, .2f, .1f)},
+    {ControlPoint::GrabberState::NEUTRAL, Vector3(.8f, .8f, .8f)},
+    {ControlPoint::GrabberState::DEFAULT, Vector3(1.f, 0.f, 0.f)}
+};
+
+ControlPoint::ControlPoint()
+    : ControlPoint(Vector3::origin)
 {
 
 }
 
-ControlPoint3D::ControlPoint3D(const Vector3 &pos, float radius, GrabberState state, bool applyManipulations)
+ControlPoint::ControlPoint(const Vector3 &pos, float radius, GrabberState state, bool applyManipulations)
     : Gizmo3D(applyManipulations)
 {
+    this->stateColorMap = ControlPoint::default_GrabberStateColor;
     this->move(pos);
     this->setRadius(radius);
     this->setState(state);
 }
 
-Vector3 ControlPoint3D::getPosition() const {
+Vector3 ControlPoint::getPosition() const {
     return this->state().transform.position;
 }
 
-Vector3 ControlPoint3D::getRotation() const
+Vector3 ControlPoint::getRotation() const
 {
     return this->state().transform.rotation.toVector3();
 }
 
-void ControlPoint3D::allowAllAxisRotations(bool allow)
+void ControlPoint::allowAllAxisRotations(bool allow)
 {
     state().capabilities.allowRotateX = allow;
     state().capabilities.allowRotateY = allow;
     state().capabilities.allowRotateZ = allow;
 }
 
-void ControlPoint3D::allowAllAxisTranslation(bool allow)
+void ControlPoint::allowAllAxisTranslation(bool allow)
 {
     state().capabilities.allowTranslateX = allow;
     state().capabilities.allowTranslateY = allow;
     state().capabilities.allowTranslateZ = allow;
 }
 
-void ControlPoint3D::display()
+void ControlPoint::display()
 {
-    this->render();
+    if (state().transform.position.isValid())
+        this->render();
 }
 
-void ControlPoint3D::hide()
+void ControlPoint::hide()
 {
     state().settings.visible = false;
     this->removeFromMouseGrabberPool();
 }
 
-void ControlPoint3D::show()
+void ControlPoint::show()
 {
     state().settings.visible = true;
     this->addInMouseGrabberPool();
 }
 
-void ControlPoint3D::setVisible(bool visibility)
+void ControlPoint::setVisible(bool visibility)
 {
     if (visibility) show();
     else hide();
 }
 
-void ControlPoint3D::move(const Vector3 &newPos)
+void ControlPoint::move(const Vector3 &newPos)
 {
     state().transform.position = newPos;
-    Q_EMIT this->pointModified();
+    emitOnPointModified();
+    // Q_EMIT this->pointModified();
 }
 
-void ControlPoint3D::setGrabberStateColor(std::map<GrabberState, std::vector<float> > stateColorMap)
+void ControlPoint::setGrabberStateColor(GrabberState state, Vector3 color)
+{
+    this->setGrabberStateColor(std::map<GrabberState, Vector3>{{state, color}});
+}
+
+void ControlPoint::setGrabberStateColor(std::map<GrabberState, Vector3 > stateColorMap)
 {
     for (auto [s, color] : stateColorMap) {
         this->stateColorMap[s] = color;
     }
 }
 
-void ControlPoint3D::setState(GrabberState newState)
+void ControlPoint::setState(GrabberState newState)
 {
-    std::cout << "ControlPoint3D::setState not implemented" << std::endl;
+    // std::cout << "ControlPoint3D::setState not implemented" << std::endl;
+    state().visual.body_color = this->stateColorMap[newState];
 }
 
-void ControlPoint3D::setRadius(float newRadius)
+void ControlPoint::setRadius(float newRadius)
 {
     state().settings.radius = newRadius;
     state().settings.ringRadius = 1.5f * newRadius;
     state().settings.axisLength = 2.f * newRadius;
 }
 
-void ControlPoint3D::setConstraint(qglviewer::Constraint *constraint)
+void ControlPoint::setConstraint(qglviewer::Constraint *constraint)
 {
     std::cout << "ControlPoint3D::setConstraint not implemented" << std::endl;
 }
 
-// bool ControlPoint3D::grabsMouse() const
+// bool ControlPoint::grabsMouse() const
 // {
-    // std::cout << "ControlPoint3D::grabsMouse not implemented" << std::endl;
+    // std::cout << "ControlPoint::grabsMouse not implemented" << std::endl;
     // return false;
 // }
 
 
-void ControlPoint3D::setDisplayOnTop(bool enable)
+void ControlPoint::setDisplayOnTop(bool enable)
 {
     state().settings.displayOnTop = enable;
 }
 
-Vector3 ControlPoint3D::getFluidTranslation()
+Vector3 ControlPoint::getFluidTranslation()
 {
     std::cout << "ControlPoint3D::getFluidTranslation not implemented" << std::endl;
     return Vector3::invalid;
@@ -115,7 +135,7 @@ Vector3 ControlPoint3D::getFluidTranslation()
 
 
 
-
+/*
 std::shared_ptr<Shader> ControlPoint::base_shader = nullptr;
 std::map<ControlPoint::GrabberState, std::vector<float>> ControlPoint::default_GrabberStateColor = {
     {ControlPoint::GrabberState::HIDDEN, {.0f, .0f, .0f, 0.f}},
@@ -705,7 +725,7 @@ void ControlPoint::move(const Vector3& newPos)
     }
     this->currentPosition = newPos;
 }
-
+*/
 
 
 

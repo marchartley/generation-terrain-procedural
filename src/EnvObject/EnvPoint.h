@@ -48,7 +48,7 @@ public:
     virtual void applyAbsorption(EnvMaterial& material);
     virtual void applyDepositionOnDeath();
 
-    virtual GridV3& computeFlowModification(GridV3& waterFlow);
+    virtual GridV3& computeFlowModification(GridV3& waterFlow, float scale = 1.f);
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 

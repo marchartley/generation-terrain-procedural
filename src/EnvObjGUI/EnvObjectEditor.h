@@ -19,12 +19,14 @@ struct BodyKelvinletParameters {
     float maxRadius = 100.f;
 
 
-    PinchKelvinletCurve* pinchK;
-    TwistKelvinletCurve* twistK;
-    GrabKelvinletCurve* grabK;
-    ScaleKelvinletCurve* scaleK;
+    PinchKelvinletCurve* pinchK = nullptr;
+    TwistKelvinletCurve* twistK = nullptr;
+    GrabKelvinletCurve* grabK = nullptr;
+    ScaleKelvinletCurve* scaleK = nullptr;
 
     std::vector<RelativeKelvinlet*> relativeKelvinlets;
+
+    void resetKelvinlets();
 };
 
 class EnvObjectEditor : public ImageViewer
@@ -44,13 +46,14 @@ public:
 
     GridF& simulateDeposition(GridF& currentState, int iterations = 10);
 
-    GridV3 getVectorFieldWithRotation(bool takeIntoAccountCurrentKelvinlet);
+    GridV3 getVectorFieldWithRotation(bool takeIntoAccountCurrentKelvinlet = false);
 
     void updateCurrentChartViewWithCurrentKelvinlets(const Vector3& mouseRelPos, bool updateCurrentKelvinlet);
 
-    EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true);
+    EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true, bool sendSignal = false);
 
     void animateEnvObject(bool animate);
+    void displayDepositionSimulation();
 
     // PainterToolParams painterParams;
     KelvinletToolParams kelvinletParams;
@@ -65,7 +68,7 @@ public:
         MAIN, START, END, UNDEFINED
     };
     KELVINLET_ANCHOR_POINT currentAnchorPoint = UNDEFINED;
-    std::map<Kelvinlet*, KELVINLET_ANCHOR_POINT> kelvinletAnchors;
+    std::map<Kelvinlet*, std::pair<KELVINLET_ANCHOR_POINT, Vector3>> kelvinletAnchors;
 
     bool animating = false;
     std::vector<Vector3> verticesTargets;
@@ -73,9 +76,7 @@ public:
 
     float objectScale = 1.f;
 
-Q_SIGNALS:
-    void objectModified(const EnvObject* object);
-           // void imagePainted(const GridF& newImage);
+    DECLARE_EVENT(OnObjectModified, (const EnvObject* object), (object))
 };
 
 #endif // ENVOBJECTEDITOR_H

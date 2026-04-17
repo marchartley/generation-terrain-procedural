@@ -6,6 +6,8 @@
 #include <set>
 #include <complex>
 
+#include "Utils/Signals.h"
+
 
 
 namespace interpolation {
@@ -84,7 +86,7 @@ void sleep(int milliseconds);
 
 double timeIt(std::function<void()> func, int repetitions = 1);
 std::string showTime(double nanoseconds);
-float displayProcessTime(const std::string& textToDisplay, const std::function<void ()>& func, bool verbose = true);
+float displayProcessTime(const std::string& textToDisplay, const std::function<void ()>& func, bool verbose = true, int trials = 1);
 
 
 /// Careful, the order of the vectors are not preserved in these functions

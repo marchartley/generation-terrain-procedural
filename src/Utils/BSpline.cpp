@@ -673,16 +673,26 @@ Vector3 BSpline::containingBoxSize() const
     return (maxBox - minBox);
 }
 
-BSpline &BSpline::scale(float factor)
+BSpline& BSpline::scale(float factor)
 {
     return this->scale(Vector3(factor, factor, factor));
 }
 
-BSpline &BSpline::scale(const Vector3 &factor)
+BSpline& BSpline::scale(const Vector3 &factor)
 {
     for (auto& vert : this->points)
         vert *= factor;
     return *this;
+}
+BSpline BSpline::scaled(float factor)
+{
+    return this->scaled(Vector3(factor, factor, factor));
+}
+
+BSpline BSpline::scaled(const Vector3& factor)
+{
+    BSpline copy = *this;
+    return copy.scale(factor);
 }
 
 BSpline BSpline::computeConvexHull() const

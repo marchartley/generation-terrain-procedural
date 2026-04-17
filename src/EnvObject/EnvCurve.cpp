@@ -206,18 +206,18 @@ void EnvCurveInstance::applyDepositionOnDeath()
     }
 }
 
-GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow)
+GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow, float scale)
 {
     std::vector<RelativeKelvinlet> relativeFlowsStarting;
     std::vector<RelativeKelvinlet> relativeFlowsEnding;
     std::vector<KelvinletCurve*> relativeCurveFlow;
     for (size_t i = 0; i < this->getDefinition()->startingPointKelvinlets.size(); i++) {
         if (this->getDefinition()->startingPointKelvinlets[i]->valid())
-            relativeFlowsStarting.push_back(RelativeKelvinlet(this->getDefinition()->startingPointKelvinlets[i], this->curve.points.front()));
+            relativeFlowsStarting.push_back(RelativeKelvinlet(this->getDefinition()->startingPointKelvinlets[i], this->curve.points.front(), scale));
     }
     for (size_t i = 0; i < this->getDefinition()->endingPointKelvinlets.size(); i++) {
         if (this->getDefinition()->endingPointKelvinlets[i]->valid())
-            relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.points.back()));
+            relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.points.back(), scale));
     }
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
@@ -244,38 +244,9 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow)
             waterFlow[p] += relativeK.evaluate(p, flowAngleEnding, flowStrengthEnding, true);
         }
         for (const auto& k : relativeCurveFlow) {
-            waterFlow[p] += k->evaluate(p) * waterFlow[p].norm(); // Scale with water flow strength
+            waterFlow[p] += k->evaluate(p) * waterFlow[p].norm(); // Scale with water flow strength // TODO : Scale with "scale" also, for distance scaling
         }
     });
-    /*
-    if (this->flowEffect == Vector3()) return {waterFlow, GridF()};
-
-    float growingState = computeGrowingState2();
-
-    if (this->_cachedFlowModif.empty()) {
-        Vector3 objectWidth = Vector3(width, width, 0);
-        Vector3 halfWidth = objectWidth * .5f;
-        BSpline translatedCurve = this->curve;
-        for (auto& p : translatedCurve)
-            p.z() = 0;
-        AABBox box = AABBox(translatedCurve.points);
-        box.expand({box.min() - halfWidth, box.max() + halfWidth});
-
-        GrabKelvinletCurve k;
-        k.radialScale = width * .05f;
-        k.force = 10.f;
-
-        k.curve = translatedCurve;
-
-        GridV3 flow = waterFlow;
-        flow.iterateParallel([&](const Vector3i& p) {
-            Vector3 displacement = k.evaluate(p);
-            flow(p) += displacement.xy();
-        });
-        this->_cachedFlowModif = flow;
-    }
-    return {waterFlow.add(_cachedFlowModif * growingState, Vector3()), GridF()}; //{flow, GridF(flow.getDimensions(), 1.f)};
-    */
     return waterFlow;
 }
 

@@ -256,7 +256,7 @@
 				"rate": 0.5
 			},
 			"polyp": {
-				"radius": 2.0,
+				"radius": 4.0,
 				"rate": 0.009999999776482582
 			},
 			"sand": {
@@ -266,8 +266,8 @@
 		},
 		"absorption-rate": {
 			"polyp": {
-				"radius": 1.0,
-				"rate": 0.009999999776482582
+				"radius": 2.0,
+				"rate": 0.029999999776482582
 			},
 			"sand": {
 				"radius": 1.0,
@@ -277,7 +277,7 @@
 		"on-death-deposition": {},
 		"height": 10.0,
 		"flow-effect": [],
-		"radius": 10.0,
+		"radius": 2.0,
 		"type": "Point"
 	},
 	{

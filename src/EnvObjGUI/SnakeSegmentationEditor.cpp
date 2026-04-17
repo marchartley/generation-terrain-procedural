@@ -20,14 +20,14 @@ SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, QWidge
 
     this->setSnakeImage(GridF::perlin(Vector3i(100, 100, 1), Vector3(5.f, 5.f, 1)));
 
-    // QObject::connect(this, &SnakeSegmentationEditor::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
     this->animate([=]() {
         snakeParameters.snake.runSegmentation(50);
         showSnakePath();
+        return true;
     });
 
 
-    QObject::connect(this, &SnakeSegmentationEditor::clickedOnImage, this, [&](const Vector3& relPos, Vector3 value, bool leftClick, bool rightClick) {
+    this->setOnMousePressed([&](const Vector3& relPos, Vector3 value, bool leftClick, bool rightClick) {
         if (!relPos.isValid()) return;
 
         Vector3 pos = relPos * Vector3(100, 100, 1);
@@ -41,7 +41,7 @@ SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, QWidge
         showSnakePath();
     });
 
-    QObject::connect(this, &SnakeSegmentationEditor::movedOnImage, this, [&](const Vector3& pos, const Vector3& previousPos, QMouseEvent* event) {
+    this->setOnMouseMoved([&](const Vector3& pos, const Vector3& previousPos, QMouseEvent* event) {
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
@@ -65,8 +65,8 @@ void SnakeSegmentationEditor::showSnakePath() {
 
 
     for (size_t i = 0; i < path.size() - 1; i++) {
-        PlotVectorData::drawLine(colors, Vector3::blue, path[i], path[i + 1]);
-        PlotVectorData::drawLine(alpha, 1.f, path[i], path[i + 1]);
+        PlottingUtils::drawLine(colors, Vector3::blue, path[i], path[i + 1]);
+        PlottingUtils::drawLine(alpha, 1.f, path[i], path[i + 1]);
     }
     for (auto& p : snakeParameters.snake.contour) {
         colors(p * ratio) = Vector3::yellow;

@@ -162,6 +162,7 @@ void FaultSlipInterface::setBindings()
 //    {
 
         QObject::connect(slipVector.get(), &InteractiveVector::modified, this, &FaultSlipInterface::updateSlipVector);
-        QObject::connect(firstSlipControlPoint.get(), &ControlPoint::pointModified, this, &FaultSlipInterface::updatePoints);
+        // QObject::connect(firstSlipControlPoint.get(), &ControlPoint3D::pointModified, this, &FaultSlipInterface::updatePoints);
+        firstSlipControlPoint->setOnPointModified([=]() { updatePoints(); });
 //    }
 }

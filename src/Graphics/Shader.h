@@ -81,6 +81,10 @@ public:
         GlobalsGL::f()->glUniformMatrix4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
                                            1, GL_FALSE, &values[0][0]);
     }
+
+    /*void setMatrix(const std::string& pname, const Matrix& mat) {
+        this->setMatrix(pname, &(mat.data()[0]), mat.cols(), mat.rows());
+    }*/
     template <class T>
     void setMatrix(const std::string& pname, std::vector<std::vector<T>> values)
     {

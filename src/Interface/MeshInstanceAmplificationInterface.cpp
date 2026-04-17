@@ -43,8 +43,8 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
                 float size = meshType.sizes[i];
                 Vector3& orientation = meshType.orientations[i];
                 Matrix rotMatrix = Vector3(0, 0, -(orientation.getAngleWith(Vector3(0, 1, 0)))).toRotationMatrix().toHomogeneous();
-                rotMatrix[2][2] *= -1.f;
-                auto values = rotMatrix.toStdVector();
+                rotMatrix(2, 2) *= -1.f;
+                auto values = rotMatrix.data();
 //                std::tie(iMesh, pos, size) = meshType.indicesAndPositionsAndSizes[i];
                 meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", (pos + Vector3(0, 0, 2.f)) * Vector3(1, 1, terrainHeightFactor) - meshType.requiredTranslation * size);
                 meshType.possibleMeshes[iMesh].shader->setFloat("sizeFactor", size);

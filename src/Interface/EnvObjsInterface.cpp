@@ -25,9 +25,9 @@ EnvObjsInterface::EnvObjsInterface(QWidget *parent)
 {
     this->scene = std::make_shared<EnvironmentalScene>();
 
-    std::cout << "Reading materials..." << std::endl;
+    log("Reading materials...");
     this->scene->readEnvMaterialsFile("EnvObjects/envMaterials.json");
-    std::cout << "Reading objects..." << std::endl;
+    log("Reading objects...");
     this->scene->readEnvObjectsFile("EnvObjects/primitives.json");
 
     primitiveDefinitionFile.onChange([&](const std::string& newDefinitions) { updateObjectsDefinitions(newDefinitions); });
@@ -79,26 +79,29 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->simulationFlowField = GridV3(initialHeightmap.getDimensions());
     this->scene->precomputeTerrainProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
 
-    QObject::connect(&ImageViewer::get("Object Preview"), &ImageViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
+    ImageViewer::get("Object Preview").setOnMouseMoved([=](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
         this->previewCurrentEnvObjectPlacement(clickPos);
     });
 
-    QObject::connect(&EnvMaterialViewer::get("Material"), &EnvMaterialViewer::imagePainted, this, [&](const GridF& newDistrib) {
+    EnvMaterialViewer::get("Material").setOnImagePainted([=](const GridF& newDistrib) {
         this->scene->materials[this->currentMaterialEdited].currentState = newDistrib;
     });
 
-    QObject::connect(&FocusAreaViewer::get("Focus"), &FocusAreaViewer::imagePainted, this, [&](const GridF& newDistrib) {
+    FocusAreaViewer::get("Focus").setOnImagePainted([=](const GridF& newDistrib) {
         this->focusedArea = newDistrib;
     });
 
-    QObject::connect(&WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::updated, this, [&]() {
+    // QObject::connect(&WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::updated, this, [&]() {
+    WaterFlowViewer::get("Flowfield").setOnVectorFieldModified([=]() {
         this->userKelvinlets = WaterFlowViewer::get("Flowfield").kelvinletParams.kelvinlets;
         this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
+        std::cout << "WaterFlowViewer" << std::endl;
         Q_EMIT this->updated();
     });
 
-    QObject::connect(&EnvObjectEditor::get(""), &EnvObjectEditor::objectModified, this, [&](const EnvObject* modifiedObject) {
+    EnvObjectEditor::get("").setOnObjectModified([=](const EnvObject* modifiedObject) {
         this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
+        std::cout << "EnvObjEditor" << std::endl;
         Q_EMIT this->updated();
     });
 }
@@ -194,19 +197,12 @@ InterfaceUI* EnvObjsInterface::createGUI()
     auto editFlowfieldButton = new ButtonElement("Edit flowfield", [&]() { this->manualModificationOfFlowfield(); });
     auto resetFlowfieldButton = new ButtonElement("Reset flow", [&]() { this->resetFlowfield(); });
     auto showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
-
     auto saveButton = new ButtonElement("Save", [&]() {this->saveScene("EnvObjects/testEnvObjects.json");});
-
     auto flowErosionSlider = new SliderElement("Erode", -10.f, 10.f, .1f);
-
     auto newObjectCreationBox = new CheckboxElement("Manual creation");
-
     auto nextStepButton = new ButtonElement("Step");
-
     auto runButton = new ButtonElement("Run");
-
     auto displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
-
     auto userFlowScaleSlider = new SliderElement("User flow", 0.f, 100.f, .1f, this->userFlowScale);
 
 
@@ -233,7 +229,7 @@ InterfaceUI* EnvObjsInterface::createGUI()
     });
     runButton->setOnPressed([&]() {
         if (!this->forceScenarioInterruption) {
-            std::cout << "Stopping scenario" << std::endl;
+            log("Stopping scenario");
             this->forceScenarioInterruption = true;
         } else {
             this->runScenario();
@@ -251,10 +247,12 @@ InterfaceUI* EnvObjsInterface::createGUI()
 
     spendTimeButton->setOnPressed([&]() {
        for (auto& obj : this->scene->instantiatedObjects) {
-           obj->improvePositionning(1.f);
+            obj->improvePositionning(random_gen::generate() * 1.f);
        }
        this->updateUntilStabilization();
        this->updateSelectionMesh();
+       this->updateSceneFlowfieldWithUserFlow();
+       this->updateVectorFieldVisu();
 
        Q_EMIT this->updated();
     });
@@ -262,11 +260,15 @@ InterfaceUI* EnvObjsInterface::createGUI()
     forceButton->setOnPressed([&](){
        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
        updateObjectsList();
+       this->updateSceneFlowfieldWithUserFlow();
+       this->updateVectorFieldVisu();
        Q_EMIT this->updated();
     });
     forceButton->setOnRepeat([&](){
         this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
         updateObjectsList();
+        this->updateSceneFlowfieldWithUserFlow();
+        this->updateVectorFieldVisu();
         Q_EMIT this->updated();
     });
 
@@ -297,6 +299,13 @@ InterfaceUI* EnvObjsInterface::createGUI()
         testingFittingFormula->setText(obj->s_FittingFunction);
         this->currentObjectName = objectCombobox->choices[objectCombobox->combobox()->currentIndex()]->label;
         blockSignals(false);
+    });
+
+    userFlowScaleSlider->setOnValueChanged([=](float newVal) {
+        // this->updateEnvironmentFromEnvObjects(false, false, false);
+        this->updateSceneFlowfieldWithUserFlow();
+        this->updateVectorFieldVisu();
+        Q_EMIT this->updated();
     });
 
     return UI;
@@ -471,7 +480,7 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
                 // k->radialScale = delta.norm();
             }
 
-            this->scene->updateFlowfield(userFlowField * userFlowScale + this->computeUserKelvinletField(), simulationFlowField);
+            this->updateSceneFlowfieldWithUserFlow();
             this->updateVectorFieldVisu();
             // Q_EMIT this->updated();
         }
@@ -488,7 +497,7 @@ void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition
 
     if (this->kelvinletDraggingPoint.isValid()) {
         this->kelvinletDraggingPoint = Vector3::invalid;
-
+        this->updateSceneFlowfieldWithUserFlow();
         this->updateVectorFieldVisu();
         Q_EMIT this->updated();
     }
@@ -559,7 +568,6 @@ EnvObjectInstance* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScore
     bool verbose = false;
     Vector3 initialPosition = position;
     EnvObjectInstance* newObject = this->scene->instantiate(objectName);
-    // std::cout << "Placing '" << newObject->name << "' at " << initialPosition << std::endl;
 
     if (!newObject->placeInTerrain(initialPosition)) {
         this->destroyEnvObject(newObject, false, false);
@@ -639,8 +647,9 @@ EnvObjectInstance* EnvObjsInterface::instantiateSpecific(const std::string& _obj
         // std::cout << "Nope, impossible to instantiate..." << std::endl;
     }
 
-    if (updateScreen)
+    if (updateScreen) {
         updateObjectsList();
+    }
     return result;
 }
 
@@ -660,8 +669,6 @@ EnvObjectInstance* EnvObjsInterface::fakeInstantiate(const std::string& _objectN
     if (!newObject) {
         return nullptr;
     }
-    // newObject->getDefinition()->fittingFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FittingFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
-    // newObject->getDefinition()->fitnessFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FitnessFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
     this->destroyEnvObject(newObject, false, false);
     return newObject;
 }
@@ -956,7 +963,7 @@ void EnvObjsInterface::manualModificationOfFocusArea()
 
 void EnvObjsInterface::manualModificationOfFlowfield()
 {
-    WaterFlowViewer::get("Flowfield").addVectorField(this->scene->flowfield);
+    WaterFlowViewer::get("Flowfield").addVectorField(this->scene->flowfield * 0.f);
     WaterFlowViewer::get("Flowfield").show();
 }
 
@@ -967,7 +974,7 @@ void EnvObjsInterface::resetFlowfield()
         delete this->userKelvinlets[i];
     this->userKelvinlets.resize(0);
 
-    this->scene->updateFlowfield(GridV3(), simulationFlowField);
+    this->updateSceneFlowfieldWithUserFlow();
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
     this->updateVectorFieldVisu();
@@ -1266,237 +1273,10 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(const st
     }
 }
 
-
-/*
-BSpline followGradient(const GridV3 gradients, const Vector3& startPoint, float maxDist, bool followInverse) {
-    Vector3 pos = startPoint;
-    BSpline path({pos});
-    Vector3 dir;
-    float totalDistance = 0.f;
-    while (totalDistance < maxDist) {
-        Vector3 gradient = gradients(pos);
-        if (gradient == Vector3()) break; // Nowhere to go
-        gradient.normalize();
-        dir = gradient * (followInverse ? -1.f : 1.f);
-
-        pos += dir;
-
-        totalDistance += dir.norm();
-
-        path.points.push_back(pos);
-
-        int nbPoints = std::min(int(path.size()), 5);
-        if (nbPoints > 4) {
-            std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
-            Vector3 meanVel;
-            for (size_t i = 0; i < nbPoints - 1; i++) {
-                meanVel += (lastPositions[i + 1] - lastPositions[i]);
-            }
-            if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
-//                        std::cout << "Stuck in grad, stopping" << std::endl;
-                path.points.erase(path.points.end() - nbPoints, path.points.end());
-                break;
-            }
-        }
-    }
-    return path;
-}
-
-std::vector<Vector3> findCandidatesPositions(const Vector3& startPosition, const Vector3& direction, float angle, float radius, int nbCandidates) {
-    std::vector<Vector3> points(nbCandidates);
-    float initialAngle = direction.getSignedAngleWith(Vector3(1, 0, 0));
-    for (int i = 0; i < nbCandidates; i++) {
-        float phi = interpolation::inv_linear(random_gen::generate(), -angle, angle);
-        float r = std::sqrt(random_gen::generate()) * radius; // Use square root to svoid bias towards center of the disk
-
-        points[i] = Vector3(r, std::sin(phi) * r).rotate(0, 0, initialAngle) + startPosition;
-    }
-    return points;
-}
-
-std::vector<BSpline> getCandidatesPaths(const GridV3& gradients, const std::vector<Vector3>& positions, float directionLength) {
-    std::vector<BSpline> paths(positions.size());
-    for (int i = 0; i < positions.size(); i++) {
-        paths[i] = followGradient(gradients, positions[i], directionLength * .5f, false);
-    }
-    return paths;
-}
-
-BSpline getBestCandidatesPath(const GridF& score, const BSpline& initialPath, const std::vector<BSpline>& paths) {
-    float longestDistance = 0.f;
-    float smallestScore = std::numeric_limits<float>::max();
-    int bestIndex = 0;
-    for (int i = 0; i < paths.size(); i++) {
-        if (paths[i].size() == 0) continue;
-        float currentScore = score(paths[i].points.back()) / (initialPath.points[0] - paths[i].points.back()).norm2();
-        if (currentScore < smallestScore) {
-            smallestScore = currentScore;
-            bestIndex = i;
-        }
-//            float dist = (initialPath.points[0] - paths[i].points.back()).norm2();
-//            if (dist > longestDistance) {
-//                longestDistance = dist;
-//                bestIndex = i;
-//            }
-    }
-    return paths[bestIndex];
-}
-BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vector3& startPoint, float maxDist) {
-    BSpline finalPath;
-
-    Vector3 pos = startPoint;
-    float initialIsovalue = values.interpolate(pos);
-    BSpline path({pos});
-    Vector3 dir(0, 0, 0);
-    bool didAFullCircle = false;
-    float totalDistance = 0.f;
-    while (maxDist > totalDistance && path.size() < 5000) {
-        if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
-            didAFullCircle = true;
-            break; // Got back close to beginning
-        }
-        Vector3 gradient;
-        int maxTries = 100;
-        for (int iTry = 0; iTry < maxTries; iTry++) {
-            Vector3 jitter = Vector3::random() * (5.f * float(iTry) / (float(maxTries)));
-            if (jitter.dot(dir) < 0) continue;
-            auto testPos = pos + jitter;
-            gradient = gradients.interpolate(testPos);
-            if (gradient.norm2() > 1e-8) {
-                pos = testPos;
-                break; // Nowhere to go
-            }
-        }
-        if (gradient.norm2() < 1e-8) break; // Nowhere to go
-        gradient.normalize();
-
-        Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
-        dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
-
-        if (!newDir.isValid() || !gradient.isValid()) break;
-
-        float newVal = values.interpolate(pos + dir);
-
-        if (std::abs(newVal - initialIsovalue) < 1e-5) {
-            Vector3 newGrad = gradients.interpolate(pos + dir);
-            float bestRectificationScale = 0.f;
-            float closestIso = std::numeric_limits<float>::max();
-            for (int i = 0; i < 10; i++) {
-                float scale = float(i) / 10.f * (newVal < initialIsovalue ? 1.f : -1.f);
-                float newDiff = values.interpolate(pos + dir + newGrad * scale);
-                if (newDiff < closestIso) {
-                    closestIso = newDiff;
-                    bestRectificationScale = scale;
-                }
-            }
-            dir += newGrad * bestRectificationScale;
-        }
-
-        pos += dir;
-
-        totalDistance += dir.norm();
-
-        path.points.push_back(pos);
-    }
-
-    finalPath = path;
-    return finalPath;
-}
-
-BSpline EnvObjsInterface::computeNewObjectsCurveAtPosition(const Vector3 &seedPosition, const GridV3 &gradients, const GridF& score, float directionLength, float widthMaxLength, bool followIsolevel)
+void EnvObjsInterface::updateSceneFlowfieldWithUserFlow()
 {
-    Vector3 pos = seedPosition;
-    BSpline isoline;
-    if (followIsolevel) {
-        isoline = followIsovalue(score, gradients, pos, directionLength);
-    } else {
-        Vector3 gradDir = gradients(pos).normalized();
-        isoline = BSpline({pos - gradDir * directionLength * .5f, pos + gradDir * directionLength * .5f});
-        isoline.resamplePoints(10);
-        for (auto& p : isoline) {
-            p += gradients(p).normalized().rotated(0, 0, deg2rad(90)) * widthMaxLength * random_gen::generate(-1, 1);
-        }
-    }
-    return isoline;
+    this->scene->updateFlowfield((userFlowField + this->computeUserKelvinletField()) * userFlowScale, simulationFlowField);
 }
-
-ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &seedPosition, const GridV3& gradients, const GridF& score, float directionLength)
-{
-    BSpline isoline = followIsovalue(score, gradients, seedPosition, directionLength);
-    return isoline;
-}
-
-ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPositionForceCircle(const Vector3 &seedPosition, const GridV3 &gradients, const GridF &score, float directionLength)
-{
-    ShapeCurve finalIsoline;
-//    float targetArea = directionLength * _widthMaxLength;
-    Vector3 pos = seedPosition;
-
-//    int maxTries = 3;
-//    float bestAreaDiff = std::numeric_limits<float>::max();
-    ShapeCurve bestCurve;
-    Vector3 jitterPos = pos;
-//    while (maxTries > 0) {
-        finalIsoline = this->computeNewObjectsShapeAtPosition(jitterPos, gradients, score, directionLength).close();
-        if (finalIsoline.size() > 5 && (finalIsoline.points.front() - finalIsoline.points.back()).norm2() < 3*3) {
-//            float area = finalIsoline.computeArea();
-//            if (std::abs(area - targetArea) < std::abs(bestAreaDiff)) {
-//                bestAreaDiff = area - targetArea;
-                bestCurve = finalIsoline;
-            }
-//        } else {
-//            jitterPos = pos + Vector3::random() * .1f;
-//        }
-//        maxTries--;
-//    }
-    return bestCurve;
-}
-
-ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPositionForceCircleOptimizedArea(const Vector3 &seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float targetArea)
-{
-    Vector3 currentSeedPos = seedPosition;
-    float maxError = 5.f;
-    int maxTries = 100;
-    ShapeCurve finalCurve;
-    float moveFactor = 1.f;
-    bool currentlyAreaGettingSmaller = true;
-
-    // We will move only in the direction of the gradient, since we want to optimize the isolevel.
-    // And we know that higher isolevel => lower area while lower isolevel => higher area.
-    // So isolevel gradient proportional to -area gradient.
-    while (maxTries > 0) {
-        ShapeCurve curve = computeNewObjectsShapeAtPositionForceCircle(currentSeedPos, gradients, score, directionLength);
-        if (curve.size() == 0) {
-            // The isocontour is too big, we didn't manage to do a full circle.
-            currentSeedPos = currentSeedPos + gradients.interpolate(currentSeedPos).normalized() * 2.f;
-        } else {
-            float area = curve.computeArea();
-
-            float diff = targetArea - area; // < 0 means curve too big, > 0 means curve too small
-            finalCurve = curve;
-            if (std::abs(diff) < maxError) break;
-            currentSeedPos = currentSeedPos + gradients.interpolate(currentSeedPos).normalized() * (diff > 0 ? -1.f : 1.f) * moveFactor;
-
-            if (currentlyAreaGettingSmaller != (diff > 0)) {
-                currentlyAreaGettingSmaller = !currentlyAreaGettingSmaller;
-                moveFactor *= .5f;
-            }
-        }
-        maxTries--;
-    }
-    return finalCurve;
-}
-
-void EnvObjsInterface::runPerformanceTest()
-{
-
-    displayProcessTime("Benchmarking coral growth...", [&]() {
-        for (int i = 0; i < 10; i++) {
-            this->instantiateSpecific("coralpolyp");
-        }
-    });
-}
-*/
 
 void EnvObjsInterface::resetScene()
 {
@@ -1734,26 +1514,27 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
 
 void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3 &brushDir)
 {
+    const bool verbose = false;
     displayProcessTime("updateFlowfield", [&]() {
-        this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField);
-    });
+        this->updateSceneFlowfieldWithUserFlow();
+    }, verbose);
     displayProcessTime("updateVectorFieldVisu", [&]() {
         this->updateVectorFieldVisu();
-    });
+    }, verbose);
 
-    displayProcessTime("addObjectsHeightmaps", [&]() {
-        this->addObjectsHeightmaps();
-    });
+    // displayProcessTime("addObjectsHeightmaps", [&]() {
+        // this->addObjectsHeightmaps();
+    // }, verbose);
     displayProcessTime("flowErosionSimulation", [&]() {
         this->flowErosionSimulation();
-    });
+    }, verbose);
 }
 
 void EnvObjsInterface::openObjectKelvinletEditor(const std::string& objName)
 {
     auto& obj = scene->availableObjects[objName];
     auto& viewer = EnvObjectEditor::get();
-    viewer.addVectorField(userFlowField * userFlowScale + this->computeUserKelvinletField() + simulationFlowField);
+    viewer.addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
     viewer.addEnvObject(obj);
     viewer.show();
 }
@@ -1950,8 +1731,6 @@ void EnvObjsInterface::endNewObjectCreation()
         return;
     }
     newObject->recomputeEvaluationPoints();
-    // newObject->getDefinition()->fittingFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FittingFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
-    // newObject->getDefinition()->fitnessFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FitnessFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
     auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
     this->implicitPatchesFromObjects[newObject] = implicit;
     if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
@@ -1973,6 +1752,8 @@ void EnvObjsInterface::endNewObjectCreation()
 
     this->updateNewObjectMesh();
     this->updateSelectionMesh();
+    this->updateSceneFlowfieldWithUserFlow();
+    this->updateVectorFieldVisu();
 
     Q_EMIT this->updated();
 }
@@ -2288,31 +2069,6 @@ void EnvObjsInterface::saveForRenders()
     log("Exported to '" + folder + "'.");
 }
 
-
-
-
-
-/*
-StatsValues EnvObjsInterface::displayStatsForObjectCreation(const std::string& objectName, int nbSamples)
-{
-    std::vector<float> values(nbSamples);
-    bool isPossible;
-    GridF score = computeScoreMap(objectName, subsidedHeightmap.getDimensions(), isPossible) * focusedArea;
-    if (isPossible) {
-        // #pragma omp parallel for
-        for (int i = 0; i < nbSamples; i++) {
-            auto obj = fakeInstantiate(objectName, score);
-            if (obj) {
-                values[i] = obj->fitnessScoreAtCreation;
-            }
-        }
-    }
-    StatsValues stats = getStats(values);
-    std::cout << objectName << ": " << stats.mean << " (" << stats.stdev << ")" << std::endl;
-    return stats;
-
-}
-*/
 
 GridV3 EnvObjsInterface::computeUserKelvinletField() const
 {

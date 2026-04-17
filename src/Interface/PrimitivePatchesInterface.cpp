@@ -229,9 +229,12 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     this->primitiveControlPoint->allowAllAxisTranslation(true);
     this->primitiveControlPoint->hide();
 
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::pointModified, this, &PrimitivePatchesInterface::moveDebugBoxWithControlPoint);
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::translationApplied, this, &PrimitivePatchesInterface::translatePatch);
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, &PrimitivePatchesInterface::rotatePatch);
+    // QObject::connect(this->primitiveControlPoint.get(), &ControlPoint3D::pointModified, this, &PrimitivePatchesInterface::moveDebugBoxWithControlPoint);
+    primitiveControlPoint->setOnPointModified([=]() { moveDebugBoxWithControlPoint(); });
+    // QObject::connect(this->primitiveControlPoint.get(), &ControlPoint3D::translationApplied, this, &PrimitivePatchesInterface::translatePatch);
+    primitiveControlPoint->setOnPointTranslated([=]() { translatePatch(primitiveControlPoint->state().drag.currentHitPointWorld - primitiveControlPoint->state().drag.startWorldPosition); });
+    // QObject::connect(this->primitiveControlPoint.get(), &ControlPoint3D::rotationApplied, this, &PrimitivePatchesInterface::rotatePatch);
+    primitiveControlPoint->setOnPointRotated([=]() { rotatePatch(primitiveControlPoint->state().transform.rotation.toVector3()); });
     return UI;
 }
 
@@ -1436,7 +1439,7 @@ void PrimitivePatchesInterface::translatePatch(const Vector3& translation)
 //        QObject::blockSignals(true);
     // Get patch being manipulated
     if (this->selectedPatch() != nullptr) {
-        primitiveControlPoint->blockSignals(true);
+        // primitiveControlPoint->blockSignals(true);
         primitiveSelectionGui->blockSignals(true);
 
         ImplicitTranslation* manipulatedAsUnary = dynamic_cast<ImplicitTranslation*>(this->selectedPatch());
@@ -1473,7 +1476,7 @@ void PrimitivePatchesInterface::translatePatch(const Vector3& translation)
         }
         this->updateMapWithCurrentPatch();
 
-        primitiveControlPoint->blockSignals(false);
+        // primitiveControlPoint->blockSignals(false);
         primitiveSelectionGui->blockSignals(false);
     }
 }
@@ -1484,7 +1487,7 @@ void PrimitivePatchesInterface::rotatePatch(const Vector3& rotation)
 //        QObject::blockSignals(true);
     // Get patch being manipulated
     if (this->selectedPatch() != nullptr) {
-        primitiveControlPoint->blockSignals(true);
+        // primitiveControlPoint->blockSignals(true);
         primitiveSelectionGui->blockSignals(true);
 
         ImplicitRotation* manipulatedAsUnary = dynamic_cast<ImplicitRotation*>(this->selectedPatch());
@@ -1524,7 +1527,7 @@ void PrimitivePatchesInterface::rotatePatch(const Vector3& rotation)
         }
         this->updateMapWithCurrentPatch();
 
-        primitiveControlPoint->blockSignals(false);
+        // primitiveControlPoint->blockSignals(false);
         primitiveSelectionGui->blockSignals(false);
     }
 }

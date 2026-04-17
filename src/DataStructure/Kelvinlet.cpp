@@ -25,7 +25,7 @@ Vector3 GrabKelvinlet::evaluate(const Vector3 &p) const
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
     const float repsilon = regularDistance(radius);
-    if (repsilon > epsLimit) return Vector3();
+    if (repsilon > epsLimit) return Vector3::origin;
     auto identity = Matrix::identity(3);
     const float epsilon = this->radialScale;
     const float repsilon3 = repsilon * repsilon * repsilon;
@@ -70,7 +70,7 @@ Vector3 TwistKelvinlet::evaluate(const Vector3 &p) const
 
     auto qxr = rvector.cross(force);
 
-    float scaleFactor = 100.;
+    const float scaleFactor = 100.;
     return -scaleFactor * a * affineScalar * qxr;
 }
 
@@ -95,7 +95,7 @@ Vector3 ScaleKelvinlet::evaluate(const Vector3 &p) const
     float a = 1.f / (4 * M_PI * mu);
     float b = a / (4 * (1.f - v));
     float scale = 2 * b - a;
-    float scaleFactor = 10.f;
+    const float scaleFactor = 10.f;
     Vector3 delta = rvector * (this->force * -scaleFactor * scale * affineScalar);
 
     return delta;
@@ -110,11 +110,8 @@ PinchKelvinlet::PinchKelvinlet()
 Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
 {
     if (!this->valid()) return Vector3::origin;
-    // r = p - x0
     const Vector3 r = p - pos;
     const float r2 = r.dot(r);
-
-    // Regularized distance: r_eps = sqrt(r^2 + eps^2)
     const float eps = this->radialScale;
     const float re2 = r2 + eps * eps;
     const float re  = std::sqrt(re2);
@@ -123,16 +120,13 @@ Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
 
     const float re4 = re2 * re2;
 
-    // Material constants (Kelvinlets notation)
     const float a = 1.f / (4.f * float(M_PI) * mu);
     const float b = a / (4.f * (1.f - v));
 
-    // Build symmetric, traceless pinch-mode matrix F.
-    // Use force direction as pinch axis; magnitude as strength.
     const float strength = this->force.norm();
     if (strength == 0.f) return Vector3();
 
-    const Vector3 d = this->force / strength; // unit axis
+    const Vector3 d = this->force / strength;
     const float dx = d.x(), dy = d.y(), dz = d.z();
 
     // F = strength * (d d^T - I/3)  (symmetric, trace = 0)
@@ -150,7 +144,7 @@ Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
     const Vector3 Fr = Vector3::fromMatrix(FrM);
 
     Matrix rT = rM.transpose();               // 1x3
-    const float s = rT.product(F).product(rM)[0][0];
+    const float s = rT.product(F).product(rM)(0, 0);
 
     // Pinch Kelvinlet (regularized) displacement:
     //
@@ -172,48 +166,6 @@ Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
 
     return Fr * coeffFr + r * coeffR;
 }
-
-/*
-Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
-{
-if (!this->pos.isValid()) return Vector3::invalid();
-    Vector3 rvector =  p - pos;
-    const float radius = rvector.norm();
-    const float repsilon = regularDistance(radius);
-    if (repsilon > epsLimit) return Vector3();
-    auto identity = Matrix::identity(3);
-    const float epsilon = this->radialScale;
-    const float repsilon3 = repsilon * repsilon * repsilon;
-
-    float a = 1.f / (4 * M_PI * mu);
-    float b = a / (4 * (1.f - v));
-    float c = 2 / (3 * a - 2 * b);
-
-    float fx = this->force.x();
-    float fy = this->force.y();
-    float fz = this->force.z();
-    float mean = (fx + fy + fz) / 3.f;
-    fx -= mean;
-    fy -= mean;
-    fz -= mean;
-    Matrix F = Matrix({
-                          {fx, a, b},
-                          {a, fy, c},
-                          {b, c, fz}
-                      });
-
-    Matrix r = rvector.toMatrix();
-    Matrix first = F.product(r) * (2 * b - a) / repsilon3;
-    Matrix rF = r.transpose().product(F);
-    float rFr = rF.product(r)[0][0];
-    Matrix rFrI = identity * rFr;
-    Matrix second = (rFrI + F * a * epsilon * epsilon).product(r) * (3.f/(2.f * repsilon3*repsilon*repsilon));
-
-    const auto force = first - second;
-
-    return Vector3::fromMatrix(force);
-}*/
-
 
 
 KelvinletCurve::KelvinletCurve()
@@ -363,7 +315,7 @@ Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
     Matrix r = rvector.toMatrix();
     Matrix first = F.product(r) * (2 * b - a) / repsilon3;
     Matrix rF = r.transpose().product(F);
-    float rFr = rF.product(r)[0][0];
+    float rFr = rF.product(r)(0, 0);
     Matrix rFrI = identity * rFr;
     Matrix second = (rFrI + F * a * epsilon * epsilon).product(r) * (3.f/(2.f * repsilon3*repsilon*repsilon));
 
@@ -372,12 +324,12 @@ Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
     return Vector3::fromMatrix(force) * sign(this->force);
 }
 
-RelativeKelvinlet::RelativeKelvinlet(Kelvinlet* kelvinlet, const Vector3 &anchorPoint)
-    : kelvinlet(kelvinlet), anchorPoint(anchorPoint)
+RelativeKelvinlet::RelativeKelvinlet(Kelvinlet* kelvinlet, const Vector3 &anchorPoint, float zoom)
+    : kelvinlet(kelvinlet), anchorPoint(anchorPoint), zoom(zoom)
 {}
 
 Vector3 RelativeKelvinlet::evaluate(const Vector3& p, float angle, float scaleFactor, bool KelvinletPositionIsRelativeToAnchor) const
 {
-    Vector3 evaluationPoint = (p - anchorPoint).rotate(Vector3(0, 0, -angle)) + (KelvinletPositionIsRelativeToAnchor ? Vector3() : anchorPoint);
+    Vector3 evaluationPoint = ((p - anchorPoint) / zoom).rotate(Vector3(0, 0, -angle)) + (KelvinletPositionIsRelativeToAnchor ? Vector3::origin : anchorPoint * zoom);
     return kelvinlet->evaluate(evaluationPoint).rotate(Vector3(0, 0, angle)) * scaleFactor;
 }

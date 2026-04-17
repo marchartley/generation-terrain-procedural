@@ -61,10 +61,8 @@ void GANPainterInterface::replay(nlohmann::json action)
 void GANPainterInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
-    QObject::connect(&GanUIPainter::get("cGanPainter"), &GanUIPainter::clickedOnImage, this, [&](const Vector3& pos, const Vector3& value) {
-        if (!pos.isValid()) { // On release
-            this->runGANs();
-        }
+    GanUIPainter::get("cGanPainter").setOnMouseReleased([&](const Vector3& pos) {
+        this->runGANs();
     });
 }
 

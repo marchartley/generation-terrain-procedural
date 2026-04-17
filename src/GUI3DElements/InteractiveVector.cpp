@@ -22,11 +22,13 @@ InteractiveVector::InteractiveVector(const Vector3& start, const Vector3& end)
     this->endingControlPoint->allowAllAxisTranslation(true);
 //    this->arrowMesh.shareShader(this->startingControlPoint->mesh);
 
-    QObject::connect(this->startingControlPoint.get(), &ControlPoint::pointModified, this, [=](){
+    // QObject::connect(this->startingControlPoint.get(), &ControlPoint3D::pointModified, this, [=](){
+    startingControlPoint->setOnPointModified([=]() {
         Q_EMIT this->modified(this->getResultingVector());
         Q_EMIT this->startingModified(this->getStartingVector());
     });
-    QObject::connect(this->endingControlPoint.get(), &ControlPoint::pointModified, this, [=](){
+    // QObject::connect(this->endingControlPoint.get(), &ControlPoint3D::pointModified, this, [=](){
+    endingControlPoint->setOnPointModified([=]() {
         Q_EMIT this->modified(this->getResultingVector());
         Q_EMIT this->endingModified(this->getEndingVector());
     });

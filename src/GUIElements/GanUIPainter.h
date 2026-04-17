@@ -22,11 +22,6 @@ public:
     float sharpness = 0.01f;
 
     GanUIPainter& updateUI();
-public Q_SLOTS:
-
-    // Q_SIGNALS:
-    // void clickedOnImage(const Vector3& pos, Vector3 value);
-    // void movedOnImage(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event);
 };
 
 #endif // GANUIPAINTER_H

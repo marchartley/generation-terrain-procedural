@@ -2,7 +2,7 @@
 #define INTERACTIVEVECTOR_H
 
 #include "DataStructure/Vector3.h"
-#include "GUIElements/ControlPoint.h"
+#include "GUI3DElements/ControlPoint.h"
 #include "Graphics/Mesh.h"
 #include "Interface/CustomInteractiveObject.h"
 
