@@ -14,13 +14,15 @@ public:
 
     virtual EnvCurve* clone() const;
 
+    virtual void clearKelvinlets();
+
     // static EnvCurve* fromJSON(nlohmann::json content);
     float width;
     float length;
 
     std::vector<Kelvinlet*> startingPointKelvinlets;
     std::vector<Kelvinlet*> endingPointKelvinlets;
-    std::vector<Kelvinlet*> curveKelvinlets;
+    std::vector<KelvinletCurve*> curveKelvinlets;
 
     // virtual nlohmann::json toJSON() const;
 

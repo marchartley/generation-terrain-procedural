@@ -32,7 +32,6 @@ struct PainterToolParams {
 
 struct KelvinletToolParams {
     std::vector<Kelvinlet*> kelvinlets;
-    std::vector<Kelvinlet*> additional_kelvinlets;
     Kelvinlet* currentKelvinlet = nullptr;
 
     float radialScale = 15.f; // epsilon
@@ -53,7 +52,9 @@ struct KelvinletToolParams {
     GridV3 getInitialVectorField() const { return this->temporaryVectorData.field; }
     GridV3 getVectorField(bool takeIntoAccountCurrentKelvinlet = false) const;
 
-    void setOnNewKelvinlet(std::function<void(Kelvinlet*)> func);
+    void resetKelvinlets();
+
+    // void setOnNewKelvinlet(std::function<void(Kelvinlet*)> func);
 
 // protected:
     Vector3 kelvinletPosition = Vector3::invalid;
@@ -61,7 +62,10 @@ struct KelvinletToolParams {
 
     bool displayResultingField = true;
 
-    std::vector<std::function<void(Kelvinlet*)>> onNewKelvinletCallbacks;
+    // std::vector<std::function<void(Kelvinlet*)>> onNewKelvinletCallbacks;
+    DECLARE_EVENT(NewKelvinlet, (Kelvinlet* k), (k))
+    DECLARE_EVENT(ModifiedKelvinlet, (Kelvinlet* k), (k))
+    DECLARE_EVENT(DeletedKelvinlet, (Kelvinlet* k), (k))
 };
 
 class PainterToolsUI

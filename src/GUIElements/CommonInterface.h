@@ -109,6 +109,8 @@ public:
     void add(const std::vector<UIElement*>& elements);
     InterfaceUI& clear();
 
+    UIElement* findByName(std::string name, bool recursive = false) const;
+
     InterfaceUI* setTight(bool tight);
 
     std::vector<UIElement*> elements;

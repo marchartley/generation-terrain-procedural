@@ -107,24 +107,27 @@ void updateKelvinletList(HierarchicalListUI* listWidget, KelvinletToolParams* pa
         const auto& k = params->kelvinlets[i];
         listWidget->addItem(new HierarchicalListWidgetItem<Kelvinlet*>(k->getShortName(), k));
     }
-    for (size_t i = 0; i < params->additional_kelvinlets.size(); i++) {
-        const auto& k = params->additional_kelvinlets[i];
-        listWidget->addItem(new HierarchicalListWidgetItem<Kelvinlet*>("[*] " + k->getShortName(), k));
-    }
     listWidget->hierarchicalList()->setCurrentRow(currentSelection);
     listWidget->get()->blockSignals(false);
     listWidget->update();
 }
-InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, KelvinletToolParams* params, std::function<void (const Vector3 &, bool)> onUpdateCallback, std::function<GridV3 (bool)> vectorFieldFunction)
+InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter,
+                                                    KelvinletToolParams* params,
+                                                    std::function<void (const Vector3 &, bool)> onUpdateCallback,
+                                                    std::function<GridV3 (bool)> vectorFieldFunction)
 {
     auto& chartView = plotter->chartView;
     auto& dataModel = plotter->dataModel;
 
     if (!vectorFieldFunction) {
-        vectorFieldFunction = [=](bool useCurrentKelvinlet) { return params->getVectorField(useCurrentKelvinlet); };
+        vectorFieldFunction = [=](bool useCurrentKelvinlet) {
+            return params->getVectorField(useCurrentKelvinlet);
+        };
     }
     if (!onUpdateCallback) {
-        onUpdateCallback = [=](const Vector3& mousePos, bool updateCurrentKelvinlet){ PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, params, mousePos, updateCurrentKelvinlet, vectorFieldFunction); };
+        onUpdateCallback = [=](const Vector3& mousePos, bool updateCurrentKelvinlet) {
+            PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, params, mousePos, updateCurrentKelvinlet, vectorFieldFunction);
+        };
     }
     params->temporaryVectorData = dataModel->vectorData;
 
@@ -135,15 +138,17 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
     auto poissonSlider = new SliderElement("Poisson ratio", params->minPoisson, params->maxPoisson, 0.01f, params->poisson);
 
     auto updateKelvinletType = [=](Kelvinlet* newKelvinlet) {
-        if (params->currentKelvinlet)
+        if (params->currentKelvinlet) {
+            if (isIn(params->currentKelvinlet, params->kelvinlets)) {
+                params->kelvinlets.erase(std::find(params->kelvinlets.begin(), params->kelvinlets.end(), params->currentKelvinlet));
+            }
             delete params->currentKelvinlet;
+        }
         params->currentKelvinlet = newKelvinlet;
         PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
+        params->emitModifiedKelvinlet(newKelvinlet);
     };
 
-    // if (!params->currentKelvinlet) {
-        // params->currentKelvinlet = new GrabKelvinlet();
-    // }
     updateKelvinletType(new GrabKelvinlet);
     auto pinchRadio = new RadioButtonElement<int>("Pinch", [=] (bool checked) { if (checked) updateKelvinletType(new PinchKelvinlet); });
     auto twistRadio = new RadioButtonElement<int>("Twist", [=] (bool checked) { if (checked) updateKelvinletType(new TwistKelvinlet); });
@@ -164,20 +169,25 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
         radialScaleSlider,
         muSlider,
         poissonSlider,
-        createHorizontalGroup(std::vector<UIElement*>{pinchRadio, twistRadio, grabRadio, scaleRadio}),
-        kelvinletsHistory,
+        createHorizontalGroup(std::vector<UIElement*>{pinchRadio, twistRadio, grabRadio, scaleRadio})
+    });
+    UI->add(kelvinletsHistory, "kelvinlets");
+    UI->add({
         deleteKelvinletButton,
         createHorizontalGroup(std::vector<UIElement*>{displayAsArrowsCheckbox, displayAsFlowLinesCheckbox, displayNoDisplayCheckbox})
     });
 
     radialScaleSlider->setOnValueChanged([=](float) {
         onUpdateCallback(Vector3::invalid, true);
+        params->emitModifiedKelvinlet(params->currentKelvinlet);
     });
     muSlider->setOnValueChanged([=](float) {
         onUpdateCallback(Vector3::invalid, true);
+        params->emitModifiedKelvinlet(params->currentKelvinlet);
     });
     poissonSlider->setOnValueChanged([=](float) {
         onUpdateCallback(Vector3::invalid, true);
+        params->emitModifiedKelvinlet(params->currentKelvinlet);
     });
 
     kelvinletsHistory->setOnItemSelectionChanged([=]() {
@@ -221,11 +231,12 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
         auto items = kelvinletsHistory->selectedItems();
         for (auto& _selection : items) {
             auto selection = dynamic_cast<HierarchicalListWidgetItem<Kelvinlet*>*>(_selection);
+            params->emitDeletedKelvinlet(selection->itemValue);
             auto found = std::find(params->kelvinlets.begin(), params->kelvinlets.end(), selection->itemValue);
             if (found != params->kelvinlets.end()) {
                 params->kelvinlets.erase(found);
             }
-            updateKelvinletList(kelvinletsHistory, params);            
+            updateKelvinletList(kelvinletsHistory, params);
         }
         onUpdateCallback(Vector3::invalid, true);
     });
@@ -244,13 +255,15 @@ InterfaceUI* PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ke
                 k->radialScale = params->radialScale;
             }
 
-            if (!pos.isValid() && k->valid() && !isIn(static_cast<Kelvinlet*>(k), params->kelvinlets)) {
-                auto clone = k->clone();
-                params->kelvinlets.push_back(clone);
-                kelvinletsHistory->addItem(new HierarchicalListWidgetItem<Kelvinlet*>(clone->getShortName(), clone));
-                k->reset();
-                for (auto func : params->onNewKelvinletCallbacks) {
-                    func(clone);
+            if (!pos.isValid() && k->valid()) {
+                if (!isIn(static_cast<Kelvinlet*>(k), params->kelvinlets)) {
+                    auto clone = k->clone();
+                    params->kelvinlets.push_back(clone);
+                    kelvinletsHistory->addItem(new HierarchicalListWidgetItem<Kelvinlet*>(clone->getShortName(), clone));
+                    k->reset();
+                    params->emitNewKelvinlet(clone);
+                } else {
+                    params->emitModifiedKelvinlet(k);
                 }
             }
         }
@@ -291,10 +304,10 @@ std::pair<GridV3, GridF> PainterToolsUI::getKelvinletParametersImage(GridV3& img
 
         if (k->valid()) {
             Vector3 force;
-            if (auto asPinch = dynamic_cast<PinchKelvinlet*>(k)) force = asPinch->force;
-            else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(k)) force = asGrab->force;
-            else if (auto asTwist= dynamic_cast<TwistKelvinlet*>(k)) force = Vector3(asTwist->force.z(), asTwist->force.z(), 0);
-            else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(k)) force = Vector3(asScale->force, asScale->force, 0);
+            if (auto asPinch = dynamic_cast<PinchKelvinlet*>(k)) force = asPinch->force();
+            else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(k)) force = asGrab->force();
+            else if (auto asTwist= dynamic_cast<TwistKelvinlet*>(k)) force = Vector3(asTwist->force().z(), asTwist->force().z(), 0);
+            else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(k)) force = Vector3(asScale->force(), asScale->force(), 0);
 
             img = PlottingUtils::drawLine(img, Vector3(0, 0, 1), kCenter.xy() * imgScale, (kCenter + force).xy() * imgScale);
             alpha = PlottingUtils::drawLine(alpha, 1.f, kCenter.xy() * imgScale, (kCenter + force).xy() * imgScale);
@@ -303,7 +316,11 @@ std::pair<GridV3, GridF> PainterToolsUI::getKelvinletParametersImage(GridV3& img
     return {img, alpha};
 }
 
-void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, KelvinletToolParams* params, const Vector3& mouseRelPos, bool updateCurrentKelvinlet, std::function<GridV3 (bool)> vectorFieldFunction)
+void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter,
+                                                                 KelvinletToolParams* params,
+                                                                 const Vector3& mouseRelPos,
+                                                                 bool updateCurrentKelvinlet,
+                                                                 std::function<GridV3 (bool)> vectorFieldFunction)
 {
     auto& chartView = plotter->chartView;
     auto& dataModel = plotter->dataModel;
@@ -334,7 +351,7 @@ void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter
     chartView->update();
     dataModel->vectorData.field = vectorFieldFunction(true);
     // Q_EMIT plotter->updated();
-    plotter->emitOnUpdate();
+    plotter->emitUpdate();
 }
 
 Kelvinlet *PainterToolsUI::updateCurrentKelvinlet(KelvinletToolParams *params, const Vector3 &mousePos)
@@ -345,13 +362,13 @@ Kelvinlet *PainterToolsUI::updateCurrentKelvinlet(KelvinletToolParams *params, c
         if (auto asPoint = dynamic_cast<KelvinletPoint*>(k)) {
             Vector3 force = mousePos - asPoint->pos;
             if (auto asPinch = dynamic_cast<PinchKelvinlet*>(asPoint)) {
-                asPinch->force = force;
+                asPinch->setForce(force);
             } else if (auto asTwist = dynamic_cast<TwistKelvinlet*>(asPoint)) {
-                asTwist->force = Vector3(0, 0, sign(force.x()) * force.norm());
+                asTwist->setForce(Vector3(0, 0, sign(force.x()) * force.norm()));
             } else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(asPoint)) {
-                asGrab->force = force;
+                asGrab->setForce(force);
             } else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(asPoint)) {
-                asScale->force = sign(force.x()) * force.norm();
+                asScale->setForce(sign(force.x()) * force.norm());
             }
         }
     }
@@ -370,10 +387,6 @@ GridV3 KelvinletToolParams::getVectorField(bool takeIntoAccountCurrentKelvinlet)
         if (k && k->valid())
             evaluatingKelvinlets.push_back(k);
     }
-    for (const auto& k : this->additional_kelvinlets) {
-        if (k && k->valid())
-            evaluatingKelvinlets.push_back(k);
-    }
     if (takeIntoAccountCurrentKelvinlet && this->currentKelvinlet->valid() && !isIn(static_cast<Kelvinlet*>(this->currentKelvinlet), evaluatingKelvinlets))
         evaluatingKelvinlets.push_back(this->currentKelvinlet->clone());
 
@@ -384,7 +397,9 @@ GridV3 KelvinletToolParams::getVectorField(bool takeIntoAccountCurrentKelvinlet)
     return resultingVectorField;
 }
 
-void KelvinletToolParams::setOnNewKelvinlet(std::function<void (Kelvinlet *)> func)
-{
-    this->onNewKelvinletCallbacks.push_back(func);
+void KelvinletToolParams::resetKelvinlets() {
+    for (auto& k : kelvinlets) {
+        delete k;
+    }
+    kelvinlets.clear();
 }

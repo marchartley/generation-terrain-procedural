@@ -2,9 +2,9 @@
 	{
 		"name": "boulders",
 		"decay": 0.8999999761581421,
-		"diffusion-speed": 0.0,
-		"mass": 0.0,
-		"water-transport": 0.0,
+		"diffusion-speed": 1.0,
+		"mass": 3.0,
+		"water-transport": 0.5,
 		"virtual-height": 0.0
 	},
 	{
@@ -33,10 +33,10 @@
 	},
 	{
 		"name": "polyp",
-		"decay": 0.8999999761581421,
-		"diffusion-speed": 1.0,
-		"mass": 0.5,
-		"water-transport": 1.0,
+		"decay": 0.95,
+		"diffusion-speed": 0.2,
+		"mass": 0.0,
+		"water-transport": 0.8,
 		"virtual-height": 0.0
 	},
 	{

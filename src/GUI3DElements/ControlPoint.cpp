@@ -79,7 +79,7 @@ void ControlPoint::setVisible(bool visibility)
 void ControlPoint::move(const Vector3 &newPos)
 {
     state().transform.position = newPos;
-    emitOnPointModified();
+    emitPointModified();
     // Q_EMIT this->pointModified();
 }
 

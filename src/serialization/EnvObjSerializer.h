@@ -364,7 +364,11 @@ void from_json(const Json& json, EnvCurve& obj)
         auto flow = json.at("flow-effect");
         obj.startingPointKelvinlets = flow.at("starting-effect");
         obj.endingPointKelvinlets = flow.at("ending-effect");
-        obj.curveKelvinlets = flow.at("curve-effect");
+        std::vector<Kelvinlet*> kelvinlets = flow.at("curve-effect");
+        for (auto& k : kelvinlets) {
+            obj.curveKelvinlets.push_back((dynamic_cast<KelvinletPoint*>(k))->cloneToCurveKelvinlet());
+        }
+        // obj.curveKelvinlets = flow.at("curve-effect");
     }
 
     // obj.recomputeEvaluationPoints();
@@ -505,7 +509,7 @@ void to_json(Json& json, const EnvObject* envObj)
 template <class Json>
 EnvObject* make_envobj_from_json(const Json& json)
 {
-    const std::string type = toLower(json["type"]);
+    const std::string type = toLower(json.at("type"));
 
     if (type == "point")  return new EnvPoint();
     if (type == "curve") return new EnvCurve();

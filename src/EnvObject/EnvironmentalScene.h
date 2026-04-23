@@ -24,15 +24,19 @@ public:
 
     nlohmann::ordered_json readEnvObjectsFile(const std::string& filename);
     nlohmann::ordered_json readEnvObjectsFileContent(const std::string& content);
+    void updateEnvObjectsFileContent(const std::string& filename);
 
     nlohmann::ordered_json readEnvMaterialsFile(const std::string& filename);
     nlohmann::ordered_json readEnvMaterialsFileContent(const std::string& content);
+    void updateEnvMaterialsFileContent(const std::string& filename);
 
     void readEnvMaterialsTransformationsFile(const std::string& filename);
     void readEnvMaterialsTransformationsFileContent(const std::string& content);
+    void updateEnvMaterialsTransformationFileContent(const std::string& filename);
 
     nlohmann::ordered_json readScenarioFile(const std::string& filename);
     nlohmann::ordered_json readScenarioFileContent(const std::string& content);
+    void updateScenarioFileContent(const std::string& filename);
 
     std::vector<std::string> getMaterialsToUpdate() const;
 

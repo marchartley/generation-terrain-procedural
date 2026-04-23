@@ -4,6 +4,8 @@
 #include <QColor>
 #include "GUIElements/PlottingUtils.h"
 
+#include "Utils/Signals.h"
+
 struct PlotLineData {
 
     void add(const std::vector<Vector3>& data, const std::string& name, const QColor& color);

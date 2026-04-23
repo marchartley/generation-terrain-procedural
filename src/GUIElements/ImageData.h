@@ -5,6 +5,9 @@
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Image.h"
 
+#include "Utils/Signals.h"
+
+
 
 struct DisplayedImageParameters {
     bool normalized = false;
@@ -41,16 +44,17 @@ struct PlotImageData {
                                  const std::map<std::string, int>& overlayLayers,
                                  const Vector3i& imgSize) const;
 
-    void setOnImageModified(const std::function<void(void)>& callback);
+    // void setOnImageModified(const std::function<void(void)>& callback);
 
     // protected:
     DisplayedImageParameters displayParameters;
     // GridV3 image;
     Image image;
 
-protected:
-    void callOnImageModifiedCallbacks() { for (auto& func : onImageModifiedCallbacks) func(); }
-    std::vector<std::function<void(void)>> onImageModifiedCallbacks;
+    DECLARE_EVENT(ImageModified, (), ())
+// protected:
+    // void callOnImageModifiedCallbacks() { for (auto& func : onImageModifiedCallbacks) func(); }
+    // std::vector<std::function<void(void)>> onImageModifiedCallbacks;
 };
 
 

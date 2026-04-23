@@ -105,6 +105,8 @@ public:
 
     virtual EnvObject* clone() const = 0;
 
+    virtual void clearKelvinlets() = 0;
+
 
     enum HeightmapFrom {
         SURFACE, GROUND, WATER

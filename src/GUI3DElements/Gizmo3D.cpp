@@ -543,7 +543,7 @@ void Gizmo3D::mousePressEvent(QMouseEvent* const event, qglviewer::Camera* const
 {
     Vector3 mousePos(event->x(), event->y());
     if(this->interactor_.beginDrag(state(), mousePos, camera))
-        emitOnPointPressed();
+        emitPointPressed();
     qglviewer::MouseGrabber::mousePressEvent(event, camera);
 }
 
@@ -552,7 +552,7 @@ void Gizmo3D::mouseMoveEvent(QMouseEvent* const event, qglviewer::Camera* const 
     if (isManipulated()) {
         Vector3 mousePos(event->x(), event->y());
         this->interactor_.updateDrag(state(), mousePos, camera);
-        emitOnPointModified();
+        emitPointModified();
     }
     qglviewer::MouseGrabber::mouseMoveEvent(event, camera);
 }
@@ -561,11 +561,11 @@ void Gizmo3D::mouseReleaseEvent(QMouseEvent* const event, qglviewer::Camera* con
 {
     if (this->isManipulated()) {
         if (state().drag.mode == DragMode::TranslateAxis || state().drag.mode == DragMode::FreeMove) {
-            emitOnPointTranslated();
+            emitPointTranslated();
         } else if (state().drag.mode == DragMode::RotateAxis) {
-            emitOnPointRotated();
+            emitPointRotated();
         }
-        emitOnPointReleased();
+        emitPointReleased();
         this->interactor_.endDrag(state());
     }
     qglviewer::MouseGrabber::mouseReleaseEvent(event, camera);

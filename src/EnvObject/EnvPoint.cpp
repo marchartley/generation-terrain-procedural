@@ -21,6 +21,14 @@ EnvObjectInstance* EnvPoint::instantiate()
     return newObject;
 }
 
+void EnvPoint::clearKelvinlets()
+{
+    for (auto& k : mainKelvinlets) {
+        delete k;
+    }
+    mainKelvinlets.clear();
+}
+
 EnvPointInstance::EnvPointInstance()
     : EnvPointInstance(nullptr)
 {
@@ -163,29 +171,6 @@ GridV3& EnvPointInstance::computeFlowModification(GridV3& waterFlow, float scale
             waterFlow[p] += relativeK.evaluate(p, flowAngle, flowStrength, true);
         }
     });
-    /*
-    if (flowEffect == Vector3()) return {waterFlow, GridF()};
-    float growingState = this->computeGrowingState2();
-    if (_cachedFlowModif.size() == 0) {
-        // float growingState = this->computeGrowingState();
-
-        ScaleKelvinlet k;
-        k.pos = this->position;
-        k.radialScale = this->getDefinition()->radius * .2f;
-        k.force = 10.f * this->flowEffect.x();
-        k.mu = .9f;
-        k.v = 0.f;
-
-        // GridV3 flow = waterFlow;
-        GridV3 flow(waterFlow.getDimensions());
-        flow.iterateParallel([&](const Vector3i& p) {
-            Vector3 displacement = k.evaluate(p);
-            flow(p) += displacement;
-        });
-        _cachedFlowModif = flow;
-    }
-    return {waterFlow.add(_cachedFlowModif * growingState, Vector3()), GridF(waterFlow.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
-    */
     return waterFlow;
 }
 

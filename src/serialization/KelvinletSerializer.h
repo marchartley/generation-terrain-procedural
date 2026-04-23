@@ -82,9 +82,9 @@ template <class Json>
 void to_json(Json& json, const Kelvinlet& kelvinlet)
 {
     json["type"] = kelvinlet.getShortName();
-    json["epsLimit"] = kelvinlet.epsLimit;
+    json["eps-limit"] = kelvinlet.epsLimit;
     json["mu"] = kelvinlet.mu;
-    json["radialScale"] = kelvinlet.radialScale;
+    json["radial-scale"] = kelvinlet.radialScale;
     json["v"] = kelvinlet.v;
 }
 template <class Json>
@@ -105,56 +105,56 @@ template <class Json>
 void to_json(Json& json, const GrabKelvinlet& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletPoint&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
 void to_json(Json& json, const ScaleKelvinlet& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletPoint&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
 void to_json(Json& json, const TwistKelvinlet& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletPoint&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
 void to_json(Json& json, const PinchKelvinlet& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletPoint&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
 void to_json(Json& json, const GrabKelvinletCurve& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletCurve&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
 void to_json(Json& json, const ScaleKelvinletCurve& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletCurve&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
 void to_json(Json& json, const TwistKelvinletCurve& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletCurve&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
 void to_json(Json& json, const PinchKelvinletCurve& kelvinlet)
 {
     to_json(json, static_cast<const KelvinletCurve&>(kelvinlet));
-    json["force"] = kelvinlet.force;
+    json["force"] = kelvinlet.force();
 }
 
 template <class Json>
@@ -170,87 +170,87 @@ void to_json(Json& json, const RelativeKelvinlet& relativeKelvinlet)
 template <class Json>
 void from_json(const Json& json, Kelvinlet& kelvinlet)
 {
-    kelvinlet.epsLimit = json["epsLimit"];
-    kelvinlet.mu = json["mu"];
-    kelvinlet.radialScale = json["radialScale"];
-    kelvinlet.v = json["v"];
+    kelvinlet.epsLimit = json.at("eps-limit");
+    kelvinlet.mu = json.at("mu");
+    kelvinlet.radialScale = json.at("radial-scale");
+    kelvinlet.v = json.at("v");
 }
 
 template <class Json>
 void from_json(const Json& json, KelvinletPoint& kelvinlet)
 {
     from_json(json, static_cast<Kelvinlet&>(kelvinlet));
-    kelvinlet.pos = json["pos"];
+    kelvinlet.pos = json.at("pos");
 }
 
 template <class Json>
 void from_json(const Json& json, KelvinletCurve& kelvinlet)
 {
     from_json(json, static_cast<Kelvinlet&>(kelvinlet));
-    kelvinlet.curve = json["curve"];
+    kelvinlet.curve = json.at("curve");
 }
 
 template <class Json>
 void from_json(const Json& json, GrabKelvinlet& kelvinlet)
 {
     from_json(json, static_cast<KelvinletPoint&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, ScaleKelvinlet& kelvinlet)
 {
     from_json(json, static_cast<KelvinletPoint&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, TwistKelvinlet& kelvinlet)
 {
     from_json(json, static_cast<KelvinletPoint&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, PinchKelvinlet& kelvinlet)
 {
     from_json(json, static_cast<KelvinletPoint&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, GrabKelvinletCurve& kelvinlet)
 {
     from_json(json, static_cast<KelvinletCurve&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, ScaleKelvinletCurve& kelvinlet)
 {
     from_json(json, static_cast<KelvinletCurve&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, TwistKelvinletCurve& kelvinlet)
 {
     from_json(json, static_cast<KelvinletCurve&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, PinchKelvinletCurve& kelvinlet)
 {
     from_json(json, static_cast<KelvinletCurve&>(kelvinlet));
-    kelvinlet.force = json["force"];
+    kelvinlet.setForce(json.at("force"));
 }
 
 template <class Json>
 void from_json(const Json& json, RelativeKelvinlet& relativeKelvinlet)
 {
-    relativeKelvinlet.anchorPoint = json["anchor"];
-    relativeKelvinlet.kelvinlet = json["kelvinlet"].template get<Kelvinlet*>();
+    relativeKelvinlet.anchorPoint = json.at("anchor");
+    relativeKelvinlet.kelvinlet = json.at("kelvinlet").template get<Kelvinlet*>();
 }
 
 
@@ -311,27 +311,52 @@ void to_json(Json& json, const KelvinletCurve* kelvinlet)
 }
 
 template <class Json>
-Kelvinlet* make_kelvinlet_from_json(const Json& j)
+Kelvinlet* make_kelvinlet_from_json(const Json& json)
 {
-    const std::string type = toLower(j["type"]);
+    Kelvinlet* kelvinlet;
+    const std::string type = toLower(json["type"]);
 
-    const bool isCurve = j.contains("curve");
-    const bool isPoint = j.contains("pos");
+    const bool isCurve = json.contains("curve");
+    const bool isPoint = json.contains("pos");
 
     if (isPoint) {
-        if (type == toLower(GrabKelvinlet().getShortName()))  return new GrabKelvinlet();
-        if (type == toLower(ScaleKelvinlet().getShortName())) return new ScaleKelvinlet();
-        if (type == toLower(TwistKelvinlet().getShortName())) return new TwistKelvinlet();
-        if (type == toLower(PinchKelvinlet().getShortName())) return new PinchKelvinlet();
+        if (type == toLower(GrabKelvinlet().getShortName()))  {
+            kelvinlet = new GrabKelvinlet();
+            from_json(json, *(dynamic_cast<GrabKelvinlet*>(kelvinlet)));
+        }
+        if (type == toLower(ScaleKelvinlet().getShortName())) {
+            kelvinlet = new ScaleKelvinlet();
+            from_json(json, *(dynamic_cast<ScaleKelvinlet*>(kelvinlet)));
+        }
+        if (type == toLower(TwistKelvinlet().getShortName())) {
+            kelvinlet = new TwistKelvinlet();
+            from_json(json, *(dynamic_cast<TwistKelvinlet*>(kelvinlet)));
+        }
+        if (type == toLower(PinchKelvinlet().getShortName())) {
+            kelvinlet = new PinchKelvinlet();
+            from_json(json, *(dynamic_cast<PinchKelvinlet*>(kelvinlet)));
+        }
     }
     else if (isCurve) {
-        if (type == toLower(GrabKelvinletCurve().getShortName()))  return new GrabKelvinletCurve();
-        if (type == toLower(ScaleKelvinletCurve().getShortName())) return new ScaleKelvinletCurve();
-        if (type == toLower(TwistKelvinletCurve().getShortName())) return new TwistKelvinletCurve();
-        if (type == toLower(PinchKelvinletCurve().getShortName())) return new PinchKelvinletCurve();
+        if (type == toLower(GrabKelvinletCurve().getShortName()))  {
+            kelvinlet = new GrabKelvinletCurve();
+            from_json(json, *(dynamic_cast<GrabKelvinletCurve*>(kelvinlet)));
+        }
+        if (type == toLower(ScaleKelvinletCurve().getShortName())) {
+            kelvinlet = new ScaleKelvinletCurve();
+            from_json(json, *(dynamic_cast<ScaleKelvinletCurve*>(kelvinlet)));
+        }
+        if (type == toLower(TwistKelvinletCurve().getShortName())) {
+            kelvinlet = new TwistKelvinletCurve();
+            from_json(json, *(dynamic_cast<TwistKelvinletCurve*>(kelvinlet)));
+        }
+        if (type == toLower(PinchKelvinletCurve().getShortName())) {
+            kelvinlet = new PinchKelvinletCurve();
+            from_json(json, *(dynamic_cast<PinchKelvinletCurve*>(kelvinlet)));
+        }
     }
-
-    throw std::runtime_error("Unknown Kelvinlet type: " + type);
+    return kelvinlet;
+    // throw std::runtime_error("Unknown Kelvinlet type: " + type);
 }
 
 
@@ -339,7 +364,7 @@ template <class Json>
 void from_json(const Json& json, Kelvinlet*& kelvinlet)
 {
     kelvinlet = make_kelvinlet_from_json(json);
-    from_json(json, *kelvinlet);
+    // from_json(json, *kelvinlet);
 }
 
 

@@ -196,11 +196,11 @@ protected:
 
     bool applyManipulations;
 
-    DECLARE_EVENT(OnPointPressed, (), ())
-    DECLARE_EVENT(OnPointModified, (), ())
-    DECLARE_EVENT(OnPointReleased, (), ())
-    DECLARE_EVENT(OnPointTranslated, (), ())
-    DECLARE_EVENT(OnPointRotated, (), ())
+    DECLARE_EVENT(PointPressed, (), ())
+    DECLARE_EVENT(PointModified, (), ())
+    DECLARE_EVENT(PointReleased, (), ())
+    DECLARE_EVENT(PointTranslated, (), ())
+    DECLARE_EVENT(PointRotated, (), ())
 
     // void emitPressedEvent() { for (auto& fn : onPointPressedCallbacks) { fn(); } }
     // void emitModifiedEvent() { for (auto& fn : onPointModifiedCallbacks) { fn(); } }
