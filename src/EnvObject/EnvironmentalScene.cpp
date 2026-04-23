@@ -78,6 +78,19 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
     return json;
 }
 
+void EnvironmentalScene::updateEnvObjectsFileContent(const std::string &filename)
+{
+    std::vector<EnvObject*> allObjects;
+    for (const auto [name, obj] : this->availableObjects)
+        allObjects.push_back(obj);
+
+    nlohmann::ordered_json envObjectsJSON = allObjects;
+
+    std::ofstream outObjs = std::ofstream(filename, std::ios_base::out | std::ios_base::trunc);
+    outObjs << envObjectsJSON.dump(1, '\t');
+    outObjs.close();
+}
+
 nlohmann::ordered_json EnvironmentalScene::readEnvMaterialsFile(const std::string& filename)
 {
     std::ifstream file(filename);
@@ -102,6 +115,20 @@ nlohmann::ordered_json EnvironmentalScene::readEnvMaterialsFileContent(const std
         this->materials[matName] = material;
     }
     return json;
+}
+
+void EnvironmentalScene::updateEnvMaterialsFileContent(const std::string &filename)
+{
+    std::vector<EnvMaterial> allMaterials;
+
+    for (const auto [name, mat] : this->materials)
+        allMaterials.push_back(mat);
+
+    nlohmann::ordered_json materialsJSON = allMaterials;
+
+    std::ofstream out = std::ofstream(filename, std::ios_base::out | std::ios_base::trunc);
+    out << materialsJSON.dump(1, '\t');
+    out.close();
 }
 
 void EnvironmentalScene::readEnvMaterialsTransformationsFile(const std::string& filename)
@@ -146,6 +173,12 @@ void EnvironmentalScene::readEnvMaterialsTransformationsFileContent(const std::s
         }
     }
     this->transformationRules = rules;
+}
+
+void EnvironmentalScene::updateEnvMaterialsTransformationFileContent(const std::string &filename)
+{
+    // TODO
+    throw std::logic_error("EnvironmentalScene::updateEnvMaterialsTransformationFileContent() not implemented yet.");
 }
 
 nlohmann::ordered_json EnvironmentalScene::readScenarioFile(const std::string& filename)
@@ -208,6 +241,12 @@ nlohmann::ordered_json EnvironmentalScene::readScenarioFileContent(const std::st
     scenario.waterLevel = waterLevel;
 
     return json;
+}
+
+void EnvironmentalScene::updateScenarioFileContent(const std::string &filename)
+{
+    // TODO
+    throw std::logic_error("EnvironmentalScene::updateScenarioFileContent() not implemented yet.");
 }
 
 std::vector<std::string> EnvironmentalScene::getMaterialsToUpdate() const

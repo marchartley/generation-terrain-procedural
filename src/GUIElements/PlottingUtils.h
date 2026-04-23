@@ -3,6 +3,8 @@
 
 #include "DataStructure/Matrix3.h"
 
+#include "Utils/Signals.h"
+
 struct PlottingUtils {
     template <class T>
     static Matrix3<T>& drawLine(Matrix3<T>& img, const T& color, const Vector3& start, const Vector3& end, int strokeWidth = 1);

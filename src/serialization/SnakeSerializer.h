@@ -39,31 +39,31 @@ template <class Json>
 void from_json(const Json &json, SnakeSegmentationParameters& snake)
 {
     if (json.contains("connectivity-cost"))
-        snake.connectivityCost = json["connectivity-cost"];
+        snake.connectivityCost = json.at("connectivity-cost");
     if (json.contains("curvature-cost"))
-        snake.curvatureCost = json["curvature-cost"];
+        snake.curvatureCost = json.at("curvature-cost");
     if (json.contains("length-cost"))
-        snake.lengthCost = json["length-cost"];
+        snake.lengthCost = json.at("length-cost");
     if (json.contains("area-cost"))
-        snake.areaCost = json["area-cost"];
+        snake.areaCost = json.at("area-cost");
     if (json.contains("image-cost"))
-        snake.imageCost = json["image-cost"];
+        snake.imageCost = json.at("image-cost");
     if (json.contains("image-inside-cost"))
-        snake.imageInsideCoef = json["image-inside-cost"];
+        snake.imageInsideCoef = json.at("image-inside-cost");
     if (json.contains("image-borders-cost"))
-        snake.imageBordersCoef = json["image-borders-cost"];
+        snake.imageBordersCoef = json.at("image-borders-cost");
     if (json.contains("catapillars"))
-        snake.nbCatapillars = json["catapillars"];
+        snake.nbCatapillars = json.at("catapillars");
     if (json.contains("target-length"))
-        snake.targetLength = json["target-length"];
+        snake.targetLength = json.at("target-length");
     if (json.contains("target-area"))
-        snake.targetArea = json["target-area"];
+        snake.targetArea = json.at("target-area");
     if (json.contains("position-cost"))
-        snake.positionCost = json["position-cost"];
+        snake.positionCost = json.at("position-cost");
     if (json.contains("closed"))
-        snake.collapseFirstAndLastPoint = json["closed"];
+        snake.collapseFirstAndLastPoint = json.at("closed");
     if (json.contains("slope-cost"))
-        snake.slopeCost = json["slope-cost"];
+        snake.slopeCost = json.at("slope-cost");
 }
 
 

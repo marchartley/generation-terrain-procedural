@@ -281,6 +281,21 @@ InterfaceUI& InterfaceUI::clear()
     return *this;
 }
 
+UIElement* InterfaceUI::findByName(std::string name, bool recursive) const
+{
+    name = toLower(name);
+    for (auto& child : elements) {
+        if (toLower(child->getName()) == name) return child;
+        if (recursive) {
+            if (auto child_as_interface = dynamic_cast<InterfaceUI*>(child)) {
+                auto found = child_as_interface->findByName(name, true);
+                if (found) return found;
+            }
+        }
+    }
+    return nullptr;
+}
+
 InterfaceUI *InterfaceUI::setTight(bool tight)
 {
     get()->setProperty("class", (tight ? "tight-element" : ""));

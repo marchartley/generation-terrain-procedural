@@ -5,6 +5,7 @@
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Image.h"
 
+#include "Utils/Signals.h"
 
 struct DisplayedVectorFieldParameters {
     enum VECTOR_DISPLAY { ARROWS, FLOWLINES, NONE };
@@ -25,14 +26,15 @@ struct PlotVectorData {
     std::pair<GridV3, GridF> getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i &numberOfCells) const;
     static std::pair<GridV3, GridF> createFieldImageAndAlpha(const GridV3& field, Vector3i imgSize, const Vector3i &numberOfCells, DisplayedVectorFieldParameters displayParameters = DisplayedVectorFieldParameters());
 
-    void setOnFieldModified(const std::function<void(void)>& callback) { this->onFieldModifiedCallbacks.push_back(callback); }
+    // void setOnFieldModified(const std::function<void(void)>& callback) { this->onFieldModifiedCallbacks.push_back(callback); }
 
     GridV3 field;
     DisplayedVectorFieldParameters displayParameters;
 
-protected:
-    std::vector<std::function<void(void)>> onFieldModifiedCallbacks;
-    void callOnFieldModifiedCallbacks() { for (const auto& func : onFieldModifiedCallbacks) func(); }
+    DECLARE_EVENT(FieldModified, (), ())
+// protected:
+    // std::vector<std::function<void(void)>> onFieldModifiedCallbacks;
+    // void callOnFieldModifiedCallbacks() { for (const auto& func : onFieldModifiedCallbacks) func(); }
 };
 
 

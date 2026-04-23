@@ -12,7 +12,8 @@ PlotVectorData::PlotVectorData(const GridV3 &field) : field(field)
 PlotVectorData& PlotVectorData::setField(const GridV3 &field)
 {
     this->field = field;
-    this->callOnFieldModifiedCallbacks();
+    // this->callOnFieldModifiedCallbacks();
+    emitFieldModified();
     return *this;
 }
 

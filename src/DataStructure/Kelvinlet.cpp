@@ -13,6 +13,23 @@ KelvinletPoint::KelvinletPoint()
 
 }
 
+KelvinletCurve* KelvinletPoint::cloneToCurveKelvinlet() const {
+    KelvinletCurve* k;
+    std::string my_type = toLower(this->getShortName());
+    if (my_type == "grab") k = new GrabKelvinletCurve;
+    else if (my_type == "scale") k = new ScaleKelvinletCurve;
+    else if (my_type == "twist") k = new TwistKelvinletCurve;
+    else if (my_type == "pinch") k = new PinchKelvinletCurve;
+
+    k->radialScale = radialScale;
+    k->mu = mu;
+    k->v = v;
+    k->epsLimit = epsLimit;
+    k->forceDir = forceDir;
+    k->forceMag = forceMag;
+    return k;
+}
+
 GrabKelvinlet::GrabKelvinlet()
     : KelvinletPoint()
 {
@@ -42,7 +59,7 @@ Vector3 GrabKelvinlet::evaluate(const Vector3 &p) const
 
     const auto force = first + rrt * second + last;
 
-    auto res = Matrix::matprod(force, this->force.toMatrix());
+    auto res = Matrix::matprod(force, this->force().toMatrix());
     return Vector3::fromMatrix(res);
 }
 
@@ -68,7 +85,7 @@ Vector3 TwistKelvinlet::evaluate(const Vector3 &p) const
     // float b = a / (4 * (1.f - v));
     float affineScalar = 1 / repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
 
-    auto qxr = rvector.cross(force);
+    auto qxr = rvector.cross(force());
 
     const float scaleFactor = 100.;
     return -scaleFactor * a * affineScalar * qxr;
@@ -96,7 +113,7 @@ Vector3 ScaleKelvinlet::evaluate(const Vector3 &p) const
     float b = a / (4 * (1.f - v));
     float scale = 2 * b - a;
     const float scaleFactor = 10.f;
-    Vector3 delta = rvector * (this->force * -scaleFactor * scale * affineScalar);
+    Vector3 delta = rvector * (this->force() * -scaleFactor * scale * affineScalar);
 
     return delta;
 }
@@ -123,10 +140,10 @@ Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
     const float a = 1.f / (4.f * float(M_PI) * mu);
     const float b = a / (4.f * (1.f - v));
 
-    const float strength = this->force.norm();
+    const float strength = this->forceMag;
     if (strength == 0.f) return Vector3();
 
-    const Vector3 d = this->force / strength;
+    const Vector3 d = this->force() / strength;
     const float dx = d.x(), dy = d.y(), dz = d.z();
 
     // F = strength * (d d^T - I/3)  (symmetric, trace = 0)
@@ -182,7 +199,7 @@ GrabKelvinletCurve::GrabKelvinletCurve()
 
 Vector3 GrabKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (!this->valid() || this->force == 0.f) return Vector3::origin;
+    if (!this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getDirection(closestTime);
@@ -207,7 +224,7 @@ Vector3 GrabKelvinletCurve::evaluate(const Vector3 &p) const
 
     const auto force = first + rrt * second + last;
 
-    auto res = force * (dir * this->force).toMatrix();
+    auto res = force * (dir * this->force()).toMatrix();
     return Vector3::fromMatrix(res);
 }
 
@@ -219,7 +236,7 @@ TwistKelvinletCurve::TwistKelvinletCurve()
 
 Vector3 TwistKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (!this->valid() || this->force == 0.f) return Vector3::origin;
+    if (!this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getBinormal(closestTime); //curve.getDirection(closestTime);
@@ -237,7 +254,7 @@ Vector3 TwistKelvinletCurve::evaluate(const Vector3 &p) const
     // float b = a / (4 * (1.f - v));
     float affineScalar = 1 / repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
 
-    auto qxr = rvector.cross(dir * force);
+    auto qxr = rvector.cross(dir * force());
 
     float scaleFactor = 100.;
     return -scaleFactor * a * affineScalar * qxr;
@@ -251,7 +268,7 @@ ScaleKelvinletCurve::ScaleKelvinletCurve()
 
 Vector3 ScaleKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (!this->valid() || this->force == 0.f) return Vector3::origin;
+    if (!this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
 //    Vector3 dir = curve.getDirection(closestTime);
@@ -269,7 +286,7 @@ Vector3 ScaleKelvinletCurve::evaluate(const Vector3 &p) const
     float b = a / (4 * (1.f - v));
     float scale = 2 * b - a;
     float scaleFactor = 10.f;
-    Vector3 delta = rvector * (this->force * -scaleFactor * scale * affineScalar);
+    Vector3 delta = rvector * (this->force() * -scaleFactor * scale * affineScalar);
 
     return delta;
 }
@@ -282,10 +299,10 @@ PinchKelvinletCurve::PinchKelvinletCurve()
 
 Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (!this->valid() || this->force == 0.f) return Vector3::origin;
+    if (!this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
-    Vector3 dir = curve.getDirection(closestTime) * this->force;
+    Vector3 dir = curve.getDirection(closestTime) * this->force();
 
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
@@ -321,7 +338,7 @@ Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
 
     const auto force = first - second;
 
-    return Vector3::fromMatrix(force) * sign(this->force);
+    return Vector3::fromMatrix(force) * sign(this->force());
 }
 
 RelativeKelvinlet::RelativeKelvinlet(Kelvinlet* kelvinlet, const Vector3 &anchorPoint, float zoom)

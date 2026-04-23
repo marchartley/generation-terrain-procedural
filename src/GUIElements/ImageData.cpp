@@ -13,14 +13,16 @@ PlotImageData::PlotImageData(const GridF &img) : image(img)
 PlotImageData& PlotImageData::setImage(const GridV3 &img)
 {
     this->image.setImage(img);
-    this->callOnImageModifiedCallbacks();
+    // this->callOnImageModifiedCallbacks();
+    emitImageModified();
     return *this;
 }
 
 PlotImageData& PlotImageData::setImage(const GridF &img)
 {
     this->image.setImage(img);
-    this->callOnImageModifiedCallbacks();
+    // this->callOnImageModifiedCallbacks();
+    emitImageModified();
     return *this;
 }
 
@@ -178,7 +180,7 @@ QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> 
     return img.scaled(imgSize.x(), imgSize.y());
 }
 
-void PlotImageData::setOnImageModified(const std::function<void ()> &callback)
-{
-    this->onImageModifiedCallbacks.push_back(callback);
-}
+// void PlotImageData::setOnImageModified(const std::function<void ()> &callback)
+// {
+    // this->onImageModifiedCallbacks.push_back(callback);
+// }

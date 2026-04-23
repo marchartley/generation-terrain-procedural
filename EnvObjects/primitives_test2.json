@@ -1,0 +1,90 @@
+[
+	{
+		"name": "coralpolyp",
+		"fitness": "(normal(current.vel * 5.0))  * (polyp * 10000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 1.0,
+		"deposition-rate": {
+			"deadcoral": {
+				"radius": 2.0,
+				"rate": 0.5
+			},
+			"polyp": {
+				"radius": 4.0,
+				"rate": 0.009999999776482582
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 0.029999999329447746
+			},
+			"sand": {
+				"radius": 1.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 10.0,
+		"flow-effect": [
+			{
+				"type": "Grab",
+				"eps-limit": 1000.0,
+				"mu": 0.5,
+				"radial-scale": 0.5999999642372131,
+				"v": 0.5,
+				"pos": {
+					"x": -0.007259521167725325,
+					"y": -0.6047431826591492,
+					"z": 0.0
+				},
+				"force": {
+					"x": -3.8112523555755615,
+					"y": -0.007905120961368084,
+					"z": 0.0
+				}
+			},
+			{
+				"type": "Twist",
+				"eps-limit": 1000.0,
+				"mu": 0.5,
+				"radial-scale": 0.5999999642372131,
+				"v": 0.5,
+				"pos": {
+					"x": 0.0,
+					"y": 0.6047430038452148,
+					"z": 0.0
+				},
+				"force": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.16043594479560852
+				}
+			}
+		],
+		"radius": 2.0,
+		"type": "Point"
+	}
+]

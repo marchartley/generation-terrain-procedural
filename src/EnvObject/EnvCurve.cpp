@@ -20,6 +20,22 @@ EnvCurve *EnvCurve::clone() const
     return newDefinition;
 }
 
+void EnvCurve::clearKelvinlets()
+{
+    for (auto& k : startingPointKelvinlets) {
+        delete k;
+    }
+    for (auto& k : endingPointKelvinlets) {
+        delete k;
+    }
+    for (auto& k : curveKelvinlets) {
+        delete k;
+    }
+    startingPointKelvinlets.clear();
+    endingPointKelvinlets.clear();
+    curveKelvinlets.clear();
+}
+
 EnvCurveInstance::EnvCurveInstance()
     : EnvCurveInstance(nullptr)
 {
@@ -220,11 +236,13 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow, float scale
             relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.points.back(), scale));
     }
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
+        this->getDefinition()->curveKelvinlets[i]->curve = this->curve;
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
             auto k = this->getDefinition()->curveKelvinlets[i]->clone();
-            auto asCurve = dynamic_cast<KelvinletCurve*>(k);
-            asCurve->curve = this->curve;
-            relativeCurveFlow.push_back(asCurve);
+            // auto asCurve = dynamic_cast<KelvinletCurve*>(k);
+            // asCurve->curve = this->curve;
+            // relativeCurveFlow.push_back(asCurve);
+            relativeCurveFlow.push_back(k);
         }
     }
 

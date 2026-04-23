@@ -23,6 +23,8 @@ public:
 
 
     virtual bool isArea() const { return true; }
+
+    virtual void clearKelvinlets();
 };
 
 

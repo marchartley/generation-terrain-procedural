@@ -7,20 +7,20 @@
 
 
 // Here is an easy to use Callback framework. Example usage (in a class):
-// DECALRE_EVENT(OnMouseMoved, (int pos_x, int pos_y), (pos_x, pos_y))
+// DECALRE_EVENT(MouseMoved, (int pos_x, int pos_y), (pos_x, pos_y))
 // Note: second parameter's names MUST match third parameter's names.
 #define DECLARE_EVENT(EVENT_NAME, PARAMS, ARGS)                             \
 private:                                                                    \
-    std::vector<std::function<void PARAMS>> EVENT_NAME##Callbacks;          \
+    std::vector<std::function<void PARAMS>> on##EVENT_NAME##Callbacks;          \
     public:                                                                     \
-    void set##EVENT_NAME(std::function<void PARAMS> func)         \
+    void setOn##EVENT_NAME(std::function<void PARAMS> func)         \
 {                                                                       \
-        EVENT_NAME##Callbacks.push_back(std::move(func));                   \
+    on##EVENT_NAME##Callbacks.push_back(std::move(func));                   \
 }                                                                       \
                                                                             \
     void emit##EVENT_NAME PARAMS                                           \
 {                                                                       \
-        for (auto& func : EVENT_NAME##Callbacks)                            \
+    for (auto& func : on##EVENT_NAME##Callbacks)                            \
         func ARGS;                                                      \
 }
 

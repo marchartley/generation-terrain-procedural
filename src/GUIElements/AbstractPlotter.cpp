@@ -81,23 +81,23 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
         this->displayInfoUnderMouse(pos);
         if (this->hasImage()) {
             Vector3 scale = dataModel->getImage().getDimensions();
-            this->emitOnMouseMoved(pos * scale, prevPos * scale, e);
-            emitOnMouseMoved(pos * scale, prevPos * scale, e);
+            this->emitMouseMoved(pos * scale, prevPos * scale, e);
+            emitMouseMoved(pos * scale, prevPos * scale, e);
         }
         else if (this->hasVectorField()) {
             Vector3 scale = dataModel->vectorData.field.getDimensions();
-            this->emitOnMouseMoved(pos * scale, prevPos * scale, e);
-            emitOnMouseMoved(pos * scale, prevPos * scale, e);
+            this->emitMouseMoved(pos * scale, prevPos * scale, e);
+            emitMouseMoved(pos * scale, prevPos * scale, e);
         }
     });
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &AbstractPlotter::draw);
     QObject::connect(this->chartView, &ChartView::clickedOnValue, this, [&](const Vector3& pos, bool leftClick, bool rightClick) {
         if (pos.isValid()) {
             Vector3 imageValue = (this->hasImage() ? this->dataModel->getImage().at(pos * this->dataModel->getImage().getDimensions()) : Vector3::invalid);
-            emitOnMousePressed(pos, imageValue, leftClick, rightClick);
+            emitMousePressed(pos, imageValue, leftClick, rightClick);
             // Q_EMIT this->clickedOnImage(pos, imageValue, leftClick, rightClick);
         } else {
-            emitOnMouseReleased(pos.validated());
+            emitMouseReleased(pos.validated());
         }
     });
 }

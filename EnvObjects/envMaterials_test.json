@@ -33,10 +33,10 @@
 	},
 	{
 		"name": "polyp",
-		"decay": 0.95,
-		"diffusion-speed": 0.2,
+		"decay": 0.949999988079071,
+		"diffusion-speed": 0.20000000298023224,
 		"mass": 0.0,
-		"water-transport": 0.8,
+		"water-transport": 0.800000011920929,
 		"virtual-height": 0.0
 	},
 	{

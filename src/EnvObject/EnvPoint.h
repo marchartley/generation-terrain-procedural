@@ -19,6 +19,8 @@ public:
     virtual EnvObjectInstance* instantiate();
 
     virtual bool isPoint() const { return true; }
+
+    virtual void clearKelvinlets();
 };
 
 

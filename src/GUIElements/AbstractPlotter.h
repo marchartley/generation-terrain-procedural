@@ -138,27 +138,14 @@ protected:
     static std::map<std::string, AbstractPlotter*> instances;
     static std::string id_name;
 
-
-    // void callOnMouseMovedCallbacks(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event) { for (const auto& func : onMouseMovedCallbacks) func(pos, previousPos, event); }
-    // void callOnMousePressedCallbacks(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick) { for (const auto& func : onMousePressedCallbacks) func(pos, value, leftClick, rightClick); }
-
-    // std::vector<std::function<void(const Vector3&, const Vector3&, QMouseEvent*)>> onMouseMovedCallbacks;
-    // std::vector<std::function<void(const Vector3&, Vector3, bool, bool)>> onMousePressedCallbacks;
-
-    DECLARE_EVENT(OnMouseMoved, (const Vector3& mousePos, const Vector3& previousPos, QMouseEvent* event), (mousePos, previousPos, event))
-    DECLARE_EVENT(OnMousePressed, (const Vector3& mousePos, Vector3 value, bool leftClick, bool rightClick), (mousePos, value, leftClick, rightClick))
-    DECLARE_EVENT(OnMouseReleased, (const Vector3& mousePos), (mousePos))
-    DECLARE_EVENT(OnUpdate, (), ())
+    DECLARE_EVENT(MouseMoved, (const Vector3& mousePos, const Vector3& previousPos, QMouseEvent* event), (mousePos, previousPos, event))
+    DECLARE_EVENT(MousePressed, (const Vector3& mousePos, Vector3 value, bool leftClick, bool rightClick), (mousePos, value, leftClick, rightClick))
+    DECLARE_EVENT(MouseReleased, (const Vector3& mousePos), (mousePos))
+    DECLARE_EVENT(Update, (), ())
 
 public Q_SLOTS:
     virtual void draw();
     virtual void show();
-
-
-// Q_SIGNALS:
-    // void clickedOnImage(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick);
-    // void movedOnImage(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event);
-    // void updated();
 };
 
 

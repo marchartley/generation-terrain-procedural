@@ -11,7 +11,7 @@ MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* 
     : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)
 {
     meshInstancesFile.path = "EnvObjects/meshInstances.json";
-    meshInstancesFile.onChange([&](const std::string& content) {
+    meshInstancesFile.setOnChange([&](const std::string& content) {
         this->readMeshInstanceFile(content);
     });
 

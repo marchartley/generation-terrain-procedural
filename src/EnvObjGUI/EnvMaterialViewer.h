@@ -17,7 +17,7 @@ public:
 
     PainterToolParams painterParams;
 
-    DECLARE_EVENT(OnImagePainted, (const GridF& newImage), (newImage))
+    DECLARE_EVENT(ImagePainted, (const GridF& newImage), (newImage))
 };
 
 #endif // ENVMATERIALVIEWER_H

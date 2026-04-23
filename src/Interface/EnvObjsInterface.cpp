@@ -30,10 +30,10 @@ EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     log("Reading objects...");
     this->scene->readEnvObjectsFile("EnvObjects/primitives.json");
 
-    primitiveDefinitionFile.onChange([&](const std::string& newDefinitions) { updateObjectsDefinitions(newDefinitions); });
-    materialsDefinitionFile.onChange([&](const std::string& newDefinitions) { updateMaterialsDefinitions(newDefinitions); });
-    transformationsFile.onChange([&](const std::string& newDefinitions) { updateMaterialsTransformationsDefinitions(newDefinitions); });
-    scenarioFile.onChange([&](const std::string& newDefinitions) { updateScenarioDefinition(newDefinitions); });
+    primitiveDefinitionFile.setOnChange([&](const std::string& newDefinitions) { updateObjectsDefinitions(newDefinitions); });
+    materialsDefinitionFile.setOnChange([&](const std::string& newDefinitions) { updateMaterialsDefinitions(newDefinitions); });
+    transformationsFile.setOnChange([&](const std::string& newDefinitions) { updateMaterialsTransformationsDefinitions(newDefinitions); });
+    scenarioFile.setOnChange([&](const std::string& newDefinitions) { updateScenarioDefinition(newDefinitions); });
 
     QTimer* hotreloadTimer = new QTimer(this);
     hotreloadTimer->setInterval(500);
@@ -52,9 +52,6 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
     const char* vNoShader = "src/Shaders/no_shader.vert";
     const char* fNoShader = "src/Shaders/no_shader.frag";
-    const char* vMCShader = "src/Shaders/MarchingCubes.vert";
-    const char* fMCShader = "src/Shaders/no_shader.frag";
-    const char* gMCShader = "src/Shaders/MarchingCubes.geom";
 
     this->velocitiesMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->velocitiesMesh.useIndices = false;
@@ -103,6 +100,10 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
         std::cout << "EnvObjEditor" << std::endl;
         Q_EMIT this->updated();
+    });
+    EnvObjectEditor::get("").setOnObjectSaved([=](const EnvObject* objModified) {
+        this->scene->updateEnvObjectsFileContent("EnvObjects/primitives.json");
+        log("Saved EnvObjects to file");
     });
 }
 
@@ -203,7 +204,7 @@ InterfaceUI* EnvObjsInterface::createGUI()
     auto nextStepButton = new ButtonElement("Step");
     auto runButton = new ButtonElement("Run");
     auto displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
-    auto userFlowScaleSlider = new SliderElement("User flow", 0.f, 100.f, .1f, this->userFlowScale);
+    auto userFlowScaleSlider = new SliderElement("User flow", 0.f, 10.f, .1f, this->userFlowScale);
 
 
     flowErosionSlider->setOnValueChanged([=](float newValue) {
@@ -466,17 +467,17 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
         if (_k != nullptr) {
             if (this->KelvinletChoice == "grab") {
                 GrabKelvinlet* k = dynamic_cast<GrabKelvinlet*>(_k);
-                k->force = delta;
+                k->setForce(delta);
             } else if (this->KelvinletChoice == "scale") {
                 ScaleKelvinlet* k = dynamic_cast<ScaleKelvinlet*>(_k);
                 // k->radialScale = 5.f;
-                k->force = delta.norm();
+                k->setForce(delta.norm());
             } else if (this->KelvinletChoice == "pinch") {
                 PinchKelvinlet* k = dynamic_cast<PinchKelvinlet*>(_k);
-                k->force = delta;
+                k->setForce(delta);
             } else if (this->KelvinletChoice == "twist") {
                 TwistKelvinlet* k = dynamic_cast<TwistKelvinlet*>(_k);
-                k->force = Vector3(0, 0, delta.norm() * sign(delta.x()));
+                k->setForce(Vector3(0, 0, delta.norm() * sign(delta.x())));
                 // k->radialScale = delta.norm();
             }
 
@@ -1307,22 +1308,22 @@ void EnvObjsInterface::loadScene(const std::string& filename)
     this->resetScene();
     nlohmann::json json = nlohmann::json::parse(std::ifstream(filename));
 
-    std::vector<nlohmann::json> allObjects = json["objects"];
-    std::vector<nlohmann::json> allMaterials = json["materials"];
+    std::vector<nlohmann::json> allObjects = json.at("objects");
+    std::vector<nlohmann::json> allMaterials = json.at("materials");
     if (json.contains("initialflow")) {
-        std::string flowStr = json["initialflow"];
-        this->scene->initialFlowfield = json["initialflow"]; // loadGridV3(flowStr, false);
+        std::string flowStr = json.at("initialflow");
+        this->scene->initialFlowfield = json.at("initialflow"); // loadGridV3(flowStr, false);
     }
     if (json.contains("userflow")) {
-        this->userFlowField = json["userflow"]; //loadGridV3(json["userflow"], false);
+        this->userFlowField = json.at("userflow"); //loadGridV3(json.at("userflow"), false);
     }
 
     if (json.contains("waterlevel")) {
-        float waterLevel = json["waterlevel"];
+        float waterLevel = json.at("waterlevel");
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces.at("terraingeneration").get())->setWaterLevel(waterLevel);
     }
     if (json.contains("heightmap")) {
-        initialHeightmap = json["heightmap"]; // loadGridF(json["heightmap"], false);
+        initialHeightmap = json.at("heightmap"); // loadGridF(json.at("heightmap"), false);
     }
 
     for (auto mat : allMaterials) {

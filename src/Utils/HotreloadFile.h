@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <functional>
 #include <fstream>
+#include "Utils/Signals.h"
 
 class HotreloadFile
 {
@@ -17,10 +18,11 @@ public:
     std::string path;
 
     bool check(bool verbose = true);
-    void onChange(const std::function<void(const std::string&)>& func);
+    // void onChange(const std::function<void(const std::string&)>& func);
     std::string read();
 
-    std::vector<std::function<void(const std::string&)>> onChangeCallbacks;
+    DECLARE_EVENT(Change, (const std::string& content), (content))
+    // std::vector<std::function<void(const std::string&)>> onChangeCallbacks;
     std::filesystem::file_time_type lastChange;
 };
 

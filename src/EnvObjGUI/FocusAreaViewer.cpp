@@ -19,7 +19,7 @@ FocusAreaViewer::FocusAreaViewer(const std::string& name, QWidget* parent)
         GridF img = this->dataModel->getImageGrey();
         PainterToolsUI::paintImage(img, clickPos, painterParams, rightPressed);
         // Q_EMIT this->imagePainted(img);
-        emitOnImagePainted(img);
+        emitImagePainted(img);
         this->addImage(img);
         this->show();
     });

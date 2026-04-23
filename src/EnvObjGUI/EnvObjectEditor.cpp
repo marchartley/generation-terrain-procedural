@@ -29,11 +29,9 @@ EnvObjectEditor::EnvObjectEditor(const std::string& name, QWidget* parent)
 EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
 {
     auto updateView = [=](const Vector3& mousePos, bool updateCurrentKelvinlet) {
-        std::cout << "Calling the draw (" << mousePos << " , " << updateCurrentKelvinlet << ")..." << std::endl;
         this->updateCurrentChartViewWithCurrentKelvinlets(mousePos, updateCurrentKelvinlet);
     };
     auto updateField = [=](bool useCurrentKelvinlet) {
-        std::cout << "Object validation as field updates..." << std::endl;
         validateEnvObject(useCurrentKelvinlet);
         return this->getVectorFieldWithRotation(useCurrentKelvinlet);
     };
@@ -57,6 +55,7 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
         else if (this->currentObject->getDefinition()->isCurve()) {
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Start", START), true);
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("End", END));
+            anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Curve", CURVE));
         } else {
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("---", UNDEFINED), true);
         }
@@ -67,28 +66,7 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
     angleInitialFlow->setAngle(0.f);
     strengthInitialFlow->setValue(1.f);
 
-    auto validationButton = new ButtonElement("Validate", [=]() { validateEnvObject(false, true); });
-
-    if (this->currentObject->getDefinition()->isCurve() || this->currentObject->getDefinition()->isArea()) {
-
-        auto pinchForceSlider = new SliderElement("Pinch force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.pinchK->force);
-        auto twistForceSlider = new SliderElement("Twist force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.twistK->force);
-        auto grabForceSlider = new SliderElement("Grab force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.grabK->force);
-        auto scaleForceSlider = new SliderElement("Scale force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.scaleK->force);
-
-        bodyKelvinletUI->add({
-            pinchForceSlider,
-            twistForceSlider,
-            grabForceSlider,
-            scaleForceSlider
-        });
-
-        for (auto& slider : {pinchForceSlider, twistForceSlider, grabForceSlider, scaleForceSlider}) {
-            slider->setOnValueChanged([=](float) {
-                this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-            });
-        }
-    }
+    auto validationButton = new ButtonElement("Validate", [=]() { validateEnvObject(false, true, true); });
 
     bodyKelvinletUI->add({
         anchorSelectionCombobox,
@@ -111,15 +89,29 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
 
     kelvinletParams.setOnNewKelvinlet([=](Kelvinlet* k) {
         auto anchorType = currentAnchorPoint;
-        if (anchorType == KELVINLET_ANCHOR_POINT::MAIN) {
-            this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvPointInstance*>(currentObject)->position);
-        } else if (anchorType == KELVINLET_ANCHOR_POINT::START) {
-            this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.front());
-        } else if (anchorType == KELVINLET_ANCHOR_POINT::END) {
-            this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.back());
+        switch (anchorType) {
+            case KELVINLET_ANCHOR_POINT::MAIN :
+                this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvPointInstance*>(currentObject)->position);
+                break;
+            case KELVINLET_ANCHOR_POINT::START :
+                this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.front());
+                break;
+            case KELVINLET_ANCHOR_POINT::END :
+                this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.back());
+                break;
+            case KELVINLET_ANCHOR_POINT::CURVE :
+                this->kelvinletAnchors[k] = std::make_pair(anchorType, Vector3::origin);
+                break;
+            default:
+                break;
         }
-        //std::cout << "Should I do it here?" << std::endl;
-        this->validateEnvObject(false, true);
+        this->validateEnvObject(false, true, false);
+    });
+    kelvinletParams.setOnDeletedKelvinlet([=](Kelvinlet* k) {
+        this->validateEnvObject(false, true, false);
+    });
+    kelvinletParams.setOnModifiedKelvinlet([=](Kelvinlet* k) {
+        this->validateEnvObject(false, true, false);
     });
 
     anchorSelectionCombobox->setOnSelectionChanged([=] (int) {
@@ -133,54 +125,30 @@ EnvObjectEditor& EnvObjectEditor::addEnvObject(EnvObject *envObj)
     this->currentObject = envObj->instantiate();
 
     bodyParameters.resetKelvinlets();
-    kelvinletParams.additional_kelvinlets.clear();
+    kelvinletParams.resetKelvinlets();
 
-    if (currentObject->getDefinition()->isCurve() || currentObject->getDefinition()->isArea()) {
-        bodyParameters.pinchK = new PinchKelvinletCurve();
-        bodyParameters.twistK = new TwistKelvinletCurve();
-        bodyParameters.grabK = new GrabKelvinletCurve();
-        bodyParameters.scaleK = new ScaleKelvinletCurve();
-
-        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.pinchK);
-        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.twistK);
-        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.grabK);
-        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.scaleK);
+    if (auto list = dynamic_cast<HierarchicalListUI*>(this->toolsInterface->findByName("kelvinlets", true))) {
+        list->clear();
     }
 
     if (auto asPoint = dynamic_cast<EnvPointInstance*>(this->currentObject)) {
         asPoint->position = Vector3(50, 50, 0);
         this->objectScale = 100.f / (2.f * asPoint->getDefinition()->radius);
 
+        for (auto& k : asPoint->getDefinition()->mainKelvinlets) {
+            auto clone = k->clone();
+            clone->scale(objectScale);
+            clone->translate(asPoint->position);
+            kelvinletParams.kelvinlets.push_back(clone);
+            this->kelvinletAnchors[clone] = {MAIN, asPoint->position};
+        }
     } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {
         asCurve->curve = BSpline({Vector3(10, 10), Vector3(60, 30), Vector3(30, 60), Vector3(90, 90)});
         this->objectScale = asCurve->curve.length() / asCurve->getDefinition()->length;
-
-        bodyParameters.pinchK->curve = asCurve->curve;
-        bodyParameters.twistK->curve = asCurve->curve;
-        bodyParameters.grabK->curve = asCurve->curve;
-        bodyParameters.scaleK->curve = asCurve->curve;
-
-        bodyParameters.pinchK->radialScale = asCurve->getDefinition()->width;
-        bodyParameters.twistK->radialScale = asCurve->getDefinition()->width;
-        bodyParameters.grabK->radialScale = asCurve->getDefinition()->width;
-        bodyParameters.scaleK->radialScale = asCurve->getDefinition()->width;
-
     } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
         asArea->curve = ShapeCurve({Vector3(30, 30), Vector3(30, 70), Vector3(70, 70), Vector3(60, 40)});
         this->objectScale = asArea->curve.computeArea() / (asArea->getDefinition()->width * asArea->getDefinition()->length);
-
-        bodyParameters.pinchK->curve = asArea->curve;
-        bodyParameters.twistK->curve = asArea->curve;
-        bodyParameters.grabK->curve = asArea->curve;
-        bodyParameters.scaleK->curve = asArea->curve;
-
-        bodyParameters.pinchK->radialScale = asArea->getDefinition()->width;
-        bodyParameters.twistK->radialScale = asArea->getDefinition()->width;
-        bodyParameters.grabK->radialScale = asArea->getDefinition()->width;
-        bodyParameters.scaleK->radialScale = asArea->getDefinition()->width;
-
     }
-
 
     this->addImage(displayEnvObject().first);
     return *this;
@@ -192,16 +160,16 @@ std::pair<GridV3, GridF> EnvObjectEditor::displayEnvObject() const
     GridV3 img(100 * imgScale.x(), 100 * imgScale.y(), 1, this->dataModel->vectorData.displayParameters.backgroundColor);
     GridF alpha(img.getDimensions());
     if (auto asPoint = dynamic_cast<EnvPointInstance*>(this->currentObject)) {
-        float crossLength = asPoint->getDefinition()->radius * this->objectScale;
+        float crossLength = asPoint->getDefinition()->radius;
         Vector3 pos = asPoint->position * imgScale;
 
-        PlottingUtils::drawLine(img, Vector3(0, 0, 1), pos - Vector3(crossLength / 2, crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, crossLength / 2) * imgScale);
-        PlottingUtils::drawLine(img, Vector3(0, 0, 1), pos - Vector3(crossLength / 2, -crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, -crossLength / 2) * imgScale);
+        PlottingUtils::drawLine(img, Vector3(0, 0, 1), pos - Vector3(crossLength * .5f, crossLength * .5f) * imgScale, pos + Vector3(crossLength * .5f, crossLength * .5f) * imgScale);
+        PlottingUtils::drawLine(img, Vector3(0, 0, 1), pos - Vector3(crossLength * .5f, -crossLength * .5f) * imgScale, pos + Vector3(crossLength * .5f, -crossLength * .5f) * imgScale);
 
         PlottingUtils::drawCircle(img, Vector3(1, 0, 0), pos, asPoint->getDefinition()->radius * this->objectScale);
 
-        PlottingUtils::drawLine(alpha, 1.f, pos - Vector3(crossLength / 2, crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, crossLength / 2) * imgScale);
-        PlottingUtils::drawLine(alpha, 1.f, pos - Vector3(crossLength / 2, -crossLength / 2) * imgScale, pos + Vector3(crossLength / 2, -crossLength / 2) * imgScale);
+        PlottingUtils::drawLine(alpha, 1.f, pos - Vector3(crossLength * .5f, crossLength * .5f) * imgScale, pos + Vector3(crossLength * .5f, crossLength * .5f) * imgScale);
+        PlottingUtils::drawLine(alpha, 1.f, pos - Vector3(crossLength * .5f, -crossLength * .5f) * imgScale, pos + Vector3(crossLength * .5f, -crossLength * .5f) * imgScale);
 
         PlottingUtils::drawCircle(alpha, 1.f, pos, asPoint->getDefinition()->radius * this->objectScale);
 
@@ -241,7 +209,6 @@ GridF& EnvObjectEditor::simulateDeposition(GridF &currentState, int iterations)
 
 GridV3 EnvObjectEditor::getVectorFieldWithRotation(bool)
 {
-    this->validateEnvObject();
     GridV3 resultingVectorField = this->kelvinletParams.getInitialVectorField();
     currentObject->computeFlowModification(resultingVectorField, this->objectScale);
     return resultingVectorField;
@@ -249,58 +216,64 @@ GridV3 EnvObjectEditor::getVectorFieldWithRotation(bool)
 
 void EnvObjectEditor::updateCurrentChartViewWithCurrentKelvinlets(const Vector3& mouseRelPos, bool updateCurrentKelvinlet)
 {
-    displayProcessTime("Display...", [&]() {
-        this->animateEnvObject(animating);
+    this->animateEnvObject(animating);
+    if (updateCurrentKelvinlet)
+        PainterToolsUI::updateCurrentKelvinlet(&this->kelvinletParams, Vector3::invalid);
+
+    Vector3i imgSize = Vector3i(300, 300, 1);
+    GridV3 img(imgSize);
+    GridF alpha(img.getDimensions(), 1.f);
+
+    this->validateEnvObject(true, false);
+    GridV3 field = this->getVectorFieldWithRotation();
+
+    std::tie(img, alpha) = PlotVectorData::createFieldImageAndAlpha(field, img.getDimensions(), Vector3i(20, 20, 1), dataModel->vectorData.displayParameters);
+
+    if (mouseRelPos.isValid()) {
+        Vector3 pos = mouseRelPos * dataModel->vectorData.getField().getDimensions();
         if (updateCurrentKelvinlet)
-            PainterToolsUI::updateCurrentKelvinlet(&this->kelvinletParams, Vector3::invalid);
+            PainterToolsUI::updateCurrentKelvinlet(&this->kelvinletParams, pos);
+    }
 
-        Vector3i imgSize = Vector3i(300, 300, 1);
-        GridV3 img(imgSize);
-        GridF alpha(img.getDimensions(), 1.f);
+    if (auto k = dynamic_cast<KelvinletPoint*>(this->kelvinletParams.currentKelvinlet)) {
+        PainterToolsUI::getKelvinletParametersImage(img, alpha, (Vector3)imgSize / (Vector3)dataModel->vectorData.field.getDimensions(), k, (k->pos.isValid() ? k->pos : mouseRelPos * dataModel->vectorData.getField().getDimensions()));
+    }
 
-        GridV3 field = this->getVectorFieldWithRotation();
+    chartView->setOverlay(img, "Kelvinlet placement", alpha, 1000);
+    dataModel->vectorData.field = GridV3();
+    chartView->setPlotModel(dataModel);
+    chartView->update();
+    dataModel->vectorData.field = field;
 
-        std::tie(img, alpha) = PlotVectorData::createFieldImageAndAlpha(field, img.getDimensions(), Vector3i(20, 20, 1), dataModel->vectorData.displayParameters);
-
-        if (mouseRelPos.isValid()) {
-            Vector3 pos = mouseRelPos * dataModel->vectorData.getField().getDimensions();
-            if (updateCurrentKelvinlet)
-                PainterToolsUI::updateCurrentKelvinlet(&this->kelvinletParams, pos);
-        }
-
-        if (auto k = dynamic_cast<KelvinletPoint*>(this->kelvinletParams.currentKelvinlet)) {
-            PainterToolsUI::getKelvinletParametersImage(img, alpha, (Vector3)imgSize / (Vector3)dataModel->vectorData.field.getDimensions(), k, (k->pos.isValid() ? k->pos : mouseRelPos * dataModel->vectorData.getField().getDimensions()));
-        }
-
-        chartView->setOverlay(img, "Kelvinlet placement", alpha, 1000);
-        dataModel->vectorData.field = GridV3();
-        chartView->setPlotModel(dataModel);
-        chartView->update();
-        dataModel->vectorData.field = field;
-        // Q_EMIT this->updated();
-        emitOnUpdate();
-    });
+    emitUpdate();
 }
 
-EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinlet, bool sendSignal)
+EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinlet, bool sendSignal, bool sendDefinitiveObject)
 {
     std::vector<Kelvinlet*> evaluatedKelvinlets = kelvinletParams.kelvinlets;
     if (takeIntoAccountCurrentKelvinlet && this->kelvinletParams.currentKelvinlet->valid() && !isIn(kelvinletParams.currentKelvinlet, kelvinletParams.kelvinlets)) {
         evaluatedKelvinlets.push_back(this->kelvinletParams.currentKelvinlet);
         auto anchorType = currentAnchorPoint;
-        if (anchorType == KELVINLET_ANCHOR_POINT::MAIN) {
-            this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvPointInstance*>(currentObject)->position);
-        }
-        else if (anchorType == KELVINLET_ANCHOR_POINT::START) {
-            this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.front());
-        }
-        else if (anchorType == KELVINLET_ANCHOR_POINT::END) {
-            this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.back());
+        switch (anchorType) {
+            case KELVINLET_ANCHOR_POINT::MAIN:
+                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvPointInstance*>(currentObject)->position);
+                break;
+            case KELVINLET_ANCHOR_POINT::START:
+                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.front());
+                break;
+            case KELVINLET_ANCHOR_POINT::END:
+                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.back());
+                break;
+            case KELVINLET_ANCHOR_POINT::CURVE:
+                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, Vector3::origin);
+                break;
+            default:
+                break;
         }
     }
 
+    currentObject->getDefinition()->clearKelvinlets();
     if (auto asPoint = dynamic_cast<EnvPointInstance*>(currentObject)) {
-        asPoint->getDefinition()->mainKelvinlets.clear();
         for (auto& k : evaluatedKelvinlets) {
             auto newK = k->clone();
             newK->translate(-kelvinletAnchors[k].second);
@@ -310,31 +283,37 @@ EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinl
     }
     else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(currentObject)) {
         auto definition = asCurve->getDefinition();
-        definition->startingPointKelvinlets.clear();
-        definition->endingPointKelvinlets.clear();
-        definition->curveKelvinlets.clear();
         for (auto& k : evaluatedKelvinlets) {
             auto newK = k->clone();
+            newK->translate(-kelvinletAnchors[k].second);
+            newK->scale(1.f / this->objectScale);
             if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k).first == START) {
-                newK->translate(-kelvinletAnchors[k].second);
-                newK->scale(1.f / this->objectScale);
+                // newK->translate(-kelvinletAnchors[k].second);
                 definition->startingPointKelvinlets.push_back(newK);
             } else if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k).first == END) {
-                newK->translate(-kelvinletAnchors[k].second);
-                newK->scale(1.f / this->objectScale);
                 definition->endingPointKelvinlets.push_back(newK);
+            } else if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k).first == CURVE) {
+                if (auto pointKelvinlet = dynamic_cast<KelvinletPoint*>(newK)) {
+                    definition->curveKelvinlets.push_back(pointKelvinlet->cloneToCurveKelvinlet());
+                } else {
+                    // definition->curveKelvinlets.push_back(newK);
+                }
             }
         }
-        definition->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
+        // definition->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
     }
     else if (auto asArea = dynamic_cast<EnvArea*>(currentObject->getDefinition())) {
-        asArea->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
+        // asArea->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
         // newK->scale(1.f / this->objectScale);
         // newK->radialScale /= this->objectScale;
     }
 
-    if (sendSignal)
-        emitOnObjectModified(currentObject->getDefinition());
+    if (sendSignal) {
+        emitObjectModified(currentObject->getDefinition());
+    }
+    if (sendDefinitiveObject) {
+        emitObjectSaved(currentObject->getDefinition());
+    }
     return currentObject->getDefinition();
 }
 
@@ -397,18 +376,7 @@ void EnvObjectEditor::displayDepositionSimulation()
 
 void BodyKelvinletParameters::resetKelvinlets()
 {
-    if (pinchK)
-        delete pinchK;
-    if (twistK)
-        delete twistK;
-    if (scaleK)
-        delete scaleK;
-    if (grabK)
-        delete grabK;
-
-    pinchK = nullptr;
-    twistK = nullptr;
-    scaleK = nullptr;
-    grabK = nullptr;
+    for (auto& rK : relativeKelvinlets)
+        delete rK;
     relativeKelvinlets.clear();
 }

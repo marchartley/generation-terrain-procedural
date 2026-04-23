@@ -18,12 +18,6 @@ struct BodyKelvinletParameters {
     float minRadius = 0.f;
     float maxRadius = 100.f;
 
-
-    PinchKelvinletCurve* pinchK = nullptr;
-    TwistKelvinletCurve* twistK = nullptr;
-    GrabKelvinletCurve* grabK = nullptr;
-    ScaleKelvinletCurve* scaleK = nullptr;
-
     std::vector<RelativeKelvinlet*> relativeKelvinlets;
 
     void resetKelvinlets();
@@ -50,7 +44,7 @@ public:
 
     void updateCurrentChartViewWithCurrentKelvinlets(const Vector3& mouseRelPos, bool updateCurrentKelvinlet);
 
-    EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true, bool sendSignal = false);
+    EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true, bool sendSignal = false, bool sendDefinitiveObject = false);
 
     void animateEnvObject(bool animate);
     void displayDepositionSimulation();
@@ -65,7 +59,7 @@ public:
     bool depositionSimulationDisplay = false;
 
     enum KELVINLET_ANCHOR_POINT {
-        MAIN, START, END, UNDEFINED
+        MAIN, START, END, CURVE, UNDEFINED
     };
     KELVINLET_ANCHOR_POINT currentAnchorPoint = UNDEFINED;
     std::map<Kelvinlet*, std::pair<KELVINLET_ANCHOR_POINT, Vector3>> kelvinletAnchors;
@@ -76,7 +70,8 @@ public:
 
     float objectScale = 1.f;
 
-    DECLARE_EVENT(OnObjectModified, (const EnvObject* object), (object))
+    DECLARE_EVENT(ObjectModified, (const EnvObject* object), (object))
+    DECLARE_EVENT(ObjectSaved, (const EnvObject* object), (object))
 };
 
 #endif // ENVOBJECTEDITOR_H
