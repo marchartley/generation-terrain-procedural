@@ -6,7 +6,7 @@ class SpaceColonizationInterface;
 #include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
 // #include "GUIElements/FancySlider.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 // #include <QWidget>
 #include "TreeColonisation/TreeColonisation.h"
 // #include "TerrainGen/VoxelGrid.h"

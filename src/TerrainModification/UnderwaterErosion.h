@@ -4,7 +4,7 @@
 #include "TerrainGen/VoxelGrid.h"
 
 #include <tuple>
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 #include "Karst/KarstHoleProfile.h"
 #include "Karst/KarstHole.h"
 #include "TerrainModification/ParticleErosion.h"

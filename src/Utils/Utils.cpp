@@ -4,7 +4,7 @@
 #include <thread>
 #include <chrono>
 
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 
 std::vector<std::string> split(const std::string& _str, std::string c)
 {

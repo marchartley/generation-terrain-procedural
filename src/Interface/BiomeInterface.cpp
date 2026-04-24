@@ -187,7 +187,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         bool atLeastOne = false;
         for (int x = AABBoxMin.x(); x < AABBoxMax.x(); x++) {
             for (int y = AABBoxMin.y(); y < AABBoxMax.y(); y++) {
-                if (area.contains(Vector3(x, y, area.points[0].z())) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
+                if (area.contains(Vector3(x, y, area.front().z())) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
                     heightmap->getBiomeIndices().at(x, y).push_back(current->instanceID);
                     out << "Found at (" << x << ", " << y << ")" << std::endl;
                     atLeastOne = true;
@@ -702,10 +702,10 @@ void BiomeInterface::show()
 
 void BiomeInterface::addTunnel(KarstHole &hole)
 {
-    if (hole.path.points.empty()) return;
+    if (hole.path.empty()) return;
 
-    Vector3 startPoint = this->fromVoxelsPosToHeightmap(hole.path.points.front());
-//    Vector3 endPoint = this->fromVoxelsPosToHeightmap(hole.path.points.back());
+    Vector3 startPoint = this->fromVoxelsPosToHeightmap(hole.path.front());
+//    Vector3 endPoint = this->fromVoxelsPosToHeightmap(hole.path.back());
 
     if (this->heightmap->getBiomeIndices().checkCoord(startPoint.xy()) && !this->heightmap->getBiomeIndices().at(startPoint.xy()).empty()) {
         std::shared_ptr<BiomeInstance> startingBiome = BiomeInstance::instancedBiomes[this->heightmap->getBiomeIndices().at(startPoint.xy()).back()];

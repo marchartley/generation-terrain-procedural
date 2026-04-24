@@ -38,8 +38,8 @@ BSpline SnakeSegmentation::runSegmentation(const BSpline &curve, int maxIteratio
     }
     if (params->collapseFirstAndLastPoint && currentContour.size() > 0) {
         currentContour[-1] = currentContour[0];
-        currentContour.resamplePoints(currentContour.size() + 1);
-        currentContour.points.pop_back();
+        currentContour.resamplePoints(currentContour.size());
+        // currentContour.points.pop_back();
     }
 
     this->params->targetArea = initialTargetArea;

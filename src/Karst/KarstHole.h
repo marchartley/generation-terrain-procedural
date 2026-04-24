@@ -26,7 +26,7 @@ public:
     int number_of_intermediates = 2;
 
     std::vector<std::tuple<Vector3, float>> vertexCylinders;
-    std::vector<std::tuple<Vector3, Vector3>> cylinders;
+    std::vector<std::pair<Vector3, Vector3>> cylinders;
     std::map<int, int> vertexGroups;
 };
 

@@ -4,7 +4,7 @@
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
 #include "TerrainGen/VoxelGrid.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 
 class ConstraintsSolver
 {

@@ -4,7 +4,7 @@
 class FaultSlipInterface;
 #include "GUI3DElements/ControlPoint.h"
 #include "GUI3DElements/InteractiveVector.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 // #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/FaultSlip.h"

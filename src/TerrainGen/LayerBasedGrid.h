@@ -14,7 +14,7 @@ class LayerBasedGrid;
 #include <tuple>
 #include "Graphics/Mesh.h"
 //#include "Utils/FastNoiseLit.h"
-//#include "Utils/ShapeCurve.h"
+//#include "Curves/ShapeCurve.h"
 #include "TerrainGen/ImplicitPatch.h"
 #include "TerrainGen/TerrainModel.h"
 

@@ -97,14 +97,14 @@ std::vector<BSpline> Matrix3<int>::skeletonizeToBSplines() const
     skeleton_tracer_t::polyline_t* p = (skeleton_tracer_t::polyline_t*)skel->trace_skeleton(0, 0, skel->W, skel->H, 0);
 
 
-    std::vector<BSpline> splines;
+    std::vector<std::vector<Vector3>> splines;
     skeleton_tracer_t::polyline_t* it = p; //iterator
     while(it){
       skeleton_tracer_t::point_t* jt = it->head;
-      BSpline spline;
+        std::vector<Vector3> spline;
       while(jt){
           ;
-          spline.points.push_back(Vector3(jt->x, jt->y));
+          spline.push_back(Vector3(jt->x, jt->y));
           jt = jt->next;
       }
       it = it->next;
@@ -122,39 +122,39 @@ std::vector<BSpline> Matrix3<int>::skeletonizeToBSplines() const
     bool atLeastOneMerging = true;
     while (atLeastOneMerging) {
         atLeastOneMerging = false;
-        std::vector<BSpline> merged;
+        std::vector<std::vector<Vector3>> merged;
         for (int i = int(splines.size()) - 1; i >= 0; i--) {
             auto& spline = splines[i];
             bool isMerged = false;
             for (auto& merge : merged) {
                 // Try back to front, front to back, back to back and front to front
-                auto frontSpline = spline.points.front();
-                auto backSpline = spline.points.back();
-                auto frontMerge = merge.points.front();
-                auto backMerge = merge.points.back();
+                auto frontSpline = spline.front();
+                auto backSpline = spline.back();
+                auto frontMerge = merge.front();
+                auto backMerge = merge.back();
                 // back to front:
                 if ((frontMerge - backSpline).norm2() < sqrLim) {
-                    merge.points.insert(merge.points.begin(), spline.points.begin(), spline.points.end());
+                    merge.insert(merge.begin(), spline.begin(), spline.end());
                     isMerged = true;
                     break;
                 }
                 // front to back:
                 else if ((backMerge - frontSpline).norm2() < sqrLim) {
-                    merge.points.insert(merge.points.end(), spline.points.begin(), spline.points.end());
+                    merge.insert(merge.end(), spline.begin(), spline.end());
                     isMerged = true;
                     break;
                 }
                 // back to back:
                 else if ((backMerge - backSpline).norm2() < sqrLim) {
-                    std::reverse(spline.points.begin(), spline.points.end());
-                    merge.points.insert(merge.points.end(), spline.points.begin(), spline.points.end());
+                    std::reverse(spline.begin(), spline.end());
+                    merge.insert(merge.end(), spline.begin(), spline.end());
                     isMerged = true;
                     break;
                 }
                 // front to front:
                 else if ((frontMerge - frontSpline).norm2() < sqrLim) {
-                    std::reverse(spline.points.begin(), spline.points.end());
-                    merge.points.insert(merge.points.begin(), spline.points.begin(), spline.points.end());
+                    std::reverse(spline.begin(), spline.end());
+                    merge.insert(merge.begin(), spline.begin(), spline.end());
                     isMerged = true;
                     break;
                 }
@@ -166,7 +166,9 @@ std::vector<BSpline> Matrix3<int>::skeletonizeToBSplines() const
         }
         splines = merged;
     }
-    return splines;
+    std::vector<BSpline> allSplines(splines.size());
+    for (const auto& spline : splines) { allSplines.push_back(spline); }
+    return allSplines;
 }
 template <>
 Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<BSpline> splines) const {

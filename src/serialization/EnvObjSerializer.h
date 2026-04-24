@@ -364,8 +364,8 @@ void from_json(const Json& json, EnvCurve& obj)
         auto flow = json.at("flow-effect");
         obj.startingPointKelvinlets = flow.at("starting-effect");
         obj.endingPointKelvinlets = flow.at("ending-effect");
-        std::vector<Kelvinlet*> kelvinlets = flow.at("curve-effect");
-        for (auto& k : kelvinlets) {
+        std::vector<Kelvinlet*> curveKelvinlets = flow.at("curve-effect");
+        for (auto& k : curveKelvinlets) {
             obj.curveKelvinlets.push_back((dynamic_cast<KelvinletPoint*>(k))->cloneToCurveKelvinlet());
         }
         // obj.curveKelvinlets = flow.at("curve-effect");
@@ -385,7 +385,10 @@ void from_json(const Json& json, EnvArea& obj)
 
     if (json.contains("flow-effect")) {
         auto flow = json.at("flow-effect");
-        obj.curveKelvinlets = flow.at("curve-effect");
+        std::vector<Kelvinlet*> curveKelvinlets = flow.at("curve-effect");
+        for (auto& k : curveKelvinlets) {
+            obj.curveKelvinlets.push_back((dynamic_cast<KelvinletPoint*>(k))->cloneToCurveKelvinlet());
+        }
         obj.flowAttenuation = flow.at("flow-attenuation");
     }
 

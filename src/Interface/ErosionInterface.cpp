@@ -569,7 +569,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 std::vector<float> velocities;
                 this->countsTrajectories.resize(lastRocksLaunched.size());
                 for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
-                    auto points = lastRocksLaunched[i].points;
+                    auto points = lastRocksLaunched[i].getPoints();
                     asOneVector.insert(asOneVector.end(), points.begin(), points.end());
                     int windowSize = 3;
                     for (size_t i = 0; i < points.size(); i++) {

@@ -95,7 +95,7 @@ GridV3 PlotImageData::prepareImageForDisplay(const Image& img) const
         });
     } else {
         displayedImage.iterateParallel([&](size_t i) {
-            displayedImage[i] = colorPalette(displayedImage[i].x(), this->displayParameters.colorRamp.points);
+            displayedImage[i] = colorPalette(displayedImage[i].x(), this->displayParameters.colorRamp.getPath());
         });
     }
     return displayedImage;

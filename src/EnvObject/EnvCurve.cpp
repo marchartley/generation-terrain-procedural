@@ -59,8 +59,8 @@ std::map<std::string, Vector3> EnvCurveInstance::getAllProperties(const Vector3 
     return {
         {"default", closestPos},
         {"center", this->curve.center()},
-        {"start", this->curve.points.front()},
-        {"end", this->curve.points.back()},
+        {"start", this->curve.front()},
+        {"end", this->curve.back()},
         {"inside", ((position - closestPos).norm2() < this->getDefinition()->width * this->getDefinition()->width ? Vector3(true) : Vector3(false))},
         {"normal", this->curve.getNormal(closestTime)},
         {"dir", this->curve.getDirection(closestTime)},
@@ -116,7 +116,7 @@ void EnvCurveInstance::improvePositionning(float steps)
 
 void EnvCurveInstance::recomputeEvaluationPoints()
 {
-    this->evaluationPositions = curve.points;
+    this->evaluationPositions = curve.getPoints();
 }
 
 void EnvCurveInstance::applyDeposition(EnvMaterial& material)
@@ -125,7 +125,7 @@ void EnvCurveInstance::applyDeposition(EnvMaterial& material)
     auto depositionProperties = this->getDefinition()->materialDepositionRate[material.name];
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
 
-    AABBox box = AABBox(this->curve.points);
+    AABBox box = AABBox(this->curve.AABBox());
     BSpline translatedCurve = this->curve; //.getPath(100);
     translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
 
@@ -161,7 +161,7 @@ void EnvCurveInstance::applyAbsorption(EnvMaterial& material)
     auto absorptionProperties = this->getDefinition()->materialAbsorptionRate[material.name];
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
 
-    AABBox box = AABBox(this->curve.points);
+    AABBox box = AABBox(this->curve.AABBox());
     BSpline translatedCurve = this->curve; //.getPath(100);
     translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
 
@@ -209,7 +209,7 @@ void EnvCurveInstance::applyDepositionOnDeath()
         auto& material = this->scene->materials[materialName];
         if (depos.rate == 0) return;
 
-        AABBox box = AABBox(this->curve.points);
+        AABBox box = AABBox(this->curve.AABBox());
         BSpline translatedCurve = this->curve;
         for (auto& p : translatedCurve)
             p = p + Vector3(depos.radius , depos.radius , 0) - box.min();
@@ -229,11 +229,11 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow, float scale
     std::vector<KelvinletCurve*> relativeCurveFlow;
     for (size_t i = 0; i < this->getDefinition()->startingPointKelvinlets.size(); i++) {
         if (this->getDefinition()->startingPointKelvinlets[i]->valid())
-            relativeFlowsStarting.push_back(RelativeKelvinlet(this->getDefinition()->startingPointKelvinlets[i], this->curve.points.front(), scale));
+            relativeFlowsStarting.push_back(RelativeKelvinlet(this->getDefinition()->startingPointKelvinlets[i], this->curve.front(), scale));
     }
     for (size_t i = 0; i < this->getDefinition()->endingPointKelvinlets.size(); i++) {
         if (this->getDefinition()->endingPointKelvinlets[i]->valid())
-            relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.points.back(), scale));
+            relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.back(), scale));
     }
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
         this->getDefinition()->curveKelvinlets[i]->curve = this->curve;
@@ -246,11 +246,11 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow, float scale
         }
     }
 
-    const Vector3 initialFlowStarting = waterFlow.interpolate(this->curve.points.front());
+    const Vector3 initialFlowStarting = waterFlow.interpolate(this->curve.front());
     float flowAngleStarting = curve.getDerivative(0).getSignedAngleWith(Vector3(1, 0, 0)); //initialFlowStarting.getSignedAngleWith(Vector3(1, 0, 0));
     float flowStrengthStarting = initialFlowStarting.length();
 
-    const Vector3 initialFlowEnding = waterFlow.interpolate(this->curve.points.back());
+    const Vector3 initialFlowEnding = waterFlow.interpolate(this->curve.back());
     float flowAngleEnding = curve.getDerivative(1).getSignedAngleWith(Vector3(1, 0, 0)); // initialFlowEnding.getSignedAngleWith(Vector3(1, 0, 0));
     float flowStrengthEnding = initialFlowEnding.length();
 
@@ -326,7 +326,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
         previousPrimitive = nullptr;
         return nullptr;
     }
-    AABBox box(this->curve.points);
+    AABBox box(this->curve.AABBox());
     float growingState = 1.f; // this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
     // float height = this->height;
@@ -352,7 +352,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
             box = AABBox({box.center()});
             offset = Vector3();
         }
-        box = AABBox(translatedCurve.points);
+        box = AABBox(translatedCurve.AABBox());
         box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
         translatedCurve.translate(-(box.min() - offset * .5f));
         *patch = *ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
@@ -373,7 +373,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
             box = AABBox({box.center()});
             offset = Vector3();
         }
-        box = AABBox(translatedCurve.points);
+        box = AABBox(translatedCurve.AABBox());
         box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
         translatedCurve.translate(-(box.min() - offset * .5f));
         patch = ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
@@ -410,7 +410,7 @@ void EnvCurveInstance::updateCurve(const BSpline &newCurve)
     float evaluationPointClosestTime = this->curve.estimateClosestTime(this->evaluationPosition);
     Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
     this->evaluationPosition = newCurve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;*/
-    this->evaluationPositions = newCurve.points;
+    this->evaluationPositions = newCurve.getPoints();
     for (auto& k : this->getDefinition()->curveKelvinlets) {
         if (auto asKelvinletCurve = dynamic_cast<KelvinletCurve*>(k)) {
             asKelvinletCurve->curve = newCurve;

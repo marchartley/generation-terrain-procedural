@@ -57,7 +57,7 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("End", END));
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Curve", CURVE));
         } else {
-            anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("---", UNDEFINED), true);
+            anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Curve", CURVE), true);
         }
     }
     this->currentAnchorPoint = dynamic_cast<ComboboxLineElement<KELVINLET_ANCHOR_POINT>*>(anchorSelectionCombobox->choices[0])->value;
@@ -94,10 +94,10 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
                 this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvPointInstance*>(currentObject)->position);
                 break;
             case KELVINLET_ANCHOR_POINT::START :
-                this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.front());
+                this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.front());
                 break;
             case KELVINLET_ANCHOR_POINT::END :
-                this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.back());
+                this->kelvinletAnchors[k] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.back());
                 break;
             case KELVINLET_ANCHOR_POINT::CURVE :
                 this->kelvinletAnchors[k] = std::make_pair(anchorType, Vector3::origin);
@@ -259,10 +259,10 @@ EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinl
                 this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvPointInstance*>(currentObject)->position);
                 break;
             case KELVINLET_ANCHOR_POINT::START:
-                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.front());
+                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.front());
                 break;
             case KELVINLET_ANCHOR_POINT::END:
-                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.points.back());
+                this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, dynamic_cast<EnvCurveInstance*>(currentObject)->curve.back());
                 break;
             case KELVINLET_ANCHOR_POINT::CURVE:
                 this->kelvinletAnchors[this->kelvinletParams.currentKelvinlet] = std::make_pair(anchorType, Vector3::origin);
@@ -273,39 +273,40 @@ EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinl
     }
 
     currentObject->getDefinition()->clearKelvinlets();
-    if (auto asPoint = dynamic_cast<EnvPointInstance*>(currentObject)) {
+    if (auto asPoint = dynamic_cast<EnvPoint*>(currentObject->getDefinition())) {
         for (auto& k : evaluatedKelvinlets) {
             auto newK = k->clone();
             newK->translate(-kelvinletAnchors[k].second);
             newK->scale(1.f / this->objectScale);
-            asPoint->getDefinition()->mainKelvinlets.push_back(newK);
+            asPoint->mainKelvinlets.push_back(newK);
         }
     }
-    else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(currentObject)) {
-        auto definition = asCurve->getDefinition();
+    else if (auto asCurve = dynamic_cast<EnvCurve*>(currentObject->getDefinition())) {
         for (auto& k : evaluatedKelvinlets) {
             auto newK = k->clone();
             newK->translate(-kelvinletAnchors[k].second);
             newK->scale(1.f / this->objectScale);
             if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k).first == START) {
                 // newK->translate(-kelvinletAnchors[k].second);
-                definition->startingPointKelvinlets.push_back(newK);
+                asCurve->startingPointKelvinlets.push_back(newK);
             } else if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k).first == END) {
-                definition->endingPointKelvinlets.push_back(newK);
+                asCurve->endingPointKelvinlets.push_back(newK);
             } else if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k).first == CURVE) {
                 if (auto pointKelvinlet = dynamic_cast<KelvinletPoint*>(newK)) {
-                    definition->curveKelvinlets.push_back(pointKelvinlet->cloneToCurveKelvinlet());
-                } else {
-                    // definition->curveKelvinlets.push_back(newK);
+                    asCurve->curveKelvinlets.push_back(pointKelvinlet->cloneToCurveKelvinlet());
                 }
             }
         }
-        // definition->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
     }
     else if (auto asArea = dynamic_cast<EnvArea*>(currentObject->getDefinition())) {
-        // asArea->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
-        // newK->scale(1.f / this->objectScale);
-        // newK->radialScale /= this->objectScale;
+        for (auto& k : evaluatedKelvinlets) {
+            auto newK = k->clone();
+            newK->translate(-kelvinletAnchors[k].second);
+            newK->scale(1.f / this->objectScale);
+            if (auto pointKelvinlet = dynamic_cast<KelvinletPoint*>(newK)) {
+                asArea->curveKelvinlets.push_back(pointKelvinlet->cloneToCurveKelvinlet());
+            }
+        }
     }
 
     if (sendSignal) {

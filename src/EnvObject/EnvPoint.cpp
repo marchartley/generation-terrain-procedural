@@ -89,7 +89,7 @@ bool EnvPointInstance::placeInTerrain(const BSpline &seedCurve)
 {
     if (seedCurve.empty())
         return false;
-    return this->placeInTerrain(seedCurve.points.back());
+    return this->placeInTerrain(seedCurve.back());
 }
 
 void EnvPointInstance::improvePositionning(float maxDistance)

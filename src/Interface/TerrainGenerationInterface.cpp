@@ -5,7 +5,7 @@
 #include "GUIElements/FancySlider.h"
 #include "GUIElements/InterfaceUtils.h"
 #include "Utils/ConstraintsSolver.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 #include "Utils/Utils.h"
 #include "Utils/Voronoi.h"
 //#include "Utils/stb_image.h"

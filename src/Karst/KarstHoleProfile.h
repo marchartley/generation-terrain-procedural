@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "DataStructure/Vector3.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 
 enum KarstHolePredefinedShapes
 {

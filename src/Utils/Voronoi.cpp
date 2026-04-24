@@ -89,22 +89,22 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
 {
     this->boundingShape = boundingShape.removeDuplicates();
 
-    if (boundingShape.points.empty()) {
-        boundingShape.points = {
+    if (boundingShape.empty()) {
+        boundingShape = BSpline({
             Vector3(minBoundarie.x(), minBoundarie.y(), minBoundarie.z()),
             Vector3(minBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
             Vector3(maxBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
             Vector3(maxBoundarie.x(), minBoundarie.y(), minBoundarie.z())
-        };
+        });
     }
     if (pointset.size() == 0) {
         return std::vector<ShapeCurve>();
     } else if (pointset.size() == 1) {
-        if (!this->boundingShape.points.empty())
+        if (!this->boundingShape.empty())
             return std::vector<ShapeCurve>{this->boundingShape};
     }
     jcv_point* points = (jcv_point*)malloc( sizeof(jcv_point) * pointset.size());
-    jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.points.size());
+    jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.numPoints());
     for (size_t i = 0; i < pointset.size(); i++) {
         points[i].x = pointset[i].x();
         points[i].y = pointset[i].y();
@@ -113,10 +113,11 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
         else
             points[i].weight = 1.f;
     }
-    for (size_t i = 0; i < boundingShape.points.size(); i++) {
-        if (i > 0 && boundingShape.points[i] == boundingShape.points[0]) continue;
-        boundingPoints[i].x = boundingShape.points[i].x();
-        boundingPoints[i].y = boundingShape.points[i].y();
+    auto boundingShapePoints = boundingShape.getPath();
+    for (size_t i = 0; i < boundingShapePoints.size(); i++) {
+        if (i > 0 && boundingShapePoints[i] == boundingShapePoints.front()) continue;
+        boundingPoints[i].x = boundingShapePoints[i].x();
+        boundingPoints[i].y = boundingShapePoints[i].y();
     }
 
     jcv_clipper polygonclipper;
@@ -125,9 +126,9 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     polygonclipper.clip_fn = jcv_clip_polygon_clip_edge;
     polygonclipper.fill_fn = jcv_clip_polygon_fill_gaps;
     jcv_clipping_polygon polygon;
-    if (!boundingShape.points.empty()) {
+    if (!boundingShape.empty()) {
 
-        polygon.num_points = boundingShape.points.size();
+        polygon.num_points = boundingShape.numPoints();
         polygon.points = boundingPoints;
     } else {
         std::cout << "We should not be here" << std::endl;
@@ -167,7 +168,7 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
         {
             jcv_point p0 = e->pos[0];
             Vector3 v0 = Vector3(p0.x, p0.y);
-            areaShape.points.push_back(v0);
+            areaShape.addPoint(v0);
             if (e->neighbor != nullptr)
                 neighbors[site->index].push_back(e->neighbor->index);
 

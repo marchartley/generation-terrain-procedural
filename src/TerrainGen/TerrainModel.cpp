@@ -1,6 +1,6 @@
 #include "TerrainModel.h"
 #include "TerrainGen/ImplicitPatch.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 
 TerrainModel::TerrainModel()
 {
@@ -235,7 +235,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
 
             for (size_t iTunnel = 0; iTunnel < allTunnelsCurves.size(); iTunnel++) {
                 auto& curve = allTunnelsCurves[iTunnel];
-                Vector3 inputFlow = simulation->getVelocity(curve.points.front());
+                Vector3 inputFlow = simulation->getVelocity(curve.front());
                 float inputStrength = inputFlow.norm();
 
                 GridF& rasterizedCurve = rasterizedTunnelCurves[iTunnel];
@@ -251,7 +251,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
 
             for (size_t iReef = 0; iReef < allReefCurves.size(); iReef++) {
                 auto& curve = allReefCurves[iReef];
-//                Vector3 inputFlow = simulation->getVelocity(curve.points.front());
+//                Vector3 inputFlow = simulation->getVelocity(curve.front());
 //                float inputStrength = inputFlow.norm();
 
                 GridF& rasterizedCurve = rasterizedReefCurves[iReef];

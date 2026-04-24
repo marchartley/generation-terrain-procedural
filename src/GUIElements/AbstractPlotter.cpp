@@ -119,7 +119,7 @@ AbstractPlotter& AbstractPlotter::addPlot(const std::vector<Vector3>& data, std:
 
 AbstractPlotter& AbstractPlotter::addPlot(const BSpline &data, std::string name, QColor color)
 {
-    return this->addPlot(data.points, name, color);
+    return this->addPlot(data.getPoints(), name, color);
 }
 
 AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
@@ -228,7 +228,7 @@ GridV3 AbstractPlotter::computeStreamLinesRendering(const GridV3 &field, Vector3
         BSpline spline;
         for (int t = 0; t < linesLength; t++) {
             dir = field.interpolate(particle).normalized();
-            spline.points.push_back(particle);
+            spline.addPoint(particle);
             particle += dir;
         }
         auto path = spline.getPath(2.f * linesLength * ratio.maxComp());

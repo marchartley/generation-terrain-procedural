@@ -17,7 +17,7 @@ public:
     float length;
     float flowAttenuation;
 
-    std::vector<Kelvinlet*> curveKelvinlets;
+    std::vector<KelvinletCurve*> curveKelvinlets;
 
     bool evaluateInside = false; // Ture = evaluation points inside, false = evaluation points on borders
 

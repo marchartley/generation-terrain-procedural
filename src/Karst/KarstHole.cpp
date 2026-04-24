@@ -121,8 +121,8 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     Vector3 maxVec = Vector3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
     std::vector<float> v_times;
-    float intervals = 1.f / (float)(int(this->path.points.size()) - 1);
-    for(size_t i = 0; i < this->path.points.size() - 1; i++) {
+    float intervals = 1.f / (float)(int(this->path.numPoints()) - 1);
+    for(size_t i = 0; i < this->path.numPoints() - 1; i++) {
         v_times.push_back((i +  0) * intervals);
         v_times.push_back((i + .1) * intervals);
         v_times.push_back((i + .9) * intervals);
@@ -134,7 +134,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     std::vector<float> validTimesInPath;
     for (int i = 0; i < number_of_intermediates; i++) {
         float t = v_times[i]; //i * dt;
-        std::vector<Vector3> intermediateShape = this->interpolate(t).vertices.points;
+        std::vector<Vector3> intermediateShape = this->interpolate(t).vertices.getPath();
         for (const Vector3& pos : intermediateShape) {
             minVec.x() = std::min(minVec.x(), pos.x());
             minVec.y() = std::min(minVec.y(), pos.y());
@@ -177,20 +177,20 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
         } else {
             if (iT == 0) {
                 currentProfile = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->width).scale(.5f);
-                cylinders.push_back(std::make_tuple(path.getPoint(0.f) + path.getDirection(0.f) * -this->width, path.getPoint(0.f)));
+                cylinders.push_back({path.getPoint(0.f) + path.getDirection(0.f) * -this->width, path.getPoint(0.f)});
             }
             else if(iT == number_of_intermediates + 1) {
 //                std::cout << "Direction " << path.getDirection(1.f) * this->size << std::endl;
                 currentProfile = this->interpolate(1.0).translate(path.getDirection(1.f) * this->width).scale(.5f);
-                cylinders.push_back(std::make_tuple(path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->width));
+                cylinders.push_back({path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->width});
             }
             else {
                 currentProfile = this->interpolate(t, previousValidTime, nextValidTime);
                 if (iT < number_of_intermediates) // Avoid the last cylinder
-                    cylinders.push_back(std::make_tuple(path.getPoint(t), path.getPoint(t + dt)));
+                    cylinders.push_back({path.getPoint(t), path.getPoint(t + dt)});
             }
         }
-        currentProfile.vertices.closed = false;
+        currentProfile.vertices.setClosed(false);
         intermediateProfiles.push_back(currentProfile);
         allIntermediateVertices[iT] = currentProfile.vertices.getPath(number_of_points);
     }
@@ -298,8 +298,8 @@ std::tuple<GridF, Vector3> KarstHole::generateMask(std::vector<std::vector<Vecto
     std::vector<Vector3> cylindersStart;
     std::vector<Vector3> cylindersEnd;
     for (auto& cylinder : this->cylinders) {
-        cylindersStart.push_back(std::get<0>(cylinder) - minVec);
-        cylindersEnd.push_back(std::get<1>(cylinder) - minVec);
+        cylindersStart.push_back(cylinder.first - minVec);
+        cylindersEnd.push_back(cylinder.second - minVec);
     }
     GridF mask((maxVec - minVec));
 #pragma omp parallel for collapse(3)
@@ -372,6 +372,6 @@ std::tuple<GridF, Vector3> KarstHole::generateMask(std::vector<std::vector<Vecto
 //        m = interpolation::linear(m, 0.f, maxDistance);
 ////        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
 //    }
-    Vector3 anchor = this->path.points[0] - minVec;
+    Vector3 anchor = this->path.front() - minVec;
     return std::make_tuple(mask, anchor);
 }

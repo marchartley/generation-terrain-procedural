@@ -2,8 +2,8 @@
 #define SNAKESEGMENTATIONIMPLICIT_H
 
 /*
-#include "Utils/BSpline.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/BSpline.h"
+#include "Curves/ShapeCurve.h"
 #include "EnvObject/SnakeSegmentation.h"
 #include <functional>
 

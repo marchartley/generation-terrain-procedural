@@ -1,33 +1,31 @@
 #ifndef BSPLINE_H
 #define BSPLINE_H
 
-#include <vector>
-#include "DataStructure/Vector3.h"
+#include "Curves/Curve.h"
 
-class BSpline
+class BSpline : public Curve
 {
 public:
     BSpline();
-    BSpline(int numberOfPoints);
-    BSpline(std::vector<Vector3> points);
+    BSpline(const std::vector<Vector3>& points);
     BSpline(std::vector<BSpline> subsplines);
 
-    std::vector<Vector3> getPath(int numberOfPoints, bool linearPath = false) const;
-    Vector3 getPoint(float x, float alpha = 2.f) const; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
+    std::vector<Vector3> getPath(int numberOfPoints = -1) const;
+    Vector3 getPoint(float x) const;
     Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const;
     Vector3 getDerivative(float x, bool normalize = false) const;
     Vector3 getSecondDerivative(float x, bool normalize = false) const;
     float estimateClosestTime(const Vector3& pos, float epsilon = 1e-4, float nbChecksFactor = 2.f, float earlyExitThreshold = 1e-3) const;
     Vector3 estimateClosestPos(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
     float estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
-    float estimateDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
-    float estimateSignedDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
     float length() const;
+
+    std::vector<Vector3> getPoints() const { return this->points; }
 
     BSpline smooth(float factor = 1.f) const;
     BSpline taubinSmooth(float factor = 1.f) const;
 
-    BSpline &setPoint(int i, const Vector3& newPos);
+    BSpline& setPoint(int i, const Vector3& newPos);
 
     BSpline& resamplePoints(int newNbPoints = -1);
 
@@ -44,10 +42,6 @@ public:
     Vector3 getFrenetBinormal(float x) const;
 
     Vector3 getCenterCircle(float x) const;
-    Vector3 getDirection(float x) const;
-    Vector3 getNormal(float x) const;
-    Vector3 getBinormal(float x) const;
-    float getCurvature(float x) const;
 
     Vector3 center() const;
 
@@ -55,20 +49,19 @@ public:
 
     BSpline& cleanPoints();
 
-    Vector3 getCatmullPoint(float x, float alpha = 1.f) const; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
+    Vector3 getCatmullPoint(float x) const;
 
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
 
-    std::tuple<Vector3, Vector3> AABBox() const;
-    Vector3 containingBoxSize() const;
+    std::pair<Vector3, Vector3> AABBox() const;
 
     BSpline& scale(float factor);
     BSpline& scale(const Vector3& factor);
     BSpline scaled(float factor);
     BSpline scaled(const Vector3& factor);
 
-//    BSpline& grow(float increase);
-//    BSpline& shrink(float decrease);
+    //    BSpline& grow(float increase);
+    //    BSpline& shrink(float decrease);
 
     BSpline computeConvexHull() const;
 
@@ -85,13 +78,6 @@ public:
 
     std::string toString() const;
 
-    friend std::ostream& operator<<(std::ostream& io, const BSpline& s);
-    friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<BSpline> s);
-
-    std::vector<Vector3> points;
-    bool closed = false;
-
-
     auto begin() const { return points.begin(); }
     auto end() const { return points.end(); }
     auto begin() { return points.begin(); }
@@ -101,16 +87,39 @@ public:
     std::size_t numVertices() const { return size(); }
     bool empty() const { return begin() == end(); }
 
+    Vector3 front() const { return (size() > 0 ? points[0] : Vector3::invalid); }
+    Vector3 back() const { return (size() > 0 ? points[size() - 1] : Vector3::invalid); }
+
     Vector3& operator[](size_t i);
     const Vector3& operator[](size_t i) const;
 
     std::string display1DPlot(int sizeX, int sizeY) const;
 
 
-    Vector3 computeDerivative(float x, float alpha = 2.f) const; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
+    Vector3 computeDerivative(float x) const;
 
-    std::pair<Vector3, Vector3> pointAndDerivative(float x, float alpha = 2.f) const;
-    std::tuple<Vector3, Vector3, Vector3> pointAndDerivativeAndSecondDerivative(float x, float alpha = 2.f) const;
+    std::pair<Vector3, Vector3> pointAndDerivative(float x) const;
+    std::tuple<Vector3, Vector3, Vector3> pointAndDerivativeAndSecondDerivative(float x) const;
+
+
+    static BSpline random(int numberOfPoints);
+
+    void setAlpha(float newAlpha) { this->alpha = newAlpha; }
+    float getAlpha() const { return alpha; }
+
+    void addPoint(const Vector3& newPoint);
+    BSpline& insertPoint(int i, const Vector3& newPos) { this->points.insert(points.begin() + i, newPos); return *this; }
+    BSpline& removePoint(int i) { this->points.erase(points.begin() + i); return *this; }
+
+    void reset() { this->points.clear(); }
+
+protected:
+    float alpha = 1.f;  // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
+    std::vector<Vector3> points;
+};
+
+class CatmullRomSpline : public BSpline {
+
 };
 
 #endif // BSPLINE_H

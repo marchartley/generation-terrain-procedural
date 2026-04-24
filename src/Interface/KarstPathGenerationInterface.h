@@ -8,7 +8,7 @@ class KarstPathGenerationInterface;
 #include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
 #include "GUIElements/FancySlider.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 // #include <QWidget>
 // #include "TerrainGen/VoxelGrid.h"
 #include "GUI3DElements/PathCameraConstraint.h"

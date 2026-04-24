@@ -2,12 +2,12 @@
 #include "Utils/Globals.h"
 #include "UnderwaterErosion.h"
 #include "TerrainModification/RockErosion.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 #include "Karst/KarstHole.h"
 #include "Utils/Utils.h"
 #include "Graph/Matrix3Graph.h"
 #include "EnvObject/EnvObject.h"
-#include "Utils/Curve1D.h"
+#include "Curves/Curve1D.h"
 
 UnderwaterErosion::UnderwaterErosion()
 {
@@ -247,7 +247,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         tunnels[i] = BSpline(allReturns[i].getPositions());
         std::vector<Vector3> erosionPositions = allReturns[i].getErosionPositions();
         std::vector<float> erosionValues = allReturns[i].getErosionValues();
-        positions += tunnels[i].points.size();
+        positions += tunnels[i].numPoints();
         erosions += erosionValues.size();
         allErosions[i].resize(erosionValues.size());
         for (size_t j = 0; j < erosionValues.size(); j++) {
@@ -530,7 +530,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 lastBouncingTime ++;
                 steps --;
 
-                tunnel.points.push_back(particle.pos);
+                tunnel.addPoint(particle.pos);
 
                 particle.pos = particle.pos + (particle.dir * dt);
                 if (wrapPositions)
@@ -776,7 +776,7 @@ std::tuple<GridF, GridF, GridF> UnderwaterErosion::flatteningErodedTerrain(const
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addingMatter, bool applyChanges,
                                                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
-    BSpline curve = BSpline(numberPoints); // Random curve
+    BSpline curve = BSpline::random(numberPoints); // Random curve
     for (Vector3& coord : curve)
         coord = ((coord + Vector3(1.0, 1.0, 1.0)) / 2.0) * voxelGrid->getDimensions(); //Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
     return CreateTunnel(curve, addingMatter, true, applyChanges, startingShape, endingShape);
