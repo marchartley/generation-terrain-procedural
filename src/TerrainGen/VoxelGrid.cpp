@@ -1,6 +1,6 @@
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/UnderwaterErosion.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 #include "DataStructure/Image.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float noise_shifting)
@@ -207,7 +207,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
              ///
             for (size_t iTunnel = 0; iTunnel < allTunnelsCurves.size(); iTunnel++) {
                 auto& curve = allTunnelsCurves[iTunnel];
-                Vector3 inputFlow = this->multipleFluidSimulations[iCurrent].velocity.at(curve.points.front());
+                Vector3 inputFlow = this->multipleFluidSimulations[iCurrent].velocity.at(curve.front());
                 float inputStrength = inputFlow.norm();
 
                 GridF& rasterizedCurve = rasterizedCurves[iTunnel];

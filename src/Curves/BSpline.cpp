@@ -1,4 +1,4 @@
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 
 #include "Utils/Utils.h"
 #include "Utils/Collisions.h"
@@ -10,20 +10,14 @@ BSpline::BSpline()
 {
 
 }
-BSpline::BSpline(int numberOfPoints) {
-    for(int i = 0; i < numberOfPoints; i++) {
-        this->points.push_back(Vector3::random());
-    }
-}
-
-BSpline::BSpline(std::vector<Vector3> points)
+BSpline::BSpline(const std::vector<Vector3>& points)
     : points(points)
 {
 }
 BSpline::BSpline(std::vector<BSpline> subsplines)
 {
     for (BSpline& spline : subsplines) {
-        bool ignoreFirstPoint = (this->points.empty() ? false : this->points.back() == spline.points.front());
+        bool ignoreFirstPoint = (this->points.empty() ? false : this->points.back() == spline.front());
         this->points.insert(this->points.end(), spline.points.begin() + (ignoreFirstPoint ? 1 : 0), spline.points.end());
     }
 }
@@ -35,8 +29,9 @@ BSpline& BSpline::reverseVertices()
     return *this;
 }
 
-std::vector<Vector3> BSpline::getPath(int numberOfPoints, bool linearPath) const
+std::vector<Vector3> BSpline::getPath(int numberOfPoints) const
 {
+    if (numberOfPoints < 0) return this->points;
     /// I'm really not sure this is the best solution, but an easy fix :
     /// forcing user to have at least 2 points
     numberOfPoints = std::max(numberOfPoints, 2);
@@ -44,11 +39,11 @@ std::vector<Vector3> BSpline::getPath(int numberOfPoints, bool linearPath) const
     std::vector<Vector3> path;
     float resolution = 1.f / (float)(numberOfPoints - 1);
     for (int i = 0; i < numberOfPoints; i ++)
-        path.push_back(this->getPoint(i * resolution, (linearPath ? 0.f : 2.f)));
+        path.push_back(this->getPoint(i * resolution));
     return path;
 }
 
-Vector3 BSpline::getPoint(float x, float alpha) const
+Vector3 BSpline::getPoint(float x) const
 {
     if (this->closed) {
         x = x - std::floor(x); // Warp around if x < 0 or x > 1
@@ -56,7 +51,7 @@ Vector3 BSpline::getPoint(float x, float alpha) const
         x = std::clamp(x, 0.f, 1.f);
     }
     if (points.size() > 2)
-        return this->getCatmullPoint(x, alpha);
+        return this->getCatmullPoint(x);
 
     if(points.size() == 0)
         return Vector3();
@@ -374,24 +369,10 @@ float BSpline::estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape, 
 {
     return (this->estimateClosestPos(pos, useNativeShape, epsilon) - pos).norm2();
 }
-float BSpline::estimateDistanceFrom(const Vector3& pos, bool useNativeShape, float epsilon) const
-{
-    return std::sqrt(this->estimateSqrDistanceFrom(pos, useNativeShape, epsilon));
-}
-
-float BSpline::estimateSignedDistanceFrom(const Vector3& pos, bool useNativeShape, float epsilon) const
-{
-    // Only available for 2D paths, otherwise there's no sense
-    float t = this->estimateClosestTime(pos, epsilon);
-    Vector3 normal = this->getNormal(t);
-    Vector3 posOnCurve = this->getPoint(t);
-    float dist = (posOnCurve - pos).norm();
-    float sign = (normal.dot(posOnCurve - pos) > 0.f ? 1.f : -1.f);
-    return dist * sign;
-}
 
 float BSpline::length() const
 {
+    // Should be using approximation of arclength instead
     float length = 0;
     if (this->points.empty()) return length;
     for (size_t i = 0; i < this->points.size() - 1; i++) {
@@ -507,25 +488,6 @@ Vector3 BSpline::getCenterCircle(float x) const
     return this->getPoint(x) + this->getNormal(x) * (1 / this->getCurvature(x));
 }
 
-Vector3 BSpline::getDirection(float x) const
-{
-    return this->getDerivative(x, true);
-}
-
-Vector3 BSpline::getNormal(float x) const
-{
-    return this->getSecondDerivative(x, true);
-}
-
-Vector3 BSpline::getBinormal(float x) const
-{
-    return this->getDirection(x).cross(this->getNormal(x)).normalize();
-}
-
-float BSpline::getCurvature(float x) const
-{
-    return (getDerivative(x).cross(getSecondDerivative(x))).norm() / (std::pow(getDerivative(x).norm(), 3));
-}
 
 Vector3 BSpline::center() const
 {
@@ -566,7 +528,7 @@ T map(T x, T prev_min, T prev_max, T new_min, T new_max)
     return ((x - prev_min) / (prev_max - prev_min)) * (new_max - new_min) + new_min;
 }
 
-Vector3 BSpline::getCatmullPoint(float x, float alpha) const
+Vector3 BSpline::getCatmullPoint(float x) const
 {
     Vector3 v = std::get<0>(this->pointAndDerivativeAndSecondDerivative(x));
     return v;
@@ -624,11 +586,11 @@ BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
     if (subspline.points.size() == 1) return subspline;
 
     // Find farest point from the line going from start to end of this (sub)spline
-    Vector3 vecAB = (subspline.points.front() - subspline.points.back()).normalized();
+    Vector3 vecAB = (subspline.front() - subspline.back()).normalized();
     float maxDist = 0;
     int index = -1;
     for (size_t i = 1; i < subspline.points.size() - 1; i++) {
-        float d = vecAB.cross((subspline.points[i] - subspline.points.front())).norm2();
+        float d = vecAB.cross((subspline.points[i] - subspline.front())).norm2();
         if (d > maxDist) {
             maxDist = d;
             index = i;
@@ -641,15 +603,15 @@ BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
         BSpline sub2 = this->simplifyByRamerDouglasPeucker(epsilon, std::vector<Vector3>(subspline.points.begin() + index, subspline.points.end()));
         returningSpline = BSpline({sub1, sub2});
     } else {
-        returningSpline.points = {subspline.points.front(), subspline.points.back()};
+        returningSpline.points = {subspline.front(), subspline.back()};
     }
     return returningSpline;
 }
 
-std::tuple<Vector3, Vector3> BSpline::AABBox() const
+std::pair<Vector3, Vector3> BSpline::AABBox() const
 {
-    if (this->points.empty()) return std::make_tuple(Vector3(), Vector3());
-    if (this->points.size() == 1) return std::make_tuple(points[0], points[0]);
+    if (this->points.empty()) return {Vector3::invalid, Vector3::invalid};
+    if (this->points.size() == 1) return {points[0], points[0]};
 
     float minDim = std::numeric_limits<float>::lowest();
     float maxDim = std::numeric_limits<float>::max();
@@ -663,14 +625,7 @@ std::tuple<Vector3, Vector3> BSpline::AABBox() const
         maxVec.y() = std::max(point.y(), maxVec.y());
         maxVec.z() = std::max(point.z(), maxVec.z());
     }
-    return std::make_tuple(minVec, maxVec);
-}
-
-Vector3 BSpline::containingBoxSize() const
-{
-    Vector3 minBox, maxBox;
-    std::tie(minBox, maxBox) = this->AABBox();
-    return (maxBox - minBox);
+    return {minVec, maxVec};
 }
 
 BSpline& BSpline::scale(float factor)
@@ -880,10 +835,8 @@ std::string BSpline::display1DPlot(int sizeX, int sizeY) const
     return oss.str();
 }
 
-Vector3 BSpline::computeDerivative(float x, float alpha) const
+Vector3 BSpline::computeDerivative(float x) const
 {
-    alpha /= 2.f;
-
     std::vector<Vector3> displayedPoints = this->points;
     if (this->closed)
         displayedPoints.push_back(displayedPoints.front());
@@ -929,10 +882,8 @@ Vector3 BSpline::computeDerivative(float x, float alpha) const
     return C_prim;
 }
 
-std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x, float alpha) const
+std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x) const
 {
-    alpha /= 2.f;
-
     std::vector<Vector3> displayedPoints = this->points;
     if (this->closed)
         displayedPoints.push_back(displayedPoints.front());
@@ -984,13 +935,10 @@ std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x, float alpha) co
     return {C, C_prim};
 }
 
-std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDerivative(float x, float alpha) const
+std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDerivative(float x) const
 {
     // This is incredibly dirty!!!!
     x = std::clamp(x, 0.0001f, 0.9999f);
-
-
-    alpha /= 2.f;
 
     std::vector<Vector3> displayedPoints = this->points;
     if (this->closed)
@@ -1053,7 +1001,7 @@ const Vector3 &BSpline::operator[](size_t i) const
     return this->points[(i + size()) % size()];
 }
 
-std::ostream& operator<<(std::ostream& io, const BSpline& s) {
+/*std::ostream& operator<<(std::ostream& io, const BSpline& s) {
     io << s.toString();
     return io;
 }
@@ -1061,4 +1009,19 @@ std::ostream& operator<<(std::ostream& io, const BSpline& s) {
 std::ostream& operator<<(std::ostream& io, std::shared_ptr<BSpline> s) {
     io << s->toString();
     return io;
+}*/
+
+
+
+BSpline BSpline::random(int numberOfPoints) {
+    BSpline curve;
+    for(int i = 0; i < numberOfPoints; i++) {
+        curve.addPoint(Vector3::random());
+    }
+    return curve;
+}
+
+void BSpline::addPoint(const Vector3 &newPoint)
+{
+    this->points.push_back(newPoint);
 }

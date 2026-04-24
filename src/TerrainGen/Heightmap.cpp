@@ -4,7 +4,7 @@
 
 #include "Utils/FastNoiseLit.h"
 #include "Utils/Utils.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 
 #include "DataStructure/Image.h"
 

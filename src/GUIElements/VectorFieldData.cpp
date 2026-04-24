@@ -60,7 +60,7 @@ std::pair<GridV3, GridF> PlotVectorData::createFieldImageAndAlpha(const GridV3 &
             float relativeMag = 1.f;
             if (std::abs(minMag - maxMag) > 1e-5) {
                 relativeMag = interpolation::linear(mag, minMag, maxMag);
-                color = colorPalette(relativeMag, displayParameters.colorRamp.points);
+                color = colorPalette(relativeMag, displayParameters.colorRamp.getPath());
             }
             bool valid = dir.xy().norm2() > 1e-5;
             if (!valid) return;
@@ -91,7 +91,7 @@ std::pair<GridV3, GridF> PlotVectorData::createFieldImageAndAlpha(const GridV3 &
                     if (!dir.isValid()) break;
                     float mag = dir.norm();
                     if (mag < 1e-5) break;
-                    auto color = colorPalette(interpolation::inv_linear(mag, minMag, maxMag), displayParameters.colorRamp.points);
+                    auto color = colorPalette(interpolation::inv_linear(mag, minMag, maxMag), displayParameters.colorRamp.getPath());
 
                     dir = (dir.maxMagnitude(1.f)) * fieldToReducedRatio * stepLength;
                     Vector3 end = p + dir;

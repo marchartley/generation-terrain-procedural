@@ -10,8 +10,8 @@
 #include <iomanip>
 #include <complex>
 #include "DataStructure/Vector3.h"
-#include "Utils/BSpline.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/BSpline.h"
+#include "Curves/ShapeCurve.h"
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 

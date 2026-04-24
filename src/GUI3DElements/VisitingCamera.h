@@ -1,7 +1,7 @@
 #ifndef VISITINGCAMERA_H
 #define VISITINGCAMERA_H
 
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 #include <QGLViewer/camera.h>
 
 class VisitingCamera : public qglviewer::Camera

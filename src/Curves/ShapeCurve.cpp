@@ -326,10 +326,14 @@ ShapeCurve __sub_merge(ShapeCurve self, ShapeCurve other)
     clipShape = clipShape.removeDuplicates();
 
     std::vector<ClipVertex*> poly, clip;
-    poly.reserve((polyShape.points.size() + clipShape.points.size()) * 4);
-    clip.reserve((polyShape.points.size() + clipShape.points.size()) * 4);
-    for (size_t i = 0; i < polyShape.points.size(); i++) poly.push_back(new ClipVertex(polyShape.points[i]));
-    for (size_t i = 0; i < clipShape.points.size(); i++) clip.push_back(new ClipVertex(clipShape.points[i]));
+
+    const auto polyPoints = polyShape.getPath();
+    const auto clipPoints = clipShape.getPath();
+
+    poly.reserve((polyPoints.size() + clipPoints.size()) * 4);
+    clip.reserve((polyPoints.size() + clipPoints.size()) * 4);
+    for (size_t i = 0; i < polyPoints.size(); i++) poly.push_back(new ClipVertex(polyPoints[i]));
+    for (size_t i = 0; i < clipPoints.size(); i++) clip.push_back(new ClipVertex(clipPoints[i]));
 
     bool foundIntersection = false;
 

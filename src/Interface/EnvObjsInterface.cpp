@@ -1449,7 +1449,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
             objAsCurve->improvePositionning(5);
             initialCurve = objAsCurve->curve;
             BSpline display = initialCurve;
-            display.points.push_back(display[0]);
+            display.addPoint(display[0]);
             display.resamplePoints(100);
             for (size_t i = 0; i < display.size(); i++) {
                 const auto& pos = display[i];
@@ -1458,7 +1458,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
             }
         }
         isoline = initialCurve;
-        isoline.closed = false;
+        isoline.setClosed(false);
     } else if (auto objAsArea = dynamic_cast<EnvAreaInstance*>(obj)) {
         ShapeCurve initialCurve;
         SnakeSegmentation& s = obj->snake;
@@ -1472,7 +1472,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
             obj->improvePositionning(5);
             initialCurve = objAsArea->curve;
             ShapeCurve display = initialCurve;
-            display.points.push_back(display[0]);
+            display.addPoint(display[0]);
             display.resamplePoints(100);
             if (iteration <= 9) {
                 for (size_t i = 0; i < display.size(); i++) {
@@ -1492,7 +1492,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         isoline = initialCurve;
     }
 
-    if (isoline.closed) {
+    if (isoline.isClosed()) {
         dataV3.iterateParallel([&](const Vector3i& pos) {
             bool insideCurve = isoline.containsXY(pos, false);
             result(pos) += Vector3(.5f, .5f, .5f) * (insideCurve ? 1.f : 0.f);
@@ -1698,7 +1698,7 @@ void EnvObjsInterface::addPointOnNewObjectCreation(const Vector3 &position, bool
 {
     if (addPoint) {
         auto objectModel = this->scene->availableObjects[getCurrentObjectName()];
-        this->objectSkeletonCreation.points.push_back(position.xy());
+        this->objectSkeletonCreation.addPoint(position.xy());
         if (objectModel->isPoint()) {
             this->endNewObjectCreation();
         } else {
@@ -1707,7 +1707,7 @@ void EnvObjsInterface::addPointOnNewObjectCreation(const Vector3 &position, bool
     } else {
         for (int i = objectSkeletonCreation.size() - 1; i >= 0; i--) {
             if ((objectSkeletonCreation[i] - position).xy().norm2() < removeRadius * removeRadius) {
-                objectSkeletonCreation.points.erase(objectSkeletonCreation.begin() + i);
+                objectSkeletonCreation.removePoint(i);
             }
         }
     }
@@ -2248,10 +2248,11 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
     GridF evaluationAmounts(terrainDims);
     displayProcessTime("Computing flow from erosion data... ", [&]() {
         for (const auto& path : lastRocksLaunched) {
-            for (int i = 1; i < int(path.points.size()) - 1; i++) {
-                auto& pos = path.points[i];
-                auto& pPrev = path.points[i - 1];
-                auto& pNext = path.points[i + 1];
+            auto points = path.getPoints();
+            for (int i = 1; i < int(points.size()) - 1; i++) {
+                auto& pos = points[i];
+                auto& pPrev = points[i - 1];
+                auto& pNext = points[i + 1];
                 auto velocity = (pNext - pPrev).normalize();
                 if (velocity.norm2() > 50 * 50) continue; // When a particle is wraped from one side to the other of the terrain
                 velocities(pos) += velocity * .5f;

@@ -38,9 +38,10 @@ void PathCameraConstraint::constrainTranslation(qglviewer::Vec &t, qglviewer::Fr
     Vector3 currentPos = Vector3(fr->position().x, fr->position().y, fr->position().z);
     for (const BSpline& path : this->paths)
     {
-        for (size_t i = 0; i < path.points.size(); i++)
+        auto pathPoints = path.getPath();
+        for (size_t i = 0; i < pathPoints.size(); i++)
         {
-            float distToPoint = (path.points[i] - currentPos).norm2();
+            float distToPoint = (pathPoints[i] - currentPos).norm2();
             if (std::abs(distToPoint - dist) < 1.0) {
                 closestPathCandidates.push_back(path);
                 closestPointIndexCandidates.push_back(i);
@@ -62,24 +63,26 @@ void PathCameraConstraint::constrainTranslation(qglviewer::Vec &t, qglviewer::Fr
         Vector3 camPos = this->camera->position();
         Vector3 camDir = this->camera->viewDirection();
         for (size_t i = 0; i < closestPathCandidates.size(); i++) {
-            if ((closestPathCandidates[i].points[closestPointIndexCandidates[i]] - camPos).normalized().dot(camDir) > bestDotValue) {
+            auto pathPoints = closestPathCandidates[i].getPath();
+            auto closestPathPoints = closestPath.getPoints();
+            if ((pathPoints[closestPointIndexCandidates[i]] - camPos).normalized().dot(camDir) > bestDotValue) {
                 closestPath = closestPathCandidates[i];
                 closestPointIndex = closestPointIndexCandidates[i];
-                bestDotValue = (closestPath.points[closestPointIndex] - camPos).normalized().dot(camDir);
+                bestDotValue = (closestPathPoints[closestPointIndex] - camPos).normalized().dot(camDir);
                 goingForward = true;
             }
             if (closestPointIndexCandidates[i] > 0 &&
-                    (closestPathCandidates[i].points[closestPointIndexCandidates[i] - 1] - camPos).normalized().dot(camDir) > bestDotValue) {
+                    (pathPoints[closestPointIndexCandidates[i] - 1] - camPos).normalized().dot(camDir) > bestDotValue) {
                 closestPath = closestPathCandidates[i];
                 closestPointIndex = closestPointIndexCandidates[i];
-                bestDotValue = (closestPath.points[closestPointIndex - 1] - camPos).normalized().dot(camDir);
+                bestDotValue = (closestPathPoints[closestPointIndex - 1] - camPos).normalized().dot(camDir);
                 goingForward = false;
             }
-            if (closestPointIndexCandidates[i] < int(closestPathCandidates[i].points.size() - 1) &&
-                    (closestPathCandidates[i].points[closestPointIndexCandidates[i] + 1] - camPos).normalized().dot(camDir) > bestDotValue) {
+            if (closestPointIndexCandidates[i] < int(pathPoints.size() - 1) &&
+                    (pathPoints[closestPointIndexCandidates[i] + 1] - camPos).normalized().dot(camDir) > bestDotValue) {
                 closestPath = closestPathCandidates[i];
                 closestPointIndex = closestPointIndexCandidates[i];
-                bestDotValue = (closestPath.points[closestPointIndex + 1] - camPos).normalized().dot(camDir);
+                bestDotValue = (closestPathPoints[closestPointIndex + 1] - camPos).normalized().dot(camDir);
                 goingForward = true;
             }
         }

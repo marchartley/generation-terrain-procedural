@@ -4,7 +4,7 @@
 class BiomeInstance;
 #include "Biomes/BiomeModel.h"
 #include "DataStructure/Vector3.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 #include <vector>
 
 class BiomeInstance : public std::enable_shared_from_this<BiomeInstance>

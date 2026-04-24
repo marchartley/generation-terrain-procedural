@@ -4,7 +4,7 @@
 #include "Utils/Globals.h"
 #include <QGLViewer/constraint.h>
 #include <QGLViewer/camera.h>
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 #include <vector>
 
 class PathCameraConstraint : public qglviewer::Constraint

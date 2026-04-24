@@ -19,14 +19,14 @@ BSpline PositionOptimizer::trackHighestPosition(const Vector3& seedPosition, [[m
     BSpline track;
 
     for (int i = 0; i < maxTries; i++) {
-        track.points.push_back(pos);
+        track.addPoint(pos);
 
         auto newPos = PositionOptimizer::followGradient(pos, gradients, 1, goUp);
         if ((newPos - pos).norm2() < 1e-5) break;
 
         pos = newPos;
     }
-    track.points.push_back(pos);
+    track.addPoint(pos);
     return track;
 }
 
@@ -155,7 +155,7 @@ BSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF&
                 float newVal = score.interpolate(pos0 + dir0);
                 Vector3 newPos0 = PathOptimizer::attractToIsovalue(pos0 + dir0, score, gradients, newVal, initialIsovalue, 1.f, 10);
                 if (newPos0.isValid()) {
-                    path.points.push_back(newPos0); // Back
+                    path.addPoint(newPos0); // Back
                     totalDistance += (pos0 - newPos0).norm();
                     pos0 = newPos0;
                 }
@@ -172,7 +172,7 @@ BSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF&
                 float newVal = score.interpolate(pos1 + dir1);
                 Vector3 newPos1 = PathOptimizer::attractToIsovalue(pos1 + dir1, score, gradients, newVal, initialIsovalue, 1.f, 10);
                 if (newPos1.isValid()) {
-                    path.points.insert(path.points.begin(), newPos1); // Front
+                    path.insertPoint(0, newPos1); // Front
                     totalDistance += (pos1 - newPos1).norm();
                     pos1 = newPos1;
                 }
@@ -181,7 +181,7 @@ BSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF&
 
         // Check for a loop: P0 == Pn || P0 == Pn-1 || P1 == Pn
         float loopEpsilon = 5.f;
-        if (path.size() > 5 && (path.points.front() - path.points.back()).norm2() < loopEpsilon){
+        if (path.size() > 5 && (path.front() - path.back()).norm2() < loopEpsilon){
             break; // Got back close to beginning
         }
         if (minLength < totalDistance || path.size() > 5000) {
@@ -189,7 +189,7 @@ BSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF&
         }
     }
     // Run check for detecting spiral (This is my own algo, I don't think it's a good one...)
-    AABBox boundingBox(path.points);
+    AABBox boundingBox(path.AABBox());
     float ratioAreaPerimeter = (std::pow(boundingBox.dimensions().maxComp(), 2) / totalDistance);
     float ratioLimit = .5f * totalDistance / (2.f * PI); // Approximatively the ratio for a circle...
     if (ratioAreaPerimeter < ratioLimit) return BSpline();
@@ -202,14 +202,14 @@ BSpline CurveOptimizer::followGradient(const Vector3& seedPosition, [[maybe_unus
     BSpline track;
 
     for (int i = 0; i < maxTries; i++) {
-        track.points.push_back(pos);
+        track.addPoint(pos);
 
         auto newPos = PositionOptimizer::followGradient(pos, gradients, 1, goUp);
         if ((newPos - pos).norm2() < 1e-5) break;
 
         pos = newPos;
     }
-    track.points.push_back(pos);
+    track.addPoint(pos);
     return track;
 }
 
@@ -223,9 +223,9 @@ ShapeCurve AreaOptimizer::getInitialShape(const Vector3& seedPosition, const Gri
     Vector3 jitterPos = pos;
     // Create a "curve" with maximal length as possible
     finalIsoline = CurveOptimizer::followIsolevel(jitterPos, score, gradients, std::numeric_limits<float>::max()); //this->computeNewObjectsShapeAtPosition(jitterPos, gradients, score, directionLength).close();
-    if (finalIsoline.size() > 5 && (finalIsoline.points.front() - finalIsoline.points.back()).norm2() < 3*3) {
+    if (finalIsoline.size() > 5 && (finalIsoline.front() - finalIsoline.back()).norm2() < 3*3) {
         bestCurve = finalIsoline;
-        bestCurve.closed = true;
+        bestCurve.setClosed(true);
     }
     return bestCurve;
 }
@@ -373,7 +373,7 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, co
                 float newVal = func(pos0 + dir0);
                 Vector3 newPos0 = ContinuousPathOptimizer::attractToIsovalue(pos0 + dir0, func, newVal, initialIsovalue, 1.f, 10);
                 if (newPos0.isValid()) {
-                    path.points.push_back(newPos0); // Back
+                    path.addPoint(newPos0); // Back
                     totalDistance += (pos0 - newPos0).norm();
                     pos0 = newPos0;
                 }
@@ -390,7 +390,7 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, co
                 float newVal = func(pos1 + dir1);
                 Vector3 newPos1 = ContinuousPathOptimizer::attractToIsovalue(pos1 + dir1, func, newVal, initialIsovalue, 1.f, 10);
                 if (newPos1.isValid()) {
-                    path.points.insert(path.points.begin(), newPos1); // Front
+                    path.insertPoint(0, newPos1); // Front
                     totalDistance += (pos1 - newPos1).norm();
                     pos1 = newPos1;
                 }
@@ -399,7 +399,7 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, co
 
         // Check for a loop: P0 == Pn || P0 == Pn-1 || P1 == Pn
         float loopEpsilon = 5.f;
-        if (path.size() > 5 && (path.points.front() - path.points.back()).norm2() < loopEpsilon){
+        if (path.size() > 5 && (path.front() - path.back()).norm2() < loopEpsilon){
             break; // Got back close to beginning
         }
         if (minLength < totalDistance || path.size() > 5000) {
@@ -407,7 +407,7 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, co
         }
     }
     // Run check for detecting spiral (This is my own algo, I don't think it's a good one...)
-    AABBox boundingBox(path.points);
+    AABBox boundingBox(path.AABBox());
     float ratioAreaPerimeter = (std::pow(boundingBox.dimensions().maxComp(), 2) / totalDistance);
     float ratioLimit = .5f * totalDistance / (2.f * PI); // Approximatively the ratio for a circle...
     if (ratioAreaPerimeter < ratioLimit) return BSpline();
@@ -422,14 +422,14 @@ BSpline ContinuousCurveOptimizer::followGradient(const Vector3& seedPosition, co
     auto gradients = gradientFromFieldFunction(func);
 
     for (int i = 0; i < maxTries; i++) {
-        track.points.push_back(pos);
+        track.addPoint(pos);
 
         auto newPos = ContinuousPositionOptimizer::followGradient(pos, gradients, 1, goUp);
         if ((newPos - pos).norm2() < 1e-5) break;
 
         pos = newPos;
     }
-    track.points.push_back(pos);
+    track.addPoint(pos);
     return track;
 }
 
@@ -501,14 +501,14 @@ BSpline ContinuousPositionOptimizer::trackHighestPosition(const Vector3& seedPos
     auto gradients = gradientFromFieldFunction(func);
 
     for (int i = 0; i < maxTries; i++) {
-        track.points.push_back(pos);
+        track.addPoint(pos);
 
         auto newPos = ContinuousPositionOptimizer::followGradient(pos, gradients, 1, goUp);
         if ((newPos - pos).norm2() < 1e-5) break;
 
         pos = newPos;
     }
-    track.points.push_back(pos);
+    track.addPoint(pos);
     return track;
 }
 
@@ -603,9 +603,9 @@ ShapeCurve ContinuousAreaOptimizer::getInitialShape(const Vector3& seedPosition,
     Vector3 jitterPos = pos;
     // Create a "curve" with maximal length as possible
     finalIsoline = ContinuousCurveOptimizer::followIsolevel(jitterPos, func, std::numeric_limits<float>::max()); //this->computeNewObjectsShapeAtPosition(jitterPos, gradients, score, directionLength).close();
-    if (finalIsoline.size() > 5 && (finalIsoline.points.front() - finalIsoline.points.back()).norm2() < 3*3) {
+    if (finalIsoline.size() > 5 && (finalIsoline.front() - finalIsoline.back()).norm2() < 3*3) {
         bestCurve = finalIsoline;
-        bestCurve.closed = true;
+        bestCurve.setClosed(true);
     }
     return bestCurve;
 }

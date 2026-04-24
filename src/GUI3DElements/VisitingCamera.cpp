@@ -17,9 +17,10 @@ void VisitingCamera::moveForward(float distance)
     Vector3 currentDir = viewDirection();
     for (const BSpline& path : this->paths)
     {
-        for (size_t i = 0; i < path.points.size(); i++)
+        auto pathPoints = path.getPath();
+        for (size_t i = 0; i < pathPoints.size(); i++)
         {
-            Vector3 pointPos = path.points[i];
+            Vector3 pointPos = pathPoints[i];
             Vector3 toPoint = pointPos - currentPos;
             if (toPoint.norm2() < 2.f) continue;
 
@@ -32,7 +33,8 @@ void VisitingCamera::moveForward(float distance)
         }
     }
     if (closestPointIndex > -1) {
-        Vector3 desiredDirection = (closestPath.points[closestPointIndex] - currentPos).normalize();
+        auto closestPathPoints = closestPath.getPath();
+        Vector3 desiredDirection = (closestPathPoints[closestPointIndex] - currentPos).normalize();
         this->setPosition(currentPos + desiredDirection * distance);
         this->setPivotPoint(position());
 //        this->lookAt(closestPath.points[closestPointIndex]);

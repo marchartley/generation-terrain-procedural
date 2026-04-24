@@ -6,7 +6,7 @@ class BiomeModel;
 #include "Biomes/BiomeInstance.h"
 #include "Utils/json.h"
 #include "DataStructure/Vector3.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 
 #include <cmath>
 

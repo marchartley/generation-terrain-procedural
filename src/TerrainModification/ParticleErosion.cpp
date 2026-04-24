@@ -429,7 +429,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
         lastBouncingTime ++;
         steps --;
 
-//        tunnel.points.push_back(particle.pos);
+//        tunnel.addPoint(particle.pos);
 
         particle.pos = particle.pos + (particle.dir * dt);
         if (wrapPositions)

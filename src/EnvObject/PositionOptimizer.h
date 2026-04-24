@@ -3,7 +3,7 @@
 
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 #include "EnvObject/SnakeSegmentation.h"
 
 class PathOptimizer {

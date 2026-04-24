@@ -1,7 +1,7 @@
 #include "TunnelInterface.h"
 
 #include "GUIElements/InterfaceUtils.h"
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
 TunnelInterface::TunnelInterface(QWidget *parent)

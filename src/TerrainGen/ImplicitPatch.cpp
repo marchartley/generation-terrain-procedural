@@ -1,5 +1,5 @@
 #include "ImplicitPatch.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 //#include "Utils/stb_image.h"
 #include "Utils/Utils.h"
 
@@ -1824,7 +1824,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createMountainChainFunction
 
 std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
-    ShapeCurve polygon(path.points);
+    ShapeCurve polygon(path);
     std::function<float (const Vector3&)> polygonFunc = [=] (const Vector3& pos) -> float {
         return (polygon.containsXY(pos.xy(), false) ? height : 0.f);
     };
@@ -1838,10 +1838,10 @@ std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float
 
 std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
-    random_gen::random_generator.seed((path.points[0] + path.points[1]).divergence());
+    random_gen::random_generator.seed((path.getPoint(0) + path.getPoint(0.1)).divergence());
     int nbPoints = 50;
     int nbPaths = 50;
-    ShapeCurve polygon(path.points);
+    ShapeCurve polygon(path);
     for (auto& p : polygon)
         p.z() = 0;
     AABBox bbox(polygon.AABBox());

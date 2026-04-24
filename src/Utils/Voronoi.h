@@ -3,8 +3,8 @@
 
 
 #include "DataStructure/Vector3.h"
-#include "Utils/BSpline.h"
-#include "Utils/ShapeCurve.h"
+#include "Curves/BSpline.h"
+#include "Curves/ShapeCurve.h"
 #include <vector>
 
 #include "Graph/Graph.h"

@@ -95,13 +95,14 @@ KarstHoleProfile &KarstHoleProfile::translate(const Vector3& translation, bool v
 }
 
 KarstHoleProfile &KarstHoleProfile::scale(float scale_factor, bool verbose)
-{
+{/*
     Vector3 mean;
     for (const Vector3& point : this->vertices)
         mean += point;
     if (verbose)
         std::cout << "For scale, mean = " << mean << "/" << (float)this->vertices.points.size() << " = ";
-    mean /= (float)this->vertices.points.size();
+    mean /= (float)this->vertices.points.size();*/
+    Vector3 mean = vertices.center();
     if (verbose)
         std::cout << mean << "\nPoints are going towards mean.\n";
     for (Vector3& point : this->vertices) {
@@ -236,7 +237,7 @@ KarstHoleProfile &KarstHoleProfile::rotateIndicesUntilBestFitWith(KarstHoleProfi
     for (int i = bestRotateFit; i < numberOfPointsUsed + bestRotateFit; i++) {
         newPoints.insert((best_reversed ? newPoints.begin() : newPoints.end() ), startPositions[i % numberOfPointsUsed]);
     }
-    this->vertices.points = newPoints;
+    this->vertices = BSpline(newPoints);
     return *this;
 }
 

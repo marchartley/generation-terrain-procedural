@@ -107,7 +107,7 @@ void EnvAreaInstance::recomputeEvaluationPoints()
     if (this->getDefinition()->evaluateInside) {
         this->evaluationPositions = curve.randomPointsInside(curve.size());
     } else {
-        this->evaluationPositions = curve.points;
+        this->evaluationPositions = curve.getPoints();
     }
 }
 
@@ -118,7 +118,7 @@ void EnvAreaInstance::applyDeposition(EnvMaterial& material)
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
     ShapeCurve translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(depositionProperties.radius);
-    AABBox box = AABBox(translatedCurve.points);
+    AABBox box = AABBox(translatedCurve.AABBox());
     translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
     // for (auto& p : translatedCurve)
         // p = p + Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min();
@@ -139,7 +139,7 @@ void EnvAreaInstance::applyAbsorption(EnvMaterial& material)
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
     ShapeCurve translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(absorptionProperties.radius);
-    AABBox box = AABBox(translatedCurve.points);
+    AABBox box = AABBox(translatedCurve.AABBox());
     translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
     // for (auto& p : translatedCurve)
     // p = p + Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min();
@@ -159,7 +159,7 @@ void EnvAreaInstance::applyDepositionOnDeath()
     for (auto& [materialName, depos] : this->getDefinition()->materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
         if (depos.rate == 0) return;
-        AABBox box = AABBox(this->curve.points);
+        AABBox box = AABBox(this->curve.AABBox());
         ShapeCurve translatedCurve = this->curve;
         for (auto& p : translatedCurve)
             p = p + Vector3(depos.radius, depos.radius, 0) - box.min();
@@ -177,11 +177,13 @@ GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow, float scale)
 {
     std::vector<KelvinletCurve*> evaluatedCurveKelvinlets;
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
+        auto& k = this->getDefinition()->curveKelvinlets[i];
+        k->curve = this->curve;
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
-            if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(this->getDefinition()->curveKelvinlets[i])) {
-                asCurveKelvinlet->curve = this->curve;
-                evaluatedCurveKelvinlets.push_back(asCurveKelvinlet);
-            }
+            evaluatedCurveKelvinlets.push_back(k);
+            // if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(this->getDefinition()->curveKelvinlets[i])) {
+                // evaluatedCurveKelvinlets.push_back(asCurveKelvinlet);
+            // }
         }
     }
     waterFlow.iterateParallel([&](const Vector3& p) {
@@ -204,7 +206,7 @@ ImplicitPatch* EnvAreaInstance::createImplicitPatch(const GridF &heights, Implic
     for (Vector3& p : translatedCurve) {
         p.z() = heights(p.xy());
     }
-    AABBox box(translatedCurve.points);
+    AABBox box(translatedCurve.AABBox());
     float growingState = 1.f;
     Vector3 offset(this->getDefinition()->width, this->getDefinition()->width, this->getDefinition()->height * growingState);
     translatedCurve.translate(-(box.min() - offset * .5f));
@@ -263,7 +265,7 @@ void EnvAreaInstance::updateCurve(const BSpline &newCurve)
             evaluationPosition = newCurve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
         }
     } else {
-        this->evaluationPositions = newCurve.points;
+        this->evaluationPositions = newCurve.getPoints();
     }
     this->curve = newCurve;
     this->_cachedFlowModif.clear();

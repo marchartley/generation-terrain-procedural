@@ -1,7 +1,7 @@
 #ifndef BSPLINESERIALIZER_H
 #define BSPLINESERIALIZER_H
 
-#include "Utils/BSpline.h"
+#include "Curves/BSpline.h"
 
 #include "Utils/json.h"
 
@@ -17,21 +17,22 @@ void from_json(const Json& json, BSpline& spline);
 template <class Json>
 void to_json(Json &json, const BSpline &spline)
 {
-    std::vector<Json> points(spline.points.size());
-    for (size_t i = 0; i < spline.points.size(); i++) {
-        points[i] = spline.points[i];
+    auto p = spline.getPoints();
+    std::vector<Json> points(p.size());
+    for (size_t i = 0; i < p.size(); i++) {
+        points[i] = p[i];
     }
     json["points"] = points;
-    json["closed"] = spline.closed;
+    json["closed"] = spline.isClosed();
 }
 
 
 template <class Json>
 void from_json(const Json& json, BSpline& spline) {
     auto points = json.at("points");
-    spline.points.resize(points.size());
+    // spline.points.resize(points.size());
     for (size_t i = 0; i < points.size(); i++)
-        spline.points[i] = points[i];
+        spline.addPoint(points[i]); // spline.points[i] = points[i];
     if (json.at("closed").template get<bool>())
         spline.close();
 }

@@ -1,7 +1,7 @@
 #ifndef ENVOBJECT_H
 #define ENVOBJECT_H
 
-#include "Utils/ShapeCurve.h"
+#include "Curves/ShapeCurve.h"
 #include "Utils/json.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"

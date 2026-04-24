@@ -77,6 +77,7 @@ SOURCES += \
     src/Biomes/BiomeInstance.cpp \
     src/Biomes/BiomeModel.cpp \
     src/Biomes/BiomeUtils.cpp \
+    src/Curves/BezierCurve.cpp \
     src/DataStructure/BVH.cpp \
     src/DataStructure/Image.cpp \
     src/DataStructure/KDTree.cpp \
@@ -219,19 +220,21 @@ SOURCES += \
     src/TerrainModification/UnderwaterErosion.cpp \
     src/TreeColonisation/TreeColonisation.cpp \
     src/Utils/AdjencySolver.cpp \
-    src/Utils/BSpline.cpp \
+    src/Curves/BSpline.cpp \
     src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
-    src/Utils/Curve1D.cpp \
+    src/Curves/Curve.cpp \
+    src/Curves/Curve1D.cpp \
     src/Utils/Delaunay.cpp \
     src/Utils/Globals.cpp \
     src/Utils/HotreloadFile.cpp \
     src/Utils/PSO.cpp \
     src/Utils/PbmReader.cpp \
-    src/Utils/RadialShape.cpp \
+    src/Curves/Polyline.cpp \
+    src/Curves/RadialShape.cpp \
     src/Utils/Random.cpp \
     src/Utils/RewritableFile.cpp \
-    src/Utils/ShapeCurve.cpp \
+    src/Curves/ShapeCurve.cpp \
     src/Utils/Signals.cpp \
     src/Utils/Skeletonize.cpp \
     src/Utils/Table.cpp \
@@ -269,6 +272,7 @@ HEADERS += \
     src/Biomes/BiomeUtils.h \
     src/Biomes/InstancesTree.h \
     src/Biomes/ModelsTree.h \
+    src/Curves/BezierCurve.h \
     src/DataStructure/BVH.h \
     src/DataStructure/Image.h \
     src/DataStructure/KDTree.h \
@@ -410,10 +414,11 @@ HEADERS += \
     src/TerrainModification/UnderwaterErosion.h \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/AdjencySolver.h \
-    src/Utils/BSpline.h \
+    src/Curves/BSpline.h \
     src/Utils/Collisions.h \
     src/Utils/ConstraintsSolver.h \
-    src/Utils/Curve1D.h \
+    src/Curves/Curve.h \
+    src/Curves/Curve1D.h \
     src/Utils/Delaunay.h \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
@@ -421,10 +426,11 @@ HEADERS += \
     src/Utils/HotreloadFile.h \
     src/Utils/PSO.h \
     src/Utils/PbmReader.h \
-    src/Utils/RadialShape.h \
+    src/Curves/Polyline.h \
+    src/Curves/RadialShape.h \
     src/Utils/Random.h \
     src/Utils/RewritableFile.h \
-    src/Utils/ShapeCurve.h \
+    src/Curves/ShapeCurve.h \
     src/Utils/Signals.h \
     src/Utils/Skeletonize.h \
     src/Utils/Table.h \
