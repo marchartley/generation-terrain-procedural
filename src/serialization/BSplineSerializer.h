@@ -29,6 +29,7 @@ void to_json(Json &json, const BSpline& curve)
         points[i] = p[i];
     }
     json["points"] = points;
+    json["alpha"] = curve.getAlpha();
     json["type"] = "catmull";
 }
 
@@ -79,6 +80,8 @@ template <class Json>
 void from_json(const Json& json, BSpline& curve) {
     auto points = json.at("points").template get<std::vector<Vector3>>();
     curve = BSpline(points);
+    if (json.contains("alpha"))
+        curve.setAlpha(json.at("alpha"));
     from_json(json, static_cast<Curve&>(curve));
 }
 
