@@ -200,9 +200,9 @@ GrabKelvinletCurve::GrabKelvinletCurve()
 Vector3 GrabKelvinletCurve::evaluate(const Vector3 &p) const
 {
     if (!this->valid()) return Vector3::origin;
-    float closestTime = curve.estimateClosestTime(p);
-    Vector3 pos = curve.getPoint(closestTime);
-    Vector3 dir = curve.getDirection(closestTime);
+    float closestTime = curve->estimateClosestTime(p);
+    Vector3 pos = curve->getPoint(closestTime);
+    Vector3 dir = curve->getDirection(closestTime);
 
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
@@ -237,9 +237,9 @@ TwistKelvinletCurve::TwistKelvinletCurve()
 Vector3 TwistKelvinletCurve::evaluate(const Vector3 &p) const
 {
     if (!this->valid()) return Vector3::origin;
-    float closestTime = curve.estimateClosestTime(p);
-    Vector3 pos = curve.getPoint(closestTime);
-    Vector3 dir = curve.getBinormal(closestTime); //curve.getDirection(closestTime);
+    float closestTime = curve->estimateClosestTime(p);
+    Vector3 pos = curve->getPoint(closestTime);
+    Vector3 dir = curve->getBinormal(closestTime); //curve->getDirection(closestTime);
 
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
@@ -269,9 +269,9 @@ ScaleKelvinletCurve::ScaleKelvinletCurve()
 Vector3 ScaleKelvinletCurve::evaluate(const Vector3 &p) const
 {
     if (!this->valid()) return Vector3::origin;
-    float closestTime = curve.estimateClosestTime(p);
-    Vector3 pos = curve.getPoint(closestTime);
-//    Vector3 dir = curve.getDirection(closestTime);
+    float closestTime = curve->estimateClosestTime(p);
+    Vector3 pos = curve->getPoint(closestTime);
+//    Vector3 dir = curve->getDirection(closestTime);
 
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
@@ -300,9 +300,9 @@ PinchKelvinletCurve::PinchKelvinletCurve()
 Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
 {
     if (!this->valid()) return Vector3::origin;
-    float closestTime = curve.estimateClosestTime(p);
-    Vector3 pos = curve.getPoint(closestTime);
-    Vector3 dir = curve.getDirection(closestTime) * this->force();
+    float closestTime = curve->estimateClosestTime(p);
+    Vector3 pos = curve->getPoint(closestTime);
+    Vector3 dir = curve->getDirection(closestTime) * this->force();
 
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();

@@ -7,6 +7,11 @@ Polyline::Polyline() : Polyline(std::vector<Vector3>{})
 
 }
 
+Polyline::Polyline(const Polyline &s)
+{
+    *this = s;
+}
+
 Polyline::Polyline(const std::vector<Vector3>& points)
     : Curve(), points(points)
 {
@@ -57,7 +62,7 @@ Vector3 Polyline::getSecondDerivative(float x, bool normalize) const
     return Vector3(0.f, 0.f, 0.f); // Consider no second derivative since linear piece-wise.
 }
 
-float Polyline::estimateClosestTime(const Vector3& pos, float epsilon, float nbChecksFactor, float earlyExitThreshold) const
+float Polyline::estimateClosestTime(const Vector3& pos) const
 {
     size_t closestStartPoint = 0;
     float minDist = std::numeric_limits<float>::max();
@@ -74,12 +79,12 @@ float Polyline::estimateClosestTime(const Vector3& pos, float epsilon, float nbC
     return (float(closestStartPoint) + (Collision::projectPointOnSegment(pos, points[closestStartPoint], points[closestStartPoint + 1]) - points[closestStartPoint]).norm() / (points[closestStartPoint + 1] - points[closestStartPoint]).norm()) / float(numPoints() - 1);
 }
 
-Vector3 Polyline::estimateClosestPos(const Vector3& pos, bool useNativeShape, float epsilon) const
+Vector3 Polyline::estimateClosestPos(const Vector3& pos) const
 {
     return getPoint(estimateClosestTime(pos));
 }
 
-float Polyline::estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape, float epsilon) const
+float Polyline::estimateSqrDistanceFrom(const Vector3& pos) const
 {
     float minDist = std::numeric_limits<float>::max();
 
@@ -142,11 +147,6 @@ std::pair<Vector3, Vector3> Polyline::AABBox() const
         maxi.z() = std::max(maxi.z(), p.z());
     }
     return {mini, maxi};
-}
-
-Polyline& Polyline::scale(float factor)
-{
-    return scale(Vector3(factor, factor, factor));
 }
 
 Polyline& Polyline::scale(const Vector3& factor)

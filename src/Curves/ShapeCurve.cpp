@@ -105,9 +105,9 @@ float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const
     return dist * (contains(pos, false) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
-float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon) const
+float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos) const
 {
-    return /*BSpline(this->closedPath()).*/BSpline::estimateSignedDistanceFrom(pos, epsilon);
+    return /*BSpline(this->closedPath()).*/BSpline::estimateSignedDistanceFrom(pos);
 }
 
 float ShapeCurve::computeArea()

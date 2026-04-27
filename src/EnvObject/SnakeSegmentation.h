@@ -1,7 +1,7 @@
 #ifndef SNAKESEGMENTATION_H
 #define SNAKESEGMENTATION_H
 
-#include "Curves/BSpline.h"
+#include "Curves/Curves.h"
 #include "DataStructure/Matrix3.h"
 
 

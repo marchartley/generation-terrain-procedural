@@ -50,6 +50,11 @@ public:
 
     Vector3 getRelativeMousePositionInImage(const Vector3& pos);
 
+    void resetPlot();
+    void displayImages();
+    void displayPlotLines();
+    void displayScatterPoints();
+
     QPoint previousMousePos;
 
 
@@ -69,6 +74,9 @@ protected:
     void wheelEvent(QWheelEvent *event);
 
     bool locked = false;
+
+    QValueAxis* axisX = nullptr;
+    QValueAxis* axisY = nullptr;
 
 public:
     std::shared_ptr<PlotModel> _dataModel;

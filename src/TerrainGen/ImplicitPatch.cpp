@@ -1675,7 +1675,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createCylinderFunction(floa
             if (pos.z() < start.z() || end.z() < pos.z())
                 return 0.2f;
             BSpline spline({start, end});
-            Vector3 closestPoint = spline.estimateClosestPos(pos, 1e-5);
+            Vector3 closestPoint = spline.estimateClosestPos(pos);
             Vector3 normalizedClosestPoint = ((pos - closestPoint) / (Vector3(width, depth, height)));
             float distance = normalizedClosestPoint.norm();
             float evaluation = std::clamp(1.f - distance, 0.f, 1.f);
@@ -1747,7 +1747,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createCaveFunction(float si
             Vector3 end = Vector3(width * .5f, depth * .2f, height * .2f);
             BSpline curve = BSpline({start, p1, p2, end});
             float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
-            return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
+            return 1.f - (curve.estimateDistanceFrom(pos) / (width * .5f));
         };
         return caveFunc;
     }
@@ -1777,7 +1777,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createArchFunction(float si
         };
     } else {
         archFunc = [=] (const Vector3& pos) {
-            return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
+            return 1.f - (curve.estimateDistanceFrom(pos) / (width * .5f));
         };
     }
     return archFunc;
@@ -1875,7 +1875,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
     heights.iterateParallel([&] (const Vector3& pos) {
         for (int i = 0; i < randomPaths.size(); i++) {
             auto& path = randomPaths[i];
-            auto closestPoint = path.estimateClosestPos(pos, true);
+            auto closestPoint = toPolyline(path).estimateClosestPos(pos);
             heights(pos) += std::exp(-(pos - closestPoint).norm2() * i);
         }
         heights(pos) += random_gen::generate_fbm(pos.x(), pos.y()) * (.1f * std::abs(heights(pos)));
@@ -1946,7 +1946,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createParametricTunnelFunct
         for (auto & p : flatPath)
             p = p.xy();
         return [=](const Vector3& pos) {
-            float d = flatPath.estimateSqrDistanceFrom(pos.xy(), epsilon);
+            float d = flatPath.estimateSqrDistanceFrom(pos.xy());
             float r = (sigma * sigma);
             if (d > r) return 0.f;
             return std::sqrt(r - d);

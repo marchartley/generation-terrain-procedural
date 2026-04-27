@@ -90,7 +90,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
             emitMouseMoved(pos * scale, prevPos * scale, e);
         }
     });
-    QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &AbstractPlotter::draw);
+    // QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &AbstractPlotter::draw);
     QObject::connect(this->chartView, &ChartView::clickedOnValue, this, [&](const Vector3& pos, bool leftClick, bool rightClick) {
         if (pos.isValid()) {
             Vector3 imageValue = (this->hasImage() ? this->dataModel->getImage().at(pos * this->dataModel->getImage().getDimensions()) : Vector3::invalid);
@@ -204,47 +204,6 @@ AbstractPlotter& AbstractPlotter::hideOverlay(const std::string &overlayName)
 {
     this->chartView->overlayDisplayed[overlayName] = false;
     return *this;
-}
-
-GridV3 AbstractPlotter::computeStreamLinesRendering(const GridV3 &field, Vector3 imgSize) const
-{
-    if (!imgSize.isValid())
-        imgSize = field.getDimensions();
-    imgSize.z() = 1;
-    GridV3 img(imgSize);
-    GridF particlesPositions(20, 20, 1);
-    Vector3 ratio = imgSize / field.getDimensions();
-
-    int linesLength = 30;
-
-    // Vector3 color(0, 1, 0);
-
-    std::vector<Vector3> particles(particlesPositions.size());
-    for (int i = 0; i < particles.size(); i++) {
-        auto& particle = particles[i];
-        particle = ((particlesPositions.getCoordAsVector3(i) + Vector3(.5, .5, 0)) / particlesPositions.getDimensions()) * field.getDimensions();
-        Vector3 dir;
-
-        BSpline spline;
-        for (int t = 0; t < linesLength; t++) {
-            dir = field.interpolate(particle).normalized();
-            spline.addPoint(particle);
-            particle += dir;
-        }
-        auto path = spline.getPath(2.f * linesLength * ratio.maxComp());
-        for (int t = 0; t < path.size(); t++)
-            img(path[t] * ratio) = colorPalette(float(t) / float(path.size() - 1), Vector3(0, 1, 0), Vector3(.5, 1, 0));
-    }
-    return img;
-}
-
-AbstractPlotter& AbstractPlotter::addStreamLines(const GridV3 &field, Vector3 imgSize, float opacity)
-{
-    GridV3 img = computeStreamLinesRendering(field, imgSize);
-    if (this->hasImage()) {
-        img = this->dataModel->getImage().resize(img.getDimensions()) + img * (opacity);
-    }
-    return this->addImage(img);
 }
 
 void AbstractPlotter::draw()

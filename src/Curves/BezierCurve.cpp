@@ -5,6 +5,11 @@
 BezierCurve::BezierCurve() : BezierCurve(std::vector<Vector3>())
 {}
 
+BezierCurve::BezierCurve(const BezierCurve &s)
+{
+    *this = s;
+}
+
 BezierCurve::BezierCurve(const std::vector<Vector3> &points)
     : BezierCurve(points, std::vector<Vector3>())
 {
@@ -26,45 +31,6 @@ BezierCurve::BezierCurve(const std::vector<Vector3> &points)
     size_t n = points.size();
     Vector3 tn = points[n - 2] - points[n - 3];
     handles.back() = points[n - 1] + tn.normalize() * (points[n - 1] - points[n - 2]).norm() / 3.f;
-
-
-    // Strategy 3 :
-    /*{
-    Vector3 A = points[0];
-    Vector3 B = points[1];
-    Vector3 hB = handles[1]; // handle "in" for B, for segment A-B
-
-    Vector3 AB = B - A;
-    Vector3 u = AB.normalize();
-    float L = AB.norm();
-
-    // Expected 1/3 handle position near B
-    Vector3 baseB = B - u * (L / 3.f);
-
-    // Sideways offset from AB
-    Vector3 offset = hB - baseB;
-
-    // Matching handle near A
-    Vector3 baseA = A + u * (L / 3.f);
-    handles.front() = baseA + offset;
-    }
-    {
-    size_t n = points.size();
-
-    Vector3 A = points[n - 2];
-    Vector3 B = points[n - 1];
-    Vector3 hA = handles[2 * (n - 2)]; // handle "out" from A, for segment A-B
-
-    Vector3 AB = B - A;
-    Vector3 u = AB.normalize();
-    float L = AB.norm();
-
-    Vector3 baseA = A + u * (L / 3.f);
-    Vector3 offset = hA - baseA;
-
-    Vector3 baseB = B - u * (L / 3.f);
-    handles.back() = baseB + offset;
-    }*/
 }
 
 BezierCurve::BezierCurve(const std::vector<Vector3>& points, const std::vector<Vector3>& handles)
@@ -143,7 +109,7 @@ Vector3 BezierCurve::getSecondDerivative(float x, bool normalize) const
     return cubicBezierSecondDerivative(P0, P1, P2, P3, t);
 }
 
-float BezierCurve::estimateClosestTime(const Vector3 &pos, float epsilon, float nbChecksFactor, float earlyExitThreshold) const
+float BezierCurve::estimateClosestTime(const Vector3 &pos) const
 {
     int segmentCount = numPoints() - 1;
     int bestSegment = 0;
@@ -195,12 +161,12 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos, float epsilon, float 
     return (float(bestSegment) + bestT) / float(segmentCount);
 }
 
-Vector3 BezierCurve::estimateClosestPos(const Vector3 &pos, bool useNativeShape, float epsilon) const
+Vector3 BezierCurve::estimateClosestPos(const Vector3 &pos) const
 {
     return getPoint(estimateClosestTime(pos));
 }
 
-float BezierCurve::estimateSqrDistanceFrom(const Vector3 &pos, bool useNativeShape, float epsilon) const
+float BezierCurve::estimateSqrDistanceFrom(const Vector3 &pos) const
 {
     return (estimateClosestPos(pos) - pos).norm2();
 }
@@ -274,11 +240,6 @@ std::pair<Vector3, Vector3> BezierCurve::AABBox() const
     return {mini, maxi};
 }
 
-BezierCurve& BezierCurve::scale(float factor)
-{
-    return scale(Vector3(factor, factor, factor));
-}
-
 BezierCurve& BezierCurve::scale(const Vector3 &factor)
 {
     for (auto& p : points)
@@ -326,6 +287,7 @@ std::string BezierCurve::toString() const
 BezierCurve& BezierCurve::close()
 {
     this->closed = true;
+    return *this;
 }
 
 
