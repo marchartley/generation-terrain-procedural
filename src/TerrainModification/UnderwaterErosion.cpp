@@ -983,14 +983,15 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool add
 
 void UnderwaterErosion::ParisSeaErosion()
 {
-    Curve1D resistanceCurve = Curve1D(BSpline({Vector3(0, 0, 0), Vector3(1, 0, 0)}).getPath(20));
-    for (auto& p : resistanceCurve)
+    BSpline randomResistanceCurve = BSpline({Vector3(0, 0, 0), Vector3(1, 0, 0)}).resamplePoints(20);
+    for (auto& p : randomResistanceCurve)
         p.y() = random_gen::generate(0.f, 1.f);
+    Curve1D resistanceCurve = Curve1D(randomResistanceCurve);
 
     float waterLevel = voxelGrid->properties->waterLevel;
     float previousWater = clamp(waterLevel - 0.1f, 0.f, 1.f);
     float nextWater = clamp(waterLevel + 0.1f, 0.f, 1.f);
-    Curve1D seaErosionCurve = Curve1D({Vector3(0, 0, 0), Vector3(previousWater, 0, 0), Vector3(waterLevel, 1, 0), Vector3(nextWater, 0, 0), Vector3(1, 0, 0)});
+    Curve1D seaErosionCurve = Curve1D(BSpline({Vector3(0, 0, 0), Vector3(previousWater, 0, 0), Vector3(waterLevel, 1, 0), Vector3(nextWater, 0, 0), Vector3(1, 0, 0)}));
 //    std::cout << "Water level: " << waterLevel << std::endl;
 //    std::cout << seaErosionCurve.display1DPlot(200, 20) << std::endl;
 //    std::cout << resistanceCurve.display1DPlot(200, 20) << std::endl;

@@ -7,29 +7,31 @@ class BSpline : public Curve
 {
 public:
     BSpline();
+    BSpline(const BSpline& s);
     BSpline(const std::vector<Vector3>& points);
     BSpline(std::vector<BSpline> subsplines);
 
-    std::vector<Vector3> getPath(int numberOfPoints = -1) const;
-    Vector3 getPoint(float x) const;
-    Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const;
-    Vector3 getDerivative(float x, bool normalize = false) const;
-    Vector3 getSecondDerivative(float x, bool normalize = false) const;
-    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-4, float nbChecksFactor = 2.f, float earlyExitThreshold = 1e-3) const;
-    Vector3 estimateClosestPos(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
-    float estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
-    float length() const;
+    CLONE_FUNCTION(BSpline)
+    std::vector<Vector3> getPath(int numberOfPoints = -1) const override;
+    Vector3 getPoint(float x) const override;
+    Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const override;
+    Vector3 getDerivative(float x, bool normalize = false) const override;
+    Vector3 getSecondDerivative(float x, bool normalize = false) const override;
+    float estimateClosestTime(const Vector3& pos) const override;
+    Vector3 estimateClosestPos(const Vector3& pos) const override;
+    float estimateSqrDistanceFrom(const Vector3& pos) const override;
+    float length() const override;
 
     std::vector<Vector3> getPoints() const { return this->points; }
 
     BSpline smooth(float factor = 1.f) const;
     BSpline taubinSmooth(float factor = 1.f) const;
 
-    BSpline& setPoint(int i, const Vector3& newPos);
+    BSpline& setPoint(int i, const Vector3& newPos) override;
 
-    BSpline& resamplePoints(int newNbPoints = -1);
+    BSpline& resamplePoints(int newNbPoints = -1) override;
 
-    BSpline& reverseVertices();
+    BSpline& reverseVertices() override;
 
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
     size_t prevID(int i) { return (i - 1 + this->points.size()) % this->points.size(); }
@@ -55,8 +57,8 @@ public:
 
     std::pair<Vector3, Vector3> AABBox() const;
 
-    BSpline& scale(float factor);
-    BSpline& scale(const Vector3& factor);
+    using Curve::scale;
+    BSpline& scale(const Vector3& factor) override;
     BSpline scaled(float factor);
     BSpline scaled(const Vector3& factor);
 
@@ -65,7 +67,7 @@ public:
 
     BSpline computeConvexHull() const;
 
-    BSpline& translate(const Vector3& translation);
+    BSpline& translate(const Vector3& translation) override;
 
     std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
 
@@ -74,16 +76,16 @@ public:
     BSpline& displacePointsRandomlyPerlin(float maxDistance, float scale = 1.f, bool loop = false);
     BSpline& displacePointsRandomlyPerlin(const Vector3 &maxDistance, float scale = 1.f, bool loop = false);
 
-    virtual BSpline& removeDuplicates();
+    virtual BSpline& removeDuplicates() override;
 
-    std::string toString() const;
+    std::string toString() const override;
 
     auto begin() const { return points.begin(); }
     auto end() const { return points.end(); }
     auto begin() { return points.begin(); }
     auto end() { return points.end(); }
     std::size_t size() const { return end() - begin(); }
-    std::size_t numPoints() const { return size(); }
+    std::size_t numPoints() const override { return size(); }
     std::size_t numVertices() const { return size(); }
     bool empty() const { return begin() == end(); }
 
@@ -111,10 +113,13 @@ public:
     BSpline& insertPoint(int i, const Vector3& newPos) { this->points.insert(points.begin() + i, newPos); return *this; }
     BSpline& removePoint(int i) { this->points.erase(points.begin() + i); return *this; }
 
-    void reset() { this->points.clear(); }
+    BSpline& reset() { this->points.clear(); return *this; }
 
+
+    static float CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha);
+
+    float alpha = 0.5f;  // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
 protected:
-    float alpha = 1.f;  // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
     std::vector<Vector3> points;
 };
 

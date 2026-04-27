@@ -2,96 +2,37 @@
 
 
 ChartView::ChartView(QWidget *parent) : QChartView(new Chart(nullptr), parent)
-{}
+{
+}
 
 ChartView& ChartView::setPlotModel(std::shared_ptr<PlotModel> dataModel, const std::string& title)
 {
     this->_dataModel = std::move(dataModel);
 
-    auto& imageData = _dataModel->imageData;
-    auto& vectorData = _dataModel->vectorData;
-    auto& scatterData = _dataModel->scatterData;
-    auto& plotLineData = _dataModel->plotLineData;
-
-    this->chart()->removeAllSeries();
+    resetPlot();
 
     if (!title.empty())
         this->chart()->setTitle(QString::fromStdString(title));
 
-    for (auto& labels : scatterData.graphicLabels)
-        for (auto& lab : labels)
-            delete lab;
-    scatterData.graphicLabels.clear();
+    displayImages();
 
-    if (!imageData.image.empty() || !vectorData.field.empty() || !this->overlayColors.empty()) {
-        int width = static_cast<int>(this->chart()->plotArea().width());
-        int height = static_cast<int>(this->chart()->plotArea().height());
-        int ViewW = static_cast<int>(this->width());
-        int ViewH = static_cast<int>(this->height());
-        QImage scaledImage = QImage(width, height, QImage::Format_ARGB32);
-        scaledImage.fill(Qt::white);
-
-        Vector3i renderResolution = Vector3i::invalid; // Vector3i(100, 100, 1); //Vector3i(clamp(width, 20, 400), clamp(height, 20, 400), 1);
-
-        auto overlays = this->overlayColors;
-        auto overlayAlphas = this->overlayAlpha;
-        auto overlayDisplays = this->overlayDisplayed;
-        auto overlayLayers = this->overlayLayer;
-        if (!vectorData.field.empty()) {
-            auto [overlay, alpha] = vectorData.getFieldImageAndAlpha(renderResolution, Vector3i(20, 20, 1));
-            overlays["vector field"] = overlay;
-            overlayAlphas["vector field"] = alpha;
-            overlayDisplays["vector field"] = true;
-            overlayLayers["vector field"] = 10000;
-        }
-        scaledImage = imageData.computeDisplayedImage(overlays, overlayAlphas, overlayDisplays, overlayLayers, renderResolution);
-        scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation); // FastTransformation); // SmoothTransformation);
-
-        QImage translated(ViewW, ViewH, QImage::Format_ARGB32);
-        translated.fill(Qt::white);
-        QPainter painter(&translated);
-        QPointF TopLeft = this->chart()->plotArea().topLeft();
-        painter.drawImage(TopLeft, scaledImage);
-
-        this->chart()->setPlotAreaBackgroundBrush(translated);
-    }
     this->chart()->setPlotAreaBackgroundVisible(true);
 
-    for (size_t i = 0; i < plotLineData.plot_data.size(); i++) {
-        QLineSeries *series = new QLineSeries();
-        if (plotLineData.plot_names.size() > 0 && plotLineData.plot_names.size() == plotLineData.plot_data.size())
-            series->setName(QString::fromStdString(plotLineData.plot_names[i]));
-        for (auto pos : plotLineData.plot_data[i])
-            series->append(pos.x(), pos.y());
-        series->setColor(plotLineData.plot_colors[i]);
-        this->chart()->addSeries(series);
-        if (series->name().isEmpty()) {
-            this->chart()->legend()->markers(series)[0]->setVisible(false);
-        }
-    }
-    for (size_t i = 0; i < scatterData.scatter_data.size(); i++) {
-        QScatterSeries *series = new QScatterSeries();
-        if (scatterData.scatter_names.size() > 0 && scatterData.scatter_names.size() == scatterData.scatter_data.size())
-            series->setName(QString::fromStdString(scatterData.scatter_names[i]));
-        for (size_t j = 0; j < scatterData.scatter_data[i].size(); j++) {
-            auto pos = scatterData.scatter_data[i][j];
-            series->append(pos.x(), pos.y());
-        }
-        this->chart()->addSeries(series);
+    displayPlotLines();
+    displayScatterPoints();
 
-        if (series->name().isEmpty()) {
-            this->chart()->legend()->markers(series)[0]->setVisible(false);
-        }
+    if (axisX == nullptr) {
+        axisX = new QValueAxis(chart());
+        axisY = new QValueAxis(chart());
+
+        chart()->addAxis(axisX, Qt::AlignBottom);
+        chart()->addAxis(axisY, Qt::AlignLeft);
     }
-    for (size_t iScatter = 0; iScatter < scatterData.scatter_labels.size(); iScatter++) {
-        scatterData.graphicLabels.push_back(std::vector<QGraphicsTextItem*>());
-        for (size_t iPoint = 0; iPoint < scatterData.scatter_labels[iScatter].size(); iPoint++) {
-            QGraphicsTextItem *itm = new QGraphicsTextItem(QString::fromStdString(scatterData.scatter_labels[iScatter][iPoint]), this->chart());
-            scatterData.graphicLabels[iScatter].push_back(itm);
-        }
+    for (auto* s : chart()->series()) {
+        s->attachAxis(axisX);
+        s->attachAxis(axisY);
     }
 
-    this->chart()->createDefaultAxes();
     return *this;
 }
 
@@ -169,6 +110,107 @@ Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
     return mousePos;
 }
 
+void ChartView::resetPlot()
+{
+    auto& imageData = _dataModel->imageData;
+    auto& vectorData = _dataModel->vectorData;
+    auto& scatterData = _dataModel->scatterData;
+    auto& plotLineData = _dataModel->plotLineData;
+
+    this->chart()->removeAllSeries();
+
+    for (auto& labels : scatterData.graphicLabels)
+        for (auto& lab : labels)
+            delete lab;
+    scatterData.graphicLabels.clear();
+
+    // this->chart()->createDefaultAxes();
+}
+
+void ChartView::displayImages()
+{
+    auto& vectorData = _dataModel->vectorData;
+    auto& imageData = _dataModel->imageData;
+
+    if (!imageData.image.empty() || !vectorData.field.empty() || !this->overlayColors.empty()) {
+        int width = static_cast<int>(this->chart()->plotArea().width());
+        int height = static_cast<int>(this->chart()->plotArea().height());
+        int ViewW = static_cast<int>(this->width());
+        int ViewH = static_cast<int>(this->height());
+        QImage scaledImage = QImage(width, height, QImage::Format_ARGB32);
+        scaledImage.fill(Qt::white);
+
+        Vector3i renderResolution = Vector3i::invalid; // Vector3i(100, 100, 1); //Vector3i(clamp(width, 20, 400), clamp(height, 20, 400), 1);
+
+        auto overlays = this->overlayColors;
+        auto overlayAlphas = this->overlayAlpha;
+        auto overlayDisplays = this->overlayDisplayed;
+        auto overlayLayers = this->overlayLayer;
+        if (!vectorData.field.empty()) {
+            auto [overlay, alpha] = vectorData.getFieldImageAndAlpha(renderResolution, Vector3i(20, 20, 1));
+            overlays["vector field"] = overlay;
+            overlayAlphas["vector field"] = alpha;
+            overlayDisplays["vector field"] = true;
+            overlayLayers["vector field"] = 10000;
+        }
+        scaledImage = imageData.computeDisplayedImage(overlays, overlayAlphas, overlayDisplays, overlayLayers, renderResolution);
+        scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation); // FastTransformation); // SmoothTransformation);
+
+        QImage translated(ViewW, ViewH, QImage::Format_ARGB32);
+        translated.fill(Qt::white);
+        QPainter painter(&translated);
+        QPointF TopLeft = this->chart()->plotArea().topLeft();
+        painter.drawImage(TopLeft, scaledImage);
+        this->chart()->setPlotAreaBackgroundBrush(translated);
+    }
+    else {
+        this->chart()->setPlotAreaBackgroundBrush(QBrush());
+    }
+}
+
+void ChartView::displayPlotLines()
+{
+    auto& plotLineData = _dataModel->plotLineData;
+    for (size_t i = 0; i < plotLineData.plot_data.size(); i++) {
+        QLineSeries *series = new QLineSeries();
+        if (plotLineData.plot_names.size() > 0 && plotLineData.plot_names.size() == plotLineData.plot_data.size())
+            series->setName(QString::fromStdString(plotLineData.plot_names[i]));
+        for (auto pos : plotLineData.plot_data[i])
+            series->append(pos.x(), pos.y());
+        series->setColor(plotLineData.plot_colors[i]);
+        this->chart()->addSeries(series);
+        if (series->name().isEmpty()) {
+            this->chart()->legend()->markers(series)[0]->setVisible(false);
+        }
+    }
+}
+
+void ChartView::displayScatterPoints()
+{
+    auto& scatterData = _dataModel->scatterData;
+    for (size_t i = 0; i < scatterData.scatter_data.size(); i++) {
+        QScatterSeries *series = new QScatterSeries();
+        if (scatterData.scatter_names.size() > 0 && scatterData.scatter_names.size() == scatterData.scatter_data.size())
+            series->setName(QString::fromStdString(scatterData.scatter_names[i]));
+        for (size_t j = 0; j < scatterData.scatter_data[i].size(); j++) {
+            auto pos = scatterData.scatter_data[i][j];
+            series->append(pos.x(), pos.y());
+        }
+        this->chart()->addSeries(series);
+
+        if (series->name().isEmpty()) {
+            this->chart()->legend()->markers(series)[0]->setVisible(false);
+        }
+    }
+    for (size_t iScatter = 0; iScatter < scatterData.scatter_labels.size(); iScatter++) {
+        scatterData.graphicLabels.push_back(std::vector<QGraphicsTextItem*>());
+        for (size_t iPoint = 0; iPoint < scatterData.scatter_labels[iScatter].size(); iPoint++) {
+            // QGraphicsTextItem *itm = new QGraphicsTextItem(QString::fromStdString(scatterData.scatter_labels[iScatter][iPoint]), this->chart());
+            // scatterData.graphicLabels[iScatter].push_back(itm);
+        }
+    }
+}
+
 const ChartView& ChartView::setOverlay(const GridV3 &image, std::string layerName, const GridF &alpha, int overlayLayer)
 {
     this->overlayColors[layerName] = image;
@@ -236,7 +278,8 @@ void ChartView::keyPressEvent(QKeyEvent *event)
 }
 void ChartView::wheelEvent(QWheelEvent *event)
 {
-    qreal factor = event->angleDelta().y() > 0? 0.5: 2.0;
+    float zoomFactor = 1.1f;
+    qreal factor = event->angleDelta().y() > 0? 1.0/zoomFactor : zoomFactor;
     chart()->zoom(factor);
     Q_EMIT this->updated();
     event->accept();
@@ -248,7 +291,7 @@ Chart::Chart(QGraphicsItem* parent) : QChart(parent)
 
 bool Chart::sceneEvent(QEvent *event)
 {
-    return QChart::event(event);
+    return QChart::sceneEvent(event);
 }
 
 bool Chart::gestureEvent(QGestureEvent *event)

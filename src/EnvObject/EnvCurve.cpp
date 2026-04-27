@@ -132,7 +132,7 @@ void EnvCurveInstance::applyDeposition(EnvMaterial& material)
     GridF deposition = GridF(box.dimensions().x() + depositionProperties.radius * 2.f, box.dimensions().y() + depositionProperties.radius * 2.f);
 
     deposition.iterateParallel([&] (const Vector3& pos) {
-        float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+        float distToCurve = toPolyline(translatedCurve).estimateSqrDistanceFrom(pos);
         // float amount = normalizedGaussian(depositionProperties.radius * .25f, distToCurve);
         float amount = (distToCurve < depositionProperties.radius * depositionProperties.radius ? 1.f : 0.f);
 
@@ -168,7 +168,7 @@ void EnvCurveInstance::applyAbsorption(EnvMaterial& material)
     GridF absorption = GridF(box.dimensions().x() + absorptionProperties.radius * 2.f, box.dimensions().y() + absorptionProperties.radius * 2.f);
 
     absorption.iterateParallel([&] (const Vector3& pos) {
-        float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+        float distToCurve = toPolyline(translatedCurve).estimateSqrDistanceFrom(pos);
         // float amount = normalizedGaussian(absorptionProperties.radius * .25f, distToCurve);
         float amount = (distToCurve < absorptionProperties.radius * absorptionProperties.radius ? 1.f : 0.f);
 
@@ -236,7 +236,7 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow, float scale
             relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.back(), scale));
     }
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
-        this->getDefinition()->curveKelvinlets[i]->curve = this->curve;
+        this->getDefinition()->curveKelvinlets[i]->setCurve(&this->curve);
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
             auto k = this->getDefinition()->curveKelvinlets[i]->clone();
             // auto asCurve = dynamic_cast<KelvinletCurve*>(k);
@@ -411,12 +411,12 @@ void EnvCurveInstance::updateCurve(const BSpline &newCurve)
     Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
     this->evaluationPosition = newCurve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;*/
     this->evaluationPositions = newCurve.getPoints();
+    this->curve = newCurve;
     for (auto& k : this->getDefinition()->curveKelvinlets) {
         if (auto asKelvinletCurve = dynamic_cast<KelvinletCurve*>(k)) {
-            asKelvinletCurve->curve = newCurve;
+            asKelvinletCurve->setCurve(&this->curve);
         }
     }
-    this->curve = newCurve;
     this->_cachedFlowModif.clear();
     this->_cachedHeightfield.clear();
     this->_cachedAbsorptionDepositionField.clear();

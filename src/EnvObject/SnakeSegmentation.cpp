@@ -299,7 +299,7 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
             Vector3 newCentroid = newContour.center();
             newContour.translate(this->position - newCentroid);
         } else {
-            Vector3 posOnCurve = newContour.estimateClosestPos(this->position, true);
+            Vector3 posOnCurve = toPolyline(newContour).estimateClosestPos(this->position);
             newContour.translate(this->position - posOnCurve);
         }
     }

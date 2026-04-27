@@ -98,7 +98,7 @@ template <class Json>
 void to_json(Json& json, const KelvinletCurve& kelvinlet)
 {
     to_json(json, static_cast<const Kelvinlet&>(kelvinlet));
-    json["curve"] = kelvinlet.curve;
+    json["curve"] = *(kelvinlet.curve);
 }
 
 template <class Json>
@@ -187,7 +187,7 @@ template <class Json>
 void from_json(const Json& json, KelvinletCurve& kelvinlet)
 {
     from_json(json, static_cast<Kelvinlet&>(kelvinlet));
-    kelvinlet.curve = json.at("curve");
+    kelvinlet.curve = make_curve_from_json(json.at("curve"));
 }
 
 template <class Json>

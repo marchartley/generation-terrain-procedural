@@ -7,47 +7,53 @@ class Polyline : public Curve
 {
 public:
     Polyline();
+    Polyline(const Polyline& s);
     Polyline(const std::vector<Vector3>& points);
 
-    virtual std::vector<Vector3> getPath(int numberOfPoints = -1) const override;
-    virtual Vector3 getPoint(float x) const override;
-    virtual Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const override;
-    virtual Vector3 getDerivative(float x, bool normalize = false) const override;
-    virtual Vector3 getSecondDerivative(float x, bool normalize = false) const override;
-    virtual float estimateClosestTime(const Vector3& pos, float epsilon = 1e-4, float nbChecksFactor = 2.f, float earlyExitThreshold = 1e-3) const override;
-    virtual Vector3 estimateClosestPos(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const override;
-    virtual float estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const override;
-    virtual float length() const override;
+    CLONE_FUNCTION(Polyline)
+    std::vector<Vector3> getPath(int numberOfPoints = -1) const override;
+    Vector3 getPoint(float x) const override;
+    Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const override;
+    Vector3 getDerivative(float x, bool normalize = false) const override;
+    Vector3 getSecondDerivative(float x, bool normalize = false) const override;
+    float estimateClosestTime(const Vector3& pos) const override;
+    Vector3 estimateClosestPos(const Vector3& pos) const override;
+    float estimateSqrDistanceFrom(const Vector3& pos) const override;
+    float length() const override;
 
     size_t getIndex(int i) { return (i + numPoints()) % numPoints(); }
-    virtual Polyline& setPoint(int i, const Vector3& newPos) override;
+    Polyline& setPoint(int i, const Vector3& newPos) override;
 
-    virtual Polyline& resamplePoints(int newNbPoints = -1) override;
+    Polyline& resamplePoints(int newNbPoints = -1) override;
 
-    virtual Polyline& reverseVertices() override;
+    Polyline& reverseVertices() override;
 
-    // virtual Polyline simplifyByRamerDouglasPeucker(float epsilon, Polyline subPolyline = Polyline()) override;
+    // Polyline simplifyByRamerDouglasPeucker(float epsilon, Polyline subPolyline = Polyline()) override;
 
-    virtual std::pair<Vector3, Vector3> AABBox() const override;
+    std::pair<Vector3, Vector3> AABBox() const override;
 
-    Polyline& scale(float factor);
-    Polyline& scale(const Vector3& factor);
+    using Curve::scale;
+    Polyline& scale(const Vector3& factor) override;
     // Polyline scaled(float factor);
     // Polyline scaled(const Vector3& factor);
 
-    virtual Polyline& translate(const Vector3& translation) override;
+    Polyline& translate(const Vector3& translation) override;
 
-    virtual Polyline& removeDuplicates() override;
+    Polyline& removeDuplicates() override;
 
     size_t size() const { return numPoints(); }
-    virtual size_t numPoints() const override;
+    size_t numPoints() const override;
 
-    virtual Vector3& operator[](size_t i) override;
-    virtual const Vector3& operator[](size_t i) const override;
+    Vector3& operator[](size_t i) override;
+    const Vector3& operator[](size_t i) const override;
 
-    virtual std::string toString() const override;
+    std::string toString() const override;
 
-    virtual Polyline& close() override;
+    Polyline& close() override;
+
+    Polyline& reset() { points.clear(); return *this; }
+
+    std::vector<Vector3> getPoints() const { return this->points; }
 
 protected:
     std::vector<Vector3> points;

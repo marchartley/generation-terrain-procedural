@@ -78,6 +78,7 @@ SOURCES += \
     src/Biomes/BiomeModel.cpp \
     src/Biomes/BiomeUtils.cpp \
     src/Curves/BezierCurve.cpp \
+    src/Curves/Curves.cpp \
     src/DataStructure/BVH.cpp \
     src/DataStructure/Image.cpp \
     src/DataStructure/KDTree.cpp \
@@ -273,6 +274,7 @@ HEADERS += \
     src/Biomes/InstancesTree.h \
     src/Biomes/ModelsTree.h \
     src/Curves/BezierCurve.h \
+    src/Curves/Curves.h \
     src/DataStructure/BVH.h \
     src/DataStructure/Image.h \
     src/DataStructure/KDTree.h \

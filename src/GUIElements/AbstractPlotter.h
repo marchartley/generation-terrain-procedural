@@ -89,9 +89,6 @@ public:
     AbstractPlotter& showOverlay(const std::string& overlayName = "default");
     AbstractPlotter& hideOverlay(const std::string& overlayName = "default");
 
-    GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3::invalid) const;
-    AbstractPlotter& addStreamLines(const GridV3& field, Vector3 imgSize = Vector3::invalid, float opacity = .5f);
-
     int exec();
     AbstractPlotter& saveFig(const std::string& filename);
     AbstractPlotter& copyToClipboard();

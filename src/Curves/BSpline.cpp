@@ -10,6 +10,10 @@ BSpline::BSpline()
 {
 
 }
+BSpline::BSpline(const BSpline& s)
+{
+    *this = s;
+}
 BSpline::BSpline(const std::vector<Vector3>& points)
     : points(points)
 {
@@ -273,7 +277,7 @@ float closestTimeSpatialIndex(const BSpline& curve, const Vector3& pos, int init
     return index.nearest(pos);
 }*/
 
-float BSpline::estimateClosestTime(const Vector3& pos, float initialEpsilon, float nbChecksFactor, float earlyExitThreshold) const
+float BSpline::estimateClosestTime(const Vector3& pos) const
 {
     if (this->points.size() == 0) {
         return 0;
@@ -284,6 +288,9 @@ float BSpline::estimateClosestTime(const Vector3& pos, float initialEpsilon, flo
         float time = clamp((pos - this->points[0]).dot(line) / line.dot(line), 0.f, 1.f);
         return time;
     }
+
+    const float initialEpsilon = 1e-4;
+    const float nbChecksFactor = 2.f;
 
     int numberOfChecks = std::max(8, int(points.size() * nbChecksFactor));
     float step0 = 2.0f / numberOfChecks;
@@ -339,35 +346,14 @@ float BSpline::estimateClosestTime(const Vector3& pos, float initialEpsilon, flo
     return closestTime;
 }
 
-Vector3 BSpline::estimateClosestPos(const Vector3& pos, bool useNativeShape, float epsilon) const
+Vector3 BSpline::estimateClosestPos(const Vector3& pos) const
 {
-    if (useNativeShape) {
-        float minDist = std::numeric_limits<float>::max();
-        int minIndex = 0;
-        for (int i = 0; i < this->size() - 1; i++) {
-            float dist = (pos - Collision::projectPointOnSegment(pos, points[i], points[i + 1])).norm2();
-            if (dist < minDist) {
-                minDist = dist;
-                minIndex = i;
-            }
-        }
-
-        // recompute t on the closest segment
-        Vector3 startToPoint = pos - points[minIndex];
-        Vector3 segment = points[minIndex + 1] - points[minIndex];
-        float lengthSqr = segment.norm2();
-        float t = (lengthSqr != 0 ? clamp(startToPoint.dot(segment) / lengthSqr, 0.f, 1.f) : 0.f);
-        // if (t > 1) std::cout << "Too big" << std::endl;
-        return points[minIndex] + t * segment;
-//        return (float(i) + t) / float(this->size());
-    }
-    // "Pos epsilon" is in term of distance [0, inf], while "Time epsilon" is in term of time [0, 1]
-    return this->getPoint(this->estimateClosestTime(pos, epsilon / this->length()));
+    return this->getPoint(this->estimateClosestTime(pos));
 }
 
-float BSpline::estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape, float epsilon) const
+float BSpline::estimateSqrDistanceFrom(const Vector3& pos) const
 {
-    return (this->estimateClosestPos(pos, useNativeShape, epsilon) - pos).norm2();
+    return (this->estimateClosestPos(pos) - pos).norm2();
 }
 
 float BSpline::length() const
@@ -517,10 +503,10 @@ BSpline &BSpline::cleanPoints()
     return *this;
 }
 
-float CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha)
+float BSpline::CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha)
 {
-    float norm = std::max(1e-2f, (P0 - P1).norm2());
-    return std::pow(norm, alpha) + t_prev;
+    float norm = std::max(1e-5f, (P0 - P1).norm2());
+    return std::pow(norm, alpha * 0.5f) + t_prev;
 }
 template <class T>
 T map(T x, T prev_min, T prev_max, T new_min, T new_max)
@@ -626,11 +612,6 @@ std::pair<Vector3, Vector3> BSpline::AABBox() const
         maxVec.z() = std::max(point.z(), maxVec.z());
     }
     return {minVec, maxVec};
-}
-
-BSpline& BSpline::scale(float factor)
-{
-    return this->scale(Vector3(factor, factor, factor));
 }
 
 BSpline& BSpline::scale(const Vector3 &factor)
