@@ -9,13 +9,13 @@ ShapeCurve::ShapeCurve()
 }
 
 ShapeCurve::ShapeCurve(std::vector<Vector3> points)
-    : ShapeCurve(BSpline(points))
+    : ShapeCurve(CatmullRomSpline(points))
 {
 
 }
 
-ShapeCurve::ShapeCurve(BSpline path)
-    : BSpline(path)
+ShapeCurve::ShapeCurve(CatmullRomSpline path)
+    : CatmullRomSpline(path)
 {
     if (!this->closed) {
         if (!this->points.empty() && this->points.front() != this->points.back())
@@ -101,13 +101,13 @@ bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape, int increas
 
 float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const
 {
-    float dist = /*BSpline(this->closedPath()).*/BSpline::estimateDistanceFrom(pos);
+    float dist = /*BSpline(this->closedPath()).*/CatmullRomSpline::estimateDistanceFrom(pos);
     return dist * (contains(pos, false) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
 float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos) const
 {
-    return /*BSpline(this->closedPath()).*/BSpline::estimateSignedDistanceFrom(pos);
+    return /*BSpline(this->closedPath()).*/CatmullRomSpline::estimateSignedDistanceFrom(pos);
 }
 
 float ShapeCurve::computeArea()
@@ -446,7 +446,7 @@ ShapeCurve ShapeCurve::merge(ShapeCurve other) {
 
 ShapeCurve &ShapeCurve::resamplePoints(int newNbPoints)
 {
-    BSpline::resamplePoints(newNbPoints);
+    CatmullRomSpline::resamplePoints(newNbPoints);
     if (this->points.size() > 0) {
         this->points.pop_back(); // Remove last point (as it should be also the first one)
     }
@@ -455,7 +455,7 @@ ShapeCurve &ShapeCurve::resamplePoints(int newNbPoints)
 
 ShapeCurve &ShapeCurve::setPoint(int i, const Vector3 &newPos)
 {
-    BSpline::setPoint(i, newPos);
+    CatmullRomSpline::setPoint(i, newPos);
     return *this;
 }
 
@@ -496,7 +496,7 @@ ShapeCurve ShapeCurve::shrink(float decrease)
 
 ShapeCurve &ShapeCurve::removeDuplicates()
 {
-    BSpline::removeDuplicates();
+    CatmullRomSpline::removeDuplicates();
     std::vector<Vector3> foundPattern;
     for (size_t i = 0; i < points.size(); i++) {
         for (size_t j = i + 1; j < points.size(); j++) {

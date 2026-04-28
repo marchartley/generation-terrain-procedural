@@ -1,7 +1,7 @@
 #include "TunnelInterface.h"
 
 #include "GUIElements/InterfaceUtils.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
 TunnelInterface::TunnelInterface(QWidget *parent)
@@ -47,7 +47,7 @@ void TunnelInterface::replay(nlohmann::json action)
         float width = parameters.at("width").get<float>() * random_gen::generate(0.1f, 2.f);
         float height = parameters.at("height").get<float>() * random_gen::generate(0.1f, 2.f);
         float erosionStrength = parameters.at("erosion_strength").get<float>() * random_gen::generate(0.1f, 2.f);
-        BSpline path = parameters.at("path");
+        CatmullRomSpline path = parameters.at("path");
 
         UnderwaterErosion erod(this->voxelGrid.get(), 0, erosionStrength, 0);
         KarstHole hole(path, width, height, startingShape, endingShape);
@@ -198,7 +198,7 @@ void TunnelInterface::createTunnel(bool removingMatter)
     if (this->currentTunnelPoints.empty()) return;
 
     UnderwaterErosion erod(this->voxelGrid.get(), 0, erosionStrength, 0);
-    BSpline path(this->currentTunnelPoints);
+    CatmullRomSpline path(this->currentTunnelPoints);
     KarstHole hole(path, this->tunnelWidth, this->tunnelHeight, startingShape, endingShape);
     this->tunnelPreview.fromArray(erod.CreateTunnel(hole, !removingMatter, true));
     this->currentTunnelPoints.clear();
@@ -234,7 +234,7 @@ void TunnelInterface::createCrack(bool removingMatter)
 
 void TunnelInterface::computeTunnelPreview() {
     if (this->currentTunnelPoints.size() > 1) {
-        BSpline path(this->currentTunnelPoints);
+        CatmullRomSpline path(this->currentTunnelPoints);
         KarstHole previewHole(path, this->tunnelWidth, this->tunnelHeight, startingShape, endingShape);
         std::vector<std::vector<Vector3>> vertices = previewHole.generateMesh();
         std::vector<Vector3> meshVertices;

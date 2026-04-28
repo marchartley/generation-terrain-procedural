@@ -44,7 +44,7 @@ public:
     // static EnvAreaInstance* instantiate(const std::string& objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
-    virtual bool placeInTerrain(const BSpline& seedCurve);
+    virtual bool placeInTerrain(const CatmullRomSpline& seedCurve);
 
     virtual void improvePositionning(float steps);
 
@@ -59,7 +59,7 @@ public:
     // virtual GridF createHeightfield();
 
     virtual EnvAreaInstance& translate(const Vector3& translation);
-    void updateCurve(const BSpline& newCurve);
+    void updateCurve(const CatmullRomSpline& newCurve);
 };
 
 #endif // ENVAREA_H

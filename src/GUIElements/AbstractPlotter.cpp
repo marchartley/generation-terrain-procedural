@@ -117,7 +117,7 @@ AbstractPlotter& AbstractPlotter::addPlot(const std::vector<Vector3>& data, std:
     return *this;
 }
 
-AbstractPlotter& AbstractPlotter::addPlot(const BSpline &data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(const CatmullRomSpline &data, std::string name, QColor color)
 {
     return this->addPlot(data.getPoints(), name, color);
 }

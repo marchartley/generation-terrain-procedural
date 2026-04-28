@@ -5,7 +5,7 @@
 WaterFlowViewer::WaterFlowViewer(const std::string& name, QWidget* parent)
     : ImageViewer(name, parent)
 {
-    dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::red, Vector3::white, Vector3::green});
+    dataModel->imageData.displayParameters.colorRamp = CatmullRomSpline({Vector3::red, Vector3::white, Vector3::green});
 
     kelvinletParams.setOnNewKelvinlet([=](Kelvinlet*) { emitVectorFieldModified(); });
 }

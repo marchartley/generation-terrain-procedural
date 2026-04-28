@@ -77,7 +77,7 @@ EnvCurveInstance *EnvCurveInstance::clone()
 
 bool EnvCurveInstance::placeInTerrain(const Vector3 &seedPosition)
 {
-    BSpline initialCurve;
+    CatmullRomSpline initialCurve;
     if (this->getDefinition()->curveFollow == EnvCurve::SKELETON) {
         initialCurve = ContinuousCurveOptimizer::getSkeletonCurve(seedPosition, this->getDefinition()->fitnessFunction, this->getDefinition()->length);
     } else if (this->getDefinition()->curveFollow == EnvCurve::ISOVALUE) {
@@ -89,7 +89,7 @@ bool EnvCurveInstance::placeInTerrain(const Vector3 &seedPosition)
     return this->placeInTerrain(initialCurve);
 }
 
-bool EnvCurveInstance::placeInTerrain(const BSpline &seedCurve)
+bool EnvCurveInstance::placeInTerrain(const CatmullRomSpline &seedCurve)
 {
     if (seedCurve.empty()) {
         return false;
@@ -126,7 +126,7 @@ void EnvCurveInstance::applyDeposition(EnvMaterial& material)
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
 
     AABBox box = AABBox(this->curve.AABBox());
-    BSpline translatedCurve = this->curve; //.getPath(100);
+    CatmullRomSpline translatedCurve = this->curve; //.getPath(100);
     translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
 
     GridF deposition = GridF(box.dimensions().x() + depositionProperties.radius * 2.f, box.dimensions().y() + depositionProperties.radius * 2.f);
@@ -162,7 +162,7 @@ void EnvCurveInstance::applyAbsorption(EnvMaterial& material)
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
 
     AABBox box = AABBox(this->curve.AABBox());
-    BSpline translatedCurve = this->curve; //.getPath(100);
+    CatmullRomSpline translatedCurve = this->curve; //.getPath(100);
     translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
 
     GridF absorption = GridF(box.dimensions().x() + absorptionProperties.radius * 2.f, box.dimensions().y() + absorptionProperties.radius * 2.f);
@@ -210,7 +210,7 @@ void EnvCurveInstance::applyDepositionOnDeath()
         if (depos.rate == 0) return;
 
         AABBox box = AABBox(this->curve.AABBox());
-        BSpline translatedCurve = this->curve;
+        CatmullRomSpline translatedCurve = this->curve;
         for (auto& p : translatedCurve)
             p = p + Vector3(depos.radius , depos.radius , 0) - box.min();
         GridF sand = GridF(box.dimensions().x() + depos.radius * 2.f, box.dimensions().y() + depos.radius * 2.f);
@@ -339,7 +339,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
         /*BSpline translatedCurve = previousPrimitive->optionalCurve;
         *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);*/
 
-        BSpline translatedCurve = this->curve;
+        CatmullRomSpline translatedCurve = this->curve;
         GridF heights = _heights;
         heights.raiseErrorOnBadCoord = false;
         heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
@@ -360,7 +360,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
         patch->supportDimensions = box.dimensions() + offset;
 
     } else {
-        BSpline translatedCurve = this->curve;
+        CatmullRomSpline translatedCurve = this->curve;
         GridF heights = _heights;
         heights.raiseErrorOnBadCoord = false;
         heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
@@ -404,7 +404,7 @@ EnvCurveInstance &EnvCurveInstance::translate(const Vector3 &translation)
 }
 
 
-void EnvCurveInstance::updateCurve(const BSpline &newCurve)
+void EnvCurveInstance::updateCurve(const CatmullRomSpline &newCurve)
 {
     /*
     float evaluationPointClosestTime = this->curve.estimateClosestTime(this->evaluationPosition);

@@ -6,7 +6,7 @@ class SpaceColonizationInterface;
 #include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
 // #include "GUIElements/FancySlider.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 // #include <QWidget>
 #include "TreeColonisation/TreeColonisation.h"
 // #include "TerrainGen/VoxelGrid.h"
@@ -38,7 +38,7 @@ public:
 
     std::shared_ptr<ControlPoint> startingPoint;
     std::vector<std::shared_ptr<ControlPoint>> controlPoints;
-    std::vector<BSpline> karstPaths;
+    std::vector<CatmullRomSpline> karstPaths;
     Mesh pathsMeshes;
 
     InterfaceUI* createGUI();

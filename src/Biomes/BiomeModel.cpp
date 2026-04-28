@@ -145,7 +145,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     instance->position = biomePosition;
     instance->priorityOffset = model->priortyOffset;
     instance->area = area.removeDuplicates();
-    instance->depthShape = BSpline({Vector3(0, model->minDepth), Vector3(1, model->maxDepth)});
+    instance->depthShape = CatmullRomSpline({Vector3(0, model->minDepth), Vector3(1, model->maxDepth)});
     instance->textureClass = model->textureClass;
     instance->idealSize = (model->idealSize.mean > 0 ? model->idealSize.randomValue() : -1);
     std::vector<std::shared_ptr<BiomeModel>> children;

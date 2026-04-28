@@ -78,6 +78,7 @@ SOURCES += \
     src/Biomes/BiomeModel.cpp \
     src/Biomes/BiomeUtils.cpp \
     src/Curves/BezierCurve.cpp \
+    src/Curves/CatmullRomSpline.cpp \
     src/Curves/Curves.cpp \
     src/DataStructure/BVH.cpp \
     src/DataStructure/Image.cpp \
@@ -221,7 +222,6 @@ SOURCES += \
     src/TerrainModification/UnderwaterErosion.cpp \
     src/TreeColonisation/TreeColonisation.cpp \
     src/Utils/AdjencySolver.cpp \
-    src/Curves/BSpline.cpp \
     src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
     src/Curves/Curve.cpp \
@@ -274,6 +274,7 @@ HEADERS += \
     src/Biomes/InstancesTree.h \
     src/Biomes/ModelsTree.h \
     src/Curves/BezierCurve.h \
+    src/Curves/CatmullRomSpline.h \
     src/Curves/Curves.h \
     src/DataStructure/BVH.h \
     src/DataStructure/Image.h \
@@ -416,7 +417,6 @@ HEADERS += \
     src/TerrainModification/UnderwaterErosion.h \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/AdjencySolver.h \
-    src/Curves/BSpline.h \
     src/Utils/Collisions.h \
     src/Utils/ConstraintsSolver.h \
     src/Curves/Curve.h \

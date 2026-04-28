@@ -7,11 +7,6 @@ Polyline::Polyline() : Polyline(std::vector<Vector3>{})
 
 }
 
-Polyline::Polyline(const Polyline &s)
-{
-    *this = s;
-}
-
 Polyline::Polyline(const std::vector<Vector3>& points)
     : Curve(), points(points)
 {

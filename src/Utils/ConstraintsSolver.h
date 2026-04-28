@@ -4,7 +4,7 @@
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
 #include "TerrainGen/VoxelGrid.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 
 class ConstraintsSolver
 {
@@ -12,7 +12,7 @@ public:
     ConstraintsSolver();
 
     int addItem(Vector3* point);
-    int addItem(BSpline* curve);
+    int addItem(CatmullRomSpline* curve);
 
     std::map<int, Vector3> solveWithVoxelGrid(std::shared_ptr<VoxelGrid> mainGrid);
     std::map<int, Vector3> solve(bool checkPossible = true, float deltaMoveForHigherDistances = 1.f, float deltaMoveForLowerDistances = 1.f);
@@ -29,7 +29,7 @@ protected:
     void addConstraintSlot();
 
     std::map<int, Vector3*> pointsConstrainted;
-    std::map<int, BSpline*> curvesConstrainted;
+    std::map<int, CatmullRomSpline*> curvesConstrainted;
 
     GridI distanceConstraintsAvailable;
     GridF distanceConstraints;

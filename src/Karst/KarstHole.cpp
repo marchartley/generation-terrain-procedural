@@ -6,7 +6,7 @@ KarstHole::KarstHole(float width, float height, KarstHolePredefinedShapes starti
 {
     this->startingProfile = KarstHoleProfile(startingShape).setSize(width, height);
     this->endingProfile = KarstHoleProfile(endingShape).setSize(width, height);
-    this->path = BSpline();
+    this->path = CatmullRomSpline();
     this->width = width;
     this->height = height;
 }
@@ -15,10 +15,10 @@ KarstHole::KarstHole(const Vector3& start, const Vector3& end, float width, floa
                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
     : KarstHole(width, height, startingShape, endingShape)
 {
-    this->path = BSpline({start, end});
+    this->path = CatmullRomSpline({start, end});
 }
 
-KarstHole::KarstHole(BSpline fullPath, float width, float height,
+KarstHole::KarstHole(CatmullRomSpline fullPath, float width, float height,
                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
     : KarstHole(width, height, startingShape, endingShape)
 {

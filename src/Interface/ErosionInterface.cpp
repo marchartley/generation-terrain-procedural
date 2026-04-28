@@ -301,7 +301,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
     erod.layerBasedGrid = layerGrid.get();
 
 
-    std::vector<BSpline> lastRocksLaunched;
+    std::vector<CatmullRomSpline> lastRocksLaunched;
     this->rocksPathSuccess.clear();
     this->rocksPathFailure.clear();
     int totalPos = 0, totalErosions = 0;

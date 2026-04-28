@@ -9,7 +9,7 @@ class KarstHole
 public:
     KarstHole(float width = 1.f, float height = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     KarstHole(const Vector3& start, const Vector3& end, float width = 1.f, float height = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
-    KarstHole(BSpline fullPath, float width = 1.f, float height = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    KarstHole(CatmullRomSpline fullPath, float width = 1.f, float height = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
 
     KarstHoleProfile interpolate(float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
 
@@ -20,7 +20,7 @@ public:
 
     KarstHoleProfile startingProfile;
     KarstHoleProfile endingProfile;
-    BSpline path;
+    CatmullRomSpline path;
     float width, height;
     int number_of_points = 10;
     int number_of_intermediates = 2;

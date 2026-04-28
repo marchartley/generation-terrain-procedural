@@ -7,7 +7,7 @@
 EnvObjectEditor::EnvObjectEditor(const std::string& name, QWidget* parent)
     : ImageViewer(name, parent)
 {
-    dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::red, Vector3::white, Vector3::green});
+    dataModel->imageData.displayParameters.colorRamp = CatmullRomSpline({Vector3::red, Vector3::white, Vector3::green});
 
     kelvinletParams.displayResultingField = false;
 
@@ -143,7 +143,7 @@ EnvObjectEditor& EnvObjectEditor::addEnvObject(EnvObject *envObj)
             this->kelvinletAnchors[clone] = {MAIN, asPoint->position};
         }
     } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {
-        asCurve->curve = BSpline({Vector3(10, 10), Vector3(60, 30), Vector3(30, 60), Vector3(90, 90)});
+        asCurve->curve = CatmullRomSpline({Vector3(10, 10), Vector3(60, 30), Vector3(30, 60), Vector3(90, 90)});
         this->objectScale = asCurve->curve.length() / asCurve->getDefinition()->length;
     } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
         asArea->curve = ShapeCurve({Vector3(30, 30), Vector3(30, 70), Vector3(70, 70), Vector3(60, 40)});
@@ -174,7 +174,7 @@ std::pair<GridV3, GridF> EnvObjectEditor::displayEnvObject() const
         PlottingUtils::drawCircle(alpha, 1.f, pos, asPoint->getDefinition()->radius * this->objectScale);
 
     } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(this->currentObject)) {
-        BSpline curve = asCurve->curve.scaled(imgScale);
+        CatmullRomSpline curve = asCurve->curve.scaled(imgScale);
         PlottingUtils::drawCurve(img, Vector3(0, 0, 1), curve);
         PlottingUtils::drawCurve(alpha, 1.f, curve);
 

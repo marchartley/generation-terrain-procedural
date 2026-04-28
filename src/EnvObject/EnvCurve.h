@@ -42,7 +42,7 @@ public:
 
     EnvCurve* getDefinition() const { return dynamic_cast<EnvCurve*>(definition); }
 
-    BSpline curve;
+    CatmullRomSpline curve;
 
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
@@ -50,7 +50,7 @@ public:
     // static EnvCurveInstance* instantiate(const std::string& objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
-    virtual bool placeInTerrain(const BSpline& seedCurve);
+    virtual bool placeInTerrain(const CatmullRomSpline& seedCurve);
 
     virtual void improvePositionning(float steps);
 
@@ -65,7 +65,7 @@ public:
     // virtual GridF createHeightfield();
 
     virtual EnvCurveInstance& translate(const Vector3& translation);
-    void updateCurve(const BSpline &newCurve);
+    void updateCurve(const CatmullRomSpline &newCurve);
 };
 
 #endif // ENVCURVE_H

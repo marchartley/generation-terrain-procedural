@@ -1,16 +1,16 @@
 #include "Curves.h"
 
-BSpline toCatmullRom(const BezierCurve &curve)
+CatmullRomSpline toCatmullRom(const BezierCurve &curve)
 {
-    return BSpline(curve.getPoints());
+    return CatmullRomSpline(curve.getPoints());
 }
 
-BSpline toCatmullRom(const Polyline &curve)
+CatmullRomSpline toCatmullRom(const Polyline &curve)
 {
-    return BSpline(curve.getPoints());
+    return CatmullRomSpline(curve.getPoints());
 }
 
-BezierCurve toBezier(const BSpline &curve)
+BezierCurve toBezier(const CatmullRomSpline &curve)
 {
     std::vector<Vector3> points = curve.getPoints();
     std::vector<Vector3> handles((points.size() - 1) * 2);
@@ -39,7 +39,7 @@ BezierCurve toBezier(const Polyline &curve)
 
 
 
-Polyline toPolyline(const BSpline &curve)
+Polyline toPolyline(const CatmullRomSpline &curve)
 {
     return Polyline(curve.getPoints());
 }

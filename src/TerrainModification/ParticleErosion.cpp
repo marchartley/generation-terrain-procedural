@@ -784,10 +784,10 @@ std::vector<ParticleHistory> ParticleErosion::process()
     }
 
     if (!applyTheErosion || strengthValue == 0.f) {
-        std::vector<BSpline> tunnels(quantity);
+        std::vector<CatmullRomSpline> tunnels(quantity);
         std::vector<std::vector<std::pair<float, Vector3>>> allErosions(quantity);
         for (size_t i = 0; i < quantity; i++) {
-            tunnels[i] = BSpline(tracks[i].getPositions());
+            tunnels[i] = CatmullRomSpline(tracks[i].getPositions());
             std::vector<Vector3> erosionPositions = tracks[i].getErosionPositions();
             std::vector<float> erosionValues = tracks[i].getErosionValues();
             allErosions[i].resize(erosionValues.size());

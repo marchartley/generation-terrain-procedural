@@ -132,11 +132,11 @@ public:
 
     std::string used_json_filename = "";
 
-    BSpline optionalCurve;
+    CatmullRomSpline optionalCurve;
 
     static ImplicitPatch* createIdentity();
-    static ImplicitPrimitive *createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
-    static std::function<float(const Vector3&)> createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
+    static ImplicitPrimitive *createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, CatmullRomSpline parametricCurve = CatmullRomSpline(), bool in2D = false);
+    static std::function<float(const Vector3&)> createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, CatmullRomSpline parametricCurve = CatmullRomSpline(), bool in2D = false);
     static float isovalue;
     static const float zResolution;
 
@@ -152,10 +152,10 @@ public:
     static std::function<float(const Vector3&)> createCaveFunction(float sigma, float width, float depth, float height, bool in2D = false);
     static std::function<float(const Vector3&)> createArchFunction(float sigma, float width, float depth, float height, bool in2D = false);
     static std::function<float(const Vector3&)> createNoise2DFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(const Vector3&)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
-    static std::function<float(const Vector3&)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
-    static std::function<float(const Vector3&)> createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
-    static std::function<float(const Vector3&)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createMountainChainFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createPolygonFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createDistanceMapFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createParametricTunnelFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D = false);
     static std::function<float(const Vector3&)> createRippleFunction(float sigma, float width, float depth, float height, bool in2D = false);
     static std::function<float(const Vector3&)> createIdentityFunction(float sigma, float width, float depth, float height, bool in2D = false);
 

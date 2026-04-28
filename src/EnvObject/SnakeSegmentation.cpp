@@ -6,13 +6,13 @@ SnakeSegmentation::SnakeSegmentation()
 
 }
 
-SnakeSegmentation::SnakeSegmentation(const BSpline &curve)
+SnakeSegmentation::SnakeSegmentation(const CatmullRomSpline &curve)
     : SnakeSegmentation(nullptr, nullptr, curve)
 {
 
 }
 
-SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const BSpline& curve)
+SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const CatmullRomSpline& curve)
     : contour(curve), params(params), field(fields)
 {
 
@@ -24,9 +24,9 @@ SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeI
     // gradientField = gradientField.gaussianSmooth(10.f, true, true);
 // }
 
-BSpline SnakeSegmentation::runSegmentation(const BSpline &curve, int maxIterations)
+CatmullRomSpline SnakeSegmentation::runSegmentation(const CatmullRomSpline &curve, int maxIterations)
 {
-    BSpline currentContour = curve;
+    CatmullRomSpline currentContour = curve;
 
     float initialTargetLength = this->params->targetLength;
     float initialTargetArea = this->params->targetArea;
@@ -48,13 +48,13 @@ BSpline SnakeSegmentation::runSegmentation(const BSpline &curve, int maxIteratio
     return currentContour;
 }
 
-BSpline SnakeSegmentation::runSegmentation(int maxIterations) {
+CatmullRomSpline SnakeSegmentation::runSegmentation(int maxIterations) {
     this->contour = this->runSegmentation(this->contour, maxIterations);
     return this->contour;
 }
 
 
-Vector3 SnakeSegmentation::computeEnergyGradient(const BSpline &contour, int index, bool usePreviousPointForInternal)
+Vector3 SnakeSegmentation::computeEnergyGradient(const CatmullRomSpline &contour, int index, bool usePreviousPointForInternal)
 {
     // Compute the gradient of the total energy with respect to the control point at 'index'
     // Compute internal energy gradient
@@ -74,7 +74,7 @@ Vector3 SnakeSegmentation::computeEnergyGradient(const BSpline &contour, int ind
     return gradient;
 }
 
-Vector3 SnakeSegmentation::computeInternalEnergyGradient(const BSpline &contour, int index, bool usePreviousPoint) const
+Vector3 SnakeSegmentation::computeInternalEnergyGradient(const CatmullRomSpline &contour, int index, bool usePreviousPoint) const
 {
     // Compute the gradient of the internal energy with respect to the control point at 'index'
     Vector3 internalEnergyGradient;
@@ -109,7 +109,7 @@ Vector3 SnakeSegmentation::computeInternalEnergyGradient(const BSpline &contour,
     return internalEnergyGradient;
 }
 
-Vector3 SnakeSegmentation::computeExternalEnergyGradient(const BSpline &contour, int index) const
+Vector3 SnakeSegmentation::computeExternalEnergyGradient(const CatmullRomSpline &contour, int index) const
 {
     if (params->imageCost == 0) return Vector3();
 
@@ -148,7 +148,7 @@ Vector3 SnakeSegmentation::computeExternalEnergyGradient(const BSpline &contour,
     }
 }
 
-Vector3 SnakeSegmentation::computeShapeEnergyGradient(const BSpline &contour, int index, bool usePreviousPoint) const
+Vector3 SnakeSegmentation::computeShapeEnergyGradient(const CatmullRomSpline &contour, int index, bool usePreviousPoint) const
 {
     int i = index;
     int prev = i - 1;
@@ -185,7 +185,7 @@ Vector3 SnakeSegmentation::computeShapeEnergyGradient(const BSpline &contour, in
     return shapeEnergyGradient;
 }
 
-Vector3 SnakeSegmentation::computeGradientEnergyGradient(const BSpline &contour, int index) const
+Vector3 SnakeSegmentation::computeGradientEnergyGradient(const CatmullRomSpline &contour, int index) const
 {
     if (this->params->slopeCost != 0) {
         Vector3 gradient = getGradientImageAt(contour[index]);
@@ -209,7 +209,7 @@ Vector3 SnakeSegmentation::computeGradientEnergyGradient(const BSpline &contour,
     return Vector3();
 }
 
-BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float stepSize) {
+CatmullRomSpline SnakeSegmentation::updateContour(const CatmullRomSpline &currentContour, float stepSize) {
     if (currentContour.empty()) return currentContour;
 
     ShapeCurve contourAsRegion = ShapeCurve(currentContour);
@@ -232,7 +232,7 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
 
 
     // Initialize a new contour to be updated
-    BSpline newContour = currentContour;
+    CatmullRomSpline newContour = currentContour;
     int numPoints = currentContour.size();
 
     std::vector<Vector3> gradients(numPoints);

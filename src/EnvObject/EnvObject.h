@@ -219,7 +219,7 @@ public:
     float evaluate();
 
     virtual bool placeInTerrain(const Vector3& seedPosition) = 0;
-    virtual bool placeInTerrain(const BSpline& seedCurve) = 0;
+    virtual bool placeInTerrain(const CatmullRomSpline& seedCurve) = 0;
 
     virtual void improvePositionning(float stepsOrDistance) = 0;
 

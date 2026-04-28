@@ -112,13 +112,13 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
     /***
      * Implicit affect flowfield part :
      ***/
-    std::vector<BSpline> allTunnelsCurves;
+    std::vector<CatmullRomSpline> allTunnelsCurves;
     std::vector<GridF> rasterizedTunnelCurves;
     auto tunnelsPatches = primitives->findAll(ImplicitPatch::ParametricTunnel);
     for (auto& tunnelPatch : tunnelsPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(tunnelPatch);
         if (asPrimitive && asPrimitive->material == WATER) {
-            BSpline curve = asPrimitive->optionalCurve;
+            CatmullRomSpline curve = asPrimitive->optionalCurve;
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
@@ -140,13 +140,13 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
         }
     }
 
-    std::vector<BSpline> allReefCurves;
+    std::vector<CatmullRomSpline> allReefCurves;
     std::vector<GridF> rasterizedReefCurves;
     auto reefPatches = primitives->findAll(ImplicitPatch::MountainChain);
     for (auto& reefPatch : reefPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(reefPatch);
         if (asPrimitive) {
-            BSpline curve = asPrimitive->optionalCurve;
+            CatmullRomSpline curve = asPrimitive->optionalCurve;
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process

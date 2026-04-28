@@ -35,7 +35,7 @@ public:
 
     std::shared_ptr<BiomeModel> toBiomeModel();
 
-    BSpline depthShape;
+    CatmullRomSpline depthShape;
     std::shared_ptr<BiomeModel> model;
     std::vector<std::shared_ptr<BiomeInstance>> instances;
     std::shared_ptr<BiomeInstance> parent;

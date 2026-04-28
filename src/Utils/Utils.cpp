@@ -4,7 +4,7 @@
 #include <thread>
 #include <chrono>
 
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 
 std::vector<std::string> split(const std::string& _str, std::string c)
 {
@@ -312,7 +312,7 @@ std::string simplify(const std::string& s)
 
 
 
-double timeIt(std::function<void ()> func, int repetitions)
+double timeIt(const std::function<void ()>& func, int repetitions)
 {
     auto start = std::chrono::system_clock::now();
     for (int _ = 0; _ < repetitions; _++)
@@ -583,7 +583,7 @@ float displayProcessTime(const std::string& textToDisplay, const std::function<v
 
 Vector3 colorPalette(float t, const std::vector<Vector3> &colors)
 {
-    return BSpline(colors).getPoint(t);
+    return CatmullRomSpline(colors).getPoint(t);
 }
 
 Vector3 colorPalette(float t, const std::vector<Vector3> &colors, const std::vector<float> &keypoints)

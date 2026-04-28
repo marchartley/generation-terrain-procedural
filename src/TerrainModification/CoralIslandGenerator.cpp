@@ -150,7 +150,7 @@ std::vector<EnvObjectInstance*> CoralIslandGenerator::envObjsFromFeatureMap(cons
             std::cout << "Skeletons : " << skeletons.size() << std::endl;
             for (auto& curve : skeletons) {
                 curve.scale(ratio);
-                BSpline simplifiedCurve = curve;
+                CatmullRomSpline simplifiedCurve = curve;
                 simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
                 if (simplifiedCurve.length() < 5.f) continue; // Remove too small elements
 

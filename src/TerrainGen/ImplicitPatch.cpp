@@ -465,7 +465,7 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
     return _cachedVoxelized.subset(Vector3(), finalDimensions);
 }
 
-ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve, bool in2D)
+ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, CatmullRomSpline parametricCurve, bool in2D)
 {
     ImplicitPrimitive* primitive;
     if (in2D)
@@ -490,7 +490,7 @@ ImplicitPatch *ImplicitPatch::createIdentity()
     return primitive;
 }
 
-std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, CatmullRomSpline parametricCurve, bool in2D)
 {
     std::function<float(const Vector3&)> func;
     switch(shape) {
@@ -1674,7 +1674,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createCylinderFunction(floa
             // Line on Z axis
             if (pos.z() < start.z() || end.z() < pos.z())
                 return 0.2f;
-            BSpline spline({start, end});
+            CatmullRomSpline spline({start, end});
             Vector3 closestPoint = spline.estimateClosestPos(pos);
             Vector3 normalizedClosestPoint = ((pos - closestPoint) / (Vector3(width, depth, height)));
             float distance = normalizedClosestPoint.norm();
@@ -1745,7 +1745,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createCaveFunction(float si
             Vector3 p1 = Vector3(width * .5f, depth * .7f, height * .3f);
             Vector3 p2 = Vector3(width * .5f, depth * .4f, height * .2f);
             Vector3 end = Vector3(width * .5f, depth * .2f, height * .2f);
-            BSpline curve = BSpline({start, p1, p2, end});
+            CatmullRomSpline curve = CatmullRomSpline({start, p1, p2, end});
             float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
             return 1.f - (curve.estimateDistanceFrom(pos) / (width * .5f));
         };
@@ -1761,8 +1761,8 @@ std::function<float (const Vector3&)> ImplicitPatch::createArchFunction(float si
     Vector3 p1 = Vector3(width * .5f, depth * .3f, height * 1.f);
     Vector3 p2 = Vector3(width * .5f, depth * .7f, height * 1.f);
     Vector3 end = Vector3(width * .5f, depth * 1.f, height * 0.f);
-    BSpline curve = BSpline({start, p1, p2, end});
-    BSpline curve2D = BSpline({start.xy(), p1.xy(), p2.xy(), end.xy()});
+    CatmullRomSpline curve = CatmullRomSpline({start, p1, p2, end});
+    CatmullRomSpline curve2D = CatmullRomSpline({start.xy(), p1.xy(), p2.xy(), end.xy()});
     float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
 
     if (in2D) {
@@ -1801,7 +1801,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createNoise2DFunction(float
     //float noiseValue = (noise.GetNoise(pos.x() * (100.f / width) + noiseOffset, pos.y() * (100.f / width) + noiseOffset, pos.z() * (100.f / width) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
 }
 
-std::function<float (const Vector3&)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D)
 {
     std::function<float (const Vector3&)> chainFunc = [=] (const Vector3& pos) -> float {
         float closestTime = path.estimateClosestTime(pos);
@@ -1822,7 +1822,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createMountainChainFunction
     }
 }
 
-std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D)
 {
     ShapeCurve polygon(path);
     std::function<float (const Vector3&)> polygonFunc = [=] (const Vector3& pos) -> float {
@@ -1836,7 +1836,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float
     }
 }
 
-std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D)
 {
     random_gen::random_generator.seed((path.getPoint(0) + path.getPoint(0.1)).divergence());
     int nbPoints = 50;
@@ -1859,14 +1859,14 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
 
     GridF heights(size.x(), size.y(), 1);
 
-    std::vector<BSpline> randomPaths(nbPaths);
+    std::vector<CatmullRomSpline> randomPaths(nbPaths);
     for (int i = 0; i < randomPaths.size(); i++) {
         auto& path = randomPaths[i];
         int i0 = int(random_gen::generate(0, points.size()));
         int i1 = int(random_gen::generate(0, points.size()));
         // while (i0 == i1)
         // i1 = int(random_gen::generate(0, points.size()));
-        path = BSpline({points[i0], points[i1]}).resamplePoints(4);
+        path = CatmullRomSpline({points[i0], points[i1]}).resamplePoints(4);
         float length = (path[-1] - path[0]).norm();
         for (auto& p : path) {
             p += Vector3::random().xy() * (length / 10.f);
@@ -1937,7 +1937,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
     }*/
 }
 
-std::function<float (const Vector3&)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D)
 {
     float epsilon = 1e-1;
 
