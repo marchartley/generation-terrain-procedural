@@ -4,16 +4,16 @@
 
 
 PathCameraConstraint::PathCameraConstraint(qglviewer::Camera* camera)
-    : PathCameraConstraint(camera, std::vector<BSpline>())
+    : PathCameraConstraint(camera, std::vector<CatmullRomSpline>())
 {
 }
 
-PathCameraConstraint::PathCameraConstraint(qglviewer::Camera* camera, BSpline path)
-    : PathCameraConstraint(camera, std::vector<BSpline>(1, path))
+PathCameraConstraint::PathCameraConstraint(qglviewer::Camera* camera, CatmullRomSpline path)
+    : PathCameraConstraint(camera, std::vector<CatmullRomSpline>(1, path))
 {
 }
 
-PathCameraConstraint::PathCameraConstraint(qglviewer::Camera* camera, std::vector<BSpline> paths)
+PathCameraConstraint::PathCameraConstraint(qglviewer::Camera* camera, std::vector<CatmullRomSpline> paths)
     : camera(camera), paths(paths)
 {
     this->constraint = new qglviewer::WorldConstraint();
@@ -30,13 +30,13 @@ void PathCameraConstraint::constrainTranslation(qglviewer::Vec &t, qglviewer::Fr
     Vector3 vecT = Vector3(t.x, t.y, t.z);
     if (vecT.norm2() == 0)
         return; // Just a rotation, don't bother with translation computations
-    std::vector<BSpline> closestPathCandidates;
+    std::vector<CatmullRomSpline> closestPathCandidates;
     std::vector<int> closestPointIndexCandidates;
-    BSpline closestPath;
+    CatmullRomSpline closestPath;
     int closestPointIndex = -1;
     float dist = std::numeric_limits<float>::max();
     Vector3 currentPos = Vector3(fr->position().x, fr->position().y, fr->position().z);
-    for (const BSpline& path : this->paths)
+    for (const CatmullRomSpline& path : this->paths)
     {
         auto pathPoints = path.getPath();
         for (size_t i = 0; i < pathPoints.size(); i++)
@@ -47,7 +47,7 @@ void PathCameraConstraint::constrainTranslation(qglviewer::Vec &t, qglviewer::Fr
                 closestPointIndexCandidates.push_back(i);
             } else if (distToPoint < dist) {
                 dist = distToPoint;
-                closestPathCandidates = std::vector<BSpline>(1, path);
+                closestPathCandidates = std::vector<CatmullRomSpline>(1, path);
                 closestPointIndexCandidates = std::vector<int>(1, i);
             }
         }

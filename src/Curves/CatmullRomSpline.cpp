@@ -1,4 +1,4 @@
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 
 #include "Utils/Utils.h"
 #include "Utils/Collisions.h"
@@ -6,34 +6,30 @@
 #include <exception>
 #include <sstream>
 
-BSpline::BSpline()
+CatmullRomSpline::CatmullRomSpline()
 {
 
 }
-BSpline::BSpline(const BSpline& s)
-{
-    *this = s;
-}
-BSpline::BSpline(const std::vector<Vector3>& points)
+CatmullRomSpline::CatmullRomSpline(const std::vector<Vector3>& points)
     : points(points)
 {
 }
-BSpline::BSpline(std::vector<BSpline> subsplines)
+CatmullRomSpline::CatmullRomSpline(std::vector<CatmullRomSpline> subsplines)
 {
-    for (BSpline& spline : subsplines) {
+    for (CatmullRomSpline& spline : subsplines) {
         bool ignoreFirstPoint = (this->points.empty() ? false : this->points.back() == spline.front());
         this->points.insert(this->points.end(), spline.points.begin() + (ignoreFirstPoint ? 1 : 0), spline.points.end());
     }
 }
 
 
-BSpline& BSpline::reverseVertices()
+CatmullRomSpline& CatmullRomSpline::reverseVertices()
 {
     std::reverse(this->points.begin(), this->points.end());
     return *this;
 }
 
-std::vector<Vector3> BSpline::getPath(int numberOfPoints) const
+std::vector<Vector3> CatmullRomSpline::getPath(int numberOfPoints) const
 {
     if (numberOfPoints < 0) return this->points;
     /// I'm really not sure this is the best solution, but an easy fix :
@@ -47,7 +43,7 @@ std::vector<Vector3> BSpline::getPath(int numberOfPoints) const
     return path;
 }
 
-Vector3 BSpline::getPoint(float x) const
+Vector3 CatmullRomSpline::getPoint(float x) const
 {
     if (this->closed) {
         x = x - std::floor(x); // Warp around if x < 0 or x > 1
@@ -71,12 +67,12 @@ Vector3 BSpline::getPoint(float x) const
     }
     return controls[0];
 }
-Vector3 BSpline::getPoint(float x, const Vector3& a, const Vector3& b) const
+Vector3 CatmullRomSpline::getPoint(float x, const Vector3& a, const Vector3& b) const
 {
     return a * (1 - x) + b * x;
 }
 
-Vector3 BSpline::getDerivative(float x, bool normalize) const
+Vector3 CatmullRomSpline::getDerivative(float x, bool normalize) const
 {
     /*float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
@@ -89,7 +85,7 @@ Vector3 BSpline::getDerivative(float x, bool normalize) const
     return (normalize ? v.normalized() : v);
 }
 
-Vector3 BSpline::getSecondDerivative(float x, bool normalize) const
+Vector3 CatmullRomSpline::getSecondDerivative(float x, bool normalize) const
 {
     /*float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
@@ -277,7 +273,7 @@ float closestTimeSpatialIndex(const BSpline& curve, const Vector3& pos, int init
     return index.nearest(pos);
 }*/
 
-float BSpline::estimateClosestTime(const Vector3& pos) const
+float CatmullRomSpline::estimateClosestTime(const Vector3& pos) const
 {
     if (this->points.size() == 0) {
         return 0;
@@ -313,8 +309,8 @@ float BSpline::estimateClosestTime(const Vector3& pos) const
         for (int i = 0; i <= numberOfChecks; ++i) {
             float a = float(i) / float(numberOfChecks);
             float t = tMin + a * (tMax - tMin);
-            float a1 = float(i-1) / float(numberOfChecks);
-            float t1 = tMin + a1 * (tMax - tMin);
+            // float a1 = float(i-1) / float(numberOfChecks);
+            // float t1 = tMin + a1 * (tMax - tMin);
             float a2 = float(i+1) / float(numberOfChecks);
             float t2 = tMin + a2 * (tMax - tMin);
 
@@ -346,17 +342,17 @@ float BSpline::estimateClosestTime(const Vector3& pos) const
     return closestTime;
 }
 
-Vector3 BSpline::estimateClosestPos(const Vector3& pos) const
+Vector3 CatmullRomSpline::estimateClosestPos(const Vector3& pos) const
 {
     return this->getPoint(this->estimateClosestTime(pos));
 }
 
-float BSpline::estimateSqrDistanceFrom(const Vector3& pos) const
+float CatmullRomSpline::estimateSqrDistanceFrom(const Vector3& pos) const
 {
     return (this->estimateClosestPos(pos) - pos).norm2();
 }
 
-float BSpline::length() const
+float CatmullRomSpline::length() const
 {
     // Should be using approximation of arclength instead
     float length = 0;
@@ -367,9 +363,9 @@ float BSpline::length() const
     return length;
 }
 
-BSpline BSpline::smooth(float factor) const
+CatmullRomSpline CatmullRomSpline::smooth(float factor) const
 {
-    BSpline newCurve = *this;
+    CatmullRomSpline newCurve = *this;
     for (int i = 0; i < this->size(); i++) {
         if (i == 0 || i == this->size() - 1) continue;
 
@@ -378,7 +374,7 @@ BSpline BSpline::smooth(float factor) const
     return newCurve;
 }
 
-BSpline BSpline::taubinSmooth(float factor) const
+CatmullRomSpline CatmullRomSpline::taubinSmooth(float factor) const
 {
     auto initCurve = *this;
     auto newCurve = *this;
@@ -392,13 +388,13 @@ BSpline BSpline::taubinSmooth(float factor) const
     return initCurve;
 }
 
-BSpline& BSpline::setPoint(int i, const Vector3 &newPos)
+CatmullRomSpline& CatmullRomSpline::setPoint(int i, const Vector3 &newPos)
 {
     this->points[(i + this->size()) % this->size()] = newPos;
     return *this;
 }
 
-BSpline& BSpline::resamplePoints(int newNbPoints)
+CatmullRomSpline& CatmullRomSpline::resamplePoints(int newNbPoints)
 {
     this->cleanPoints();
     if (this->size() == 0) return *this;
@@ -441,17 +437,17 @@ BSpline& BSpline::resamplePoints(int newNbPoints)
     return *this;
 }
 
-std::tuple<Vector3, Vector3, Vector3> BSpline::getFrenetFrame(float x) const
+std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::getFrenetFrame(float x) const
 {
     return {getFrenetDirection(x), getFrenetNormal(x), getFrenetBinormal(x)};
 }
 
-Vector3 BSpline::getFrenetDirection(float x) const
+Vector3 CatmullRomSpline::getFrenetDirection(float x) const
 {
     return getDirection(x);
 }
 
-Vector3 BSpline::getFrenetNormal(float x) const
+Vector3 CatmullRomSpline::getFrenetNormal(float x) const
 {
     Vector3 new_dir = this->getFrenetDirection(x);
     Vector3 forward(0, 1, 0);
@@ -464,22 +460,22 @@ Vector3 BSpline::getFrenetNormal(float x) const
     return right.normalize();
 }
 
-Vector3 BSpline::getFrenetBinormal(float x) const
+Vector3 CatmullRomSpline::getFrenetBinormal(float x) const
 {
     return this->getFrenetDirection(x).cross(this->getFrenetNormal(x)).normalize();
 }
 
-Vector3 BSpline::getCenterCircle(float x) const
+Vector3 CatmullRomSpline::getCenterCircle(float x) const
 {
     return this->getPoint(x) + this->getNormal(x) * (1 / this->getCurvature(x));
 }
 
 
-Vector3 BSpline::center() const
+Vector3 CatmullRomSpline::center() const
 {
     if (this->points.empty()) return Vector3();
 
-    BSpline copy = *this;
+    CatmullRomSpline copy = *this;
     copy.removeDuplicates();
     Vector3 center;
     for (const auto& point : copy.points)
@@ -487,7 +483,7 @@ Vector3 BSpline::center() const
     return center / (float) copy.points.size();
 }
 
-BSpline& BSpline::close()
+CatmullRomSpline& CatmullRomSpline::close()
 {
     if (this->points.size() > 1 && !this->closed) { // && this->points.front() != this->points.back()) {
         this->closed = true;
@@ -495,7 +491,7 @@ BSpline& BSpline::close()
     return *this;
 }
 
-BSpline &BSpline::cleanPoints()
+CatmullRomSpline &CatmullRomSpline::cleanPoints()
 {
     for (int i = this->size() - 1; i >= 0; i--) {
         if (!this->points[i].isValid()) this->points.erase(this->points.begin() + i);
@@ -503,7 +499,7 @@ BSpline &BSpline::cleanPoints()
     return *this;
 }
 
-float BSpline::CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha)
+float CatmullRomSpline::CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha)
 {
     float norm = std::max(1e-5f, (P0 - P1).norm2());
     return std::pow(norm, alpha * 0.5f) + t_prev;
@@ -514,7 +510,7 @@ T map(T x, T prev_min, T prev_max, T new_min, T new_max)
     return ((x - prev_min) / (prev_max - prev_min)) * (new_max - new_min) + new_min;
 }
 
-Vector3 BSpline::getCatmullPoint(float x) const
+Vector3 CatmullRomSpline::getCatmullPoint(float x) const
 {
     Vector3 v = std::get<0>(this->pointAndDerivativeAndSecondDerivative(x));
     return v;
@@ -563,7 +559,7 @@ Vector3 BSpline::getCatmullPoint(float x) const
     */
 }
 
-BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
+CatmullRomSpline CatmullRomSpline::simplifyByRamerDouglasPeucker(float epsilon, CatmullRomSpline subspline)
 {
     if (subspline.points.empty()) {
         if (this->points.empty()) return *this; // We are just trying to do a simplification from an empty curve, that's pointless
@@ -583,18 +579,18 @@ BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
         }
     }
     // Now we split the spline in two subsplines, and apply recursively the algorithm until all points are "close" enough ( dist < epsilon)
-    BSpline returningSpline;
+    CatmullRomSpline returningSpline;
     if (maxDist > epsilon * epsilon) {
-        BSpline sub1 = this->simplifyByRamerDouglasPeucker(epsilon, std::vector<Vector3>(subspline.points.begin(), subspline.points.begin() + index));
-        BSpline sub2 = this->simplifyByRamerDouglasPeucker(epsilon, std::vector<Vector3>(subspline.points.begin() + index, subspline.points.end()));
-        returningSpline = BSpline({sub1, sub2});
+        CatmullRomSpline sub1 = this->simplifyByRamerDouglasPeucker(epsilon, std::vector<Vector3>(subspline.points.begin(), subspline.points.begin() + index));
+        CatmullRomSpline sub2 = this->simplifyByRamerDouglasPeucker(epsilon, std::vector<Vector3>(subspline.points.begin() + index, subspline.points.end()));
+        returningSpline = CatmullRomSpline({sub1, sub2});
     } else {
         returningSpline.points = {subspline.front(), subspline.back()};
     }
     return returningSpline;
 }
 
-std::pair<Vector3, Vector3> BSpline::AABBox() const
+std::pair<Vector3, Vector3> CatmullRomSpline::AABBox() const
 {
     if (this->points.empty()) return {Vector3::invalid, Vector3::invalid};
     if (this->points.size() == 1) return {points[0], points[0]};
@@ -614,26 +610,26 @@ std::pair<Vector3, Vector3> BSpline::AABBox() const
     return {minVec, maxVec};
 }
 
-BSpline& BSpline::scale(const Vector3 &factor)
+CatmullRomSpline& CatmullRomSpline::scale(const Vector3 &factor)
 {
     for (auto& vert : this->points)
         vert *= factor;
     return *this;
 }
-BSpline BSpline::scaled(float factor)
+CatmullRomSpline CatmullRomSpline::scaled(float factor)
 {
     return this->scaled(Vector3(factor, factor, factor));
 }
 
-BSpline BSpline::scaled(const Vector3& factor)
+CatmullRomSpline CatmullRomSpline::scaled(const Vector3& factor)
 {
-    BSpline copy = *this;
+    CatmullRomSpline copy = *this;
     return copy.scale(factor);
 }
 
-BSpline BSpline::computeConvexHull() const
+CatmullRomSpline CatmullRomSpline::computeConvexHull() const
 {
-    if (this->points.empty()) return BSpline();
+    if (this->points.empty()) return CatmullRomSpline();
     // Graham scan's algorithm
     std::vector<Vector3> stack;
     Vector3 start = this->points[0];
@@ -671,14 +667,14 @@ BSpline BSpline::computeConvexHull() const
     return stack;
 }
 
-BSpline &BSpline::translate(const Vector3& translation)
+CatmullRomSpline &CatmullRomSpline::translate(const Vector3& translation)
 {
     for (auto& point : points)
         point += translation;
     return *this;
 }
 
-std::vector<std::pair<size_t, size_t> > BSpline::checkAutointersections() const
+std::vector<std::pair<size_t, size_t> > CatmullRomSpline::checkAutointersections() const
 {
     auto self = *this;
     float spacingHeuristic = 1.0f;
@@ -710,7 +706,7 @@ std::vector<std::pair<size_t, size_t> > BSpline::checkAutointersections() const
     return results;
 }
 
-BSpline &BSpline::displacePointsRandomly(float maxDistance)
+CatmullRomSpline &CatmullRomSpline::displacePointsRandomly(float maxDistance)
 {
     /*std::vector<Vector3> newPoints(this->size());
     for (int i = 0; i < this->size(); i++) {
@@ -721,7 +717,7 @@ BSpline &BSpline::displacePointsRandomly(float maxDistance)
     return this->displacePointsRandomly(Vector3(maxDistance, maxDistance, maxDistance));
 }
 
-BSpline &BSpline::displacePointsRandomly(const Vector3 &maxDistance)
+CatmullRomSpline &CatmullRomSpline::displacePointsRandomly(const Vector3 &maxDistance)
 {
     std::vector<Vector3> newPoints(this->size());
     for (int i = 0; i < this->size(); i++) {
@@ -736,12 +732,12 @@ BSpline &BSpline::displacePointsRandomly(const Vector3 &maxDistance)
     return *this;
 }
 
-BSpline &BSpline::displacePointsRandomlyPerlin(float maxDistance, float scale, bool loop)
+CatmullRomSpline &CatmullRomSpline::displacePointsRandomlyPerlin(float maxDistance, float scale, bool loop)
 {
     return this->displacePointsRandomlyPerlin(Vector3(maxDistance, maxDistance, maxDistance), scale, loop);
 }
 
-BSpline &BSpline::displacePointsRandomlyPerlin(const Vector3& maxDistance, float scale, bool loop)
+CatmullRomSpline &CatmullRomSpline::displacePointsRandomlyPerlin(const Vector3& maxDistance, float scale, bool loop)
 {
     std::vector<Vector3> newPoints(this->size());
     for (int i = 0; i < this->size(); i++) {
@@ -756,7 +752,7 @@ BSpline &BSpline::displacePointsRandomlyPerlin(const Vector3& maxDistance, float
     return *this;
 }
 
-BSpline& BSpline::removeDuplicates()
+CatmullRomSpline& CatmullRomSpline::removeDuplicates()
 {
     std::vector<Vector3> newPoints;
     for (const auto& point : this->points) {
@@ -767,7 +763,7 @@ BSpline& BSpline::removeDuplicates()
     return *this;
 }
 
-std::string BSpline::toString() const
+std::string CatmullRomSpline::toString() const
 {
     std::ostringstream out;
     out << "BSpline with " << this->points.size() << " points (" << (closed ? "closed" : "not closed") << ") :\n";
@@ -776,15 +772,15 @@ std::string BSpline::toString() const
     return out.str();
 }
 
-Vector3 &BSpline::operator[](size_t i)
+Vector3 &CatmullRomSpline::operator[](size_t i)
 {
     return this->points[(i + size()) % size()];
 }
 
-std::string BSpline::display1DPlot(int sizeX, int sizeY) const
+std::string CatmullRomSpline::display1DPlot(int sizeX, int sizeY) const
 {
     std::ostringstream oss;
-    BSpline translated = *this;
+    CatmullRomSpline translated = *this;
     std::vector<Vector3> roundedPositions(translated.size());
     auto [mini, maxi] = AABBox();
     for (auto& p : translated) {
@@ -816,7 +812,7 @@ std::string BSpline::display1DPlot(int sizeX, int sizeY) const
     return oss.str();
 }
 
-Vector3 BSpline::computeDerivative(float x) const
+Vector3 CatmullRomSpline::computeDerivative(float x) const
 {
     std::vector<Vector3> displayedPoints = this->points;
     if (this->closed)
@@ -863,7 +859,7 @@ Vector3 BSpline::computeDerivative(float x) const
     return C_prim;
 }
 
-std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x) const
+std::pair<Vector3, Vector3> CatmullRomSpline::pointAndDerivative(float x) const
 {
     std::vector<Vector3> displayedPoints = this->points;
     if (this->closed)
@@ -916,7 +912,7 @@ std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x) const
     return {C, C_prim};
 }
 
-std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDerivative(float x) const
+std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSecondDerivative(float x) const
 {
     // This is incredibly dirty!!!!
     x = std::clamp(x, 0.0001f, 0.9999f);
@@ -977,7 +973,7 @@ std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDeriva
 
     return {C, Cp, Cpp};
 }
-const Vector3 &BSpline::operator[](size_t i) const
+const Vector3 &CatmullRomSpline::operator[](size_t i) const
 {
     return this->points[(i + size()) % size()];
 }
@@ -994,15 +990,15 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<BSpline> s) {
 
 
 
-BSpline BSpline::random(int numberOfPoints) {
-    BSpline curve;
+CatmullRomSpline CatmullRomSpline::random(int numberOfPoints) {
+    CatmullRomSpline curve;
     for(int i = 0; i < numberOfPoints; i++) {
         curve.addPoint(Vector3::random());
     }
     return curve;
 }
 
-void BSpline::addPoint(const Vector3 &newPoint)
+void CatmullRomSpline::addPoint(const Vector3 &newPoint)
 {
     this->points.push_back(newPoint);
 }

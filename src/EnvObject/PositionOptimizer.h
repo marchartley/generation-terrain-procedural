@@ -18,7 +18,7 @@ public:
     static Vector3 getHighestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients);
     static Vector3 getLowestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients);
 
-    static BSpline trackHighestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
+    static CatmullRomSpline trackHighestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
 
 //protected:
     static Vector3 followGradient(const Vector3& seedPosition, const GridV3& gradients, int maxTries, bool goUp);
@@ -27,11 +27,11 @@ public:
 class CurveOptimizer
 {
 public:
-    static BSpline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
-    static BSpline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
-    static BSpline getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
-    static BSpline followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
-    static BSpline followGradient(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
+    static CatmullRomSpline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
+    static CatmullRomSpline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
+    static CatmullRomSpline getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
+    static CatmullRomSpline followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
+    static CatmullRomSpline followGradient(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
 };
 
 class AreaOptimizer
@@ -56,7 +56,7 @@ public:
     static Vector3 getHighestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func);
     static Vector3 getLowestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func);
 
-    static BSpline trackHighestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
+    static CatmullRomSpline trackHighestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
 
     //protected:
     static Vector3 followGradient(const Vector3& seedPosition, const std::function<Vector3(const Vector3&)>& gradients, int maxTries, bool goUp);
@@ -65,11 +65,11 @@ public:
 class ContinuousCurveOptimizer
 {
 public:
-    static BSpline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
-    static BSpline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
-    static BSpline getSkeletonCurve(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
-    static BSpline followIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
-    static BSpline followGradient(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
+    static CatmullRomSpline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
+    static CatmullRomSpline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
+    static CatmullRomSpline getSkeletonCurve(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
+    static CatmullRomSpline followIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
+    static CatmullRomSpline followGradient(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
 
     static SnakeSegmentationParameters getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float(const Vector3&)>& func, float minLength);
     static SnakeSegmentationParameters getSnakeForExactLengthCurveFollowingGradients(const std::function<float(const Vector3&)>& func, float targetLength);

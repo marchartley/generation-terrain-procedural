@@ -36,17 +36,17 @@ KarstHoleProfile::KarstHoleProfile(KarstHolePredefinedShapes shape)
     }
 }
 
-KarstHoleProfile::KarstHoleProfile(BSpline shape)
+KarstHoleProfile::KarstHoleProfile(CatmullRomSpline shape)
 {
     this->vertices = shape;
 }
 
 KarstHoleProfile::KarstHoleProfile(std::vector<Vector3> shape)
 {
-    this->vertices = BSpline(shape);
+    this->vertices = CatmullRomSpline(shape);
 }
 
-KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
+KarstHoleProfile &KarstHoleProfile::rotateTowardVector(CatmullRomSpline path, float t)
 {
     for (Vector3& point : this->vertices)
         point.rotate(-M_PI/2.f, 0, 0);
@@ -115,7 +115,7 @@ KarstHoleProfile &KarstHoleProfile::scale(float scale_factor, bool verbose)
     return *this;
 }
 
-KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline path, float t, float previousAcceptedTime, float nextAcceptedTime)
+KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, CatmullRomSpline path, float t, float previousAcceptedTime, float nextAcceptedTime)
 {
     /*std::vector<Vector3> startingPoints = this->vertices.getPath(.1f);
     std::vector<Vector3> endingPoints = other.vertices.getPath(.1f);
@@ -172,7 +172,7 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
         return interpolation.translate((path.getPoint(t)));
     }
 }
-std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile::interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t)
+std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile::interpolateAndGetMesh(KarstHoleProfile other, CatmullRomSpline path, float t)
 {
     std::vector<Vector3> startingPoints = this->vertices.getPath(10.f);
     std::vector<Vector3> endingPoints = other.vertices.getPath(10.f);
@@ -237,14 +237,14 @@ KarstHoleProfile &KarstHoleProfile::rotateIndicesUntilBestFitWith(KarstHoleProfi
     for (int i = bestRotateFit; i < numberOfPointsUsed + bestRotateFit; i++) {
         newPoints.insert((best_reversed ? newPoints.begin() : newPoints.end() ), startPositions[i % numberOfPointsUsed]);
     }
-    this->vertices = BSpline(newPoints);
+    this->vertices = CatmullRomSpline(newPoints);
     return *this;
 }
 
 KarstHoleProfile& KarstHoleProfile::setNumberOfVertices(int vertice_count)
 {
     std::vector<Vector3> newPoints = this->vertices.getPath(vertice_count - 1);
-    this->vertices = BSpline(newPoints);
+    this->vertices = CatmullRomSpline(newPoints);
     return *this;
 }
 
@@ -334,9 +334,9 @@ std::vector<std::vector<int> > KarstHoleProfile::computeTrianglesIndices(const s
 
 
 
-BSpline KarstHoleProfile::createTubeProfile()
+CatmullRomSpline KarstHoleProfile::createTubeProfile()
 {
-    return BSpline({
+    return CatmullRomSpline({
                        {-1.,  .0, 0},
                        {-.7,  .7, 0},
                        { .0,  1., 0},
@@ -348,9 +348,9 @@ BSpline KarstHoleProfile::createTubeProfile()
                    })/*.close()*/;
 }
 
-BSpline KarstHoleProfile::createSolubleBedProfile()
+CatmullRomSpline KarstHoleProfile::createSolubleBedProfile()
 {
-    return BSpline({
+    return CatmullRomSpline({
                        {-1.,  0., 0},
                        {-.7,  .5, 0},
                        { .7,  .5, 0},
@@ -360,9 +360,9 @@ BSpline KarstHoleProfile::createSolubleBedProfile()
                    })/*.close()*/;
 }
 
-BSpline KarstHoleProfile::createPassageProfile()
+CatmullRomSpline KarstHoleProfile::createPassageProfile()
 {
-    return BSpline({
+    return CatmullRomSpline({
                        {-1.,  0., 0},
                        {-.5,  .5, 0},
                        { .5,  .5, 0},
@@ -372,9 +372,9 @@ BSpline KarstHoleProfile::createPassageProfile()
                    })/*.close()*/;
 }
 
-BSpline KarstHoleProfile::createKeyholeProfile()
+CatmullRomSpline KarstHoleProfile::createKeyholeProfile()
 {
-    return BSpline({
+    return CatmullRomSpline({
                        {-1.,  0., 0},
                        {-.5,  .5, 0},
                        { .5,  .5, 0},
@@ -386,9 +386,9 @@ BSpline KarstHoleProfile::createKeyholeProfile()
                    })/*.close()*/;
 }
 
-BSpline KarstHoleProfile::createCanyonProfile()
+CatmullRomSpline KarstHoleProfile::createCanyonProfile()
 {
-    return BSpline({
+    return CatmullRomSpline({
                        {-.5,  .5, 0},
                        {-.2,  1., 0},
                        { .2,  1., 0},
@@ -399,9 +399,9 @@ BSpline KarstHoleProfile::createCanyonProfile()
                        {-.5, -.5, 0}
                    })/*.close()*/;
 }
-BSpline KarstHoleProfile::createCrackProfile()
+CatmullRomSpline KarstHoleProfile::createCrackProfile()
 {
-    return BSpline({
+    return CatmullRomSpline({
                        {-.25,  0, 0},
                        {-.2,  .1, 0},
                        { .2,  .1, 0},
@@ -410,9 +410,9 @@ BSpline KarstHoleProfile::createCrackProfile()
                    })/*.close()*/;
 }
 
-BSpline KarstHoleProfile::createStarProfile()
+CatmullRomSpline KarstHoleProfile::createStarProfile()
 {
-    return BSpline({
+    return CatmullRomSpline({
                        {-1, .3, 0},
                        {-.1, .3, 0},
                        {0, 1., 0},

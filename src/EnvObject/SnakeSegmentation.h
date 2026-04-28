@@ -19,23 +19,23 @@ class SnakeSegmentation {
 
 public:
     SnakeSegmentation();
-    SnakeSegmentation(const BSpline& curve);
-    SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const BSpline& curve = BSpline());
+    SnakeSegmentation(const CatmullRomSpline& curve);
+    SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const CatmullRomSpline& curve = CatmullRomSpline());
     // virtual ~SnakeSegmentation() {}
     // SnakeSegmentation(const BSpline& initialContour, const GridF& inputImage,
                       // const GridV3& inputGradient);
 
-    BSpline runSegmentation(int maxIterations = 100);
-    BSpline runSegmentation(const BSpline& curve, int maxIterations = 100);
+    CatmullRomSpline runSegmentation(int maxIterations = 100);
+    CatmullRomSpline runSegmentation(const CatmullRomSpline& curve, int maxIterations = 100);
 
-    Vector3 computeEnergyGradient(const BSpline& contour, int index, bool usePreviousPointForInternal = true);
+    Vector3 computeEnergyGradient(const CatmullRomSpline& contour, int index, bool usePreviousPointForInternal = true);
 
-    Vector3 computeInternalEnergyGradient(const BSpline& contour, int index, bool usePreviousPoint = true) const;
-    Vector3 computeExternalEnergyGradient(const BSpline& contour, int index) const;
-    Vector3 computeShapeEnergyGradient(const BSpline& contour, int index, bool usePreviousPoint = true) const;
-    Vector3 computeGradientEnergyGradient(const BSpline& contour, int index) const;
+    Vector3 computeInternalEnergyGradient(const CatmullRomSpline& contour, int index, bool usePreviousPoint = true) const;
+    Vector3 computeExternalEnergyGradient(const CatmullRomSpline& contour, int index) const;
+    Vector3 computeShapeEnergyGradient(const CatmullRomSpline& contour, int index, bool usePreviousPoint = true) const;
+    Vector3 computeGradientEnergyGradient(const CatmullRomSpline& contour, int index) const;
 
-    BSpline updateContour(const BSpline& currentContour, float stepSize = 0.1f);
+    CatmullRomSpline updateContour(const CatmullRomSpline& currentContour, float stepSize = 0.1f);
 
     float getImageAt(const Vector3& p) const;
     Vector3 getGradientImageAt(const Vector3& p) const;
@@ -45,7 +45,7 @@ public:
     // virtual SnakeSegmentationParameters* getParameters() = 0;
 
 // private:
-    BSpline contour;     // BSpline representing the contour
+    CatmullRomSpline contour;     // BSpline representing the contour
     // GridF image;         // Grayscale image grid
     // GridV3 gradientField; // Gradient field of the image
 

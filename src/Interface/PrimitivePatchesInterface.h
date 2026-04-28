@@ -157,7 +157,7 @@ protected:
     int nbBinaryOperators = 0;
     int nbNaryOperators = 0;
 
-    BSpline parametricCurve;
+    CatmullRomSpline parametricCurve;
     Mesh parametricCurveMesh;
 
     Vector3 debuggingVoxelsPosition = Vector3(0.f, 0.f, 0.f);

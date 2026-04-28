@@ -4,7 +4,7 @@
 #include "TerrainGen/VoxelGrid.h"
 
 #include <tuple>
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include "Karst/KarstHoleProfile.h"
 #include "Karst/KarstHole.h"
 #include "TerrainModification/ParticleErosion.h"
@@ -18,7 +18,7 @@ public:
 
 //    std::vector<std::vector<Vector3>> Apply(int avoidMatter = -1);
     // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
-    std::tuple<std::vector<BSpline>, int, int, std::vector<std::vector<std::pair<float, Vector3> > > > Apply(EROSION_APPLIED applyOn, TerrainModel* terrain, SpacePartitioning &boundariesTree,
+    std::tuple<std::vector<CatmullRomSpline>, int, int, std::vector<std::vector<std::pair<float, Vector3> > > > Apply(EROSION_APPLIED applyOn, TerrainModel* terrain, SpacePartitioning &boundariesTree,
                                                     float& particleSimulationTime, float& terrainModifTime,
                                                     Vector3 startingPoint = Vector3::invalid,
                                                     Vector3 originalDirection = Vector3::invalid,
@@ -59,8 +59,8 @@ public:
     static std::tuple<GridF, GridF, GridF> flatteningErodedTerrain(const GridF& initialTerrain, const GridF& currentTerrain);
 
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
-    std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
-    std::vector<std::vector<Vector3>> CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    std::vector<Vector3> CreateTunnel(CatmullRomSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    std::vector<std::vector<Vector3>> CreateMultipleTunnels(std::vector<CatmullRomSpline> paths, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<Vector3> CreateCrack(const Vector3& start, const Vector3& end, bool applyChanges = true);
 
     // With a predefined tunnel :

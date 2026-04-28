@@ -34,7 +34,7 @@ SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, QWidge
         if (snakeParameters.params->collapseFirstAndLastPoint)
             snakeParameters.snake.contour = ShapeCurve::circle(10.f, pos, 20);
         else
-            snakeParameters.snake.contour = BSpline({pos - Vector3(10, 0), pos + Vector3(10, 0)}).resamplePoints(20);
+            snakeParameters.snake.contour = CatmullRomSpline({pos - Vector3(10, 0), pos + Vector3(10, 0)}).resamplePoints(20);
 
         // parameters.snake.runSegmentation(10);
 
@@ -57,11 +57,11 @@ void SnakeSegmentationEditor::showSnakePath() {
     GridF alpha(colors.getDimensions(), 0.f);
     Vector3 ratio = (this->hasImage() ? (Vector3)colors.getDimensions() / (Vector3)this->dataModel->imageData.getImage().getDimensions() : Vector3(1.f, 1.f, 1.f));
 
-    BSpline path;
+    CatmullRomSpline path;
     if (snakeParameters.params->collapseFirstAndLastPoint)
         path = ShapeCurve(snakeParameters.snake.contour).scale(ratio).getPath(100);
     else
-        path = BSpline(snakeParameters.snake.contour).scale(ratio).getPath(100);
+        path = CatmullRomSpline(snakeParameters.snake.contour).scale(ratio).getPath(100);
 
 
     for (size_t i = 0; i < path.size() - 1; i++) {

@@ -576,7 +576,7 @@ GridF EnvironmentalScene::getHeightmap(const GridF& initialHeightmap, float abso
         if (displayGrooves) {
             if (endsWith(toLower(obj->getDefinition()->name), "reef")) {
                 auto objAsEnvCurve = dynamic_cast<EnvCurveInstance*>(obj);
-                BSpline path = objAsEnvCurve->curve;
+                CatmullRomSpline path = objAsEnvCurve->curve;
                 float nbGrooves = path.length() / 10.f;
                 float sigma = objAsEnvCurve->getDefinition()->width;
                 surfaceHeights.iterateParallel([&](const Vector3i& pos) {

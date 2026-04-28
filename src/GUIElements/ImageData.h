@@ -17,7 +17,7 @@ struct DisplayedImageParameters {
     Vector3 colorRangeMax = Vector3::max();
     Vector3i displayedColors = Vector3i(1, 1, 1);
 
-    BSpline colorRamp = BSpline({Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)});
+    CatmullRomSpline colorRamp = CatmullRomSpline({Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)});
 };
 
 struct PlotImageData {

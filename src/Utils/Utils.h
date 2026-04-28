@@ -84,7 +84,7 @@ float sign(T value) {
 
 void sleep(int milliseconds);
 
-double timeIt(std::function<void()> func, int repetitions = 1);
+double timeIt(const std::function<void ()>& func, int repetitions = 1);
 std::string showTime(double nanoseconds);
 float displayProcessTime(const std::string& textToDisplay, const std::function<void ()>& func, bool verbose = true, int trials = 1);
 

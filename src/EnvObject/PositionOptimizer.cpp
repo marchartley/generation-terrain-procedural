@@ -13,10 +13,10 @@ Vector3 PositionOptimizer::getLowestPosition(const Vector3& seedPosition, [[mayb
     return followGradient(seedPosition, gradients, 100, false);
 }
 
-BSpline PositionOptimizer::trackHighestPosition(const Vector3& seedPosition, [[maybe_unused]] const GridF& score, const GridV3& gradients, int maxTries, bool goUp)
+CatmullRomSpline PositionOptimizer::trackHighestPosition(const Vector3& seedPosition, [[maybe_unused]] const GridF& score, const GridV3& gradients, int maxTries, bool goUp)
 {
     Vector3 pos = seedPosition;
-    BSpline track;
+    CatmullRomSpline track;
 
     for (int i = 0; i < maxTries; i++) {
         track.addPoint(pos);
@@ -51,7 +51,7 @@ Vector3 PositionOptimizer::followGradient(const Vector3& seedPosition, const Gri
     return pos;
 }
 
-BSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength)
+CatmullRomSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength)
 {
     const Vector3 p = seedPosition;
     SnakeSegmentationParameters parameters;
@@ -67,10 +67,10 @@ BSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPo
     parameters.lengthCost = 1.f;
     parameters.slopeCost = 0.f; // Don't follow the slope
 
-    return SnakeSegmentation(&parameters, &imageField, BSpline({p - gradients(p).rotated90XY() * minLength * .5f, p + gradients(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
+    return SnakeSegmentation(&parameters, &imageField, CatmullRomSpline({p - gradients(p).rotated90XY() * minLength * .5f, p + gradients(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
 }
 
-BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength)
+CatmullRomSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength)
 {
     const Vector3 p = seedPosition;
     SnakeSegmentationParameters parameters;
@@ -86,16 +86,16 @@ BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& see
     parameters.lengthCost = 10.f;
     parameters.slopeCost = 10.f; // Follow the slope
 
-    return SnakeSegmentation(&parameters, &imageField, BSpline({p - gradients(p).rotated90XY() * targetLength * .5f, p + gradients(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(1000);
+    return SnakeSegmentation(&parameters, &imageField, CatmullRomSpline({p - gradients(p).rotated90XY() * targetLength * .5f, p + gradients(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(1000);
 }
 
-BSpline CurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength)
+CatmullRomSpline CurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength)
 {
     Vector3 pos = seedPosition;
 
     auto gradientsSmoothed = gradients.meanSmooth(5, 5, 1); //gradients.gaussianSmooth(5.f, true);
     Vector3 dir = gradientsSmoothed(pos).normalized().rotate(PI * .5f, 0, 0, 1) * targetLength * .5f;
-    BSpline initialCurve = BSpline({pos - dir, pos + dir}).getPath(3);
+    CatmullRomSpline initialCurve = CatmullRomSpline({pos - dir, pos + dir}).getPath(3);
 
     SnakeSegmentationParameters parameters; // = SnakeSegmentationParameters(initialCurve, score, gradients);
     SnakeImageFieldExplicit imageField;
@@ -118,19 +118,19 @@ BSpline CurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const Grid
     }
     initialCurve = s.runSegmentation(50);
     if (initialCurve.size() > 1 && (initialCurve[0] - initialCurve[-1]).norm2() < std::pow(targetLength * .3f, 2)) {
-        initialCurve = BSpline();
+        initialCurve = CatmullRomSpline();
     }
     return initialCurve;
 }
 
-BSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength)
+CatmullRomSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength)
 {
     Vector3 pos0 = seedPosition;
     // Vector3 dir0 = gradients.interpolate(pos0).normalized().cross(Vector3(0, 0, 1));
     Vector3 gradient;
     std::tie(pos0, gradient) = PathOptimizer::jitterToFindPointAndGradient(pos0, Vector3::invalid, gradients, 100, 5.f);
     if (!gradient.isValid())
-        return BSpline();
+        return CatmullRomSpline();
 
     Vector3 dir0 = gradient.normalized().cross(Vector3(0, 0, 1));
     Vector3 pos1 = pos0;
@@ -138,7 +138,7 @@ BSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF&
 
     float initialIsovalue = score.interpolate(seedPosition);
 
-    BSpline path({seedPosition});
+    CatmullRomSpline path({seedPosition});
 
     float totalDistance = 0.f;
 
@@ -192,14 +192,14 @@ BSpline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF&
     AABBox boundingBox(path.AABBox());
     float ratioAreaPerimeter = (std::pow(boundingBox.dimensions().maxComp(), 2) / totalDistance);
     float ratioLimit = .5f * totalDistance / (2.f * PI); // Approximatively the ratio for a circle...
-    if (ratioAreaPerimeter < ratioLimit) return BSpline();
+    if (ratioAreaPerimeter < ratioLimit) return CatmullRomSpline();
     return path;
 }
 
-BSpline CurveOptimizer::followGradient(const Vector3& seedPosition, [[maybe_unused]] const GridF& score, const GridV3& gradients, int maxTries, bool goUp)
+CatmullRomSpline CurveOptimizer::followGradient(const Vector3& seedPosition, [[maybe_unused]] const GridF& score, const GridV3& gradients, int maxTries, bool goUp)
 {
     Vector3 pos = seedPosition;
-    BSpline track;
+    CatmullRomSpline track;
 
     for (int i = 0; i < maxTries; i++) {
         track.addPoint(pos);
@@ -253,7 +253,7 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3& seedPosition, con
     parameters.imageInsideCoef = 1.f;
     parameters.imageBordersCoef = 0.f;
 
-    BSpline result = SnakeSegmentation(&parameters, &imageField, curve).runSegmentation(200);
+    CatmullRomSpline result = SnakeSegmentation(&parameters, &imageField, curve).runSegmentation(200);
     std::cout << result.length() << " " << ShapeCurve(result).computeArea() << " / " << parameters.targetArea << std::endl;
     return result;
 }
@@ -300,30 +300,30 @@ Vector3 PathOptimizer::attractToIsovalue(const Vector3& pos, const GridF& score,
     return pos;
 }
 
-BSpline ContinuousCurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float minLength)
+CatmullRomSpline ContinuousCurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float minLength)
 {
     const Vector3 p = seedPosition;
     SnakeSegmentationParameters parameters = getSnakeForMinLengthCurveFollowingIsolevel(func, minLength);
     SnakeImageFieldImplicit imageField(func, gradientFromFieldFunction(func));
 
-    return SnakeSegmentation(&parameters, &imageField, BSpline({p - imageField.gradientField(p).rotated90XY() * minLength * .5f, p + imageField.gradientField(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
+    return SnakeSegmentation(&parameters, &imageField, CatmullRomSpline({p - imageField.gradientField(p).rotated90XY() * minLength * .5f, p + imageField.gradientField(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
 }
 
-BSpline ContinuousCurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float targetLength)
+CatmullRomSpline ContinuousCurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float targetLength)
 {
     const Vector3 p = seedPosition;
     SnakeSegmentationParameters parameters = getSnakeForExactLengthCurveFollowingGradients(func, targetLength);
     SnakeImageFieldImplicit imageField(func, gradientFromFieldFunction(func));
-    return SnakeSegmentation(&parameters, &imageField, BSpline({p - imageField.gradientField(p).rotated90XY() * targetLength * .5f, p + imageField.gradientField(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(100);
+    return SnakeSegmentation(&parameters, &imageField, CatmullRomSpline({p - imageField.gradientField(p).rotated90XY() * targetLength * .5f, p + imageField.gradientField(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(100);
 }
 
-BSpline ContinuousCurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float targetLength)
+CatmullRomSpline ContinuousCurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float targetLength)
 {
     const Vector3 p = seedPosition;
     SnakeSegmentationParameters parameters = getSnakeForSkeletonCurve(func, targetLength);
     SnakeImageFieldImplicit imageField(func, gradientFromFieldFunction(func));
     Vector3 dir = imageField.gradientField(p).normalized().rotate(PI * .5f, 0, 0, 1) * targetLength * .5f;
-    BSpline initialCurve = BSpline({p - dir, p + dir}).getPath(3);
+    CatmullRomSpline initialCurve = CatmullRomSpline({p - dir, p + dir}).getPath(3);
     SnakeSegmentation s = SnakeSegmentation(&parameters, &imageField, initialCurve);
     int nbIterations = 10;
     for (int i = 0; i < nbIterations; i++) {
@@ -335,12 +335,12 @@ BSpline ContinuousCurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, 
     }
     initialCurve = s.runSegmentation(50);
     if (initialCurve.size() > 1 && (initialCurve[0] - initialCurve[-1]).norm2() < std::pow(targetLength * .3f, 2)) {
-        initialCurve = BSpline();
+        initialCurve = CatmullRomSpline();
     }
     return initialCurve;
 }
 
-BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float minLength)
+CatmullRomSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float minLength)
 {
     Vector3 pos0 = seedPosition;
     // Vector3 dir0 = gradients.interpolate(pos0).normalized().cross(Vector3(0, 0, 1));
@@ -348,7 +348,7 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, co
     Vector3 gradient;
     std::tie(pos0, gradient) = ContinuousPathOptimizer::jitterToFindPointAndGradient(pos0, Vector3::invalid, gradients, 100, 5.f);
     if (!gradient.isValid())
-        return BSpline();
+        return CatmullRomSpline();
 
     Vector3 dir0 = gradient.normalized().cross(Vector3(0, 0, 1));
     Vector3 pos1 = pos0;
@@ -356,7 +356,7 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, co
 
     float initialIsovalue = func(seedPosition);
 
-    BSpline path({seedPosition});
+    CatmullRomSpline path({seedPosition});
 
     float totalDistance = 0.f;
 
@@ -410,14 +410,14 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, co
     AABBox boundingBox(path.AABBox());
     float ratioAreaPerimeter = (std::pow(boundingBox.dimensions().maxComp(), 2) / totalDistance);
     float ratioLimit = .5f * totalDistance / (2.f * PI); // Approximatively the ratio for a circle...
-    if (ratioAreaPerimeter < ratioLimit) return BSpline();
+    if (ratioAreaPerimeter < ratioLimit) return CatmullRomSpline();
     return path;
 }
 
-BSpline ContinuousCurveOptimizer::followGradient(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, int maxTries, bool goUp)
+CatmullRomSpline ContinuousCurveOptimizer::followGradient(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, int maxTries, bool goUp)
 {
     Vector3 pos = seedPosition;
-    BSpline track;
+    CatmullRomSpline track;
 
     auto gradients = gradientFromFieldFunction(func);
 
@@ -493,10 +493,10 @@ Vector3 ContinuousPositionOptimizer::getLowestPosition(const Vector3& seedPositi
     return followGradient(seedPosition, gradientFromFieldFunction(func), 100, false);
 }
 
-BSpline ContinuousPositionOptimizer::trackHighestPosition(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, int maxTries, bool goUp)
+CatmullRomSpline ContinuousPositionOptimizer::trackHighestPosition(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, int maxTries, bool goUp)
 {
     Vector3 pos = seedPosition;
-    BSpline track;
+    CatmullRomSpline track;
 
     auto gradients = gradientFromFieldFunction(func);
 
@@ -617,7 +617,7 @@ ShapeCurve ContinuousAreaOptimizer::getAreaOptimizedShape(const Vector3& seedPos
     ShapeCurve curve = ShapeCurve::circle(fakeRadius * .5f, seedPosition, 20);
     SnakeSegmentationParameters parameters = getSnakeForAreaOptimizedShape(func, targetArea);
     SnakeImageFieldImplicit imageField(func);
-    BSpline result = SnakeSegmentation(&parameters, &imageField, curve).runSegmentation(20);
+    CatmullRomSpline result = SnakeSegmentation(&parameters, &imageField, curve).runSegmentation(20);
     std::cout << result.length() << " " << ShapeCurve(result).computeArea() << " / " << parameters.targetArea << std::endl;
     return result;
 }

@@ -90,7 +90,7 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     this->boundingShape = boundingShape.removeDuplicates();
 
     if (boundingShape.empty()) {
-        boundingShape = BSpline({
+        boundingShape = CatmullRomSpline({
             Vector3(minBoundarie.x(), minBoundarie.y(), minBoundarie.z()),
             Vector3(minBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
             Vector3(maxBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
@@ -161,7 +161,7 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     for( int i = 0; i < diagram.numsites; ++i )
     {
         const jcv_site* site = &sites[i];
-        BSpline areaShape;
+        CatmullRomSpline areaShape;
 
         const jcv_graphedge* e = site->edges;
         while( e )

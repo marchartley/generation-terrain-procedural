@@ -178,12 +178,12 @@ void SpaceColonizationInterface::updateKarstPath()
     this->karstPaths.clear();
     std::vector<Vector3> pathPositions;
     std::vector<std::vector<Vector3>> allPaths = this->colonizer->simplifyPaths();
-    std::vector<BSpline> simplifiedKarstParths;
+    std::vector<CatmullRomSpline> simplifiedKarstParths;
 
     for (const auto& path : allPaths)
     {
-        BSpline simplifiedPath = BSpline(path); //.simplifyByRamerDouglasPeucker(3.0);
-        this->karstPaths.push_back(BSpline(path));
+        CatmullRomSpline simplifiedPath = CatmullRomSpline(path); //.simplifyByRamerDouglasPeucker(3.0);
+        this->karstPaths.push_back(CatmullRomSpline(path));
         simplifiedKarstParths.push_back(simplifiedPath);
         for (size_t i = 0; i < path.size() - 1; i++) {
             pathPositions.push_back(path[i]);

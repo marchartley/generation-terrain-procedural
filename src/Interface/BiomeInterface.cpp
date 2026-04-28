@@ -51,7 +51,7 @@ Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, const Vector3& pos, 
     return finalPos;
 }
 
-GridF archeTunnel(BSpline path, float size, float strength, bool addingMatter, std::shared_ptr<VoxelGrid> grid) {
+GridF archeTunnel(CatmullRomSpline path, float size, float strength, bool addingMatter, std::shared_ptr<VoxelGrid> grid) {
     GridF erosionMatrix(grid->getDimensions());
     float nb_points_on_path = path.length() / (size/5.f);
     RockErosion rock(size, strength);
@@ -74,7 +74,7 @@ GridF BiomeInterface::prepareTrench(std::shared_ptr<BiomeInstance> biome) {
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 midpoint1 = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(start + (end - start) * .4f + (end - start).cross(Vector3(0, 0, 1)) * .1f));
     Vector3 midpoint2 = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(start + (end - start) * .6f + (end - start).cross(Vector3(0, 0, 1)) * -.1f));
-    return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 8.f * this->voxelGridScaleFactor, 3.f, false, voxelGrid);
+    return archeTunnel(CatmullRomSpline({start, midpoint1, midpoint2, end}), 8.f * this->voxelGridScaleFactor, 3.f, false, voxelGrid);
 }
 GridF BiomeInterface::prepareCoralWall(std::shared_ptr<BiomeInstance> biome) {
     if (biome->getNumberOfPoints() < 2) return GridF(0, 0, 0);
@@ -82,7 +82,7 @@ GridF BiomeInterface::prepareCoralWall(std::shared_ptr<BiomeInstance> biome) {
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 gradient = voxelGrid->getVoxelValues().gradient(getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels((start + end) * .5f)));
     Vector3 midpoint = (start + end) * .5f + gradient * (end - start).norm() * .2f;
-    return archeTunnel(BSpline({start, midpoint, end}), 5.f * this->voxelGridScaleFactor, 3.f, true, voxelGrid);
+    return archeTunnel(CatmullRomSpline({start, midpoint, end}), 5.f * this->voxelGridScaleFactor, 3.f, true, voxelGrid);
 }
 GridF BiomeInterface::prepareArche(std::shared_ptr<BiomeInstance> biome) {
     if (biome->getNumberOfPoints() < 2) return GridF(0, 0, 0);
@@ -90,12 +90,12 @@ GridF BiomeInterface::prepareArche(std::shared_ptr<BiomeInstance> biome) {
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 midpoint1 = start + (end - start) * .3f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint1
     Vector3 midpoint2 = start + (end - start) * .6f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint2
-    return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 5.f * this->voxelGridScaleFactor, 10.f, true, voxelGrid);
+    return archeTunnel(CatmullRomSpline({start, midpoint1, midpoint2, end}), 5.f * this->voxelGridScaleFactor, 10.f, true, voxelGrid);
 }
 GridF BiomeInterface::preparePatateCorail(std::shared_ptr<BiomeInstance> biome) {
     float radius = std::min(5.f, biome->area.containingBoxSize().norm() / 2.f) * this->voxelGridScaleFactor;
     Vector3 patatePosition = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->position)) + Vector3(0, 0, radius/10.f);
-    return archeTunnel(BSpline({patatePosition, patatePosition + Vector3(0, 0, 0.001f)}), radius, 2.f, true, voxelGrid);
+    return archeTunnel(CatmullRomSpline({patatePosition, patatePosition + Vector3(0, 0, 0.001f)}), radius, 2.f, true, voxelGrid);
 }
 
 Vector3 BiomeInterface::fromHeightmapPosToVoxels(const Vector3& pos)

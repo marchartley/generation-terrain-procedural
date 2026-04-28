@@ -7,7 +7,6 @@ class Polyline : public Curve
 {
 public:
     Polyline();
-    Polyline(const Polyline& s);
     Polyline(const std::vector<Vector3>& points);
 
     CLONE_FUNCTION(Polyline)

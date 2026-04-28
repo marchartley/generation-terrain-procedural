@@ -2,7 +2,7 @@
 #include "Utils/Globals.h"
 #include "UnderwaterErosion.h"
 #include "TerrainModification/RockErosion.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include "Karst/KarstHole.h"
 #include "Utils/Utils.h"
 #include "Graph/Matrix3Graph.h"
@@ -142,7 +142,7 @@ void initializeParticle(ErosionParticle& particle, Vector3& position, Vector3& v
     particle.properties->mass = particle.properties->density * particle.properties->volume;
 }
 
-std::tuple<std::vector<BSpline>, int, int, std::vector<std::vector<std::pair<float, Vector3>>>>
+std::tuple<std::vector<CatmullRomSpline>, int, int, std::vector<std::vector<std::pair<float, Vector3>>>>
 UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                          TerrainModel* terrain,
                          SpacePartitioning& boundariesTree,
@@ -239,12 +239,12 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
     terrainModifTime = erosionProcess.terrainModifTime;
 
     int quantity = allReturns.size();
-    std::vector<BSpline> tunnels(quantity);
+    std::vector<CatmullRomSpline> tunnels(quantity);
     std::vector<std::vector<std::pair<float, Vector3>>> allErosions(quantity);
     int positions = 0;
     int erosions = 0;
     for (size_t i = 0; i < quantity; i++) {
-        tunnels[i] = BSpline(allReturns[i].getPositions());
+        tunnels[i] = CatmullRomSpline(allReturns[i].getPositions());
         std::vector<Vector3> erosionPositions = allReturns[i].getErosionPositions();
         std::vector<float> erosionValues = allReturns[i].getErosionValues();
         positions += tunnels[i].numPoints();
@@ -776,17 +776,17 @@ std::tuple<GridF, GridF, GridF> UnderwaterErosion::flatteningErodedTerrain(const
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addingMatter, bool applyChanges,
                                                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
-    BSpline curve = BSpline::random(numberPoints); // Random curve
+    CatmullRomSpline curve = CatmullRomSpline::random(numberPoints); // Random curve
     for (Vector3& coord : curve)
         coord = ((coord + Vector3(1.0, 1.0, 1.0)) / 2.0) * voxelGrid->getDimensions(); //Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
     return CreateTunnel(curve, addingMatter, true, applyChanges, startingShape, endingShape);
 }
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres, bool applyChanges,
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(CatmullRomSpline path, bool addingMatter, bool usingSpheres, bool applyChanges,
                                                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
     GridF erosionMatrix(voxelGrid->getDimensions()); //(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     bool modificationDoesSomething = true;
-    BSpline width = BSpline(std::vector<Vector3>({
+    CatmullRomSpline width = CatmullRomSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 2.0),
                                                      Vector3(1.0, 1.0)
@@ -847,11 +847,11 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
     return coords;
 }
 
-std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter, bool usingSpheres, bool applyChanges,
+std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<CatmullRomSpline> paths, bool addingMatter, bool usingSpheres, bool applyChanges,
                                                                             KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
     GridF erosionMatrix(voxelGrid->getDimensions()); // this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
-    BSpline width = BSpline(std::vector<Vector3>({
+    CatmullRomSpline width = CatmullRomSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 0.5),
                                                      Vector3(1.0, 1.0)
@@ -859,7 +859,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
 
 //    float resolution = 0.01;
     std::vector<std::vector<Vector3>> allCoords;
-    for (BSpline& path : paths) {
+    for (CatmullRomSpline& path : paths) {
         bool modificationDoesSomething = true;
         if (usingSpheres) {
             float nb_points_on_path = path.length() / (float)(this->maxRockSize / 3.f);
@@ -931,7 +931,7 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(const Vector3& start, const 
         meshPath.push_back(path[i]);
         meshPath.push_back(path[i + 1]);
     }
-    return this->CreateTunnel(BSpline(path).simplifyByRamerDouglasPeucker(0.5f), false, false, applyChanges, KarstHolePredefinedShapes::CRACK, KarstHolePredefinedShapes::CRACK);
+    return this->CreateTunnel(CatmullRomSpline(path).simplifyByRamerDouglasPeucker(0.5f), false, false, applyChanges, KarstHolePredefinedShapes::CRACK, KarstHolePredefinedShapes::CRACK);
     //    return meshPath;
 }
 
@@ -939,7 +939,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool add
 {
     GridF erosionMatrix(voxelGrid->getDimensions()); //(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     bool modificationDoesSomething = true;
-    BSpline width = BSpline(std::vector<Vector3>({
+    CatmullRomSpline width = CatmullRomSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 2.0),
                                                      Vector3(1.0, 1.0)
@@ -983,7 +983,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool add
 
 void UnderwaterErosion::ParisSeaErosion()
 {
-    BSpline randomResistanceCurve = BSpline({Vector3(0, 0, 0), Vector3(1, 0, 0)}).resamplePoints(20);
+    CatmullRomSpline randomResistanceCurve = CatmullRomSpline({Vector3(0, 0, 0), Vector3(1, 0, 0)}).resamplePoints(20);
     for (auto& p : randomResistanceCurve)
         p.y() = random_gen::generate(0.f, 1.f);
     Curve1D resistanceCurve = Curve1D(randomResistanceCurve);
@@ -991,7 +991,7 @@ void UnderwaterErosion::ParisSeaErosion()
     float waterLevel = voxelGrid->properties->waterLevel;
     float previousWater = clamp(waterLevel - 0.1f, 0.f, 1.f);
     float nextWater = clamp(waterLevel + 0.1f, 0.f, 1.f);
-    Curve1D seaErosionCurve = Curve1D(BSpline({Vector3(0, 0, 0), Vector3(previousWater, 0, 0), Vector3(waterLevel, 1, 0), Vector3(nextWater, 0, 0), Vector3(1, 0, 0)}));
+    Curve1D seaErosionCurve = Curve1D(CatmullRomSpline({Vector3(0, 0, 0), Vector3(previousWater, 0, 0), Vector3(waterLevel, 1, 0), Vector3(nextWater, 0, 0), Vector3(1, 0, 0)}));
 //    std::cout << "Water level: " << waterLevel << std::endl;
 //    std::cout << seaErosionCurve.display1DPlot(200, 20) << std::endl;
 //    std::cout << resistanceCurve.display1DPlot(200, 20) << std::endl;

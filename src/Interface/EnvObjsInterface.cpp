@@ -319,7 +319,7 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
     for (auto& tunnelPatch : tunnelsPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(tunnelPatch);
         if (asPrimitive && asPrimitive->material == WATER) {
-            BSpline curve = asPrimitive->optionalCurve;
+            CatmullRomSpline curve = asPrimitive->optionalCurve;
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
@@ -332,7 +332,7 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
     for (auto& reefPatch : reefPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(reefPatch);
         if (asPrimitive) {
-            BSpline curve = asPrimitive->optionalCurve;
+            CatmullRomSpline curve = asPrimitive->optionalCurve;
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
@@ -590,7 +590,7 @@ EnvObjectInstance* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScore
     return newObject;
 }
 
-EnvObjectInstance* EnvObjsInterface::instantiateObjectUsingSpline(const std::string& objectName, const BSpline &spline)
+EnvObjectInstance* EnvObjsInterface::instantiateObjectUsingSpline(const std::string& objectName, const CatmullRomSpline &spline)
 {
     EnvObjectInstance* newObject = this->scene->instantiate(objectName);
     newObject->snake.position = spline.getPoint(.5f);
@@ -1428,18 +1428,18 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
     if (auto objAsPoint = dynamic_cast<EnvPointInstance*>(obj)) {
         isoline = ShapeCurve::circle(objAsPoint->getDefinition()->radius, position, 20);
     } else if (auto objAsCurve = dynamic_cast<EnvCurveInstance*>(obj)) {
-        BSpline initialCurve;
+        CatmullRomSpline initialCurve;
         SnakeSegmentation& s = obj->snake;
         float targetLength = objAsCurve->getDefinition()->length;
         if (objAsCurve->getDefinition()->curveFollow == EnvCurve::SKELETON) {
             Vector3 dir = gradientFromFieldFunction(obj->getDefinition()->fitnessFunction)(position).rotated90XY().normalize() * targetLength * .1f;
-            initialCurve = BSpline({position - dir, position + dir}).resamplePoints(20);
+            initialCurve = CatmullRomSpline({position - dir, position + dir}).resamplePoints(20);
         } else if (objAsCurve->getDefinition()->curveFollow == EnvCurve::ISOVALUE) {
             Vector3 dir = gradientFromFieldFunction(obj->getDefinition()->fitnessFunction)(position).rotated90XY().normalize() * targetLength * .1f;
-            initialCurve = BSpline({position - dir, position + dir}).resamplePoints(20);
+            initialCurve = CatmullRomSpline({position - dir, position + dir}).resamplePoints(20);
         } else if (objAsCurve->getDefinition()->curveFollow == EnvCurve::GRADIENTS) {
             Vector3 dir = gradientFromFieldFunction(obj->getDefinition()->fitnessFunction)(position).normalize() * targetLength * .1f;
-            initialCurve = BSpline({position - dir, position + dir}).resamplePoints(20);
+            initialCurve = CatmullRomSpline({position - dir, position + dir}).resamplePoints(20);
         }
         objAsCurve->updateCurve(initialCurve);
         s.position = position;
@@ -1448,7 +1448,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         for (int iteration = 0; iteration < maxIterations; iteration++) {
             objAsCurve->improvePositionning(5);
             initialCurve = objAsCurve->curve;
-            BSpline display = initialCurve;
+            CatmullRomSpline display = initialCurve;
             display.addPoint(display[0]);
             display.resamplePoints(100);
             for (size_t i = 0; i < display.size(); i++) {
@@ -1690,7 +1690,7 @@ void EnvObjsInterface::flowErosionSimulation()
 
 void EnvObjsInterface::startNewObjectCreation()
 {
-    this->objectSkeletonCreation = BSpline();
+    this->objectSkeletonCreation = CatmullRomSpline();
     this->updateNewObjectMesh();
 }
 
@@ -1723,7 +1723,7 @@ void EnvObjsInterface::endNewObjectCreation()
         return;
 
     auto newObject = this->instantiateObjectUsingSpline(objectModel->name, this->objectSkeletonCreation);
-    this->objectSkeletonCreation = BSpline();
+    this->objectSkeletonCreation = CatmullRomSpline();
     if (newObject) {
         newObject->createdManually = true;
     }
@@ -2145,7 +2145,7 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
 
 
     std::vector<std::vector<std::pair<float, Vector3>>> allErosions;
-    std::vector<BSpline> lastRocksLaunched;
+    std::vector<CatmullRomSpline> lastRocksLaunched;
 
     float erosionSize = 8.f;
     float erosionStrength = .5; // .35f;

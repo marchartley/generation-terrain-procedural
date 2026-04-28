@@ -5,11 +5,6 @@
 BezierCurve::BezierCurve() : BezierCurve(std::vector<Vector3>())
 {}
 
-BezierCurve::BezierCurve(const BezierCurve &s)
-{
-    *this = s;
-}
-
 BezierCurve::BezierCurve(const std::vector<Vector3> &points)
     : BezierCurve(points, std::vector<Vector3>())
 {

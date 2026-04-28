@@ -257,7 +257,7 @@ TectonicEvent::TectonicEvent(Vector3 direction, float sigma, float startTime, fl
         for (size_t i = 0; i < area.size(); i++) {
             Vector3 p0 = area[i];
             Vector3 p1 = area[i+1];
-            BSpline path = BSpline({p0, p1}).resamplePoints(10);
+            CatmullRomSpline path = CatmullRomSpline({p0, p1}).resamplePoints(10);
             Vector3 dir = (p0 - p1);
             dir = Vector3(dir.y(), dir.x()).normalize();
             for (auto& p : path) {

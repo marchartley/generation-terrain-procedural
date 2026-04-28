@@ -7,9 +7,9 @@
 
 
 template <class Json>
-void to_json(Json& json, const BSpline& spline);
+void to_json(Json& json, const CatmullRomSpline& spline);
 template <class Json>
-void from_json(const Json& json, BSpline& spline);
+void from_json(const Json& json, CatmullRomSpline& spline);
 
 
 #include "Serializer.h"
@@ -20,7 +20,7 @@ void to_json(Json& json, const Curve& curve) {
 }
 
 template <class Json>
-void to_json(Json &json, const BSpline& curve)
+void to_json(Json &json, const CatmullRomSpline& curve)
 {
     to_json(json, static_cast<const Curve&>(curve));
     auto p = curve.getPath();
@@ -77,9 +77,9 @@ void from_json(const Json& json, Curve& curve)
 }
 
 template <class Json>
-void from_json(const Json& json, BSpline& curve) {
+void from_json(const Json& json, CatmullRomSpline& curve) {
     auto points = json.at("points").template get<std::vector<Vector3>>();
-    curve = BSpline(points);
+    curve = CatmullRomSpline(points);
     if (json.contains("alpha"))
         curve.setAlpha(json.at("alpha"));
     from_json(json, static_cast<Curve&>(curve));
@@ -110,8 +110,8 @@ Curve* make_curve_from_json(const Json& json) {
     if (json.contains("type")) {
         const std::string type = toLower(json.at("type"));
         if (type == "catmull") {
-            c = new BSpline;
-            from_json(json, *(dynamic_cast<BSpline*>(c)));
+            c = new CatmullRomSpline;
+            from_json(json, *(dynamic_cast<CatmullRomSpline*>(c)));
             foundType = true;
         } else if (type == "polyline") {
             c = new Polyline;

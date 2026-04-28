@@ -2,7 +2,7 @@
 #define SNAKESEGMENTATIONIMPLICIT_H
 
 /*
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include "Curves/ShapeCurve.h"
 #include "EnvObject/SnakeSegmentation.h"
 #include <functional>

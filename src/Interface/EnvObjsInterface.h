@@ -35,7 +35,7 @@ public:
 
     EnvObjectInstance* instantiateObjectAtBestPosition(const std::string& objectName, Vector3 position, const GridF& score);
     EnvObjectInstance* instantiateObjectAtBestPositionWithoutScoreMap(const std::string& objectName, Vector3 position, const Vector3 &maxPos);
-    EnvObjectInstance* instantiateObjectUsingSpline(const std::string& objectName, const BSpline& spline);
+    EnvObjectInstance* instantiateObjectUsingSpline(const std::string& objectName, const CatmullRomSpline& spline);
 
 public Q_SLOTS:
     void show();
@@ -87,7 +87,7 @@ public:
     void evaluateAndDisplayCustomFittingFormula(const std::string& formula);
     void evaluateAndDisplayCustomFitnessAndFittingFormula(const std::string& fitnessFuncFormula, std::string fittingFuncFormula);
 
-    BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
+    CatmullRomSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
     ShapeCurve computeNewObjectsShapeAtPositionForceCircle(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
     ShapeCurve computeNewObjectsShapeAtPositionForceCircleOptimizedArea(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float targetArea);
@@ -200,7 +200,7 @@ public:
 
     bool flowfieldEditing = false;
 
-    BSpline objectSkeletonCreation;
+    CatmullRomSpline objectSkeletonCreation;
     bool manuallyCreatingObject = false;
     bool previewingObjectInPlotter = false;
 
@@ -228,10 +228,10 @@ public:
     std::shared_ptr<EnvironmentalScene> scene;
 };
 
-BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);
-BSpline followGradient(const GridV3 gradients, const Vector3& startPoint, float maxDist, bool followInverse = false) ;
+CatmullRomSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);
+CatmullRomSpline followGradient(const GridV3 gradients, const Vector3& startPoint, float maxDist, bool followInverse = false) ;
 std::vector<Vector3> findCandidatesPositions(const Vector3& startPosition, const Vector3& direction, float angle, float radius, int nbCandidates);
-std::vector<BSpline> getCandidatesPaths(const GridV3& gradients, const std::vector<Vector3>& positions, float directionLength);
-BSpline getBestCandidatesPath(const GridF &score, const BSpline& initialPath, const std::vector<BSpline>& paths);
+std::vector<CatmullRomSpline> getCandidatesPaths(const GridV3& gradients, const std::vector<Vector3>& positions, float directionLength);
+CatmullRomSpline getBestCandidatesPath(const GridF &score, const CatmullRomSpline& initialPath, const std::vector<CatmullRomSpline>& paths);
 
 #endif // ENVOBJSINTERFACE_H

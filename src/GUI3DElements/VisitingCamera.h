@@ -1,7 +1,7 @@
 #ifndef VISITINGCAMERA_H
 #define VISITINGCAMERA_H
 
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include <QGLViewer/camera.h>
 
 class VisitingCamera : public qglviewer::Camera
@@ -14,7 +14,7 @@ public:
 
     bool isVisiting = false;
 
-    std::vector<BSpline> paths;
+    std::vector<CatmullRomSpline> paths;
 };
 
 #endif // VISITINGCAMERA_H

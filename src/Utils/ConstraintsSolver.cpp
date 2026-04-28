@@ -16,10 +16,10 @@ int ConstraintsSolver::addItem(Vector3* point)
     return ID;
 }
 
-int ConstraintsSolver::addItem(BSpline *curve)
+int ConstraintsSolver::addItem(CatmullRomSpline *curve)
 {
     int ID = distanceConstraints.sizeX;
-    this->curvesConstrainted.insert(std::pair<int, BSpline*>(ID, curve));
+    this->curvesConstrainted.insert(std::pair<int, CatmullRomSpline*>(ID, curve));
     this->addConstraintSlot();
     this->addNormalConstraint(ID, -10, 10);
     return ID;

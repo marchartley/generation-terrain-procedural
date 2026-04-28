@@ -12,7 +12,7 @@ struct DisplayedVectorFieldParameters {
 
     VECTOR_DISPLAY displayMode = ARROWS;
     Vector3 backgroundColor = Vector3::white;
-    BSpline colorRamp = BSpline({Vector3(70.f, 0.f, 100.f) / 255.f, Vector3(30.f, 160.f, 130.f) / 255.f, Vector3(255.f, 250.f, 0.f)/255.f});
+    CatmullRomSpline colorRamp = CatmullRomSpline({Vector3(70.f, 0.f, 100.f) / 255.f, Vector3(30.f, 160.f, 130.f) / 255.f, Vector3(255.f, 250.f, 0.f)/255.f});
 };
 
 struct PlotVectorData {

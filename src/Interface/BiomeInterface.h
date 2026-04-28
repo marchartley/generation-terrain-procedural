@@ -6,7 +6,7 @@
 class BiomeInterface;
 //#include "GUI3DElements/ControlPoint.h"
 //#include "GUI3DElements/InteractiveVector.h"
-// #include "Curves/BSpline.h"
+// #include "Curves/CatmullRomSpline.h"
 // #include <QWidget>
 // #include "TerrainGen/VoxelGrid.h"
 // #include "TerrainGen/Heightmap.h"

@@ -1,14 +1,14 @@
 #ifndef SHAPECURVE_H
 #define SHAPECURVE_H
 
-#include "BSpline.h"
+#include "CatmullRomSpline.h"
 
-class ShapeCurve : public BSpline
+class ShapeCurve : public CatmullRomSpline
 {
 public:
     ShapeCurve();
     ShapeCurve(std::vector<Vector3> points);
-    ShapeCurve(BSpline path);
+    ShapeCurve(CatmullRomSpline path);
 
     bool contains(const Vector3& pos, bool useNativeShape = true) const;
     bool containsXY(const Vector3& pos, bool useNativeShape = true, int increaseAccuracy = 0) const;

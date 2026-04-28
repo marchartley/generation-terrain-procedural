@@ -7,7 +7,6 @@ class BezierCurve : public Curve
 {
 public:
     BezierCurve();
-    BezierCurve(const BezierCurve& s);
     BezierCurve(const std::vector<Vector3>& points);
     BezierCurve(const std::vector<Vector3>& points, const std::vector<Vector3>& handles);
 

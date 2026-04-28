@@ -41,7 +41,7 @@ enum DebugMeshesNames {
 #include "Graphics/Sphere.h"
 #include <QObject>
 #include "Karst/KarstPathsGeneration.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include "TreeColonisation/TreeColonisation.h"
 #include "GUI3DElements/ControlPoint.h"
 #include "Interface/ActionInterface.h"

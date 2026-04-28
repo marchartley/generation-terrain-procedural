@@ -69,7 +69,7 @@ public:
 
     AbstractPlotter& addPlot(const std::vector<float>& data, std::string name = "", QColor color = Qt::gray);
     AbstractPlotter& addPlot(const std::vector<Vector3>& data, std::string name = "", QColor color = Qt::gray);
-    AbstractPlotter& addPlot(const BSpline& data, std::string name = "", QColor color = Qt::gray);
+    AbstractPlotter& addPlot(const CatmullRomSpline& data, std::string name = "", QColor color = Qt::gray);
 
     AbstractPlotter& addScatter(const std::vector<float>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     AbstractPlotter& addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), const std::vector<QColor>& colors = std::vector<QColor>());

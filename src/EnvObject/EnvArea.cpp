@@ -75,7 +75,7 @@ bool EnvAreaInstance::placeInTerrain(const Vector3 &seedPosition)
     return this->placeInTerrain(initialCurve);
 }
 
-bool EnvAreaInstance::placeInTerrain(const BSpline &seedCurve)
+bool EnvAreaInstance::placeInTerrain(const CatmullRomSpline &seedCurve)
 {
     ShapeCurve initialCurve = ShapeCurve(seedCurve);
     initialCurve.close().resamplePoints();
@@ -202,7 +202,7 @@ ImplicitPatch* EnvAreaInstance::createImplicitPatch(const GridF &heights, Implic
         previousPrimitive = nullptr;
         return nullptr;
     }
-    BSpline translatedCurve = this->curve;
+    CatmullRomSpline translatedCurve = this->curve;
     for (Vector3& p : translatedCurve) {
         p.z() = heights(p.xy());
     }
@@ -255,7 +255,7 @@ EnvAreaInstance &EnvAreaInstance::translate(const Vector3 &translation)
     return *this;
 }
 
-void EnvAreaInstance::updateCurve(const BSpline &newCurve)
+void EnvAreaInstance::updateCurve(const CatmullRomSpline &newCurve)
 {
     if (this->getDefinition()->evaluateInside) {
         std::cerr << "Need to implement 'updateCurve' for inside...!" << std::endl;

@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "DataStructure/Vector3.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 
 enum KarstHolePredefinedShapes
 {
@@ -21,14 +21,14 @@ class KarstHoleProfile
 public:
     KarstHoleProfile();
     KarstHoleProfile(KarstHolePredefinedShapes shape);
-    KarstHoleProfile(BSpline shape);
+    KarstHoleProfile(CatmullRomSpline shape);
     KarstHoleProfile(std::vector<Vector3> shape);
 
-    KarstHoleProfile& rotateTowardVector(BSpline path, float t);
+    KarstHoleProfile& rotateTowardVector(CatmullRomSpline path, float t);
     KarstHoleProfile& translate(const Vector3& new_pos, bool verbose = false);
     KarstHoleProfile& scale(float scale_factor, bool verbose = false);
-    KarstHoleProfile interpolate(KarstHoleProfile other, BSpline path, float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
-    std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t);
+    KarstHoleProfile interpolate(KarstHoleProfile other, CatmullRomSpline path, float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
+    std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> interpolateAndGetMesh(KarstHoleProfile other, CatmullRomSpline path, float t);
 
     KarstHoleProfile& rotateIndicesUntilBestFitWith(KarstHoleProfile& otherProfile, int numberOfPointsUsed);
 
@@ -37,15 +37,15 @@ public:
 
     std::vector<std::vector<int>> computeTrianglesIndices(const std::vector<Vector3>& points);
 
-    static BSpline createTubeProfile();
-    static BSpline createSolubleBedProfile();
-    static BSpline createPassageProfile();
-    static BSpline createKeyholeProfile();
-    static BSpline createCanyonProfile();
-    static BSpline createCrackProfile();
-    static BSpline createStarProfile();
+    static CatmullRomSpline createTubeProfile();
+    static CatmullRomSpline createSolubleBedProfile();
+    static CatmullRomSpline createPassageProfile();
+    static CatmullRomSpline createKeyholeProfile();
+    static CatmullRomSpline createCanyonProfile();
+    static CatmullRomSpline createCrackProfile();
+    static CatmullRomSpline createStarProfile();
 
-    BSpline vertices;
+    CatmullRomSpline vertices;
     Vector3 scaling = Vector3(1.f, 1.f, 1.f);
 };
 

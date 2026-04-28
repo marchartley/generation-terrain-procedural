@@ -11,6 +11,8 @@ class Curve
 {
 public:
     Curve() = default;
+    Curve(const Curve& copy) = default;
+    virtual ~Curve() = default;
 
     virtual Curve* clone() const = 0;
     virtual std::vector<Vector3> getPath(int numberOfPoints = -1) const = 0;

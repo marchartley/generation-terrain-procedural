@@ -3,15 +3,15 @@
 
 #include "Polyline.h"
 #include "BezierCurve.h"
-#include "BSpline.h"
+#include "CatmullRomSpline.h"
 
-BSpline toCatmullRom(const BezierCurve& curve);
-BSpline toCatmullRom(const Polyline& curve);
+CatmullRomSpline toCatmullRom(const BezierCurve& curve);
+CatmullRomSpline toCatmullRom(const Polyline& curve);
 
-BezierCurve toBezier(const BSpline& curve);
+BezierCurve toBezier(const CatmullRomSpline& curve);
 BezierCurve toBezier(const Polyline& curve);
 
-Polyline toPolyline(const BSpline& curve);
+Polyline toPolyline(const CatmullRomSpline& curve);
 Polyline toPolyline(const BezierCurve& curve);
 
 #endif // CURVES_H

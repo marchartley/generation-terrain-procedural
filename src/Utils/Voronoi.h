@@ -3,7 +3,7 @@
 
 
 #include "DataStructure/Vector3.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include "Curves/ShapeCurve.h"
 #include <vector>
 

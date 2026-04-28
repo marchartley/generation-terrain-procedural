@@ -10,7 +10,7 @@
 #include <iomanip>
 #include <complex>
 #include "DataStructure/Vector3.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include "Curves/ShapeCurve.h"
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
@@ -204,8 +204,8 @@ public:
     inline Vector3 gradient(float posX, float posY, float posZ = 0) const;
 
     Matrix3<int> skeletonize() const;
-    std::vector<BSpline> skeletonizeToBSplines() const;
-    Matrix3<Vector3> fillWithBSplines(std::vector<BSpline> splines) const;
+    std::vector<CatmullRomSpline> skeletonizeToBSplines() const;
+    Matrix3<Vector3> fillWithBSplines(std::vector<CatmullRomSpline> splines) const;
     Matrix3<T> dilate(bool use2D = false, float t = 1.f) const;
     Matrix3<T> erode(bool use2D = false, float t = 1.f) const;
     Matrix3<int> computeConnectedComponents(bool use4Connect = false) const;
@@ -216,10 +216,10 @@ public:
     T trace() const;
 
     Matrix3<T> warpWith(const Matrix3<Vector3>& warper, int precision = 1) const;
-    Matrix3<T> warpWith(const BSpline& original, const BSpline& warperCurve) const;
+    Matrix3<T> warpWith(const CatmullRomSpline& original, const CatmullRomSpline& warperCurve) const;
 
     Matrix3<T> warpWithoutInterpolation(const Matrix3<Vector3>& warper) const;
-    Matrix3<T> warpWithoutInterpolation(const BSpline& original, const BSpline& warperCurve) const;
+    Matrix3<T> warpWithoutInterpolation(const CatmullRomSpline& original, const CatmullRomSpline& warperCurve) const;
 
     static Matrix3<float> fbmNoise1D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
     static Matrix3<Vector3> fbmNoise2D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
@@ -1962,7 +1962,7 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
 
     iterateParallel([&](int x, int y, int z) {
         if (this->unsafe(x, y, z) <= 0) return;
-        if (ignoreBorders && (x == 0 || x == sizeX - 1 || y == 0 || y == sizeY - 1 || z == 0 || (ignoreZtopBorder && z == sizeZ - 1))) return;
+        if (ignoreBorders && (x == 0 || x == int(sizeX) - 1 || y == 0 || y == int(sizeY) - 1 || z == 0 || (ignoreZtopBorder && z == int(sizeZ) - 1))) return;
         bool isSurface = false;
         for (int dx = -1; dx <= 1 && !isSurface; dx++) {
             for (int dy = -1; dy <= 1 && !isSurface; dy++) {
@@ -2978,7 +2978,7 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::warpWith(const BSpline& original, const BSpline& warperCurve) const
+Matrix3<T> Matrix3<T>::warpWith(const CatmullRomSpline& original, const CatmullRomSpline& warperCurve) const
 {
     // For now, start from a straight line on the X-axis
 //    BSpline original = BSpline({this->getDimensions() * Vector3(0, .5, .5) + Vector3(1, 0, 0), this->getDimensions() * Vector3(1, .5, .5) - Vector3(1, 0, 0)});
@@ -3083,7 +3083,7 @@ Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Matrix3<Vector3>& warper) 
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const BSpline &original, const BSpline &warperCurve) const
+Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const CatmullRomSpline &original, const CatmullRomSpline &warperCurve) const
 {
 //    bool previousRaise = this->raiseErrorOnBadCoord;
 //    T previousDefault  = this->returned_value_on_outside;

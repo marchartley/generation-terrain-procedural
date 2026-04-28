@@ -85,7 +85,7 @@ bool EnvPointInstance::placeInTerrain(const Vector3 &seedPosition)
     return true;
 }
 
-bool EnvPointInstance::placeInTerrain(const BSpline &seedCurve)
+bool EnvPointInstance::placeInTerrain(const CatmullRomSpline &seedCurve)
 {
     if (seedCurve.empty())
         return false;

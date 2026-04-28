@@ -8,7 +8,7 @@ class KarstPathGenerationInterface;
 #include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
 #include "GUIElements/FancySlider.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 // #include <QWidget>
 // #include "TerrainGen/VoxelGrid.h"
 #include "GUI3DElements/PathCameraConstraint.h"
@@ -35,7 +35,7 @@ public:
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 //    std::shared_ptr<VoxelGrid> voxelGrid;
 
-    std::vector<BSpline> karstPaths;
+    std::vector<CatmullRomSpline> karstPaths;
 
     Mesh pathsMeshes;
 

@@ -2,7 +2,7 @@
 #define KELVINLET_H
 
 #include "DataStructure/Vector3.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 
 class Kelvinlet;
 class KelvinletPoint;

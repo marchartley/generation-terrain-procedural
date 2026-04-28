@@ -10,7 +10,7 @@ EnvMaterialViewer::EnvMaterialViewer(const std::string& name, QWidget* parent)
     painterParams.RGBimage = false;
     painterParams.minClampColor = Vector3(0, 0, 0);
 
-    dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::white, Vector3::green});
+    dataModel->imageData.displayParameters.colorRamp = CatmullRomSpline({Vector3::white, Vector3::green});
 
     setOnMouseMoved([=](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);

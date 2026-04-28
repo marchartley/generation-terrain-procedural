@@ -4,7 +4,7 @@
 
 #include "Utils/FastNoiseLit.h"
 #include "Utils/Utils.h"
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 
 #include "DataStructure/Image.h"
 
@@ -371,7 +371,7 @@ void Heightmap::raise(GridF elevation)
 
 void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpointsInFaults, float faultHeight)
 {
-    std::vector<BSpline> faults;
+    std::vector<CatmullRomSpline> faults;
     for (int i = 0; i < numberOfFaults; i++) {
         Vector3 firstPoint, lastPoint;
         int numberOfSubpoints = random_gen::generate(0, maxNumberOfSubpointsInFaults + 1);
@@ -396,7 +396,7 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
         for (int iSub = 0; iSub < numberOfSubpoints; iSub++)
             points.push_back(Vector3(random_gen::generate(0, getSizeX()), random_gen::generate(0, getSizeY())));
         points.push_back(lastPoint);
-        faults.push_back(BSpline(points));
+        faults.push_back(CatmullRomSpline(points));
     }
 
     GridF faultsImpact(getSizeX(), getSizeY());

@@ -158,7 +158,7 @@ void KarstPathGenerationInterface::updateKarstPath()
         for (size_t i = 0; i < path.size() - 1; i++) {
             pathPositions.push_back(this->karstCreator->getNodePos(path[i    ]));
             pathPositions.push_back(this->karstCreator->getNodePos(path[i + 1]));
-            karstPaths.push_back(BSpline(std::vector<Vector3>({this->karstCreator->getNodePos(path[i    ]),
+            karstPaths.push_back(CatmullRomSpline(std::vector<Vector3>({this->karstCreator->getNodePos(path[i    ]),
                                                                this->karstCreator->getNodePos(path[i + 1])})));
         }
     }

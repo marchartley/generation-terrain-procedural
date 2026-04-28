@@ -4,15 +4,15 @@
 #include "Utils/Globals.h"
 #include <QGLViewer/constraint.h>
 #include <QGLViewer/camera.h>
-#include "Curves/BSpline.h"
+#include "Curves/CatmullRomSpline.h"
 #include <vector>
 
 class PathCameraConstraint : public qglviewer::Constraint
 {
 public:
     PathCameraConstraint(qglviewer::Camera* camera);
-    PathCameraConstraint(qglviewer::Camera* camera, BSpline path);
-    PathCameraConstraint(qglviewer::Camera* camera, std::vector<BSpline> paths);
+    PathCameraConstraint(qglviewer::Camera* camera, CatmullRomSpline path);
+    PathCameraConstraint(qglviewer::Camera* camera, std::vector<CatmullRomSpline> paths);
 
     virtual void constrainTranslation(qglviewer::Vec& t, qglviewer::Frame* const fr);
     virtual void constrainRotation(qglviewer::Quaternion& q, qglviewer::Frame* const fr);
@@ -21,7 +21,7 @@ private:
     qglviewer::AxisPlaneConstraint* constraint;
     qglviewer::CameraConstraint* camRotationConstraint;
     qglviewer::Camera* camera;
-    std::vector<BSpline> paths;
+    std::vector<CatmullRomSpline> paths;
     int pathFollowed = -1;
 };
 

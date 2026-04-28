@@ -1,17 +1,16 @@
-#ifndef BSPLINE_H
-#define BSPLINE_H
+#ifndef CATMULLROMSPLINE_H
+#define CATMULLROMSPLINE_H
 
 #include "Curves/Curve.h"
 
-class BSpline : public Curve
+class CatmullRomSpline : public Curve
 {
 public:
-    BSpline();
-    BSpline(const BSpline& s);
-    BSpline(const std::vector<Vector3>& points);
-    BSpline(std::vector<BSpline> subsplines);
+    CatmullRomSpline();
+    CatmullRomSpline(const std::vector<Vector3>& points);
+    CatmullRomSpline(std::vector<CatmullRomSpline> subsplines);
 
-    CLONE_FUNCTION(BSpline)
+    CLONE_FUNCTION(CatmullRomSpline)
     std::vector<Vector3> getPath(int numberOfPoints = -1) const override;
     Vector3 getPoint(float x) const override;
     Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const override;
@@ -24,14 +23,14 @@ public:
 
     std::vector<Vector3> getPoints() const { return this->points; }
 
-    BSpline smooth(float factor = 1.f) const;
-    BSpline taubinSmooth(float factor = 1.f) const;
+    CatmullRomSpline smooth(float factor = 1.f) const;
+    CatmullRomSpline taubinSmooth(float factor = 1.f) const;
 
-    BSpline& setPoint(int i, const Vector3& newPos) override;
+    CatmullRomSpline& setPoint(int i, const Vector3& newPos) override;
 
-    BSpline& resamplePoints(int newNbPoints = -1) override;
+    CatmullRomSpline& resamplePoints(int newNbPoints = -1) override;
 
-    BSpline& reverseVertices() override;
+    CatmullRomSpline& reverseVertices() override;
 
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
     size_t prevID(int i) { return (i - 1 + this->points.size()) % this->points.size(); }
@@ -47,36 +46,36 @@ public:
 
     Vector3 center() const;
 
-    BSpline& close();
+    CatmullRomSpline& close();
 
-    BSpline& cleanPoints();
+    CatmullRomSpline& cleanPoints();
 
     Vector3 getCatmullPoint(float x) const;
 
-    BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
+    CatmullRomSpline simplifyByRamerDouglasPeucker(float epsilon, CatmullRomSpline subspline = CatmullRomSpline());
 
     std::pair<Vector3, Vector3> AABBox() const;
 
     using Curve::scale;
-    BSpline& scale(const Vector3& factor) override;
-    BSpline scaled(float factor);
-    BSpline scaled(const Vector3& factor);
+    CatmullRomSpline& scale(const Vector3& factor) override;
+    CatmullRomSpline scaled(float factor);
+    CatmullRomSpline scaled(const Vector3& factor);
 
     //    BSpline& grow(float increase);
     //    BSpline& shrink(float decrease);
 
-    BSpline computeConvexHull() const;
+    CatmullRomSpline computeConvexHull() const;
 
-    BSpline& translate(const Vector3& translation) override;
+    CatmullRomSpline& translate(const Vector3& translation) override;
 
     std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
 
-    BSpline& displacePointsRandomly(float maxDistance);
-    BSpline& displacePointsRandomly(const Vector3& maxDistance);
-    BSpline& displacePointsRandomlyPerlin(float maxDistance, float scale = 1.f, bool loop = false);
-    BSpline& displacePointsRandomlyPerlin(const Vector3 &maxDistance, float scale = 1.f, bool loop = false);
+    CatmullRomSpline& displacePointsRandomly(float maxDistance);
+    CatmullRomSpline& displacePointsRandomly(const Vector3& maxDistance);
+    CatmullRomSpline& displacePointsRandomlyPerlin(float maxDistance, float scale = 1.f, bool loop = false);
+    CatmullRomSpline& displacePointsRandomlyPerlin(const Vector3 &maxDistance, float scale = 1.f, bool loop = false);
 
-    virtual BSpline& removeDuplicates() override;
+    virtual CatmullRomSpline& removeDuplicates() override;
 
     std::string toString() const override;
 
@@ -104,16 +103,16 @@ public:
     std::tuple<Vector3, Vector3, Vector3> pointAndDerivativeAndSecondDerivative(float x) const;
 
 
-    static BSpline random(int numberOfPoints);
+    static CatmullRomSpline random(int numberOfPoints);
 
     void setAlpha(float newAlpha) { this->alpha = newAlpha; }
     float getAlpha() const { return alpha; }
 
     void addPoint(const Vector3& newPoint);
-    BSpline& insertPoint(int i, const Vector3& newPos) { this->points.insert(points.begin() + i, newPos); return *this; }
-    BSpline& removePoint(int i) { this->points.erase(points.begin() + i); return *this; }
+    CatmullRomSpline& insertPoint(int i, const Vector3& newPos) { this->points.insert(points.begin() + i, newPos); return *this; }
+    CatmullRomSpline& removePoint(int i) { this->points.erase(points.begin() + i); return *this; }
 
-    BSpline& reset() { this->points.clear(); return *this; }
+    CatmullRomSpline& reset() { this->points.clear(); return *this; }
 
 
     static float CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha);
@@ -123,8 +122,4 @@ protected:
     std::vector<Vector3> points;
 };
 
-class CatmullRomSpline : public BSpline {
-
-};
-
-#endif // BSPLINE_H
+#endif // CATMULLROMSPLINE_H

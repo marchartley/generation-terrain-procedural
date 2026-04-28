@@ -8,14 +8,14 @@ VisitingCamera::VisitingCamera() : qglviewer::Camera()
 void VisitingCamera::moveForward(float distance)
 {
     this->setFlySpeed(0);
-    std::vector<BSpline> closestPathCandidates;
+    std::vector<CatmullRomSpline> closestPathCandidates;
     std::vector<int> closestPointIndexCandidates;
-    BSpline closestPath;
+    CatmullRomSpline closestPath;
     int closestPointIndex = -1;
     float bestScore = -1;
     Vector3 currentPos = position();
     Vector3 currentDir = viewDirection();
-    for (const BSpline& path : this->paths)
+    for (const CatmullRomSpline& path : this->paths)
     {
         auto pathPoints = path.getPath();
         for (size_t i = 0; i < pathPoints.size(); i++)
@@ -44,12 +44,12 @@ void VisitingCamera::moveForward(float distance)
 void VisitingCamera::moveBackward(float distance)
 {
     this->setFlySpeed(0);
-    BSpline closestPath;
+    CatmullRomSpline closestPath;
     float closestTime;
     float bestDist = std::numeric_limits<float>::max();
     Vector3 currentPos = position();
     Vector3 currentDir = viewDirection();
-    for (BSpline& path : this->paths)
+    for (CatmullRomSpline& path : this->paths)
     {
         Vector3 closestPoint = path.estimateClosestPos(currentPos);
         if ((currentPos - closestPoint).norm2() < bestDist) {
