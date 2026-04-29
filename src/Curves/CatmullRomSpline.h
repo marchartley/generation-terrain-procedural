@@ -46,7 +46,7 @@ public:
 
     Vector3 center() const;
 
-    CatmullRomSpline& close();
+    CatmullRomSpline& close() override;
 
     CatmullRomSpline& cleanPoints();
 

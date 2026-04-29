@@ -67,13 +67,13 @@ public:
     }
     DECLARE_PLOTTER_GETTER(AbstractPlotter)
 
-    AbstractPlotter& addPlot(const std::vector<float>& data, std::string name = "", QColor color = Qt::gray);
-    AbstractPlotter& addPlot(const std::vector<Vector3>& data, std::string name = "", QColor color = Qt::gray);
-    AbstractPlotter& addPlot(const CatmullRomSpline& data, std::string name = "", QColor color = Qt::gray);
+    AbstractPlotter& addPlot(const std::vector<float>& data, std::string name = "", Vector3 color = Vector3::gray);
+    AbstractPlotter& addPlot(const std::vector<Vector3>& data, std::string name = "", Vector3 color = Vector3::gray);
+    AbstractPlotter& addPlot(const CatmullRomSpline& data, std::string name = "", Vector3 color = Vector3::gray);
 
-    AbstractPlotter& addScatter(const std::vector<float>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
-    AbstractPlotter& addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), const std::vector<QColor>& colors = std::vector<QColor>());
-    AbstractPlotter& addScatter(const std::vector<Vector3>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    AbstractPlotter& addScatter(const std::vector<float>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
+    AbstractPlotter& addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
+    AbstractPlotter& addScatter(const std::vector<Vector3>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
 
     AbstractPlotter& addImage(const GridV3 &image);
     AbstractPlotter& addImage(const GridF& image);
@@ -100,8 +100,8 @@ public:
 
     // AbstractPlotter& reset();
 
-    bool hasPlotValues() const { return !this->dataModel->plotLineData.plot_data.empty(); }
-    bool hasScatterValues() const { return !this->dataModel->scatterData.scatter_data.empty(); }
+    bool hasPlotValues() const { return !this->dataModel->plotLineData.data.empty(); }
+    bool hasScatterValues() const { return !this->dataModel->scatterData.data.empty(); }
     bool hasImage() const { return !this->dataModel->getImage().empty(); }
     bool hasVectorField() const { return !this->dataModel->vectorData.field.empty(); }
 

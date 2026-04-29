@@ -60,7 +60,7 @@ void RegularSimplicialComplex::display()
     std::vector<std::vector<Vector3>> plots;
     std::vector<Vector3> scatter;
     std::vector<std::string> scatter_labels;
-    std::vector<QColor> plots_colors;
+    std::vector<Vector3> plots_colors;
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             auto myNode = this->getNode(x, y);
@@ -72,9 +72,9 @@ void RegularSimplicialComplex::display()
                 if (myNode->hasNeighbor(secondNode)) {
                     plots.push_back({myNode->pos, secondNode->pos});
                     if (myNode->value < 0 || secondNode->value < 0 || myNode->value != secondNode->value) {
-                        plots_colors.push_back(Qt::gray); // plots_colors.push_back(PlotColor::GRAY);
+                        plots_colors.push_back(Vector3::gray); // plots_colors.push_back(PlotColor::GRAY);
                     } else {
-                        plots_colors.push_back(QColor::fromHsvF((float)myNode->value / maxNodeValue, 1.f, 1.f)); // plots_colors.push_back((PlotColor)(PlotColor::RED + myNode->value));
+                        plots_colors.push_back(HSVtoRGB((float)myNode->value / maxNodeValue, 1.f, 1.f)); // plots_colors.push_back((PlotColor)(PlotColor::RED + myNode->value));
                     }
                 }
             }
@@ -83,9 +83,9 @@ void RegularSimplicialComplex::display()
                 if (myNode->hasNeighbor(secondNode)) {
                     plots.push_back({myNode->pos, secondNode->pos});
                     if (myNode->value < 0 || secondNode->value < 0 || myNode->value != secondNode->value) {
-                        plots_colors.push_back(Qt::gray); // plots_colors.push_back(PlotColor::GRAY);
+                        plots_colors.push_back(Vector3::gray); // plots_colors.push_back(PlotColor::GRAY);
                     } else {
-                        plots_colors.push_back(QColor::fromHsvF((float)myNode->value / maxNodeValue, 1.f, 1.f)); // plots_colors.push_back((PlotColor)(PlotColor::RED + myNode->value));
+                        plots_colors.push_back(HSVtoRGB((float)myNode->value / maxNodeValue, 1.f, 1.f)); // plots_colors.push_back((PlotColor)(PlotColor::RED + myNode->value));
                     }
                 }
             }
@@ -94,9 +94,9 @@ void RegularSimplicialComplex::display()
                 if (myNode->hasNeighbor(secondNode)) {
                     plots.push_back({myNode->pos, secondNode->pos});
                     if (myNode->value < 0 || secondNode->value < 0 || myNode->value != secondNode->value) {
-                        plots_colors.push_back(Qt::gray); // plots_colors.push_back(PlotColor::GRAY);
+                        plots_colors.push_back(Vector3::gray); // plots_colors.push_back(PlotColor::GRAY);
                     } else {
-                        plots_colors.push_back(QColor::fromHsvF((float)myNode->value / maxNodeValue, 1.f, 1.f)); // plots_colors.push_back((PlotColor)(PlotColor::RED + myNode->value));
+                        plots_colors.push_back(HSVtoRGB((float)myNode->value / maxNodeValue, 1.f, 1.f)); // plots_colors.push_back((PlotColor)(PlotColor::RED + myNode->value));
                     }
                 }
             }

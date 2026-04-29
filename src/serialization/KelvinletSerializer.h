@@ -187,7 +187,7 @@ template <class Json>
 void from_json(const Json& json, KelvinletCurve& kelvinlet)
 {
     from_json(json, static_cast<Kelvinlet&>(kelvinlet));
-    kelvinlet.curve = make_curve_from_json(json.at("curve"));
+    kelvinlet.curve = std::shared_ptr<Curve>(make_curve_from_json(json.at("curve")));
 }
 
 template <class Json>

@@ -1,26 +1,12 @@
 #ifndef CHARTVIEW_H
 #define CHARTVIEW_H
 
-#include <QColor>
 #include <QtCharts>
 #include <QChartView>
 
 #include "GUIElements/PlottingData.h"
 #include "GUIElements/ImageData.h"
 #include "GUIElements/VectorFieldData.h"
-
-enum PlotColor {
-    WHITE, GRAY, BLACK, RED, GREEN, BLUE, RANDOM
-};
-
-inline std::map<PlotColor, QColor> PlotColorToQColor = {
-    {WHITE, Qt::white},
-    {GRAY, Qt::gray},
-    {BLACK, Qt::black},
-    {RED, Qt::red},
-    {GREEN, Qt::green},
-    {BLUE, Qt::blue}
-};
 
 class PlotModel;
 
@@ -45,6 +31,8 @@ public:
 
     ChartView& setPlotModel(std::shared_ptr<PlotModel> dataModel, const std::string& title = "");
     ChartView& updateLabelsPositions();
+
+    ChartView& setPlottingLimits(const Vector3& mini, const Vector3& maxi = Vector3::invalid);
 
     bool selectData(const Vector3& pos);
 
@@ -78,6 +66,8 @@ protected:
     QValueAxis* axisX = nullptr;
     QValueAxis* axisY = nullptr;
 
+    AABBox plottingLimits;
+
 public:
     std::shared_ptr<PlotModel> _dataModel;
 
@@ -95,9 +85,9 @@ class PlotModel {
 public:
     PlotModel();
 
-    PlotModel& addPlot(const std::vector<Vector3>& data, const std::string& name = "", const QColor& color = Qt::gray);
+    PlotModel& addPlot(const std::vector<Vector3>& data, const std::string& name = "", const Vector3& color = Vector3::gray);
 
-    PlotModel& addScatter(const std::vector<Vector3>& data, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    PlotModel& addScatter(const std::vector<Vector3>& data, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
 
     PlotModel& addImage(const GridV3& image);
     PlotModel& addImage(const GridF& image);

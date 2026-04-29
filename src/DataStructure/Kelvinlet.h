@@ -147,16 +147,16 @@ public:
     virtual ~KelvinletCurve() = default;
 
     virtual Vector3 evaluate(const Vector3& p) const = 0;
-    virtual bool valid() const { return Kelvinlet::valid() && !curve->empty(); }
+    virtual bool valid() const;
 
     virtual KelvinletCurve* clone() const = 0;
-    virtual KelvinletCurve& reset() { Kelvinlet::reset(); curve->reset(); return *this; }
-    virtual KelvinletCurve& translate(const Vector3& translation) { this->curve->translate(translation); return *this; }
-    virtual KelvinletCurve& scale(float scaling) { Kelvinlet::scale(scaling); this->curve->scale(scaling); return *this; }
+    virtual KelvinletCurve& reset();
+    virtual KelvinletCurve& translate(const Vector3& translation);
+    virtual KelvinletCurve& scale(float scaling);
 
-    KelvinletCurve& setCurve(Curve* newCurve) { delete curve; curve = newCurve; return *this; }
+    KelvinletCurve& setCurve(std::shared_ptr<Curve> newCurve);
 
-    Curve* curve;
+    std::shared_ptr<Curve> curve;
 };
 
 

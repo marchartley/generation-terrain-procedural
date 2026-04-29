@@ -186,7 +186,10 @@ std::string Polyline::toString() const
 
 Polyline& Polyline::close()
 {
-    this->closed = true;
+    Curve::close();
+    if (points.size() > 0 && points.front() != points.back())
+        this->points.push_back(points[0]);
+    return *this;
 }
 
 

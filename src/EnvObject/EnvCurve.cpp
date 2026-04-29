@@ -236,7 +236,7 @@ GridV3& EnvCurveInstance::computeFlowModification(GridV3& waterFlow, float scale
             relativeFlowsEnding.push_back(RelativeKelvinlet(this->getDefinition()->endingPointKelvinlets[i], this->curve.back(), scale));
     }
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
-        this->getDefinition()->curveKelvinlets[i]->setCurve(&this->curve);
+        this->getDefinition()->curveKelvinlets[i]->setCurve(std::shared_ptr<Curve>(this->curve.clone()));
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
             auto k = this->getDefinition()->curveKelvinlets[i]->clone();
             // auto asCurve = dynamic_cast<KelvinletCurve*>(k);
@@ -414,7 +414,7 @@ void EnvCurveInstance::updateCurve(const CatmullRomSpline &newCurve)
     this->curve = newCurve;
     for (auto& k : this->getDefinition()->curveKelvinlets) {
         if (auto asKelvinletCurve = dynamic_cast<KelvinletCurve*>(k)) {
-            asKelvinletCurve->setCurve(&this->curve);
+            asKelvinletCurve->setCurve(std::shared_ptr<Curve>(this->curve.clone()));
         }
     }
     this->_cachedFlowModif.clear();

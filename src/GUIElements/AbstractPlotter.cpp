@@ -102,7 +102,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
     });
 }
 
-AbstractPlotter& AbstractPlotter::addPlot(const std::vector<float>& data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(const std::vector<float>& data, std::string name, Vector3 color)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
@@ -111,38 +111,38 @@ AbstractPlotter& AbstractPlotter::addPlot(const std::vector<float>& data, std::s
     return this->addPlot(_data, name, color);
 }
 
-AbstractPlotter& AbstractPlotter::addPlot(const std::vector<Vector3>& data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(const std::vector<Vector3>& data, std::string name, Vector3 color)
 {
     this->dataModel->addPlot(data, name, color);
     return *this;
 }
 
-AbstractPlotter& AbstractPlotter::addPlot(const CatmullRomSpline &data, std::string name, QColor color)
+AbstractPlotter& AbstractPlotter::addPlot(const CatmullRomSpline &data, std::string name, Vector3 color)
 {
     return this->addPlot(data.getPoints(), name, color);
 }
 
-AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& data, std::string name, std::vector<std::string> labels, const Vector3& color)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
         _data.push_back(Vector3(i, data[i]));
     }
-    return this->addScatter(_data, name, labels, colors);
+    return this->addScatter(_data, name, labels, color);
 }
 
-AbstractPlotter &AbstractPlotter::addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name, const std::vector<std::string>& labels, const std::vector<QColor>& colors)
+AbstractPlotter &AbstractPlotter::addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name, const std::vector<std::string>& labels, const Vector3& color)
 {
     std::vector<Vector3> _data;
     for (size_t i = 0; i < dataX.size(); i++) {
         _data.push_back(Vector3(dataX[i], dataY[i]));
     }
-    return this->addScatter(_data, name, labels, colors);
+    return this->addScatter(_data, name, labels, color);
 }
 
-AbstractPlotter& AbstractPlotter::addScatter(const std::vector<Vector3>& data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+AbstractPlotter& AbstractPlotter::addScatter(const std::vector<Vector3>& data, std::string name, std::vector<std::string> labels, const Vector3& color)
 {
-    this->dataModel->addScatter(data, name, labels, colors);
+    this->dataModel->addScatter(data, name, labels, color);
     return *this;
 }
 
