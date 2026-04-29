@@ -178,7 +178,7 @@ GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow, float scale)
     std::vector<KelvinletCurve*> evaluatedCurveKelvinlets;
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
         auto& k = this->getDefinition()->curveKelvinlets[i];
-        k->setCurve(&this->curve);
+        k->setCurve(std::shared_ptr<Curve>(this->curve.clone()));
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
             evaluatedCurveKelvinlets.push_back(k);
             // if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(this->getDefinition()->curveKelvinlets[i])) {

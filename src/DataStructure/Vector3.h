@@ -221,6 +221,7 @@ public:
 
 
     inline static constexpr Vec3 white  { T(1), T(1), T(1) };
+    inline static constexpr Vec3 gray   { T(.5), T(.5), T(.5)};
     inline static constexpr Vec3 black  { T(0), T(0), T(0) };
     inline static constexpr Vec3 red    { T(1), T(0), T(0) };
     inline static constexpr Vec3 green  { T(0), T(1), T(0) };

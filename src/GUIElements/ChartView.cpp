@@ -33,6 +33,12 @@ ChartView& ChartView::setPlotModel(std::shared_ptr<PlotModel> dataModel, const s
         s->attachAxis(axisY);
     }
 
+    if (this->plottingLimits.maxi.isValid()) {
+        axisX->setRange(plottingLimits.min().x(), plottingLimits.max().x());
+        axisY->setRange(plottingLimits.min().y(), plottingLimits.max().y());
+    }
+
+
     return *this;
 }
 
@@ -47,18 +53,28 @@ ChartView& ChartView::updateLabelsPositions()
         QPointF qNewPoint = this->chart()->mapToValue(this->previousMousePos);
         Vector3 newPoint = Vector3(qNewPoint.x(), qNewPoint.y());
         for (auto& [iPlot, iPoint] : this->_dataModel->selectedPlotData)
-            plotLineData.plot_data[iPlot][iPoint] = newPoint;
+            plotLineData.data[iPlot][iPoint] = newPoint;
         for (auto& [iPlot, iPoint] : this->_dataModel->selectedScatterData)
-            scatterData.scatter_data[iPlot][iPoint] = newPoint;
+            scatterData.data[iPlot][iPoint] = newPoint;
     }
 
-    for (size_t iScatter = 0; iScatter < scatterData.scatter_labels.size(); iScatter++) {
-        for (size_t iPoint = 0; iPoint < scatterData.scatter_labels[iScatter].size(); iPoint++) {
-            scatterData.graphicLabels[iScatter][iPoint]->setPos(this->chart()->mapToPosition(QPointF(scatterData.scatter_data[iScatter][iPoint].x(), scatterData.scatter_data[iScatter][iPoint].y())));
+    for (size_t iScatter = 0; iScatter < scatterData.labels.size(); iScatter++) {
+        for (size_t iPoint = 0; iPoint < scatterData.labels[iScatter].size(); iPoint++) {
+            scatterData.graphicLabels[iScatter][iPoint]->setPos(this->chart()->mapToPosition(QPointF(scatterData.data[iScatter][iPoint].x(), scatterData.data[iScatter][iPoint].y())));
         }
     }
     if (!this->_dataModel->selectedPlotData.empty() || !this->_dataModel->selectedScatterData.empty()) {
         std::cout << "Removed a call to ImageViewer::draw() here..." << std::endl;
+    }
+    return *this;
+}
+
+ChartView &ChartView::setPlottingLimits(const Vector3 &mini, const Vector3 &maxi)
+{
+    if (maxi.isValid()) {
+        this->plottingLimits = AABBox(mini, maxi);
+    } else {
+        this->plottingLimits = AABBox(Vector3::origin, mini);
     }
     return *this;
 }
@@ -75,15 +91,15 @@ bool ChartView::selectData(const Vector3& pos)
     this->_dataModel->selectedPlotData.clear();
 
     if (pos.isValid()) {
-        for (size_t i = 0; i < plotLineData.plot_data.size(); i++) {
-            for (size_t j = 0; j < plotLineData.plot_data[i].size(); j++) {
-                if ((plotLineData.plot_data[i][j] - pos).norm2() < minDist*minDist)
+        for (size_t i = 0; i < plotLineData.data.size(); i++) {
+            for (size_t j = 0; j < plotLineData.data[i].size(); j++) {
+                if ((plotLineData.data[i][j] - pos).norm2() < minDist*minDist)
                     this->_dataModel->selectedPlotData.push_back({i, j});
             }
         }
-        for (size_t i = 0; i < scatterData.scatter_data.size(); i++) {
-            for (size_t j = 0; j < scatterData.scatter_data[i].size(); j++) {
-                if ((scatterData.scatter_data[i][j] - pos).norm2() < minDist*minDist)
+        for (size_t i = 0; i < scatterData.data.size(); i++) {
+            for (size_t j = 0; j < scatterData.data[i].size(); j++) {
+                if ((scatterData.data[i][j] - pos).norm2() < minDist*minDist)
                     this->_dataModel->selectedScatterData.push_back({i, j});
             }
         }
@@ -171,13 +187,17 @@ void ChartView::displayImages()
 void ChartView::displayPlotLines()
 {
     auto& plotLineData = _dataModel->plotLineData;
-    for (size_t i = 0; i < plotLineData.plot_data.size(); i++) {
+    for (size_t i = 0; i < plotLineData.data.size(); i++) {
         QLineSeries *series = new QLineSeries();
-        if (plotLineData.plot_names.size() > 0 && plotLineData.plot_names.size() == plotLineData.plot_data.size())
-            series->setName(QString::fromStdString(plotLineData.plot_names[i]));
-        for (auto pos : plotLineData.plot_data[i])
+        if (plotLineData.names.size() > 0 && plotLineData.names.size() == plotLineData.data.size())
+            series->setName(QString::fromStdString(plotLineData.names[i]));
+        for (auto pos : plotLineData.data[i])
             series->append(pos.x(), pos.y());
-        series->setColor(plotLineData.plot_colors[i]);
+        QPen pen = series->pen();
+        QColor col = QColor(int(plotLineData.colors[i].r() * 255), int(plotLineData.colors[i].g() * 255), int(plotLineData.colors[i].b() * 255));
+        pen.setColor(col);
+        series->setPen(pen);
+        series->setColor(col);
         this->chart()->addSeries(series);
         if (series->name().isEmpty()) {
             this->chart()->legend()->markers(series)[0]->setVisible(false);
@@ -188,23 +208,28 @@ void ChartView::displayPlotLines()
 void ChartView::displayScatterPoints()
 {
     auto& scatterData = _dataModel->scatterData;
-    for (size_t i = 0; i < scatterData.scatter_data.size(); i++) {
+    for (size_t i = 0; i < scatterData.data.size(); i++) {
         QScatterSeries *series = new QScatterSeries();
-        if (scatterData.scatter_names.size() > 0 && scatterData.scatter_names.size() == scatterData.scatter_data.size())
-            series->setName(QString::fromStdString(scatterData.scatter_names[i]));
-        for (size_t j = 0; j < scatterData.scatter_data[i].size(); j++) {
-            auto pos = scatterData.scatter_data[i][j];
+        if (scatterData.names.size() > 0 && scatterData.names.size() == scatterData.data.size())
+            series->setName(QString::fromStdString(scatterData.names[i]));
+        for (size_t j = 0; j < scatterData.data[i].size(); j++) {
+            auto pos = scatterData.data[i][j];
             series->append(pos.x(), pos.y());
         }
+        QPen pen = series->pen();
+        QColor col = QColor(int(scatterData.colors[i].r() * 255), int(scatterData.colors[i].g() * 255), int(scatterData.colors[i].b() * 255));
+        pen.setColor(col);
+        series->setPen(pen);
+        series->setColor(col);
         this->chart()->addSeries(series);
 
         if (series->name().isEmpty()) {
             this->chart()->legend()->markers(series)[0]->setVisible(false);
         }
     }
-    for (size_t iScatter = 0; iScatter < scatterData.scatter_labels.size(); iScatter++) {
+    for (size_t iScatter = 0; iScatter < scatterData.labels.size(); iScatter++) {
         scatterData.graphicLabels.push_back(std::vector<QGraphicsTextItem*>());
-        for (size_t iPoint = 0; iPoint < scatterData.scatter_labels[iScatter].size(); iPoint++) {
+        for (size_t iPoint = 0; iPoint < scatterData.labels[iScatter].size(); iPoint++) {
             // QGraphicsTextItem *itm = new QGraphicsTextItem(QString::fromStdString(scatterData.scatter_labels[iScatter][iPoint]), this->chart());
             // scatterData.graphicLabels[iScatter].push_back(itm);
         }
@@ -305,21 +330,21 @@ PlotModel::PlotModel()
 
 }
 
-PlotModel& PlotModel::addPlot(const std::vector<Vector3>& data, const std::string& name, const QColor& color)
+PlotModel& PlotModel::addPlot(const std::vector<Vector3>& data, const std::string& name, const Vector3& color)
 {
     this->plotLineData.add(data, name, color);
     return *this;
 }
 
-PlotModel& PlotModel::addScatter(const std::vector<Vector3>& data, const std::string& name, const std::vector<std::string>& labels, std::vector<QColor> colors)
+PlotModel& PlotModel::addScatter(const std::vector<Vector3>& data, const std::string& name, const std::vector<std::string>& labels, const Vector3& color)
 {
-    if (colors.size() == 0) {
-        colors = std::vector<QColor>({Qt::blue});
-    }
-    if (colors.size() == 1) {
-        colors = std::vector<QColor>(data.size(), colors.front());
-    }
-    this->scatterData.add(data, labels, colors, name);
+    // if (colors.size() == 0) {
+    //     colors = std::vector<Vector3>({Vector3::blue});
+    // }
+    // if (colors.size() == 1) {
+    //     colors = std::vector<Vector3>(data.size(), colors.front());
+    // }
+    this->scatterData.add(data, labels, color, name);
     return *this;
 }
 

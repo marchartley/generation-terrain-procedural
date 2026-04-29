@@ -485,9 +485,9 @@ Vector3 CatmullRomSpline::center() const
 
 CatmullRomSpline& CatmullRomSpline::close()
 {
-    if (this->points.size() > 1 && !this->closed) { // && this->points.front() != this->points.back()) {
-        this->closed = true;
-    }
+    Curve::close();
+    if (this->points.size() > 0 && this->points.front() != this->points.back())
+        this->points.push_back(points.front());
     return *this;
 }
 
@@ -918,10 +918,10 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
     x = std::clamp(x, 0.0001f, 0.9999f);
 
     std::vector<Vector3> displayedPoints = this->points;
-    if (this->closed)
-        displayedPoints.push_back(displayedPoints.front());
+    // if (this->closed)
+        // displayedPoints.push_back(displayedPoints.front());
 
-    size_t lastPointIndex = displayedPoints.size() - 1;
+    // size_t lastPointIndex = displayedPoints.size() - 1;
     size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
 
     if (nbPoints == 0) return {Vector3::invalid, Vector3::invalid, Vector3::invalid};

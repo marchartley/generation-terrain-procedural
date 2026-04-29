@@ -187,9 +187,34 @@ Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
 
 KelvinletCurve::KelvinletCurve()
     : Kelvinlet()
-{
+{}
 
+bool KelvinletCurve::valid() const {
+    return Kelvinlet::valid() && curve && !curve->empty();
 }
+
+KelvinletCurve& KelvinletCurve::reset() {
+    Kelvinlet::reset(); curve.reset();
+    return *this;
+}
+
+KelvinletCurve& KelvinletCurve::translate(const Vector3 &translation) {
+    this->curve->translate(translation);
+    return *this;
+}
+
+KelvinletCurve& KelvinletCurve::scale(float scaling) {
+    Kelvinlet::scale(scaling);
+    this->curve->scale(scaling);
+    return *this;
+}
+
+KelvinletCurve& KelvinletCurve::setCurve(std::shared_ptr<Curve> newCurve) {
+    curve = std::move(newCurve);
+    return *this;
+}
+
+
 
 GrabKelvinletCurve::GrabKelvinletCurve()
     : KelvinletCurve()

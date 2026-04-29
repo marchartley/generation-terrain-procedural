@@ -306,7 +306,7 @@ void PrimitivePatchesInterface::mouseClickedOnMapEvent(const Vector3& mousePosIn
 {
     if (this->isVisible() && mouseInMap) {
 
-        if (constructionMode && this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
+        if (constructionMode && (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel)) {
             this->addParametricPoint(model->getTerrainPos(mousePosInMap));
             return;
         }
@@ -1561,7 +1561,7 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(const Vector
         desiredPatchFromFile = nullptr;
 //        return patch;
         // Set the center of the patch at mouse position
-        auto [BBoxMin, BBoxMax] = patch->getBBox();
+        // auto [BBoxMin, BBoxMax] = patch->getBBox();
 //        Vector3 center = (BBoxMin + BBoxMax) * .5f;
         Vector3 translation = finalPos;
         // Create a translation operation to move the new patch

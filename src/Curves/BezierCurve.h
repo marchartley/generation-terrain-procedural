@@ -53,9 +53,14 @@ public:
 
     BezierCurve& reset() { points.clear(); handles.clear(); return *this; }
 
+    inline size_t handleIndex(int index) const;
+    inline size_t handleIn(int pointIdx) const;
+    inline size_t handleOut(int pointIdx) const;
+
     std::vector<Vector3> getPoints() const { return points; }
     std::vector<Vector3> getHandles() const { return handles; }
 
+    BezierCurve& autosmooth(int pointIndex);
 protected:
     std::vector<Vector3> points;
     std::vector<Vector3> handles;
