@@ -914,15 +914,10 @@ std::pair<Vector3, Vector3> CatmullRomSpline::pointAndDerivative(float x) const
 
 std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSecondDerivative(float x) const
 {
-    // This is incredibly dirty!!!!
-    x = std::clamp(x, 0.0001f, 0.9999f);
+    x = std::clamp(x, 0.f, 1.f);
 
     std::vector<Vector3> displayedPoints = this->points;
-    // if (this->closed)
-        // displayedPoints.push_back(displayedPoints.front());
-
-    // size_t lastPointIndex = displayedPoints.size() - 1;
-    size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
+    size_t nbPoints = displayedPoints.size();
 
     if (nbPoints == 0) return {Vector3::invalid, Vector3::invalid, Vector3::invalid};
     else if (nbPoints == 1) return {displayedPoints[0], Vector3::invalid, Vector3::invalid};
@@ -935,10 +930,26 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
     float resCeil = iCeil * res;
     float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
 
-    const Vector3 P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
-    const Vector3 P1 = displayedPoints[iFloor - 0];
-    const Vector3 P2 = displayedPoints[iCeil + 0];
-    const Vector3 P3 = displayedPoints[(iCeil >= int(nbPoints-1) ? (this->closed ? 1 : displayedPoints.size()-2) : iCeil + 1)];
+    Vector3 P0;
+    Vector3 P1;
+    Vector3 P2;
+    Vector3 P3;
+
+    // No problem for these two points
+    P1 = displayedPoints[iFloor - 0];
+    P2 = displayedPoints[iCeil + 0];
+
+    const float artificialCurvature = 0.1f;
+    if (!isClosed() && iFloor == 0) {
+        P0 = (2.f * P1 - P2) - (Collision::projectPointOnSegment(P2, P1, P3) - P2) * artificialCurvature; // Introduce a bit of curvature
+        P3 = displayedPoints[iCeil + 1];
+    } else if (!isClosed() && iCeil == nbPoints - 1) {
+        P0 = displayedPoints[iFloor - 1];
+        P3 = (2.f * P2 - P1) + (Collision::projectPointOnSegment(P1, P0, P2) - P1) * artificialCurvature; // Introduce a bit of curvature
+    } else {
+        P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
+        P3 = displayedPoints[(iCeil >= int(nbPoints-1) ? (this->closed ? 1 : displayedPoints.size()-2) : iCeil + 1)];
+    }
 
     float t0 = 0;
     float t1 = CatmullNextT(P0, P1, t0, alpha);
@@ -946,6 +957,8 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
     float t3 = CatmullNextT(P2, P3, t2, alpha);
 
     float t = map(x_prime, 0.f, 1.f, t1, t2);
+
+    float dtdx = (t2 - t1) * float(nbPoints - 1);
 
 
     const Vector3 A1 = P0 * (t1 - t) / (t1 - t0) + P1 * (t - t0) / (t1 - t0);
@@ -971,7 +984,7 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
 
     const Vector3 Cpp = (B1pp * (t2 - t) + B2pp * (t - t1) + 2.f * (B2p - B1p)) / (t2 - t1);
 
-    return {C, Cp, Cpp};
+    return {C, Cp * dtdx, Cpp * (dtdx * dtdx)};
 }
 const Vector3 &CatmullRomSpline::operator[](size_t i) const
 {

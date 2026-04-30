@@ -23,11 +23,12 @@ Vector3 Curve::getDirection(float x) const {
 }
 
 Vector3 Curve::getNormal(float x) const {
-    return this->getSecondDerivative(x, true);
+    const auto derivative = getDerivative(x);
+    return derivative.cross(this->getSecondDerivative(x)).cross(derivative) .normalize();
 }
 
 Vector3 Curve::getBinormal(float x) const {
-    return this->getDirection(x).cross(this->getNormal(x)).normalize();
+    return this->getDerivative(x).cross(this->getSecondDerivative(x)).normalize();
 }
 
 float Curve::getCurvature(float x) const {
