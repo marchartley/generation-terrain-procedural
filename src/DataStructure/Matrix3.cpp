@@ -311,9 +311,9 @@ Matrix3<int> Matrix3<int>::findContour(bool use2D) const
 }
 
 template <>
-std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
+std::vector<Contour> Matrix3<int>::findContoursAsCurves() const
 {
-    std::vector<ShapeCurve> curves;
+    std::vector<Contour> curves;
     auto grid = this->resize(sizeX * 2.f, sizeY * 2.f, RESIZE_MODE::MAX_VAL).findContour(true);
 //    std::cout << "Grid : " << grid << "\n" << this->resize(sizeX * .5f, sizeY * .5f, RESIZE_MODE::MAX_VAL).findContour(true).displayAsPlot() << std::endl;
     grid.raiseErrorOnBadCoord = false;

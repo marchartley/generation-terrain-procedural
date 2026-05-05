@@ -11,7 +11,7 @@ struct PlottingUtils {
     template <class T>
     static Matrix3<T>& drawCircle(Matrix3<T>& img, const T& color, const Vector3& center, float radius);
     template <class T>
-    static Matrix3<T>& drawCurve(Matrix3<T>& img, const T& color, const CatmullRomSpline& spline, int strokeWidth = 1);
+    static Matrix3<T>& drawCurve(Matrix3<T>& img, const T& color, const Curve& spline, int strokeWidth = 1);
 };
 
 template <class T>
@@ -81,13 +81,12 @@ Matrix3<T>& PlottingUtils::drawCircle(Matrix3<T> &img, const T &color, const Vec
 
 
 template <class T>
-Matrix3<T>& PlottingUtils::drawCurve(Matrix3<T>& img, const T& color, const CatmullRomSpline& spline, int strokeWidth)
+Matrix3<T>& PlottingUtils::drawCurve(Matrix3<T>& img, const T& color, const Curve& spline, int strokeWidth)
 {
-    int res = 100;
-    for (int i = 0; i < res + 1; i++) {
-        float t0 = float(i) / float(res + 1);
-        float t1 = float((i < res + 1 ? i + 1 : 0)) / float(res + 1);
-        drawLine(img, color, spline.getPoint(t0), spline.getPoint(t1), strokeWidth);
+    const int res = 100;
+    const auto points = spline.getPath(res);
+    for (int i = 0; i < res - 1; i++) {
+        drawLine(img, color, points[i], points[i + 1], strokeWidth);
     }
     return img;
 }

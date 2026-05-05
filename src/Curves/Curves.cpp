@@ -1,16 +1,21 @@
 #include "Curves.h"
 
-CatmullRomSpline toCatmullRom(const BezierCurve &curve)
+CatmullRomSpline toCatmullRom(const BezierCurve& curve)
 {
     return CatmullRomSpline(curve.getPoints());
 }
 
-CatmullRomSpline toCatmullRom(const Polyline &curve)
+CatmullRomSpline toCatmullRom(const Polyline& curve)
 {
     return CatmullRomSpline(curve.getPoints());
 }
 
-BezierCurve toBezier(const CatmullRomSpline &curve)
+CatmullRomSpline toCatmullRom(const BSpline& curve)
+{
+    return toCatmullRom(toBezier(curve));
+}
+
+BezierCurve toBezier(const CatmullRomSpline& curve)
 {
     std::vector<Vector3> points = curve.getPoints();
     std::vector<Vector3> handles((points.size() - 1) * 2);
@@ -28,23 +33,54 @@ BezierCurve toBezier(const CatmullRomSpline &curve)
     return BezierCurve(points, handles);
 }
 
-BezierCurve toBezier(const Polyline &curve)
+BezierCurve toBezier(const Polyline& curve)
 {
     return BezierCurve(curve.getPoints());
 }
 
+BezierCurve toBezier(const BSpline& curve)
+{
+    const auto splinePoints = curve.getPoints();
+    std::vector<Vector3> points(splinePoints.size() - 2);
+    std::vector<Vector3> handles(points.size() * 2 - 2);
+    size_t currentPointIdx = 0;
+    size_t currentHandleIdx = 0;
+    for (int i = 1; i < curve.numPoints() - 2; i++) {
+        const auto& B0 = splinePoints[i - 1];
+        const auto& B1 = splinePoints[i - 0];
+        const auto& B2 = splinePoints[i + 1];
+        const auto& B3 = splinePoints[i + 2];
+
+        const auto P0 = (B0 + B1 * 4.f + B2) / 6.f;
+        const auto P1 = (B1 * 2.f + B2) / 3.f;
+        const auto P2 = (B1 + B2 * 2.f) / 3.f;
+        const auto P3 = (B1 + B2 * 4.f + B3) / 6.f;
+
+        if (i == 1) {
+            points[currentPointIdx++] = P0;
+        }
+        points[currentPointIdx++] = P3;
+        handles[currentHandleIdx++] = P1;
+        handles[currentHandleIdx++] = P2;
+    }
+    return BezierCurve(points, handles);
+}
 
 
 
 
 
 
-Polyline toPolyline(const CatmullRomSpline &curve)
+Polyline toPolyline(const Curve& curve) {
+    return Polyline(curve.getPath(curve.numPoints()));
+}
+/*Polyline toPolyline(const CatmullRomSpline& curve)
 {
     return Polyline(curve.getPoints());
 }
 
-Polyline toPolyline(const BezierCurve &curve)
+Polyline toPolyline(const BezierCurve& curve)
 {
     return Polyline(curve.getPoints());
-}
+}*/
+

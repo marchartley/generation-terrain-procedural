@@ -1,9 +1,9 @@
 #ifndef RADIALSHAPE_H
 #define RADIALSHAPE_H
 
-#include "ShapeCurve.h"
+#include "Contour.h"
 
-class RadialShape : public ShapeCurve
+class RadialShape : public Contour
 {
 public:
     RadialShape();

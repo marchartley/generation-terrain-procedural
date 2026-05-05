@@ -32,9 +32,11 @@ SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, QWidge
 
         Vector3 pos = relPos * Vector3(100, 100, 1);
         if (snakeParameters.params->collapseFirstAndLastPoint)
-            snakeParameters.snake.contour = ShapeCurve::circle(10.f, pos, 20);
-        else
-            snakeParameters.snake.contour = CatmullRomSpline({pos - Vector3(10, 0), pos + Vector3(10, 0)}).resamplePoints(20);
+            snakeParameters.snake.contour = std::make_shared<Polyline>(Contour::circle(10.f, pos, 20));
+        else {
+            snakeParameters.snake.contour = std::make_shared<Polyline>(Polyline({pos - Vector3(10, 0), pos + Vector3(10, 0)}));
+            snakeParameters.snake.contour->resamplePoints(20);
+        }
 
         // parameters.snake.runSegmentation(10);
 
@@ -57,18 +59,13 @@ void SnakeSegmentationEditor::showSnakePath() {
     GridF alpha(colors.getDimensions(), 0.f);
     Vector3 ratio = (this->hasImage() ? (Vector3)colors.getDimensions() / (Vector3)this->dataModel->imageData.getImage().getDimensions() : Vector3(1.f, 1.f, 1.f));
 
-    CatmullRomSpline path;
-    if (snakeParameters.params->collapseFirstAndLastPoint)
-        path = ShapeCurve(snakeParameters.snake.contour).scale(ratio).getPath(100);
-    else
-        path = CatmullRomSpline(snakeParameters.snake.contour).scale(ratio).getPath(100);
-
+    CatmullRomSpline path = snakeParameters.snake.contour->clone()->scale(ratio).setClosed(snakeParameters.params->collapseFirstAndLastPoint).getPath(100);
 
     for (size_t i = 0; i < path.size() - 1; i++) {
         PlottingUtils::drawLine(colors, Vector3::blue, path[i], path[i + 1]);
         PlottingUtils::drawLine(alpha, 1.f, path[i], path[i + 1]);
     }
-    for (auto& p : snakeParameters.snake.contour) {
+    for (auto& p : snakeParameters.snake.contour->getPath()) {
         colors(p * ratio) = Vector3::yellow;
         alpha(p * ratio) = 1.f;
     }

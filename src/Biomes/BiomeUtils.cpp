@@ -87,13 +87,13 @@ Graph subsetToFitMostBiomes(Graph graph, [[maybe_unused]] std::vector<std::strin
 {
     Graph returnedGraph;
 
-    ShapeCurve biomesHull;
+    Contour biomesHull;
     for (size_t iNode = 0; iNode < graph.nodes.size(); iNode++) {
-        biomesHull.addPoint(graph.nodes[iNode]->pos);
+        biomesHull.curve->addPoint(graph.nodes[iNode]->pos);
     }
     biomesHull = biomesHull.computeConvexHull();
     Vector3 AABBoxMin, AABBoxMax;
-    std::tie(AABBoxMin, AABBoxMax) = biomesHull.AABBox();
+    std::tie(AABBoxMin, AABBoxMax) = biomesHull.curve->AABBox();
     Vector3 desiredAABBoxMin = AABBoxMin + (AABBoxMax - AABBoxMin) * .3f;
     Vector3 desiredAABBoxMax = AABBoxMin + (AABBoxMax - AABBoxMin) * .6f;
 
@@ -106,7 +106,7 @@ Graph subsetToFitMostBiomes(Graph graph, [[maybe_unused]] std::vector<std::strin
     return returnedGraph;
 }
 
-std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json json_content, const Vector3& biomePosition, ShapeCurve area) {
+std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json json_content, const Vector3& biomePosition, Contour area) {
     std::string biomeClass = json_content.at("class").get<std::string>();
     // Should be able to retrieve the parameters of the biome...
     std::shared_ptr<BiomeInstance> instance = std::make_shared<BiomeInstance>(BiomeInstance::fromClass(biomeClass));
@@ -114,7 +114,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json jso
     instance->area = area;
     auto children = json_content.at("children");
     Voronoi diagram(children.size(), area);
-    std::vector<ShapeCurve> subarea_borders = diagram.solve();
+    std::vector<Contour> subarea_borders = diagram.solve();
     for (size_t i = 0; i < children.size(); i++) {
         std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstance(children[i], diagram.pointset[i], subarea_borders[i]);
         childBiome->parent = instance;

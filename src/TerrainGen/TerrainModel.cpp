@@ -1,6 +1,6 @@
 #include "TerrainModel.h"
 #include "TerrainGen/ImplicitPatch.h"
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 
 TerrainModel::TerrainModel()
 {
@@ -173,8 +173,8 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
     for (auto& lagoonPatch : lagoonPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(lagoonPatch);
         if (asPrimitive /* && asPrimitive->material == WATER*/) {
-            ShapeCurve curve = asPrimitive->optionalCurve;
-            for (auto& p : curve) {
+            Contour curve = asPrimitive->optionalCurve;
+            for (auto& p : *curve.curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }

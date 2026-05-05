@@ -20,7 +20,7 @@ Voronoi::Voronoi(int numberRandomPoints, const Vector3& maxBoundarie)
 }
 
 Voronoi::Voronoi(int numberRandomPoints, const Vector3& minBoundarie, const Vector3& maxBoundarie)
-    : Voronoi(numberRandomPoints, ShapeCurve({
+    : Voronoi(numberRandomPoints, Contour({
                                                  Vector3(minBoundarie.xy()),
                                                  Vector3(maxBoundarie.x(), minBoundarie.y()),
                                                  Vector3(maxBoundarie.xy()),
@@ -30,10 +30,10 @@ Voronoi::Voronoi(int numberRandomPoints, const Vector3& minBoundarie, const Vect
 
 }
 
-Voronoi::Voronoi(int numberRandomPoints, ShapeCurve boundingShape)
+Voronoi::Voronoi(int numberRandomPoints, Contour boundingShape)
     : boundingShape(boundingShape.removeDuplicates())
 {
-    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.AABBox();
+    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.curve->AABBox();
     this->pointset = boundingShape/*.shrink(1.f)*/.randomPointsInside(numberRandomPoints);
     this->solve(false, 0);
 }
@@ -51,7 +51,7 @@ Voronoi::Voronoi(std::vector<Vector3> pointset)
         maxBoundarie.y() = std::max(point.y(), maxBoundarie.y());
         maxBoundarie.z() = std::max(point.z(), maxBoundarie.z());
     }
-    this->boundingShape = ShapeCurve({
+    this->boundingShape = Contour({
                                          Vector3(minBoundarie.xy()),
                                          Vector3(maxBoundarie.x(), minBoundarie.y()),
                                          Vector3(maxBoundarie.xy()),
@@ -68,7 +68,7 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& maxBoundarie)
 }
 
 Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& minBoundarie, const Vector3& maxBoundarie)
-    : Voronoi(pointset, ShapeCurve({
+    : Voronoi(pointset, Contour({
                                        Vector3(minBoundarie.xy()),
                                        Vector3(maxBoundarie.x(), minBoundarie.y()),
                                        Vector3(maxBoundarie.xy()),
@@ -78,18 +78,18 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& minBoundarie, con
 
 }
 
-Voronoi::Voronoi(std::vector<Vector3> pointset, ShapeCurve boundingShape)
+Voronoi::Voronoi(std::vector<Vector3> pointset, Contour boundingShape)
     : pointset(pointset), boundingShape(boundingShape.removeDuplicates())
 {
-    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.AABBox();
+    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.curve->AABBox();
     this->solve(false, 0);
 }
 
-std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numberOfRelaxations)
+std::vector<Contour> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numberOfRelaxations)
 {
     this->boundingShape = boundingShape.removeDuplicates();
 
-    if (boundingShape.empty()) {
+    if (boundingShape.curve->empty()) {
         boundingShape = CatmullRomSpline({
             Vector3(minBoundarie.x(), minBoundarie.y(), minBoundarie.z()),
             Vector3(minBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
@@ -98,13 +98,13 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
         });
     }
     if (pointset.size() == 0) {
-        return std::vector<ShapeCurve>();
+        return std::vector<Contour>();
     } else if (pointset.size() == 1) {
-        if (!this->boundingShape.empty())
-            return std::vector<ShapeCurve>{this->boundingShape};
+        if (!this->boundingShape.curve->empty())
+            return std::vector<Contour>{this->boundingShape};
     }
     jcv_point* points = (jcv_point*)malloc( sizeof(jcv_point) * pointset.size());
-    jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.numPoints());
+    jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.curve->numPoints());
     for (size_t i = 0; i < pointset.size(); i++) {
         points[i].x = pointset[i].x();
         points[i].y = pointset[i].y();
@@ -113,7 +113,7 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
         else
             points[i].weight = 1.f;
     }
-    auto boundingShapePoints = boundingShape.getPath();
+    auto boundingShapePoints = boundingShape.curve->getPath();
     for (size_t i = 0; i < boundingShapePoints.size(); i++) {
         if (i > 0 && boundingShapePoints[i] == boundingShapePoints.front()) continue;
         boundingPoints[i].x = boundingShapePoints[i].x();
@@ -126,9 +126,9 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     polygonclipper.clip_fn = jcv_clip_polygon_clip_edge;
     polygonclipper.fill_fn = jcv_clip_polygon_fill_gaps;
     jcv_clipping_polygon polygon;
-    if (!boundingShape.empty()) {
+    if (!boundingShape.curve->empty()) {
 
-        polygon.num_points = boundingShape.numPoints();
+        polygon.num_points = boundingShape.curve->numPoints();
         polygon.points = boundingPoints;
     } else {
         std::cout << "We should not be here" << std::endl;
@@ -156,7 +156,7 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     }
 
     const jcv_site* sites = jcv_diagram_get_sites( &diagram );
-    this->areas = std::vector<ShapeCurve>(pointset.size());
+    this->areas = std::vector<Contour>(pointset.size());
     this->neighbors = std::vector<std::vector<int>>(pointset.size());
     for( int i = 0; i < diagram.numsites; ++i )
     {
@@ -187,7 +187,7 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
 
 }
 
-std::vector<ShapeCurve> Voronoi::relax(int numberOfRelaxations)
+std::vector<Contour> Voronoi::relax(int numberOfRelaxations)
 {
     for (int relaxation = 0; relaxation < numberOfRelaxations; relaxation++) {
         for (size_t i = 0; i < this->pointset.size(); i++) {
@@ -204,8 +204,8 @@ std::vector<std::vector<Vector3>> Voronoi::computeIntersectionPoints()
     for (int iArea = 0; iArea < areas.size(); iArea++) {
         const auto& area = areas[iArea];
 
-        for (int i = 0; i < area.size(); i++) {
-            auto& p = area[i];
+        for (int i = 0; i < area.curve->size(); i++) {
+            auto& p = area.curve->get(i);
             if ((p - pointset[iArea]).norm2() > 1.f && boundingShape.containsXY(p)) {
                 intersectionPoints[iArea].push_back(p);
             }

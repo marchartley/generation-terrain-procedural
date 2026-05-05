@@ -112,9 +112,9 @@ QImage PlotImageData::computeDisplayedImage(const Vector3i& imgSize) const
     unsigned char* data = new unsigned char[displayedImage.size() * 4];
 
     for (size_t i = 0; i < displayedImage.size(); ++i) {
-        data[int(4 * i + 2)] = (unsigned char)(std::clamp(displayedImage[i].x(), 0.f, 1.f) * 255);
-        data[int(4 * i + 1)] = (unsigned char)(std::clamp(displayedImage[i].y(), 0.f, 1.f) * 255);
-        data[int(4 * i + 0)] = (unsigned char)(std::clamp(displayedImage[i].z(), 0.f, 1.f) * 255);
+        data[int(4 * i + 2)] = (unsigned char)(std::clamp(int(displayedImage[i].x() * 255), 0, 255));
+        data[int(4 * i + 1)] = (unsigned char)(std::clamp(int(displayedImage[i].y() * 255), 0, 255));
+        data[int(4 * i + 0)] = (unsigned char)(std::clamp(int(displayedImage[i].z() * 255), 0, 255));
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
@@ -167,9 +167,9 @@ QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> 
         unsigned char* data = new unsigned char[overlay.size() * 4];
 
         for (size_t i = 0; i < overlay.size(); ++i) {
-            data[int(4 * i + 2)] = (unsigned char)(std::clamp(overlay[i].x(), 0.f, 1.f) * 255);
-            data[int(4 * i + 1)] = (unsigned char)(std::clamp(overlay[i].y(), 0.f, 1.f) * 255);
-            data[int(4 * i + 0)] = (unsigned char)(std::clamp(overlay[i].z(), 0.f, 1.f) * 255);
+            data[int(4 * i + 2)] = (unsigned char)(std::clamp(int(overlay[i].x() * 255), 0, 255));
+            data[int(4 * i + 1)] = (unsigned char)(std::clamp(int(overlay[i].y() * 255), 0, 255));
+            data[int(4 * i + 0)] = (unsigned char)(std::clamp(int(overlay[i].z() * 255), 0, 255));
             data[int(4 * i + 3)] = (unsigned char) int((overlayAlpha.size() == overlay.size() ? overlayAlpha[i] : 1.f) * 255.f);       // Alpha
         }
         // std::cout << "Painting " << name << " at resolution " << overlay.sizeX << "x" << overlay.sizeY << " scaled to " << imgSize.x() << "x" << imgSize.y() << std::endl;

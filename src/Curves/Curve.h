@@ -16,8 +16,8 @@ public:
 
     virtual Curve* clone() const = 0;
     virtual std::vector<Vector3> getPath(int numberOfPoints = -1) const = 0;
-    virtual Vector3 getPoint(float x) const = 0; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
-    virtual Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const = 0;
+    virtual Vector3 getPoint(float x) const = 0;
+    Vector3 linear(float x, const Vector3& a, const Vector3& b) const;
     virtual Vector3 getDerivative(float x, bool normalize = false) const = 0;
     virtual Vector3 getSecondDerivative(float x, bool normalize = false) const = 0;
     virtual float estimateClosestTime(const Vector3& pos) const = 0;
@@ -27,6 +27,8 @@ public:
     virtual float estimateSignedDistanceFrom(const Vector3& pos) const;
     virtual float length() const = 0;
     virtual size_t timeToLowerIndex(float t) const;
+    virtual Vector3& get(int i) = 0; // Get point by index instead of time
+    virtual Vector3 get(int i) const { return get(i); }
 
     virtual Curve& setPoint(int i, const Vector3& newPos) = 0;
 
@@ -53,14 +55,28 @@ public:
 
     virtual Curve& removeDuplicates() = 0;
 
+    virtual Vector3 center() const;
+
     size_t size() const;
     virtual size_t numPoints() const = 0;
     virtual size_t numSegments() const;
     virtual size_t pointIndex(int index) const;
-    bool empty() const;
+    virtual bool empty() const;
+
+    virtual std::vector<Vector3>::const_iterator begin() const = 0;
+    virtual std::vector<Vector3>::const_iterator end() const = 0;
+    virtual std::vector<Vector3>::iterator begin() = 0;
+    virtual std::vector<Vector3>::iterator end() = 0;
+
+    inline Vector3 front() const { return (empty() ? Vector3::invalid : get(0)); }
+    inline Vector3 back() const { return (empty() ? Vector3::invalid : get(-1)); }
 
     virtual Vector3& operator[](size_t i) = 0;
     virtual const Vector3& operator[](size_t i) const = 0;
+
+    virtual void addPoint(const Vector3& newPoint) = 0;
+    virtual Curve& insertPoint(int i, const Vector3& newPos) = 0;
+    virtual Curve& removePoint(int i) = 0;
 
     virtual std::string toString() const = 0;
 
@@ -72,6 +88,8 @@ public:
     virtual Curve& close();
 
     virtual Curve& reset() = 0;
+
+    virtual std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
 
 
 protected:

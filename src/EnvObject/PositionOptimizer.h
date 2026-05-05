@@ -3,7 +3,7 @@
 
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 #include "EnvObject/SnakeSegmentation.h"
 
 class PathOptimizer {
@@ -18,7 +18,7 @@ public:
     static Vector3 getHighestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients);
     static Vector3 getLowestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients);
 
-    static CatmullRomSpline trackHighestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
+    static Polyline trackHighestPosition(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
 
 //protected:
     static Vector3 followGradient(const Vector3& seedPosition, const GridV3& gradients, int maxTries, bool goUp);
@@ -27,19 +27,19 @@ public:
 class CurveOptimizer
 {
 public:
-    static CatmullRomSpline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
-    static CatmullRomSpline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
-    static CatmullRomSpline getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
-    static CatmullRomSpline followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
-    static CatmullRomSpline followGradient(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
+    static Polyline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
+    static Polyline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
+    static Polyline getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
+    static Polyline followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
+    static Polyline followGradient(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
 };
 
 class AreaOptimizer
 {
 public:
-    static ShapeCurve getInitialShape(const Vector3& seedPosition, const GridF& score, const GridV3& gradients);
-    static ShapeCurve getAreaOptimizedShape(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetArea);
-    static ShapeCurve getPerimeterOptimizedShape(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float optmizedPerimeter);
+    static Contour getInitialShape(const Vector3& seedPosition, const GridF& score, const GridV3& gradients);
+    static Contour getAreaOptimizedShape(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetArea);
+    static Contour getPerimeterOptimizedShape(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float optmizedPerimeter);
 };
 
 
@@ -56,7 +56,7 @@ public:
     static Vector3 getHighestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func);
     static Vector3 getLowestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func);
 
-    static CatmullRomSpline trackHighestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
+    static Polyline trackHighestPosition(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
 
     //protected:
     static Vector3 followGradient(const Vector3& seedPosition, const std::function<Vector3(const Vector3&)>& gradients, int maxTries, bool goUp);
@@ -65,11 +65,11 @@ public:
 class ContinuousCurveOptimizer
 {
 public:
-    static CatmullRomSpline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
-    static CatmullRomSpline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
-    static CatmullRomSpline getSkeletonCurve(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
-    static CatmullRomSpline followIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
-    static CatmullRomSpline followGradient(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
+    static Polyline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
+    static Polyline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
+    static Polyline getSkeletonCurve(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
+    static Polyline followIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
+    static Polyline followGradient(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
 
     static SnakeSegmentationParameters getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float(const Vector3&)>& func, float minLength);
     static SnakeSegmentationParameters getSnakeForExactLengthCurveFollowingGradients(const std::function<float(const Vector3&)>& func, float targetLength);
@@ -81,9 +81,9 @@ public:
 class ContinuousAreaOptimizer
 {
 public:
-    static ShapeCurve getInitialShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func);
-    static ShapeCurve getAreaOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetArea);
-    static ShapeCurve getPerimeterOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
+    static Contour getInitialShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func);
+    static Contour getAreaOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetArea);
+    static Contour getPerimeterOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
 
     static SnakeSegmentationParameters getSnakeForAreaOptimizedShape(const std::function<float(const Vector3&)>& func, float targetArea);
     static SnakeSegmentationParameters getSnakeForPerimeterOptimizedShape(const std::function<float(const Vector3&)>& func, float optmizedPerimeter);

@@ -77,6 +77,7 @@ SOURCES += \
     src/Biomes/BiomeInstance.cpp \
     src/Biomes/BiomeModel.cpp \
     src/Biomes/BiomeUtils.cpp \
+    src/Curves/BSpline.cpp \
     src/Curves/BezierCurve.cpp \
     src/Curves/CatmullRomSpline.cpp \
     src/Curves/Curves.cpp \
@@ -235,7 +236,7 @@ SOURCES += \
     src/Curves/RadialShape.cpp \
     src/Utils/Random.cpp \
     src/Utils/RewritableFile.cpp \
-    src/Curves/ShapeCurve.cpp \
+    src/Curves/Contour.cpp \
     src/Utils/Signals.cpp \
     src/Utils/Skeletonize.cpp \
     src/Utils/Table.cpp \
@@ -273,6 +274,7 @@ HEADERS += \
     src/Biomes/BiomeUtils.h \
     src/Biomes/InstancesTree.h \
     src/Biomes/ModelsTree.h \
+    src/Curves/BSpline.h \
     src/Curves/BezierCurve.h \
     src/Curves/CatmullRomSpline.h \
     src/Curves/Curves.h \
@@ -432,7 +434,7 @@ HEADERS += \
     src/Curves/RadialShape.h \
     src/Utils/Random.h \
     src/Utils/RewritableFile.h \
-    src/Curves/ShapeCurve.h \
+    src/Curves/Contour.h \
     src/Utils/Signals.h \
     src/Utils/Skeletonize.h \
     src/Utils/Table.h \

@@ -232,7 +232,7 @@ std::vector<int> AdjencySolver::solveGeomToTopo(Voronoi& diagram, std::vector<st
     return bestCombinationYet;
 }
 
-void AdjencySolver::solveTopoToGeom(std::vector<BiomeInstance> instancesToPlace, std::vector<std::pair<std::string, std::string> > impossibleAdjency, ShapeCurve availableSpace)
+void AdjencySolver::solveTopoToGeom(std::vector<BiomeInstance> instancesToPlace, std::vector<std::pair<std::string, std::string> > impossibleAdjency, Contour availableSpace)
 {
     size_t numberOfNodes = instancesToPlace.size();
 

@@ -146,7 +146,7 @@ EnvObjectEditor& EnvObjectEditor::addEnvObject(EnvObject *envObj)
         asCurve->curve = CatmullRomSpline({Vector3(10, 10), Vector3(60, 30), Vector3(30, 60), Vector3(90, 90)});
         this->objectScale = asCurve->curve.length() / asCurve->getDefinition()->length;
     } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
-        asArea->curve = ShapeCurve({Vector3(30, 30), Vector3(30, 70), Vector3(70, 70), Vector3(60, 40)});
+        asArea->curve = Contour({Vector3(30, 30), Vector3(30, 70), Vector3(70, 70), Vector3(60, 40)});
         this->objectScale = asArea->curve.computeArea() / (asArea->getDefinition()->width * asArea->getDefinition()->length);
     }
 
@@ -179,9 +179,9 @@ std::pair<GridV3, GridF> EnvObjectEditor::displayEnvObject() const
         PlottingUtils::drawCurve(alpha, 1.f, curve);
 
     } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
-        ShapeCurve curve = asArea->curve.scaled(imgScale);
-        PlottingUtils::drawCurve(img, Vector3(0, 0, 1), curve);
-        PlottingUtils::drawCurve(alpha, 1.f, curve);
+        Contour curve(asArea->curve.curve->clone()->scale(imgScale));
+        PlottingUtils::drawCurve(img, Vector3(0, 0, 1), *curve.curve);
+        PlottingUtils::drawCurve(alpha, 1.f, *curve.curve);
     }
     return {img, alpha};
 }
@@ -332,7 +332,7 @@ void EnvObjectEditor::animateEnvObject(bool animate)
                     p = Vector3::random(bounds);
             }
             else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
-                verticesTargets.resize(asArea->curve.size());
+                verticesTargets.resize(asArea->curve.curve->size());
                 for (auto& p : verticesTargets)
                     p = Vector3::random(bounds);
             }
@@ -352,11 +352,11 @@ void EnvObjectEditor::animateEnvObject(bool animate)
         }
         else if (auto asArea = dynamic_cast<EnvAreaInstance*>(this->currentObject)) {
             auto newCurve = asArea->curve;
-            for (size_t i = 0; i < newCurve.size(); i++) {
-                auto& p = newCurve[i];
+            for (size_t i = 0; i < newCurve.curve->size(); i++) {
+                auto& p = newCurve.curve->get(i);
                 p += (verticesTargets[i] - p) * (interpolation::smooth(remainingFrames / 50.f)) / remainingFrames;
             }
-            asArea->updateCurve(newCurve);
+            asArea->updateCurve(*newCurve.curve);
         }
         animationFrame = (animationFrame + 1) % 50;
     }

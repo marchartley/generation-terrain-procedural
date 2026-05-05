@@ -174,7 +174,7 @@ InterfaceUI* EnvObjsInterface::createGUI()
     int selectionForCoral = 0;
     for (auto& [name, obj] : this->scene->availableObjects) {
         objectsChoices.push_back(new ComboboxLineElement<EnvObject*>(name, obj));
-        if (toLower(name) == "coralpolyp") {
+        if (toLower(name) == "river2") {
             selectionForCoral = objectsChoices.size() - 1;
         }
     }
@@ -345,8 +345,8 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
     for (auto& lagoonPatch : lagoonPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(lagoonPatch);
         if (asPrimitive /* && asPrimitive->material == WATER*/) {
-            ShapeCurve curve = asPrimitive->optionalCurve;
-            for (auto& p : curve) {
+            Contour curve = asPrimitive->optionalCurve;
+            for (auto& p : *curve.curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
             EnvAreaInstance* lagoon = dynamic_cast<EnvAreaInstance*>(this->scene->instantiate("lagoon"));
@@ -1085,18 +1085,18 @@ void EnvObjsInterface::updateSelectionMesh()
             std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
             colors.insert(colors.end(), meshColors.begin(), meshColors.end());
         } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(currentSelection)) {
-            selectionPos = asArea->curve.center();
+            selectionPos = asArea->curve.curve->center();
             std::vector<Vector3> meshPoints;
-            auto path = asArea->curve.getPath(20);
+            auto path = asArea->curve.curve->getPath(20);
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
                 meshPoints.push_back(p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + 5.f));
                 meshPoints.push_back(p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x(), p2.y()) + 5.f));
             }
-            for (int i = 0; i < asArea->curve.size(); i++) {
-                auto& p1 = asArea->curve[i];
-                auto& p2 = asArea->curve[std::abs(i - 1)];
+            for (int i = 0; i < asArea->curve.curve->size(); i++) {
+                auto& p1 = asArea->curve.curve->get(i);
+                auto& p2 = asArea->curve.curve->get(std::abs(i - 1));
                 Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + offsetAbove);
                 Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
                 meshPoints.push_back(p1leveled + perpendicular);
@@ -1347,7 +1347,9 @@ void EnvObjsInterface::loadScene(const std::string& filename)
             asCurve->curve = obj["curve"];
             newObject->createdManually = true;
         } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(newObject)) {
-            asArea->curve = obj["curve"];
+            Curve* curve;
+            from_json(obj["curve"], curve);
+            asArea->curve = std::shared_ptr<Curve>(curve);
             newObject->createdManually = true;
         }
         newObject->recomputeEvaluationPoints();
@@ -1424,9 +1426,9 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
 
     GridV3 result = GridV3(score.getDimensions());
     GridF resultAlpha = GridF(score.getDimensions(), 0.f);
-    ShapeCurve isoline;
+    Contour isoline;
     if (auto objAsPoint = dynamic_cast<EnvPointInstance*>(obj)) {
-        isoline = ShapeCurve::circle(objAsPoint->getDefinition()->radius, position, 20);
+        isoline = Contour::circle(objAsPoint->getDefinition()->radius, position, 20);
     } else if (auto objAsCurve = dynamic_cast<EnvCurveInstance*>(obj)) {
         CatmullRomSpline initialCurve;
         SnakeSegmentation& s = obj->snake;
@@ -1458,32 +1460,32 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
             }
         }
         isoline = initialCurve;
-        isoline.setClosed(false);
+        isoline.curve->setClosed(false);
     } else if (auto objAsArea = dynamic_cast<EnvAreaInstance*>(obj)) {
-        ShapeCurve initialCurve;
+        Contour initialCurve;
         SnakeSegmentation& s = obj->snake;
         s.position = position;
         float fakeRadius = std::sqrt(s.params->targetArea * .5f / PI);
 
-        ShapeCurve curve = ShapeCurve::circle(fakeRadius, position, 20);
+        Contour curve = Contour::circle(fakeRadius, position, 20);
         objAsArea->updateCurve(curve);
         int maxIterations = 10;
         for (int iteration = 0; iteration < maxIterations; iteration++) {
             obj->improvePositionning(5);
             initialCurve = objAsArea->curve;
-            ShapeCurve display = initialCurve;
-            display.addPoint(display[0]);
+            Contour display = initialCurve;
+            display.curve->addPoint(display.curve->get(0));
             display.resamplePoints(100);
             if (iteration <= 9) {
-                for (size_t i = 0; i < display.size(); i++) {
-                    const auto& pos = display[i];
+                for (size_t i = 0; i < display.curve->size(); i++) {
+                    const auto& pos = display.curve->get(i);
                     result(pos) = colorPalette(float(iteration) / float(maxIterations - 1));
                     resultAlpha(pos) = 1.f;
                 }
             }
             if (iteration == 9) {
                 for (const auto& v : s.randomGreenCoords) {
-                    auto pos = computePointFromGreenCoordinates(v, ShapeCurve(s.contour));
+                    auto pos = computePointFromGreenCoordinates(v, Contour(s.contour));
                     result(pos).z() = 1;
                     resultAlpha(pos) = 1.f;
                 }
@@ -1492,7 +1494,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         isoline = initialCurve;
     }
 
-    if (isoline.isClosed()) {
+    if (isoline.curve->isClosed()) {
         dataV3.iterateParallel([&](const Vector3i& pos) {
             bool insideCurve = isoline.containsXY(pos, false);
             result(pos) += Vector3(.5f, .5f, .5f) * (insideCurve ? 1.f : 0.f);
@@ -1500,14 +1502,14 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         });
     }
     int nbSamples = 500;
-    auto path = isoline.getPath(nbSamples); // .resamplePoints(nbSamples).points;
+    auto path = isoline.curve->getPath(nbSamples); // .resamplePoints(nbSamples).points;
     for (size_t i = 0; i < path.size(); i++) {
         result(path[i]) = Vector3(0, 0, 1.f); //colorPalette(float(i) / float(path.size() - 1));
         resultAlpha(path[i]) = 1.f;
     }
-    for (size_t i = 0; i < isoline.size(); i++) {
-        result(isoline[i]) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
-        resultAlpha(isoline[i]) = 1.f;
+    for (size_t i = 0; i < isoline.curve->size(); i++) {
+        result(isoline.curve->get(i)) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
+        resultAlpha(isoline.curve->get(i)) = 1.f;
     }
     ImageViewer::get("Object Preview").setOverlay(result, resultAlpha);
     ImageViewer::get("Object Preview").show();
@@ -1582,7 +1584,7 @@ void EnvObjsInterface::showAllElementsOnPlotter()
                 img(p) = col;
             }
         } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(obj)) {
-            for (const auto& p : asArea->curve.getPath(200)) {
+            for (const auto& p : asArea->curve.curve->getPath(200)) {
                 img(p) = col;
             }
         }
@@ -1803,8 +1805,8 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
                 int pointIndexToMove = -1;
                 float closestDistToPoint = std::numeric_limits<float>::max();
 
-                for (int i = 0; i < area->curve.size(); i++) {
-                    float dist = (area->curve[i] - position.xy()).norm2();
+                for (int i = 0; i < area->curve.curve->size(); i++) {
+                    float dist = (area->curve.curve->get(i) - position.xy()).norm2();
                     if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
                         closestDistToPoint = dist;
                         pointIndexToMove = i;
@@ -1812,7 +1814,7 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
                 }
 
                 if (pointIndexToMove > -1) {
-                    newCurve[pointIndexToMove].translate(translation);
+                    newCurve.curve->get(pointIndexToMove).translate(translation);
                 }
                 area->updateCurve(newCurve);
             }

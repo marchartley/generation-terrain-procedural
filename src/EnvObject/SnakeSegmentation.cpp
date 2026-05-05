@@ -6,17 +6,23 @@ SnakeSegmentation::SnakeSegmentation()
 
 }
 
-SnakeSegmentation::SnakeSegmentation(const CatmullRomSpline &curve)
+SnakeSegmentation::SnakeSegmentation(std::shared_ptr<Curve> curve)
     : SnakeSegmentation(nullptr, nullptr, curve)
 {
 
 }
 
-SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const CatmullRomSpline& curve)
+SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, std::shared_ptr<Curve> curve)
     : contour(curve), params(params), field(fields)
 {
 
 }
+SnakeSegmentation::SnakeSegmentation(const Curve& curve)
+    : SnakeSegmentation(std::shared_ptr<Curve>(curve.clone()))
+{}
+SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters *params, SnakeImageField *fields, const Curve &curve)
+    : SnakeSegmentation(params, fields, std::shared_ptr<Curve>(curve.clone()))
+{}
 
 // SnakeSegmentation::SnakeSegmentation(const BSpline &initialContour, const GridF &inputImage, const GridV3 &inputGradient)
     // : SnakeSegmentation() //, contour(initialContour), image(inputImage), gradientField(inputGradient)
@@ -24,9 +30,9 @@ SnakeSegmentation::SnakeSegmentation(SnakeSegmentationParameters* params, SnakeI
     // gradientField = gradientField.gaussianSmooth(10.f, true, true);
 // }
 
-CatmullRomSpline SnakeSegmentation::runSegmentation(const CatmullRomSpline &curve, int maxIterations)
+std::shared_ptr<Curve> SnakeSegmentation::runSegmentation(std::shared_ptr<Curve> curve, int maxIterations)
 {
-    CatmullRomSpline currentContour = curve;
+    std::shared_ptr<Curve> currentContour = curve;
 
     float initialTargetLength = this->params->targetLength;
     float initialTargetArea = this->params->targetArea;
@@ -34,11 +40,11 @@ CatmullRomSpline SnakeSegmentation::runSegmentation(const CatmullRomSpline &curv
     for (int iter = 0; iter < maxIterations; ++iter) {
 
         currentContour = updateContour(currentContour, this->stepSize);
-        currentContour.resamplePoints();
+        currentContour->resamplePoints();
     }
-    if (params->collapseFirstAndLastPoint && currentContour.size() > 0) {
-        currentContour[-1] = currentContour[0];
-        currentContour.resamplePoints(currentContour.size());
+    if (params->collapseFirstAndLastPoint && currentContour->size() > 0) {
+        currentContour->setPoint(-1, currentContour->get(0));
+        currentContour->resamplePoints(currentContour->size());
         // currentContour.points.pop_back();
     }
 
@@ -48,13 +54,13 @@ CatmullRomSpline SnakeSegmentation::runSegmentation(const CatmullRomSpline &curv
     return currentContour;
 }
 
-CatmullRomSpline SnakeSegmentation::runSegmentation(int maxIterations) {
+std::shared_ptr<Curve> SnakeSegmentation::runSegmentation(int maxIterations) {
     this->contour = this->runSegmentation(this->contour, maxIterations);
     return this->contour;
 }
 
 
-Vector3 SnakeSegmentation::computeEnergyGradient(const CatmullRomSpline &contour, int index, bool usePreviousPointForInternal)
+Vector3 SnakeSegmentation::computeEnergyGradient(std::shared_ptr<Curve> contour, int index, bool usePreviousPointForInternal)
 {
     // Compute the gradient of the total energy with respect to the control point at 'index'
     // Compute internal energy gradient
@@ -74,11 +80,11 @@ Vector3 SnakeSegmentation::computeEnergyGradient(const CatmullRomSpline &contour
     return gradient;
 }
 
-Vector3 SnakeSegmentation::computeInternalEnergyGradient(const CatmullRomSpline &contour, int index, bool usePreviousPoint) const
+Vector3 SnakeSegmentation::computeInternalEnergyGradient(std::shared_ptr<Curve> contour, int index, bool usePreviousPoint) const
 {
     // Compute the gradient of the internal energy with respect to the control point at 'index'
     Vector3 internalEnergyGradient;
-    float targetInterval = contour.length() / float(contour.size() - 1);
+    float targetInterval = contour->length() / float(contour->size() - 1);
 
     Vector3 E_connectivity = Vector3();
     Vector3 E_curvature = Vector3();
@@ -92,13 +98,13 @@ Vector3 SnakeSegmentation::computeInternalEnergyGradient(const CatmullRomSpline 
 
     if (i == 0 && !params->collapseFirstAndLastPoint) {
         E_curvature *= 0.f;
-        connectVector = -(contour[next] - contour[i]);
-    } else if (i == int(contour.size()) - 1 && !params->collapseFirstAndLastPoint) {
+        connectVector = -(contour->get(next) - contour->get(i));
+    } else if (i == int(contour->size()) - 1 && !params->collapseFirstAndLastPoint) {
         E_curvature *= 0.f;
-        connectVector = (contour[i] - contour[prev]);
+        connectVector = (contour->get(i) - contour->get(prev));
     } else {
-        connectVector = (usePreviousPoint ? (contour[i] - contour[prev]) : (contour[i] - contour[next]));
-        curveVector = (contour[prev] - 2 * contour[i] + contour[next]);
+        connectVector = (usePreviousPoint ? (contour->get(i) - contour->get(prev)) : (contour->get(i) - contour->get(next)));
+        curveVector = (contour->get(prev) - 2 * contour->get(i) + contour->get(next));
         float curveLength = std::max(curveVector.length(), .1f);
         E_curvature = -2.f * curveVector / curveLength;
     }
@@ -109,12 +115,12 @@ Vector3 SnakeSegmentation::computeInternalEnergyGradient(const CatmullRomSpline 
     return internalEnergyGradient;
 }
 
-Vector3 SnakeSegmentation::computeExternalEnergyGradient(const CatmullRomSpline &contour, int index) const
+Vector3 SnakeSegmentation::computeExternalEnergyGradient(std::shared_ptr<Curve> contour, int index) const
 {
     if (params->imageCost == 0) return Vector3();
 
     // Compute the gradient of the external energy with respect to the control point at 'index'
-    Vector3 currentPoint = contour[index];
+    Vector3 currentPoint = contour->get(index);
 
     // Get interpolated gradient from image gradient field at the current contour point
     Vector3 imageGradient = getGradientImageAt(currentPoint);
@@ -125,21 +131,21 @@ Vector3 SnakeSegmentation::computeExternalEnergyGradient(const CatmullRomSpline 
         return params->imageCost * gradient/*.normalize()*/;
     } else {
         // More complicated: compute the energy at borders and inside.
-        Vector3 pos = contour[index];
-        Vector3 prevPos = contour[index - 1];
-        Vector3 nextPos = contour[index + 1];
+        Vector3 pos = contour->get(index);
+        Vector3 prevPos = contour->get(index - 1);
+        Vector3 nextPos = contour->get(index + 1);
         Vector3 AB = (pos - prevPos);
         Vector3 BC = (nextPos - pos);
         Vector3 areaGradientDirection = (AB.rotated90XY() + BC.rotated90XY()).normalize();
         // Area is (new upper triangle ABB' are + new lower triangle CB'B area) with Area ABC = 1/2 * |AB x() AC|
         float addedArea = -0.5f * (AB.y() * areaGradientDirection.x() - AB.x() * areaGradientDirection.y()) + 0.5f * (BC.x() * areaGradientDirection.y() - BC.y() * areaGradientDirection.x());
 
-        std::vector<Vector3> randomPoints = ShapeCurve({pos, nextPos, prevPos}).randomPointsInside(3);
+        std::vector<Vector3> randomPoints = Contour({pos, nextPos, prevPos}).randomPointsInside(3);
         float addedIntegral = 0;
         for (const auto& p : randomPoints) {
             addedIntegral += this->getImageAt(p);
         }
-        if (ShapeCurve(contour).containsXY(pos + nextPos + prevPos) / 3.f) {
+        if (Contour(contour).containsXY(pos + nextPos + prevPos) / 3.f) {
             addedIntegral *= -1.f;
         }
 
@@ -148,7 +154,7 @@ Vector3 SnakeSegmentation::computeExternalEnergyGradient(const CatmullRomSpline 
     }
 }
 
-Vector3 SnakeSegmentation::computeShapeEnergyGradient(const CatmullRomSpline &contour, int index, bool usePreviousPoint) const
+Vector3 SnakeSegmentation::computeShapeEnergyGradient(std::shared_ptr<Curve> contour, int index, bool usePreviousPoint) const
 {
     int i = index;
     int prev = i - 1;
@@ -157,26 +163,26 @@ Vector3 SnakeSegmentation::computeShapeEnergyGradient(const CatmullRomSpline &co
     Vector3 shapeEnergyGradient;
 
     if (params->areaCost != 0) {
-        Vector3 initial = contour[i];
-        ShapeCurve shape = ShapeCurve(contour);
+        Vector3 initial = contour->get(i);
+        Contour shape = Contour(contour);
         float area = currentDomainArea; // shape.computeArea();
         float right = shape.setPoint(i, initial + Vector3(1, 0, 0)).computeArea();
         float up = shape.setPoint(i, initial + Vector3(0, 1, 0)).computeArea();
-        Vector3 areaVector = (Vector3(right - area, up - area) * sign(area - params->targetArea)) / float(contour.size());
+        Vector3 areaVector = (Vector3(right - area, up - area) * sign(area - params->targetArea)) / float(contour->size());
         shapeEnergyGradient += params->areaCost * areaVector;
     }
 
     if (params->lengthCost != 0) {
-        float targetInterval = params->targetLength / float(contour.size() - 1);
+        float targetInterval = params->targetLength / float(contour->size() - 1);
 
         Vector3 lengthVector;
 
         if (i == 0 && !params->collapseFirstAndLastPoint) {
-            lengthVector = -(contour[next] - contour[i]);
-        } else if (i == int(contour.size()) - 1 && !params->collapseFirstAndLastPoint) {
-            lengthVector = (contour[i] - contour[prev]);
+            lengthVector = -(contour->get(next) - contour->get(i));
+        } else if (i == int(contour->size()) - 1 && !params->collapseFirstAndLastPoint) {
+            lengthVector = (contour->get(i) - contour->get(prev));
         } else {
-            lengthVector = (usePreviousPoint ? (contour[i] - contour[prev]) : (contour[i] - contour[next]));
+            lengthVector = (usePreviousPoint ? (contour->get(i) - contour->get(prev)) : (contour->get(i) - contour->get(next)));
         }
         float connectLength = std::max(lengthVector.length(), .1f);
         Vector3 lengthEnergyGradient = -sign(targetInterval - connectLength) * std::pow(targetInterval - connectLength, 2) * lengthVector / connectLength;
@@ -185,34 +191,34 @@ Vector3 SnakeSegmentation::computeShapeEnergyGradient(const CatmullRomSpline &co
     return shapeEnergyGradient;
 }
 
-Vector3 SnakeSegmentation::computeGradientEnergyGradient(const CatmullRomSpline &contour, int index) const
+Vector3 SnakeSegmentation::computeGradientEnergyGradient(std::shared_ptr<Curve> contour, int index) const
 {
     if (this->params->slopeCost != 0) {
-        Vector3 gradient = getGradientImageAt(contour[index]);
+        Vector3 gradient = getGradientImageAt(contour->get(index));
 
         if (index == 0) {
             return params->slopeCost * -gradient.normalize();
         }
 
-        float t = float(index) / float(contour.size() - 1);
-        // Vector3 currentDir = contour.getDirection(t); //(index > 0 ? (contour[index] - contour[index - 1]) : (contour[index + 1] - contour[index]));
-        // bool shouldGoDownward = gradient.dot(currentDir) > 0; //(index - int(contour.size())/2) < 0;
+        float t = float(index) / float(contour->size() - 1);
+        // Vector3 currentDir = contour.getDirection(t); //(index > 0 ? (contour->get(index) - contour->get(index - 1)) : (contour->get(index + 1) - contour->get(index)));
+        // bool shouldGoDownward = gradient.dot(currentDir) > 0; //(index - int(contour->size())/2) < 0;
         // if (gradient.norm2() < 1e-4) {
         // internalEnergyGradient *= 0;
         // } else {
         // float diff = getImageAt(contour[(i == 0 ? i + 1 : i)]) - getImageAt(contour[(i == 0 ? i : i - 1)]);
         // std::cout << i << ": " << diff << "\n";
         // internalEnergyGradient += slopeCost * gradient.normalized(); // * (diff < 0 ? 0 : 1.f);
-        Vector3 internalEnergyGradient = params->slopeCost * gradient/*.normalize()*/ /* * (shouldGoDownward ? 1.f : -1.f)*/ * t;// * sign(gradient.dot(contour.getDirection(float(i) / float(contour.size() - 1))));
+        Vector3 internalEnergyGradient = params->slopeCost * gradient/*.normalize()*/ /* * (shouldGoDownward ? 1.f : -1.f)*/ * t;// * sign(gradient.dot(contour.getDirection(float(i) / float(contour->size() - 1))));
         return internalEnergyGradient;
     }
     return Vector3();
 }
 
-CatmullRomSpline SnakeSegmentation::updateContour(const CatmullRomSpline &currentContour, float stepSize) {
-    if (currentContour.empty()) return currentContour;
+std::shared_ptr<Curve> SnakeSegmentation::updateContour(std::shared_ptr<Curve> currentContour, float stepSize) {
+    if (currentContour->empty()) return currentContour;
 
-    ShapeCurve contourAsRegion = ShapeCurve(currentContour);
+    Contour contourAsRegion = Contour(currentContour);
     currentDomainArea = contourAsRegion.computeArea();
     if (this->params->imageCost != 0 && this->params->imageInsideCoef != 0 && this->params->collapseFirstAndLastPoint) {
         currentIntegralOverArea = 0;
@@ -232,8 +238,8 @@ CatmullRomSpline SnakeSegmentation::updateContour(const CatmullRomSpline &curren
 
 
     // Initialize a new contour to be updated
-    CatmullRomSpline newContour = currentContour;
-    int numPoints = currentContour.size();
+    std::shared_ptr<Curve> newContour = currentContour;
+    int numPoints = currentContour->size();
 
     std::vector<Vector3> gradients(numPoints);
 
@@ -291,25 +297,25 @@ CatmullRomSpline SnakeSegmentation::updateContour(const CatmullRomSpline &curren
 
     for (int i = 0; i < numPoints; ++i) {
         float normalizedStepSize = stepSize / (1.f + gradients[i].norm());
-        newContour[i] -= gradients[i] * normalizedStepSize;
+        newContour->get(i) -= gradients[i] * normalizedStepSize;
     }
 
     if (this->params->positionCost > 0.f && this->position.isValid()) {
         if (this->params->collapseFirstAndLastPoint) {
-            Vector3 newCentroid = newContour.center();
-            newContour.translate(this->position - newCentroid);
+            Vector3 newCentroid = newContour->center();
+            newContour->translate(this->position - newCentroid);
         } else {
-            Vector3 posOnCurve = toPolyline(newContour).estimateClosestPos(this->position);
-            newContour.translate(this->position - posOnCurve);
+            Vector3 posOnCurve = toPolyline(*newContour).estimateClosestPos(this->position);
+            newContour->translate(this->position - posOnCurve);
         }
     }
 
-    auto autointersections = newContour.checkAutointersections();
+    auto autointersections = newContour->checkAutointersections();
     for (auto [i0, i1] : autointersections) {
-        newContour[i0] = currentContour[i0];
-        newContour[i0 + 1] = currentContour[i0 + 1];
-        newContour[i1] = currentContour[i1];
-        newContour[i1 + 1] = currentContour[i1 + 1];
+        newContour->setPoint(i0    , currentContour->get(i0));
+        newContour->setPoint(i0 + 1, currentContour->get(i0 + 1));
+        newContour->setPoint(i1    , currentContour->get(i1));
+        newContour->setPoint(i1 + 1, currentContour->get(i1 + 1));
     }
     return newContour;
 }

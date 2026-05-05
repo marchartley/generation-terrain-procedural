@@ -259,6 +259,7 @@ void ChartView::mousePressEvent(QMouseEvent *event)
 
     vecLocal = this->getRelativeMousePositionInImage(Vector3(event->pos().x(), event->pos().y()));
     this->selectData(vecLocal);
+    Q_EMIT this->mousePressed(event);
     Q_EMIT this->clickedOnValue(vecLocal, event->button() == Qt::LeftButton, event->button() == Qt::RightButton);
 
     QChartView::mousePressEvent(event);
@@ -283,6 +284,7 @@ void ChartView::mouseMoveEvent(QMouseEvent *event)
 void ChartView::mouseReleaseEvent(QMouseEvent *event)
 {
     this->selectData(Vector3::invalid);
+    Q_EMIT this->mouseReleased(event);
     Q_EMIT this->clickedOnValue(Vector3::invalid, event->button() == Qt::LeftButton, event->button() == Qt::RightButton); // "unclick"
     return QChartView::mouseReleaseEvent(event);
 }

@@ -9,11 +9,11 @@ public:
     CatmullRomSpline();
     CatmullRomSpline(const std::vector<Vector3>& points);
     CatmullRomSpline(std::vector<CatmullRomSpline> subsplines);
+    CatmullRomSpline(const Curve& curve);
 
     CLONE_FUNCTION(CatmullRomSpline)
     std::vector<Vector3> getPath(int numberOfPoints = -1) const override;
     Vector3 getPoint(float x) const override;
-    Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const override;
     Vector3 getDerivative(float x, bool normalize = false) const override;
     Vector3 getSecondDerivative(float x, bool normalize = false) const override;
     float estimateClosestTime(const Vector3& pos) const override;
@@ -22,6 +22,8 @@ public:
     float length() const override;
 
     std::vector<Vector3> getPoints() const { return this->points; }
+    Vector3& get(int i) override { return this->points[pointIndex(i)]; }
+    Vector3 get(int i) const override { return this->points[pointIndex(i)]; }
 
     CatmullRomSpline smooth(float factor = 1.f) const;
     CatmullRomSpline taubinSmooth(float factor = 1.f) const;
@@ -44,8 +46,6 @@ public:
 
     Vector3 getCenterCircle(float x) const;
 
-    Vector3 center() const;
-
     CatmullRomSpline& close() override;
 
     CatmullRomSpline& cleanPoints();
@@ -64,11 +64,11 @@ public:
     //    BSpline& grow(float increase);
     //    BSpline& shrink(float decrease);
 
-    CatmullRomSpline computeConvexHull() const;
+    // CatmullRomSpline computeConvexHull() const;
 
     CatmullRomSpline& translate(const Vector3& translation) override;
 
-    std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
+    // std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
 
     CatmullRomSpline& displacePointsRandomly(float maxDistance);
     CatmullRomSpline& displacePointsRandomly(const Vector3& maxDistance);
@@ -79,17 +79,18 @@ public:
 
     std::string toString() const override;
 
-    auto begin() const { return points.begin(); }
-    auto end() const { return points.end(); }
-    auto begin() { return points.begin(); }
-    auto end() { return points.end(); }
+    std::vector<Vector3>::const_iterator begin() const override { return points.begin(); }
+    std::vector<Vector3>::const_iterator end() const override { return points.end(); }
+    std::vector<Vector3>::iterator begin() override { return points.begin(); }
+    std::vector<Vector3>::iterator end() override { return points.end(); }
+
     std::size_t size() const { return end() - begin(); }
     std::size_t numPoints() const override { return size(); }
     std::size_t numVertices() const { return size(); }
     bool empty() const { return begin() == end(); }
 
-    Vector3 front() const { return (size() > 0 ? points[0] : Vector3::invalid); }
-    Vector3 back() const { return (size() > 0 ? points[size() - 1] : Vector3::invalid); }
+    // Vector3 front() const { return (size() > 0 ? points[0] : Vector3::invalid); }
+    // Vector3 back() const { return (size() > 0 ? points[size() - 1] : Vector3::invalid); }
 
     Vector3& operator[](size_t i);
     const Vector3& operator[](size_t i) const;
@@ -108,9 +109,9 @@ public:
     void setAlpha(float newAlpha) { this->alpha = newAlpha; }
     float getAlpha() const { return alpha; }
 
-    void addPoint(const Vector3& newPoint);
-    CatmullRomSpline& insertPoint(int i, const Vector3& newPos) { this->points.insert(points.begin() + i, newPos); return *this; }
-    CatmullRomSpline& removePoint(int i) { this->points.erase(points.begin() + i); return *this; }
+    void addPoint(const Vector3& newPoint) override { this->points.push_back(newPoint); }
+    CatmullRomSpline& insertPoint(int i, const Vector3& newPos) override { this->points.insert(points.begin() + i, newPos); return *this; }
+    CatmullRomSpline& removePoint(int i) override { this->points.erase(points.begin() + i); return *this; }
 
     CatmullRomSpline& reset() { this->points.clear(); return *this; }
 

@@ -1,7 +1,7 @@
 #ifndef ENVOBJECT_H
 #define ENVOBJECT_H
 
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 #include "Utils/json.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
@@ -219,7 +219,7 @@ public:
     float evaluate();
 
     virtual bool placeInTerrain(const Vector3& seedPosition) = 0;
-    virtual bool placeInTerrain(const CatmullRomSpline& seedCurve) = 0;
+    virtual bool placeInTerrain(const Curve& seedCurve) = 0;
 
     virtual void improvePositionning(float stepsOrDistance) = 0;
 

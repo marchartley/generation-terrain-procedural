@@ -74,11 +74,6 @@ Vector3 BezierCurve::getPoint(float x) const
     return cubicBezier(P0, P1, P2, P3, t);
 }
 
-Vector3 BezierCurve::getPoint(float x, const Vector3 &a, const Vector3 &b) const
-{
-    return linearBezier(a, b, x);
-}
-
 Vector3 BezierCurve::getDerivative(float x, bool normalize) const
 {
     int pointId = timeToLowerIndex(x);
@@ -341,6 +336,30 @@ BezierCurve &BezierCurve::autosmooth(int pointIdx)
 Vector3& BezierCurve::operator[](size_t i) {
     return this->points[i];
 }
+
+void BezierCurve::addPoint(const Vector3 &newPoint) {
+    this->points.push_back(newPoint);
+    this->handles.resize(handles.size() + 2);
+    this->autosmooth(-2);
+    this->autosmooth(-1);
+}
+
+BezierCurve &BezierCurve::insertPoint(int i, const Vector3 &newPos) {
+    int newIdx = pointIndex(i);
+    this->points.insert(points.begin() + newIdx, newPos);
+    this->handles.insert(handles.begin() + handleIn(newIdx + 1), {Vector3(), Vector3()});
+    autosmooth(newIdx);
+    return *this;
+}
+
+BezierCurve &BezierCurve::removePoint(int i) {
+    int newIdx = pointIndex(i);
+    int handleIdx = handleIn(newIdx);
+    this->handles.erase(handles.begin() + handleIdx, handles.begin() + handleIdx + 1); // ???? OR 2
+    this->points.erase(points.begin() + newIdx);
+    return *this;
+}
+
 const Vector3& BezierCurve::operator[](size_t i) const {
     return this->points[i];
 }

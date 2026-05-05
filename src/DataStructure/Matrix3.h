@@ -11,7 +11,7 @@
 #include <complex>
 #include "DataStructure/Vector3.h"
 #include "Curves/CatmullRomSpline.h"
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 
@@ -211,7 +211,7 @@ public:
     Matrix3<int> computeConnectedComponents(bool use4Connect = false) const;
     Matrix3<int> fillHoles(bool ignoreZlayer = true) const;
     Matrix3<int> findContour(bool use2D = false) const;
-    std::vector<ShapeCurve> findContoursAsCurves() const; // 2D specific
+    std::vector<Contour> findContoursAsCurves() const; // 2D specific
 
     T trace() const;
 
