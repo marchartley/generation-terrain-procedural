@@ -42,22 +42,22 @@ EnvAreaInstance::EnvAreaInstance(EnvArea* definition)
 
 float EnvAreaInstance::getSqrDistance(const Vector3 &position)
 {
-    return (position - this->curve.estimateClosestPos(position)).norm2() * (this->curve.containsXY(position, false) ? -1.f : 1.f);
+    return (position - this->curve.curve->estimateClosestPos(position)).norm2() * (this->curve.containsXY(position, false) ? -1.f : 1.f);
 }
 
 std::map<std::string, Vector3> EnvAreaInstance::getAllProperties(const Vector3 &position) const
 {
-    float closestTime = this->curve.estimateClosestTime(position);
-    Vector3 closestPos = this->curve.getPoint(closestTime);
+    float closestTime = this->curve.curve->estimateClosestTime(position);
+    Vector3 closestPos = this->curve.curve->getPoint(closestTime);
     return {
         {"default", closestPos},
-        {"center", this->curve.center()},
+        {"center", this->curve.curve->center()},
         {"start", Vector3::invalid},
         {"end", Vector3::invalid},
         {"inside", (this->curve.containsXY(position, false) ? Vector3(true) : Vector3(false))},
-        {"normal", this->curve.getNormal(closestTime)},
+        {"normal", this->curve.curve->getNormal(closestTime)},
         {"dir", Vector3::invalid},
-        {"curvature", Vector3(this->curve.getCurvature(closestTime), 0, 0)}
+        {"curvature", Vector3(this->curve.curve->getCurvature(closestTime), 0, 0)}
     };
 }
 
@@ -70,16 +70,20 @@ EnvAreaInstance *EnvAreaInstance::clone()
 
 bool EnvAreaInstance::placeInTerrain(const Vector3 &seedPosition)
 {
-    ShapeCurve initialCurve = ContinuousAreaOptimizer::getAreaOptimizedShape(seedPosition, this->getDefinition()->fitnessFunction, this->getDefinition()->length * this->getDefinition()->width);
+    Contour initialCurve = ContinuousAreaOptimizer::getAreaOptimizedShape(seedPosition, this->getDefinition()->fitnessFunction, this->getDefinition()->length * this->getDefinition()->width);
     this->snake.position = seedPosition;
     return this->placeInTerrain(initialCurve);
 }
 
-bool EnvAreaInstance::placeInTerrain(const CatmullRomSpline &seedCurve)
+bool EnvAreaInstance::placeInTerrain(const Curve &seedCurve)
 {
-    ShapeCurve initialCurve = ShapeCurve(seedCurve);
-    initialCurve.close().resamplePoints();
-    if (seedCurve.empty()) {
+    return this->placeInTerrain(Contour(seedCurve.clone()));
+}
+bool EnvAreaInstance::placeInTerrain(const Contour& seedCurve)
+{
+    Contour initialCurve = Contour(seedCurve);
+    initialCurve.curve->close().resamplePoints();
+    if (seedCurve.curve->empty()) {
         return false;
     }
     Vector3 position = initialCurve.centroid(); // The optimisation process might have moved the evaluation position greatly
@@ -97,17 +101,17 @@ bool EnvAreaInstance::placeInTerrain(const CatmullRomSpline &seedCurve)
 
 void EnvAreaInstance::improvePositionning(float steps)
 {
-    this->snake.contour = this->curve;
-    this->snake.position = this->curve.center();
-    this->updateCurve(this->snake.runSegmentation(steps));
+    this->snake.contour = std::shared_ptr<Curve>(this->curve.curve->clone());
+    this->snake.position = this->curve.curve->center();
+    this->updateCurve(*this->snake.runSegmentation(steps));
 }
 
 void EnvAreaInstance::recomputeEvaluationPoints()
 {
     if (this->getDefinition()->evaluateInside) {
-        this->evaluationPositions = curve.randomPointsInside(curve.size());
+        this->evaluationPositions = curve.randomPointsInside(curve.curve->size());
     } else {
-        this->evaluationPositions = curve.getPoints();
+        this->evaluationPositions = curve.curve->getPath();
     }
 }
 
@@ -116,9 +120,9 @@ void EnvAreaInstance::applyDeposition(EnvMaterial& material)
     if (this->getDefinition()->materialDepositionRate.count(material.name) == 0) return;
     auto depositionProperties = this->getDefinition()->materialDepositionRate[material.name];
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
-    ShapeCurve translatedCurve = this->curve;
+    Contour translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(depositionProperties.radius);
-    AABBox box = AABBox(translatedCurve.AABBox());
+    AABBox box = AABBox(translatedCurve.curve->AABBox());
     translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
     // for (auto& p : translatedCurve)
         // p = p + Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min();
@@ -137,9 +141,9 @@ void EnvAreaInstance::applyAbsorption(EnvMaterial& material)
     if (this->getDefinition()->materialAbsorptionRate.count(material.name) == 0) return;
     auto absorptionProperties = this->getDefinition()->materialAbsorptionRate[material.name];
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
-    ShapeCurve translatedCurve = this->curve;
+    Contour translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(absorptionProperties.radius);
-    AABBox box = AABBox(translatedCurve.AABBox());
+    AABBox box = AABBox(translatedCurve.curve->AABBox());
     translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
     // for (auto& p : translatedCurve)
     // p = p + Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min();
@@ -159,9 +163,9 @@ void EnvAreaInstance::applyDepositionOnDeath()
     for (auto& [materialName, depos] : this->getDefinition()->materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
         if (depos.rate == 0) return;
-        AABBox box = AABBox(this->curve.AABBox());
-        ShapeCurve translatedCurve = this->curve;
-        for (auto& p : translatedCurve)
+        AABBox box = AABBox(this->curve.curve->AABBox());
+        Contour translatedCurve = this->curve;
+        for (auto& p : *translatedCurve.curve)
             p = p + Vector3(depos.radius, depos.radius, 0) - box.min();
         GridF sand = GridF(box.dimensions().x() + depos.radius * 2.f, box.dimensions().y() + depos.radius * 2.f);
 
@@ -178,7 +182,7 @@ GridV3& EnvAreaInstance::computeFlowModification(GridV3& waterFlow, float scale)
     std::vector<KelvinletCurve*> evaluatedCurveKelvinlets;
     for (size_t i = 0; i < this->getDefinition()->curveKelvinlets.size(); i++) {
         auto& k = this->getDefinition()->curveKelvinlets[i];
-        k->setCurve(std::shared_ptr<Curve>(this->curve.clone()));
+        k->setCurve(this->curve.curve);
         if (this->getDefinition()->curveKelvinlets[i]->valid()) {
             evaluatedCurveKelvinlets.push_back(k);
             // if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(this->getDefinition()->curveKelvinlets[i])) {
@@ -202,7 +206,7 @@ ImplicitPatch* EnvAreaInstance::createImplicitPatch(const GridF &heights, Implic
         previousPrimitive = nullptr;
         return nullptr;
     }
-    CatmullRomSpline translatedCurve = this->curve;
+    Polyline translatedCurve = toPolyline(*this->curve.curve);
     for (Vector3& p : translatedCurve) {
         p.z() = heights(p.xy());
     }
@@ -255,19 +259,19 @@ EnvAreaInstance &EnvAreaInstance::translate(const Vector3 &translation)
     return *this;
 }
 
-void EnvAreaInstance::updateCurve(const CatmullRomSpline &newCurve)
+void EnvAreaInstance::updateCurve(const Contour& newContour)
 {
     if (this->getDefinition()->evaluateInside) {
         std::cerr << "Need to implement 'updateCurve' for inside...!" << std::endl;
         for (auto& evaluationPosition : this->evaluationPositions) {
-            float evaluationPointClosestTime = this->curve.estimateClosestTime(evaluationPosition);
-            Vector3 relativeDisplacementFromEvaluationToCurve = (evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
-            evaluationPosition = newCurve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
+            float evaluationPointClosestTime = this->curve.curve->estimateClosestTime(evaluationPosition);
+            Vector3 relativeDisplacementFromEvaluationToCurve = (evaluationPosition - this->curve.curve->getPoint(evaluationPointClosestTime));
+            evaluationPosition = newContour.curve->getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
         }
     } else {
-        this->evaluationPositions = newCurve.getPoints();
+        this->evaluationPositions = newContour.curve->getPath();
     }
-    this->curve = newCurve;
+    this->curve = newContour;
     this->_cachedFlowModif.clear();
     this->_cachedHeightfield.clear();
 }

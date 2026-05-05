@@ -77,6 +77,27 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
     this->setWindowTitle(QString::fromStdString(toCapitalize(title)));
 
     // QObject::connect(this->chartView, &ChartView::clickedOnValue, this, &AbstractPlotter::selectData);
+    QObject::connect(this->chartView, &ChartView::mouseReleased, this, [&](QMouseEvent* e) {
+        dataModel->selectedScatterData.clear();
+        dataModel->selectedPlotData.clear();
+    });
+    QObject::connect(this->chartView, &ChartView::mousePressed, this, [&](QMouseEvent* e) {
+        dataModel->selectedScatterData.clear();
+        dataModel->selectedPlotData.clear();
+        auto p = chartView->chart()->mapToValue(e->pos(), this->chartView->chart()->series()[0]);
+        auto dataMousePos = Vector3(p.x(), p.y());
+
+        const float tol = 5.f;
+        for (size_t iSeries = 0; iSeries < dataModel->scatterData.data.size(); iSeries++) {
+            const auto& scatterSeries = dataModel->scatterData.data[iSeries];
+            for (size_t iDataPoint = 0; iDataPoint < scatterSeries.size(); iDataPoint++) {
+                const auto& scatterData = scatterSeries[iDataPoint];
+                if ((dataMousePos - scatterData).norm2() < tol * tol) {
+                    dataModel->selectedScatterData.push_back({iSeries, iDataPoint});
+                }
+            }
+        }
+    });
     QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e){
         this->displayInfoUnderMouse(pos);
         if (this->hasImage()) {
@@ -88,6 +109,35 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
             Vector3 scale = dataModel->vectorData.field.getDimensions();
             this->emitMouseMoved(pos * scale, prevPos * scale, e);
             emitMouseMoved(pos * scale, prevPos * scale, e);
+        }
+
+        if (this->hasScatterValues() || this->hasPlotValues()) {
+
+            auto p = chartView->chart()->mapToValue(e->pos(), this->chartView->chart()->series()[0]);
+            auto dataMousePos = Vector3(p.x(), p.y());
+
+            /*const float tol = 5.f;
+            for (size_t iSeries = 0; iSeries < dataModel->scatterData.data.size(); iSeries++) {
+                const auto& scatterSeries = dataModel->scatterData.data[iSeries];
+                for (size_t iDataPoint = 0; iDataPoint < scatterSeries.size(); iDataPoint++) {
+                    const auto& scatterData = scatterSeries[iDataPoint];
+                    if ((dataMousePos - scatterData).norm2() < tol * tol) {
+                        dataModel->selectedScatterData.push_back({iSeries, iDataPoint});
+                    }
+                }
+            }*/
+
+            // if (e->button() == Qt::RightButton) {
+            for (auto& [iSeries, iData] : dataModel->selectedScatterData) {
+                std::cout << dataModel->scatterData.data[iSeries][iData] << " to " << dataMousePos << std::endl;
+                dataModel->scatterData.data[iSeries][iData] = dataMousePos;
+            }
+            // }
+
+            if (dataModel->selectedScatterData.size() > 0) {
+                this->chartView->setPlotModel(dataModel);
+            }
+
         }
     });
     // QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &AbstractPlotter::draw);

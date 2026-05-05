@@ -3,15 +3,15 @@
 #include "Utils/Collisions.h"
 
 Polyline::Polyline() : Polyline(std::vector<Vector3>{})
-{
-
-}
+{}
 
 Polyline::Polyline(const std::vector<Vector3>& points)
     : Curve(), points(points)
-{
+{}
 
-}
+Polyline::Polyline(const Curve& curve)
+    : Polyline(curve.getPath())
+{}
 
 std::vector<Vector3> Polyline::getPath(int numberOfPoints) const
 {
@@ -30,13 +30,7 @@ Vector3 Polyline::getPoint(float x) const
 
     float frac = (x * (points.size() - 1)) - startId;
 
-    return getPoint(frac, points[startId], points[endId]); // Linear
-}
-
-Vector3 Polyline::getPoint(float x, const Vector3& a, const Vector3& b) const
-{
-    x = clamp(x, 0.f, 1.f);
-    return a * (1.f - x) + b * x;
+    return Curve::linear(frac, points[startId], points[endId]); // Linear
 }
 
 Vector3 Polyline::getDerivative(float x, bool normalize) const

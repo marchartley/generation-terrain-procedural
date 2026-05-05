@@ -89,7 +89,7 @@ bool EnvCurveInstance::placeInTerrain(const Vector3 &seedPosition)
     return this->placeInTerrain(initialCurve);
 }
 
-bool EnvCurveInstance::placeInTerrain(const CatmullRomSpline &seedCurve)
+bool EnvCurveInstance::placeInTerrain(const Curve &seedCurve)
 {
     if (seedCurve.empty()) {
         return false;
@@ -109,9 +109,9 @@ bool EnvCurveInstance::placeInTerrain(const CatmullRomSpline &seedCurve)
 
 void EnvCurveInstance::improvePositionning(float steps)
 {
-    this->snake.contour = this->curve;
+    this->snake.contour = std::shared_ptr<Curve>(this->curve.clone());
     this->snake.position = this->curve.getPoint(.5f);
-    this->updateCurve(this->snake.runSegmentation(int(steps)));
+    this->updateCurve(*this->snake.runSegmentation(int(steps)));
 }
 
 void EnvCurveInstance::recomputeEvaluationPoints()

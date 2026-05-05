@@ -1,5 +1,12 @@
 #include "Curve.h"
 
+#include "Utils/Collisions.h"
+
+Vector3 Curve::linear(float x, const Vector3 &a, const Vector3 &b) const
+{
+    return a * (1 - x) + b * x;
+}
+
 float Curve::estimateDistanceFrom(const Vector3 &pos) const {
     return std::sqrt(estimateSqrDistanceFrom(pos));
 }
@@ -44,6 +51,25 @@ Curve& Curve::scale(float factor) {
     return scale(Vector3(factor, factor, factor));
 }
 
+Vector3 Curve::center() const
+{
+    const auto points = getPath();
+    if (points.empty()) return Vector3();
+
+    Vector3 previous = Vector3::invalid;
+    Vector3 center;
+    int count = 0;
+    for (size_t i = 0; i < this->size() - (this->closed ? 1 : 0); i++) {
+        const auto& p = points[i];
+        float diff = (previous == p ? 0.f : 1.f);
+        center += p * diff;
+        count += int(diff);
+    }
+    // for (const auto& point : copy.points)
+        // center += point;
+    return center / (float) count;
+}
+
 size_t Curve::size() const {
     return numPoints();
 }
@@ -86,4 +112,38 @@ Curve& Curve::close()
 {
     this->closed = true;
     return *this;
+}
+
+
+
+std::vector<std::pair<size_t, size_t> > Curve::checkAutointersections() const
+{
+    auto self = this->clone();
+    float spacingHeuristic = 1.0f;
+    float selfSpacing = self->length() / float(self->size() - 1);
+    if (selfSpacing < spacingHeuristic)
+        self->scale(spacingHeuristic / selfSpacing);
+    std::vector<std::pair<size_t, size_t> > results;
+    int s = size();
+#pragma omp parallel for collapse(2)
+    for (int i = 0; i < s; i++) {
+        for (int j = 0; j < s; j++) {
+            int i00 = i;
+            int i01 = (i00 + 1) % s;
+            int i10 = (j + i + 2) % s;
+            int i11 = (i10 + 1) % s;
+
+            if (i10 <= i00 || i11 == i00 || i01 == i10 || (!closed && i11 <= i00)) continue;
+
+            Vector3 intersection = Collision::intersectionBetweenTwoSegments(self->get(i00), self->get(i01), self->get(i10), self->get(i11), 1e-6);
+
+            if (intersection.isValid()) {
+#pragma omp critical
+                {
+                    results.push_back({i00, i10});
+                }
+            }
+        }
+    }
+    return results;
 }

@@ -129,17 +129,17 @@ std::vector<EnvObjectInstance*> CoralIslandGenerator::envObjsFromFeatureMap(cons
         int nbLagoonsKept = 0; // Keep track of the number of lagoons reaching threshold area
         auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
         for (auto& curve : lagoonContours) {
-            curve.scale(ratio);
-            ShapeCurve simplifiedCurve = curve;
-            simplifiedCurve = simplifiedCurve.getPath(10); // Reduce the complexity of the curve to avoid having too much computations after
+            curve.curve->scale(ratio);
+            Contour simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.curve->getPath(10); // Reduce the complexity of the curve to avoid having too much computations after
             if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
 
             EnvCurveInstance* reef = dynamic_cast<EnvCurveInstance*>(scene->instantiate("reef"));
-            reef->curve = simplifiedCurve;
+            reef->curve = *simplifiedCurve.curve;
             objects.push_back(reef);
 
             EnvAreaInstance* lagoon = dynamic_cast<EnvAreaInstance*>(scene->instantiate("lagoon"));
-            lagoon->curve = simplifiedCurve;
+            lagoon->curve = *simplifiedCurve.curve;
             objects.push_back(lagoon);
 
             nbLagoonsKept++;
@@ -167,9 +167,9 @@ std::vector<EnvObjectInstance*> CoralIslandGenerator::envObjsFromFeatureMap(cons
         // Extract the coast contours
         auto coastContours = featureAreas["coast"].findContoursAsCurves();
         for (auto& curve : coastContours) {
-            curve.scale(ratio);
-            ShapeCurve simplifiedCurve = curve;
-            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            curve.curve->scale(ratio);
+            Contour simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.curve->getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
             if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
 
             EnvAreaInstance* coast = dynamic_cast<EnvAreaInstance*>(scene->instantiate("coast"));
@@ -183,9 +183,9 @@ std::vector<EnvObjectInstance*> CoralIslandGenerator::envObjsFromFeatureMap(cons
         // Extract the island contours
         auto islandContours = featureAreas["island"].findContoursAsCurves();
         for (auto& curve : islandContours) {
-            curve.scale(ratio);
-            ShapeCurve simplifiedCurve = curve;
-            simplifiedCurve = simplifiedCurve.getPath(20); // Reduce the complexity of the curve to avoid having too much computations after
+            curve.curve->scale(ratio);
+            Contour simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.curve->getPath(20); // Reduce the complexity of the curve to avoid having too much computations after
             if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
             EnvAreaInstance* island = dynamic_cast<EnvAreaInstance*>(scene->instantiate("island"));
             island->curve = simplifiedCurve;

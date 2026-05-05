@@ -36,7 +36,7 @@ public:
 
     EnvArea* getDefinition() const { return dynamic_cast<EnvArea*>(definition); }
 
-    ShapeCurve curve;
+    Contour curve;
 
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
@@ -44,7 +44,8 @@ public:
     // static EnvAreaInstance* instantiate(const std::string& objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
-    virtual bool placeInTerrain(const CatmullRomSpline& seedCurve);
+    virtual bool placeInTerrain(const Curve& seedCurve);
+    virtual bool placeInTerrain(const Contour& seedCurve);
 
     virtual void improvePositionning(float steps);
 
@@ -59,7 +60,7 @@ public:
     // virtual GridF createHeightfield();
 
     virtual EnvAreaInstance& translate(const Vector3& translation);
-    void updateCurve(const CatmullRomSpline& newCurve);
+    void updateCurve(const Contour& newContour);
 };
 
 #endif // ENVAREA_H

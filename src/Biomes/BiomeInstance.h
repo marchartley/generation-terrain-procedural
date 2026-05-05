@@ -4,7 +4,7 @@
 class BiomeInstance;
 #include "Biomes/BiomeModel.h"
 #include "DataStructure/Vector3.h"
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 #include <vector>
 
 class BiomeInstance : public std::enable_shared_from_this<BiomeInstance>
@@ -16,7 +16,7 @@ public:
     int getLevel(bool ignorePriorityOffset = false);
     void completeIfNeeded();
 
-    std::shared_ptr<BiomeInstance> clone(ShapeCurve newArea, const Vector3& newPosition = Vector3::invalid);
+    std::shared_ptr<BiomeInstance> clone(Contour newArea, const Vector3& newPosition = Vector3::invalid);
     std::shared_ptr<BiomeInstance> getPointInstance(int index);
 
     std::string getTextureName();
@@ -42,7 +42,7 @@ public:
     Vector3 position;
     std::string classname = "none";
     std::string textureClass;
-    ShapeCurve area;
+    Contour area;
     float idealSize;
 
     int priorityOffset = 0;

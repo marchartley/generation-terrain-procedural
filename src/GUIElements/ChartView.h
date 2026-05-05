@@ -76,6 +76,9 @@ Q_SIGNALS:
     void clickedOnValue(const Vector3& pos, bool leftClick, bool rightClick);
     void mouseMoved(const Vector3& relativePos, const Vector3& previousMousePos, QMouseEvent* e);
     void keyPressed(QKeyEvent* event);
+
+    void mousePressed(QMouseEvent* event);
+    void mouseReleased(QMouseEvent* event);
 };
 
 

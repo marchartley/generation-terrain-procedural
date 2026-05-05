@@ -254,16 +254,16 @@ TectonicEvent::TectonicEvent(Vector3 direction, float sigma, float startTime, fl
     voro.solve(false);
     #pragma omp parallel for
     for (auto& area : voro.areas) {
-        for (size_t i = 0; i < area.size(); i++) {
-            Vector3 p0 = area[i];
-            Vector3 p1 = area[i+1];
-            CatmullRomSpline path = CatmullRomSpline({p0, p1}).resamplePoints(10);
+        for (size_t i = 0; i < area.curve->size(); i++) {
+            Vector3 p0 = area.curve->get(i);
+            Vector3 p1 = area.curve->get(i+1);
+            auto path = Polyline({p0, p1}).resamplePoints(10);
             Vector3 dir = (p0 - p1);
-            dir = Vector3(dir.y(), dir.x()).normalize();
+            dir = Vector3(dir.y(), -dir.x()).normalize();
             for (auto& p : path) {
                 p += random_gen::generate_normal() * 2.f * dir;
             }
-            for (auto& p : path.getPath(50)) {
+            for (auto& p : Polyline(path).getPath(50)) {
                 initialState(p) = 1.f;
             }
         }

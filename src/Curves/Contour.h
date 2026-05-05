@@ -1,14 +1,16 @@
 #ifndef SHAPECURVE_H
 #define SHAPECURVE_H
 
-#include "CatmullRomSpline.h"
+#include "Curves.h"
 
-class ShapeCurve : public CatmullRomSpline
+class Contour // : public CatmullRomSpline
 {
 public:
-    ShapeCurve();
-    ShapeCurve(std::vector<Vector3> points);
-    ShapeCurve(CatmullRomSpline path);
+    Contour();
+    Contour(std::vector<Vector3> points);
+    Contour(const Curve& path);
+    Contour(Curve* path);
+    Contour(std::shared_ptr<Curve> path);
 
     bool contains(const Vector3& pos, bool useNativeShape = true) const;
     bool containsXY(const Vector3& pos, bool useNativeShape = true, int increaseAccuracy = 0) const;
@@ -19,27 +21,38 @@ public:
 
     Vector3 centroid() const;
 
-    ShapeCurve intersect(ShapeCurve other);
+    // Contour intersect(Contour other);
 
     Vector3 planeNormal();
-    ShapeCurve grow(float increase);
-    ShapeCurve shrink(float decrease);
-    ShapeCurve& translate(const Vector3& translation);
+    Contour grow(float increase);
+    Contour shrink(float decrease);
+    Contour& translate(const Vector3& translation);
 
-    ShapeCurve& removeDuplicates();
+    Contour& removeDuplicates();
 
     std::vector<Vector3> closedPath() const;
 
     std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
 
-    ShapeCurve merge(ShapeCurve other);
+    Contour merge(Contour other);
 
-    ShapeCurve& resamplePoints(int newNbPoints = -1);
+    Contour& resamplePoints(int newNbPoints = -1);
 
-    ShapeCurve& setPoint(int i, const Vector3 &newPos);
+    Contour& setPoint(int i, const Vector3 &newPos);
 
-    static ShapeCurve circle(float radius, const Vector3& center, int nbPoints);
+    Polyline computeConvexHull() const;
+
+    static std::vector<Vector3> circle(float radius, const Vector3& center, int nbPoints);
+
+public:
+    std::shared_ptr<Curve> curve;
 };
+
+
+
+
+
+
 
 struct ClipVertex {
     Vector3 coord;
@@ -62,8 +75,8 @@ int markEntriesExits(std::vector<ClipVertex*>& poly, bool currentlyInside, int s
 
 
 
-std::vector<float> computeGreenCoordinates(const Vector3& p, const ShapeCurve& polygon);
-Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, const ShapeCurve& polygon);
+std::vector<float> computeGreenCoordinates(const Vector3& p, const Contour& polygon);
+Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, const Contour& polygon);
 
 Vector3 randomPointInTriangle(const Vector3& A, const Vector3& B, const Vector3& C);
 

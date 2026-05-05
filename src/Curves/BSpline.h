@@ -1,16 +1,16 @@
-#ifndef POLYLINE_H
-#define POLYLINE_H
+#ifndef BSPLINE_H
+#define BSPLINE_H
 
 #include "Curves/Curve.h"
 
-class Polyline : public Curve
+class BSpline : public Curve
 {
 public:
-    Polyline();
-    Polyline(const std::vector<Vector3>& points);
-    Polyline(const Curve& curve);
+    BSpline();
+    BSpline(const std::vector<Vector3>& points);
+    BSpline(const Curve& curve);
 
-    CLONE_FUNCTION(Polyline)
+    CLONE_FUNCTION(BSpline)
     std::vector<Vector3> getPath(int numberOfPoints = -1) const override;
     Vector3 getPoint(float x) const override;
     Vector3 getDerivative(float x, bool normalize = false) const override;
@@ -21,24 +21,24 @@ public:
     float length() const override;
 
     size_t getIndex(int i) { return (i + numPoints()) % numPoints(); }
-    Polyline& setPoint(int i, const Vector3& newPos) override;
+    BSpline& setPoint(int i, const Vector3& newPos) override;
 
     std::vector<Vector3> getPoints() const { return this->points; }
     Vector3& get(int i) override { return this->points[pointIndex(i)]; }
     Vector3 get(int i) const override { return this->points[pointIndex(i)]; }
 
-    Polyline& resamplePoints(int newNbPoints = -1) override;
+    BSpline& resamplePoints(int newNbPoints = -1) override;
 
-    Polyline& reverseVertices() override;
+    BSpline& reverseVertices() override;
 
     std::pair<Vector3, Vector3> AABBox() const override;
 
     using Curve::scale;
-    Polyline& scale(const Vector3& factor) override;
+    BSpline& scale(const Vector3& factor) override;
 
-    Polyline& translate(const Vector3& translation) override;
+    BSpline& translate(const Vector3& translation) override;
 
-    Polyline& removeDuplicates() override;
+    BSpline& removeDuplicates() override;
 
     inline size_t size() const { return numPoints(); }
     size_t numPoints() const override;
@@ -52,17 +52,17 @@ public:
     const Vector3& operator[](size_t i) const override;
 
     void addPoint(const Vector3& newPoint) override { this->points.push_back(newPoint); }
-    Polyline& insertPoint(int i, const Vector3& newPos) override { this->points.insert(points.begin() + i, newPos); return *this; }
-    Polyline& removePoint(int i) override { this->points.erase(points.begin() + i); return *this; }
+    BSpline& insertPoint(int i, const Vector3& newPos) override { this->points.insert(points.begin() + i, newPos); return *this; }
+    BSpline& removePoint(int i) override { this->points.erase(points.begin() + i); return *this; }
 
     std::string toString() const override;
 
-    Polyline& close() override;
+    BSpline& close() override;
 
-    Polyline& reset() { points.clear(); return *this; }
+    BSpline& reset() { points.clear(); return *this; }
 
 protected:
     std::vector<Vector3> points;
 };
 
-#endif // POLYLINE_H
+#endif // BSPLINE_H

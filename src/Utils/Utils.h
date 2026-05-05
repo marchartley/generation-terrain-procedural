@@ -145,6 +145,11 @@ U remap(T val, T oldMin, T oldMax, U newMin, U newMax)
     float oldProgress = inverseLerp(val, oldMin, oldMax);
     return lerp(oldProgress, newMin, newMax);
 }
+template <class T, class U>
+U map(T val, T oldMin, T oldMax, U newMin, U newMax)
+{
+    return remap(val, oldMin, oldMax, newMin, newMax);
+}
 
 float gaussian(float sigma, float sqrDist);
 float gaussian(const Vector3 &size, const Vector3 &position, float sigma);

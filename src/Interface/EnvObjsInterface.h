@@ -88,9 +88,9 @@ public:
     void evaluateAndDisplayCustomFitnessAndFittingFormula(const std::string& fitnessFuncFormula, std::string fittingFuncFormula);
 
     CatmullRomSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
-    ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
-    ShapeCurve computeNewObjectsShapeAtPositionForceCircle(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
-    ShapeCurve computeNewObjectsShapeAtPositionForceCircleOptimizedArea(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float targetArea);
+    Contour computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
+    Contour computeNewObjectsShapeAtPositionForceCircle(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
+    Contour computeNewObjectsShapeAtPositionForceCircleOptimizedArea(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float targetArea);
 
     void updateSceneFlowfieldWithUserFlow();
 

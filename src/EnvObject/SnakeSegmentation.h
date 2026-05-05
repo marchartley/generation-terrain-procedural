@@ -19,23 +19,25 @@ class SnakeSegmentation {
 
 public:
     SnakeSegmentation();
-    SnakeSegmentation(const CatmullRomSpline& curve);
-    SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const CatmullRomSpline& curve = CatmullRomSpline());
+    SnakeSegmentation(std::shared_ptr<Curve> curve);
+    SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, std::shared_ptr<Curve> curve = std::shared_ptr<Curve>());
+    SnakeSegmentation(const Curve& curve);
+    SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const Curve& curve);
     // virtual ~SnakeSegmentation() {}
     // SnakeSegmentation(const BSpline& initialContour, const GridF& inputImage,
                       // const GridV3& inputGradient);
 
-    CatmullRomSpline runSegmentation(int maxIterations = 100);
-    CatmullRomSpline runSegmentation(const CatmullRomSpline& curve, int maxIterations = 100);
+    std::shared_ptr<Curve> runSegmentation(int maxIterations = 100);
+    std::shared_ptr<Curve> runSegmentation(std::shared_ptr<Curve> curve, int maxIterations = 100);
 
-    Vector3 computeEnergyGradient(const CatmullRomSpline& contour, int index, bool usePreviousPointForInternal = true);
+    Vector3 computeEnergyGradient(std::shared_ptr<Curve> contour, int index, bool usePreviousPointForInternal = true);
 
-    Vector3 computeInternalEnergyGradient(const CatmullRomSpline& contour, int index, bool usePreviousPoint = true) const;
-    Vector3 computeExternalEnergyGradient(const CatmullRomSpline& contour, int index) const;
-    Vector3 computeShapeEnergyGradient(const CatmullRomSpline& contour, int index, bool usePreviousPoint = true) const;
-    Vector3 computeGradientEnergyGradient(const CatmullRomSpline& contour, int index) const;
+    Vector3 computeInternalEnergyGradient(std::shared_ptr<Curve> contour, int index, bool usePreviousPoint = true) const;
+    Vector3 computeExternalEnergyGradient(std::shared_ptr<Curve> contour, int index) const;
+    Vector3 computeShapeEnergyGradient(std::shared_ptr<Curve> contour, int index, bool usePreviousPoint = true) const;
+    Vector3 computeGradientEnergyGradient(std::shared_ptr<Curve> contour, int index) const;
 
-    CatmullRomSpline updateContour(const CatmullRomSpline& currentContour, float stepSize = 0.1f);
+    std::shared_ptr<Curve> updateContour(std::shared_ptr<Curve> currentContour, float stepSize = 0.1f);
 
     float getImageAt(const Vector3& p) const;
     Vector3 getGradientImageAt(const Vector3& p) const;
@@ -45,7 +47,7 @@ public:
     // virtual SnakeSegmentationParameters* getParameters() = 0;
 
 // private:
-    CatmullRomSpline contour;     // BSpline representing the contour
+    std::shared_ptr<Curve> contour;     // BSpline representing the contour
     // GridF image;         // Grayscale image grid
     // GridV3 gradientField; // Gradient field of the image
 

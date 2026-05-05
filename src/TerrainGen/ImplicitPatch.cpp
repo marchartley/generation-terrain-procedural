@@ -1,5 +1,5 @@
 #include "ImplicitPatch.h"
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 //#include "Utils/stb_image.h"
 #include "Utils/Utils.h"
 
@@ -1824,7 +1824,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createMountainChainFunction
 
 std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D)
 {
-    ShapeCurve polygon(path);
+    Contour polygon(path);
     std::function<float (const Vector3&)> polygonFunc = [=] (const Vector3& pos) -> float {
         return (polygon.containsXY(pos.xy(), false) ? height : 0.f);
     };
@@ -1841,10 +1841,10 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
     random_gen::random_generator.seed((path.getPoint(0) + path.getPoint(0.1)).divergence());
     int nbPoints = 50;
     int nbPaths = 50;
-    ShapeCurve polygon(path);
-    for (auto& p : polygon)
+    Contour polygon(path);
+    for (auto& p : *polygon.curve)
         p.z() = 0;
-    AABBox bbox(polygon.AABBox());
+    AABBox bbox(polygon.curve->AABBox());
     Vector3 size = bbox.dimensions();
     polygon.translate(-bbox.min()); //(-(bbox.min()));
     // auto points = ShapeCurve(path).randomPointsInside(50);

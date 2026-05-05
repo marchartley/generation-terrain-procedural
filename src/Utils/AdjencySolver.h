@@ -12,7 +12,7 @@ public:
 
     std::vector<int> solveGeomToTopo(Voronoi& diagram, std::vector<std::string> restrictedBiomesNames, std::vector<std::pair<std::string, std::string>> impossibleAdjency);
 
-    void solveTopoToGeom(std::vector<BiomeInstance> instancesToPlace, std::vector<std::pair<std::string, std::string>> impossibleAdjency, ShapeCurve availableSpace);
+    void solveTopoToGeom(std::vector<BiomeInstance> instancesToPlace, std::vector<std::pair<std::string, std::string>> impossibleAdjency, Contour availableSpace);
 
     GraphTemplate<std::string> graph;
     GraphTemplate<std::string> adjency;

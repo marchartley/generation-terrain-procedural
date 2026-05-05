@@ -21,6 +21,9 @@ CatmullRomSpline::CatmullRomSpline(std::vector<CatmullRomSpline> subsplines)
         this->points.insert(this->points.end(), spline.points.begin() + (ignoreFirstPoint ? 1 : 0), spline.points.end());
     }
 }
+CatmullRomSpline::CatmullRomSpline(const Curve& curve)
+    : CatmullRomSpline(curve.getPath())
+{}
 
 
 CatmullRomSpline& CatmullRomSpline::reverseVertices()
@@ -61,15 +64,11 @@ Vector3 CatmullRomSpline::getPoint(float x) const
     {
         std::vector<Vector3> newCtrls;
         for (size_t i = 0; i < controls.size() - 1; i++) {
-            newCtrls.push_back(this->getPoint(x, controls[i], controls[i+1]));
+            newCtrls.push_back(Curve::linear(x, controls[i], controls[i+1]));
         }
         controls = newCtrls;
     }
     return controls[0];
-}
-Vector3 CatmullRomSpline::getPoint(float x, const Vector3& a, const Vector3& b) const
-{
-    return a * (1 - x) + b * x;
 }
 
 Vector3 CatmullRomSpline::getDerivative(float x, bool normalize) const
@@ -470,19 +469,6 @@ Vector3 CatmullRomSpline::getCenterCircle(float x) const
     return this->getPoint(x) + this->getNormal(x) * (1 / this->getCurvature(x));
 }
 
-
-Vector3 CatmullRomSpline::center() const
-{
-    if (this->points.empty()) return Vector3();
-
-    CatmullRomSpline copy = *this;
-    copy.removeDuplicates();
-    Vector3 center;
-    for (const auto& point : copy.points)
-        center += point;
-    return center / (float) copy.points.size();
-}
-
 CatmullRomSpline& CatmullRomSpline::close()
 {
     Curve::close();
@@ -503,11 +489,6 @@ float CatmullRomSpline::CatmullNextT(const Vector3& P0, const Vector3& P1, float
 {
     float norm = std::max(1e-5f, (P0 - P1).norm2());
     return std::pow(norm, alpha * 0.5f) + t_prev;
-}
-template <class T>
-T map(T x, T prev_min, T prev_max, T new_min, T new_max)
-{
-    return ((x - prev_min) / (prev_max - prev_min)) * (new_max - new_min) + new_min;
 }
 
 Vector3 CatmullRomSpline::getCatmullPoint(float x) const
@@ -627,83 +608,12 @@ CatmullRomSpline CatmullRomSpline::scaled(const Vector3& factor)
     return copy.scale(factor);
 }
 
-CatmullRomSpline CatmullRomSpline::computeConvexHull() const
-{
-    if (this->points.empty()) return CatmullRomSpline();
-    // Graham scan's algorithm
-    std::vector<Vector3> stack;
-    Vector3 start = this->points[0];
-    // Get point with lowest Y (and lowest X in case of tie)
-    for (size_t i = 0; i < this->points.size(); i++) {
-        Vector3 p = points[i];
-        if (p.y() < start.y() || (p.y() == start.y() && p.x() < start.x())) {
-            start = p;
-        }
-    }
-    // Sort points by the minimum angle from the "starting point"
-    std::map<float, Vector3> points_angle;
-    for (size_t i = 0; i < this->points.size(); i++) {
-        Vector3 dir = (points[i] - start).normalize();
-        if (dir == Vector3()) continue; // Ignore the starting point
-        float angle = -dir.x(); // Sort from "most right" to "more left"
-        if (points_angle.count(angle) == 0 || ((points_angle[angle] - start).norm2() < (points[i] - start).norm2())) {
-            points_angle[angle] = points[i];
-        }
-    }
-    // Add the starting point on the stack
-    stack.push_back(start);
-    // Iterate over all the points:
-    while (points_angle.begin() != points_angle.end()) {
-        // Remove the points from the stack if they create a "left turn"
-        // This can be checked if the Z component of (P1-P0).cross(P2-P0) <= 0
-        // With P0 the current point, P1 the top of stack and P2 the second top
-        while(stack.size() > 1 && ((stack[stack.size() - 1] - stack[stack.size() - 2]).cross((points_angle.begin()->second - stack[stack.size() - 2])).z() <= 0)) {
-            stack.pop_back();
-        }
-        // Add the point at the end of the stack
-        stack.push_back(points_angle.begin()->second);
-        points_angle.erase(points_angle.begin());
-    }
-    return stack;
-}
 
 CatmullRomSpline &CatmullRomSpline::translate(const Vector3& translation)
 {
     for (auto& point : points)
         point += translation;
     return *this;
-}
-
-std::vector<std::pair<size_t, size_t> > CatmullRomSpline::checkAutointersections() const
-{
-    auto self = *this;
-    float spacingHeuristic = 1.0f;
-    float selfSpacing = self.length() / float(self.size() - 1);
-    if (selfSpacing < spacingHeuristic)
-        self.scale(spacingHeuristic / selfSpacing);
-    std::vector<std::pair<size_t, size_t> > results;
-    int s = size();
-    #pragma omp parallel for collapse(2)
-    for (int i = 0; i < s; i++) {
-        for (int j = 0; j < s; j++) {
-            int i00 = i;
-            int i01 = (i00 + 1) % s;
-            int i10 = (j + i + 2) % s;
-            int i11 = (i10 + 1) % s;
-
-            if (i10 <= i00 || i11 == i00 || i01 == i10 || (!closed && i11 <= i00)) continue;
-
-            Vector3 intersection = Collision::intersectionBetweenTwoSegments(self[i00], self[i01], self[i10], self[i11], 1e-6);
-
-            if (intersection.isValid()) {
-                #pragma omp critical
-                {
-                    results.push_back({i00, i10});
-                }
-            }
-        }
-    }
-    return results;
 }
 
 CatmullRomSpline &CatmullRomSpline::displacePointsRandomly(float maxDistance)
@@ -912,9 +822,9 @@ std::pair<Vector3, Vector3> CatmullRomSpline::pointAndDerivative(float x) const
     return {C, C_prim};
 }
 
-std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSecondDerivative(float x) const
+std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSecondDerivative(float _x) const
 {
-    x = std::clamp(x, 0.f, 1.f);
+    float x = std::clamp(_x, 0.f, 1.f);
 
     std::vector<Vector3> displayedPoints = this->points;
     size_t nbPoints = displayedPoints.size();
@@ -923,12 +833,37 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
     else if (nbPoints == 1) return {displayedPoints[0], Vector3::invalid, Vector3::invalid};
     else if (nbPoints == 2) return {displayedPoints[0] * (1.f - x) + displayedPoints[1] * x, displayedPoints[1] - displayedPoints[0], Vector3(0, 0, 0)};
 
+    /*if (!isClosed()) {
+        displayedPoints.insert(displayedPoints.begin(), displayedPoints.front());
+        displayedPoints.push_back(displayedPoints.back());
+        nbPoints = displayedPoints.size();
+    }
+
+    float res = 1 / (float)(nbPoints - 1);
+    int iFloor = int(x / res);
+    int iCeil = int(x / res) + 1;
+    float resFloor = iFloor * res;
+    float resCeil = iCeil * res;
+    float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);*/
+
     float res = 1 / (float)(nbPoints - 1);
     int iFloor = int(x / res);
     int iCeil = int(x / res) + 1;
     float resFloor = iFloor * res;
     float resCeil = iCeil * res;
     float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
+
+    if (!isClosed()) {
+        displayedPoints.insert(displayedPoints.begin(), displayedPoints.front());
+        displayedPoints.push_back(displayedPoints.back());
+        if (_x < 1.f) {
+            iFloor++;
+            iCeil++;
+        } else {
+            x_prime = 1.f; // Small problem when t = 1.0
+        }
+        // nbPoints = displayedPoints.size();
+    }
 
     Vector3 P0;
     Vector3 P1;
@@ -1011,7 +946,4 @@ CatmullRomSpline CatmullRomSpline::random(int numberOfPoints) {
     return curve;
 }
 
-void CatmullRomSpline::addPoint(const Vector3 &newPoint)
-{
-    this->points.push_back(newPoint);
-}
+

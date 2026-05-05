@@ -93,7 +93,7 @@ GridF BiomeInterface::prepareArche(std::shared_ptr<BiomeInstance> biome) {
     return archeTunnel(CatmullRomSpline({start, midpoint1, midpoint2, end}), 5.f * this->voxelGridScaleFactor, 10.f, true, voxelGrid);
 }
 GridF BiomeInterface::preparePatateCorail(std::shared_ptr<BiomeInstance> biome) {
-    float radius = std::min(5.f, biome->area.containingBoxSize().norm() / 2.f) * this->voxelGridScaleFactor;
+    float radius = std::min(5.f, biome->area.curve->containingBoxSize().norm() / 2.f) * this->voxelGridScaleFactor;
     Vector3 patatePosition = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->position)) + Vector3(0, 0, radius/10.f);
     return archeTunnel(CatmullRomSpline({patatePosition, patatePosition + Vector3(0, 0, 0.001f)}), radius, 2.f, true, voxelGrid);
 }
@@ -126,7 +126,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
     // auto startTime = std::chrono::system_clock::now();
 //return;
-    ShapeCurve terrainArea({
+    Contour terrainArea({
                    heightmap->getDimensions() * Vector3(0, 0, 0),
                    heightmap->getDimensions() * Vector3(1, 0, 0),
                    heightmap->getDimensions() * Vector3(1, 1, 0),
@@ -174,11 +174,11 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     selectedBiomeIDs.clear();
 
     for (auto& current : sortedBiomes) {
-        ShapeCurve area = current->area;
+        Contour area = current->area;
         // int level = current->getLevel();
 //        area = area.grow(1.f); // Grow the area to fill all artefacts
         Vector3 AABBoxMin, AABBoxMax;
-        std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
+        std::tie(AABBoxMin, AABBoxMax) = area.curve->AABBox();
         BiomeInstance::registerBiomeInstance(current);
         possibleBiomeInstances.push_back(*current);
         std::ostringstream out;
@@ -187,7 +187,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         bool atLeastOne = false;
         for (int x = AABBoxMin.x(); x < AABBoxMax.x(); x++) {
             for (int y = AABBoxMin.y(); y < AABBoxMax.y(); y++) {
-                if (area.contains(Vector3(x, y, area.front().z())) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
+                if (area.contains(Vector3(x, y, area.curve->front().z())) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
                     heightmap->getBiomeIndices().at(x, y).push_back(current->instanceID);
                     out << "Found at (" << x << ", " << y << ")" << std::endl;
                     atLeastOne = true;
@@ -198,7 +198,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
             out << "Never seen..." << std::endl;
         }
         out << "Area was\n";
-        for (auto& p : current->area)
+        for (auto& p : *current->area.curve)
             out << "- " << p << std::endl;
 //        current->instanceID = biomeID;
 //        biomeID++;
@@ -333,7 +333,7 @@ void BiomeInterface::replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace,
 {
     auto previousParent = biomeToReplace->parent;
     Vector3 previousPos = biomeToReplace->position;
-    ShapeCurve previousArea = biomeToReplace->area;
+    Contour previousArea = biomeToReplace->area;
 
     auto it = std::find(previousParent->instances.begin(), previousParent->instances.end(), biomeToReplace);
 
@@ -562,12 +562,12 @@ void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex,
 //        selectionPlane.fromArray(std::vector<float>{});
     } else {
         int level = BiomeInstance::instancedBiomes[biomeID]->getLevel();
-        ShapeCurve biomeArea = BiomeInstance::instancedBiomes[biomeID]->area;
+        Contour biomeArea = BiomeInstance::instancedBiomes[biomeID]->area;
         biomeArea = biomeArea.shrink(level);
         std::vector<Vector3> upperPoints, lowerPoints;
         float maxHeight = std::numeric_limits<float>::lowest(),
                 minHeight = std::numeric_limits<float>::max();
-        for (auto& point : biomeArea) {
+        for (auto& point : *biomeArea.curve) {
             Vector3 surfacePoint = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(point));
             upperPoints.push_back(surfacePoint);
             lowerPoints.push_back(surfacePoint);

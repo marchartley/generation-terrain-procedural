@@ -1,6 +1,6 @@
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/UnderwaterErosion.h"
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 #include "DataStructure/Image.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float noise_shifting)

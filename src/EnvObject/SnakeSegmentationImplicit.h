@@ -3,7 +3,7 @@
 
 /*
 #include "Curves/CatmullRomSpline.h"
-#include "Curves/ShapeCurve.h"
+#include "Curves/Contour.h"
 #include "EnvObject/SnakeSegmentation.h"
 #include <functional>
 
