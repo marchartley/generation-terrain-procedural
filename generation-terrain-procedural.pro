@@ -1,12 +1,31 @@
-QT *= quick opengl xml widgets gui charts
-CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
+QT *= \
+    # quick \
+    opengl \
+    xml \
+    widgets \
+    gui \
+    charts
+
+CONFIG += \
+    qt \
+    opengl \
+    warn_on \
+    thread \
+    rtti \
+    console \
+    embed_manifest_exe \
+    no_keywords
 
 INCLUDEPATH *= src/
 
-QMAKE_CXXFLAGS += -fopenmp -g
-LIBS += -fopenmp
+QMAKE_CXXFLAGS += \
+    -fopenmp \
+    -g
+LIBS += \
+    -fopenmp
 
-DEFINES += "WM_LABEL_SIZE=32"
+DEFINES += \
+    "WM_LABEL_SIZE=32"
 
 
 TORCH_DIR = $$getenv(HOME)/codes/libtorch
@@ -242,26 +261,26 @@ SOURCES += \
     src/Utils/Table.cpp \
     src/Utils/Utils.cpp \
     src/Utils/Voronoi.cpp \
-    src/main.cpp \
     src/serialization/BSplineSerializer.cpp \
     src/serialization/EnvObjSerializer.cpp \
     src/serialization/KelvinletSerializer.cpp \
     src/serialization/Matrix3Serializer.cpp \
     src/serialization/Serializer.cpp \
     src/serialization/SnakeSerializer.cpp \
-    src/serialization/Vec3Serializer.cpp
+    src/serialization/Vec3Serializer.cpp \
+    src/main.cpp
 
-RESOURCES += qml.qrc \
+RESOURCES += \ #qml.qrc \
     icons.qrc \
 #    models_3d.qrc \
 #    terrain_textures.qrc \
     tunnels_icons.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
-QML_IMPORT_PATH =
+# QML_IMPORT_PATH =
 
 # Additional import path used to resolve QML modules just for Qt Quick Designer
-QML_DESIGNER_IMPORT_PATH =
+# QML_DESIGNER_IMPORT_PATH =
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

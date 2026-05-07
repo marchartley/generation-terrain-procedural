@@ -15,13 +15,8 @@ Contour::Contour(std::vector<Vector3> points)
 }
 
 Contour::Contour(const Curve& path)
-    // : CatmullRomSpline(path)
 {
     this->curve = std::shared_ptr<Curve>(path.clone());
-    // if (!this->closed) {
-        // if (!points.empty() && points.front() != points.back())
-            // this->close();
-    // }
     curve->close();
 }
 Contour::Contour(Curve* path)
@@ -33,6 +28,11 @@ Contour::Contour(std::shared_ptr<Curve> path)
 {
     this->curve = path;
     curve->close();
+}
+
+Contour::~Contour()
+{
+    // std::cout << "~Contour" << std::endl;
 }
 
 Contour& Contour::translate(const Vector3& translation)
@@ -95,12 +95,12 @@ float Contour::estimateSignedDistanceFrom(const Vector3& pos) const
     // return /*BSpline(this->closedPath()).*/CatmullRomSpline::estimateSignedDistanceFrom(pos);
 }
 
-float Contour::computeArea()
+float Contour::computeArea() const
 {
     return std::abs(this->computeSignedArea());
 }
 
-float Contour::computeSignedArea()
+float Contour::computeSignedArea() const
 {
     float area = 0;
     auto points = this->curve->getPath(this->curve->numPoints() * 3);
@@ -112,7 +112,7 @@ float Contour::computeSignedArea()
 
 Vector3 Contour::centroid() const
 {
-    Vector3 centroid;
+    /*Vector3 centroid;
     float totalArea = 0;
     const auto points = curve->getPath();
     for (int i = 0; i < points.size(); i++) {
@@ -123,7 +123,15 @@ Vector3 Contour::centroid() const
         centroid += triangleArea * points[i];
         totalArea += triangleArea;
     }
-    return centroid / totalArea;
+    return centroid / totalArea;*/
+    Vector3 centroid;
+    const auto points = curve->getPath();
+    for (size_t i = 0; i < points.size(); i++) {
+        const auto& p0 = curve->get(i);
+        const auto& p1 = curve->get(i+1);
+        centroid += Vector3(p0.x() + p1.x(), p0.y() + p1.y()) * (p0.x() * p1.y() - p1.x() * p0.y());
+    }
+    return (centroid / (6.f * computeArea())) + Vector3(0, 0, points[0].z());
 }
 
 int getIndex(int index, size_t size) {
@@ -251,15 +259,20 @@ Contour Contour::intersect(Contour other)
     }
 }
 */
-Vector3 Contour::planeNormal()
+Vector3 Contour::planeNormal() const
 {
     Vector3 normal;
-    int numberOfSamples = 10;
+    /*int numberOfSamples = 10;
     for (int i = 0; i < numberOfSamples; i++) {
         float t = i / (float)(numberOfSamples);
         Vector3 binormal = this->curve->getBinormal(t);
         if (binormal.isValid())
             normal += binormal;
+    }*/
+    const auto& points = curve->getPath();
+    for (int i = 0; i < points.size() - 2; i++) {
+        Vector3 n = (points[i + 1] - points[i]).cross(points[i + 2] - points[i]);
+        normal += n * sign(n.dot(normal));
     }
     return normal.normalize();
 }
@@ -503,20 +516,27 @@ Contour Contour::grow(float increase)
 {
     Contour copy(curve->clone());
     std::vector<Vector3> newPoints = copy.removeDuplicates().curve->getPath();
+    float previousArea = copy.computeArea();
     const auto points = copy.curve->getPath();
     Vector3 normal = copy.planeNormal();
+    std::vector<Vector3> displacement(points.size());
+
     for (size_t i = 0; i < points.size(); i++) {
-//        Vector3 point = points[i];
-        Vector3 next_point = points[(i + 1) % points.size()];
-        Vector3 prev_point = points[(points.size() + i - 1) % points.size()];
-        Vector3 dir = (next_point - prev_point).normalize();
-        /*
-        float time = estimateClosestTime(points[i]);
-        Vector3 normal = getNormal(estimateClosestTime(points[i]));*/
-        newPoints[i] = points[i] + dir.cross(normal) * increase; //+ getNormal(estimateClosestTime(points[i])) * increase;
-        copy.curve->setPoint(i, newPoints[i]);
+        float t = float(i) / float(curve->numSegments());
+        displacement[i] = curve->getNormal(t, normal) * increase;
     }
-    // copy.curve->= newPoints;
+    for (size_t i = 0; i < points.size(); i++) {
+        copy.curve->setPoint(i, copy.curve->get(i) + displacement[i]);
+    }
+    if (sign(copy.computeArea() - previousArea) != sign(increase)) {
+        // Made an error in the direction, need to rectify
+        for (size_t i = 0; i < points.size(); i++) {
+            copy.curve->setPoint(i, copy.curve->get(i) - 2.f * displacement[i]);
+        }
+    }
+    Vector3 mid = (copy.curve->get(0) + copy.curve->get(-1)) * .5f;
+    copy.curve->setPoint(0, mid);
+    copy.curve->setPoint(-1, mid);
     return copy;
 }
 

@@ -34,6 +34,10 @@ BezierCurve::BezierCurve(const std::vector<Vector3>& points, const std::vector<V
 {
 }
 
+// BezierCurve::BezierCurve(const BezierCurve &curve)
+//     : BezierCurve(curve.points, curve.handles)
+// {}
+
 std::vector<Vector3> BezierCurve::getPath(int numberOfPoints) const
 {
     if (numberOfPoints < 0 || numberOfPoints == numPoints()) return points;
@@ -174,9 +178,13 @@ float BezierCurve::length() const
     return dist;
 }
 
-BezierCurve& BezierCurve::setPoint(int i, const Vector3 &newPos)
+BezierCurve& BezierCurve::setPoint(int _i, const Vector3 &newPos)
 {
+    size_t i = pointIndex(_i);
+    Vector3 translation = newPos - points[i];
     this->points[i] = newPos;
+    this->handles[handleIn(i)] += translation;
+    this->handles[handleOut(i)] += translation;
     return *this;
 }
 
@@ -320,7 +328,7 @@ size_t BezierCurve::handleOut(int pointIdx) const
     return handleIndex(2 * pointIdx);
 }
 
-BezierCurve &BezierCurve::autosmooth(int pointIdx)
+BezierCurve& BezierCurve::autosmooth(int pointIdx)
 {
     const auto& P = points[pointIndex(pointIdx)];
     const auto& P_next = points[pointIndex(pointIdx + 1)];
@@ -328,6 +336,14 @@ BezierCurve &BezierCurve::autosmooth(int pointIdx)
     Vector3 proj = Collision::projectPointOnSegment(P, P_prev, P_next);
     handles[handleIn(pointIdx)] = P - (proj - P_prev).normalize() * (P - P_prev).norm() / 3.f;
     handles[handleOut(pointIdx)] = P + (P_next - proj).normalize() * (P_next - P).norm() / 3.f;
+    return *this;
+}
+
+BezierCurve& BezierCurve::autosmooth()
+{
+    for (size_t i = 0; i < numPoints(); i++) {
+        autosmooth(i);
+    }
     return *this;
 }
 

@@ -2,12 +2,11 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 
-#undef interface
+// #undef interface
 
 //#define OPENVDB_DLL
 #include "Utils/Globals.h"
 #include <QGuiApplication>
-#include <QQmlApplicationEngine>
 #include <qapplication.h>
 #include <iostream>
 
@@ -25,8 +24,7 @@
 
 #include "GUIElements/ImageViewer.h"
 
-// #include "EnvObjGUI/SnakeSegmentationEditor.h"
-#include "EnvObjGUI/EnvObjectEditor.h"
+#include "Utils/Voronoi.h"
 
 using namespace std;
 
@@ -78,49 +76,6 @@ int main(int argc, char *argv[])
 
     return 0;
     */
-    /*
-    EnvironmentalScene scene;
-    auto initialMaterial = scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
-    auto initialObjects = scene.readEnvObjectsFile("EnvObjects/primitives.json");
-
-    std::vector<EnvObject*> allObjects;
-    std::vector<EnvMaterial> allMaterials;
-    for (const auto [name, obj] : scene.availableObjects)
-        allObjects.push_back(obj);
-
-    for (const auto [name, mat] : scene.materials)
-        allMaterials.push_back(mat);
-
-    nlohmann::ordered_json materialsJSON = allMaterials;
-    nlohmann::ordered_json envObjectsJSON = allObjects;
-
-    initialMaterial = scene.readEnvMaterialsFileContent(materialsJSON.dump(1));
-    initialObjects = scene.readEnvObjectsFileContent(envObjectsJSON.dump(1));
-
-    allMaterials.clear();
-    allObjects.clear();
-
-    for (const auto [name, obj] : scene.availableObjects)
-        allObjects.push_back(obj);
-
-    for (const auto [name, mat] : scene.materials)
-        allMaterials.push_back(mat);
-
-    materialsJSON = allMaterials;
-    envObjectsJSON = allObjects;
-
-    std::ofstream out = std::ofstream("EnvObjects/envMaterials.json", std::ios_base::out | std::ios_base::trunc);
-    out << materialsJSON.dump(1, '\t');
-    out.close();
-
-    std::ofstream outObjs = std::ofstream("EnvObjects/primitives.json", std::ios_base::out | std::ios_base::trunc);
-    outObjs << envObjectsJSON.dump(1, '\t');
-    outObjs.close();
-
-    std::cout << "Done." << std::endl;
-    return 0;
-    */
-
 
     auto allVars = getAllEnvironmentVariables();
     for (auto& [key, val] : allVars) {
@@ -150,6 +105,503 @@ int main(int argc, char *argv[])
     qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+    auto curve = std::make_shared<BezierCurve>(std::vector<Vector3>({
+        Vector3(.0f, .2f),
+        Vector3(.0f, 1.1f),
+        Vector3(.5f, 1.1f),
+        Vector3(.5f, 1.5f),
+        Vector3(.75f, 1.5f),
+        Vector3(.75f, .8f),
+        Vector3(.2f, 1.f),
+        Vector3(.2f, 0.f)
+    }));
+    Contour initial(curve);
+
+    std::cout << initial.curve << std::endl;
+
+    Contour grown = initial.grow(.05f);
+    Contour shrink = initial.shrink(.05f);
+
+    auto initialCurve = (dynamic_cast<BezierCurve*>(initial.curve.get()));
+    auto shrinkCurve = (dynamic_cast<BezierCurve*>(shrink.curve.get()));
+    auto grownCurve = (dynamic_cast<BezierCurve*>(grown.curve.get()));
+
+    initialCurve->removePoint(-1);
+    shrinkCurve->removePoint(-1);
+    grownCurve->removePoint(-1);
+
+    shrinkCurve->autosmooth();
+    grownCurve->autosmooth();
+
+    auto& viewer = AbstractPlotter::get();
+    auto drawCurves = [&]() {
+        viewer.dataModel->reset();
+        viewer
+            .addScatter(initial.curve->getPath(), "", {}, Vector3::black)
+            .addScatter(shrink.curve->getPath(), "", {}, Vector3::red)
+            .addScatter(grown.curve->getPath(), "", {}, Vector3::green)
+
+            .addPlot(initial.curve->getPath(100), "Original", Vector3::black)
+            .addPlot(shrink.curve->getPath(100), "", Vector3::red)
+            .addPlot(grown.curve->getPath(100), "", Vector3::green);
+
+        for (int i = 0; i < initialCurve->numPoints(); i++) {
+            if (i > 0) {
+                viewer.addPlot({initialCurve->handles[initialCurve->handleIn(i)], initialCurve->get(i)}, "", Vector3::black);
+                viewer.addPlot({shrinkCurve->handles[shrinkCurve->handleIn(i)], shrinkCurve->get(i)}, "", Vector3::black);
+                viewer.addPlot({grownCurve->handles[grownCurve->handleIn(i)], grownCurve->get(i)}, "", Vector3::black);
+            }
+            if (i < initialCurve->numPoints() - 1) {
+                viewer.addPlot({initialCurve->handles[initialCurve->handleOut(i)], initialCurve->get(i)}, "", Vector3::black);
+                viewer.addPlot({shrinkCurve->handles[shrinkCurve->handleOut(i)], shrinkCurve->get(i)}, "", Vector3::black);
+                viewer.addPlot({grownCurve->handles[grownCurve->handleOut(i)], grownCurve->get(i)}, "", Vector3::black);
+            }
+        }
+
+        // viewer.chartView->setPlottingLimits(Vector3(-.5f, -.5f), Vector3(1.5f, 1.5f));
+
+        viewer.addImage(GridV3(1, 1, 1, Vector3(1, 1, .75f)));
+    };
+    drawCurves();
+
+    viewer.setOnUserModifiedData([&](const std::vector<size_t>& modifiedSeriesIndices) {
+        std::cout << "Modifications" << std::endl;
+        for (auto& idx : modifiedSeriesIndices) {
+            std::cout << " - " << idx << std::endl;
+            int i = 0;
+            for (auto& point : viewer.dataModel->scatterData[idx]) {
+                if (idx == 0) {
+                    initialCurve->setPoint(i, point.pos);
+                } else if (idx == 1) {
+                    shrinkCurve->setPoint(i, point.pos);
+                } else if (idx == 2) {
+                    grownCurve->setPoint(i, point.pos);
+                }
+                i++;
+            }
+        }
+        drawCurves();
+    });
+    return viewer.exec();
+    /*
+    Vector3i imgDims(1000, 1000, 1);
+    Voronoi v = Voronoi(100, imgDims);
+    v.solve(true, 10);
+    GridV3 img(imgDims);
+    for (auto& p : v.pointset) {
+        PlottingUtils::drawCircle(img, Vector3::blue, p, -2);
+    }
+    for (auto& area : v.areas) {
+        auto drawn = area.shrink(8.f);
+        PlottingUtils::drawCurve(img, Vector3::red, *drawn.curve, 1.f);
+
+        PlottingUtils::drawCircle(img, Vector3::white, drawn.centroid(), -5.f);
+    }
+
+    return ImageViewer::get().addImage(img).exec();
+    */
+    /*
+    v = Voronoi(100, Vector3(100, 100, 0));
+    displayProcessTime("Voronoi 100 sites...", [&]() {
+        v.solve(false, 0);
+    });
+    v = Voronoi(1000, Vector3(100, 100, 0));
+    displayProcessTime("Voronoi 1,000 sites...", [&]() {
+            v.solve(false, 0);
+        }, true, 2);
+    v = Voronoi(10000, Vector3(100, 100, 0));
+    displayProcessTime("Voronoi 10,000 sites...", [&]() {
+            v.solve(false, 0);
+        }, true, 2);
+    v = Voronoi(100000, Vector3(100, 100, 0));
+    displayProcessTime("Voronoi 100,000 sites...", [&]() {
+            v.solve(false, 0);
+        }, true, 2);
+    v = Voronoi(1000000, Vector3(100, 100, 0));
+    displayProcessTime("Voronoi 1,000,000 sites...", [&]() {
+            v.solve(false, 0);
+        }, true, 2);
+    v = Voronoi(6000000, Vector3(100, 100, 0));
+    displayProcessTime("Voronoi 6,000,000 sites...", [&]() {
+            v.solve(false, 0);
+        }, true, 2);
+    v = Voronoi(6000000, Vector3(1000, 1000, 0));
+    displayProcessTime("Voronoi 6,000,000 sites (1000x1000 bounding box)...", [&]() {
+            v.solve(false, 0);
+        }, true, 2);
+    return 0;
+    */
+
+
+    /*
+    GridF initial = GridF::perlin(Vector3i(200, 200, 1), Vector3(1.f, 1.f, 1.f) * .75f);
+    // GridF initial = Image::readFromFile("/home/marc/generation-terrain-procedural/saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png").getBwImage().resize(Vector3i(100, 100, 1));
+    GridF smoothed = initial; //.normalized();
+    GridF result = smoothed;
+
+    float erosionAmplitude = .06f;
+    int octaves = 3;
+    float gain = .3f;
+    float lacunarity = 3.f;
+
+    displayProcessTime("Erosion", [&]() {
+        for (int octave = 0; octave < octaves ; octave++) {
+            int seedScale = 10 * std::pow(lacunarity, octave); //(octave + 1);
+            float freq = 1.f * PI;
+
+            auto getCos = [=](const Vector3& currentGradient, const Vector3& relativePos) -> float {
+                return (currentGradient.norm2() > 0.1 ? std::cos((freq * relativePos.dot(currentGradient.rotated90XY()))) : 0.f);
+            };
+            Vector3 ratio = Vector3(seedScale, seedScale, 1) / result.getDimensions();
+
+            GridF intermediate(result.getDimensions());
+
+            if (false) {
+                Voronoi v(seedScale * seedScale, Vector3(seedScale, seedScale, 0));
+                v.solve(true, 1);
+
+                intermediate.iterateParallel([&](const Vector3& p) {
+                    Vector3 inGrid = p * ratio;
+                    float sum = 0.f;
+                    size_t iClosest = 0;
+                    float minDist = 10000;
+                    for (size_t i = 0; i < v.pointset.size(); i++) {
+                        float d = (inGrid - v.pointset[i]).norm2();
+                        if (d < minDist) {
+                            minDist = d;
+                            iClosest = i;
+                        }
+                    }
+                    std::vector<int> neighborIndices = v.neighbors[iClosest];
+                    neighborIndices.push_back(iClosest);
+                    for (auto& neighbor : neighborIndices) {
+                        const Vector3& cellPos = v.pointset[neighbor];
+                        float cosVal = getCos(result.gradient(cellPos), (inGrid - cellPos)) / std::pow(2.f, octave);
+                        float coef = 1.f; // std::pow(std::clamp(1.f - ((inGrid - cellPos).norm() / float(std::sqrt(2))), 0.f, 1.f), 1.f);
+                        sum += coef;
+                        intermediate[p] += coef * cosVal;
+                    }
+                    intermediate[p] = 1.f - (intermediate[p] / sum);
+                });
+            }
+            GridV3 seedPoints(seedScale, seedScale, 1);
+            seedPoints.iterate([&](const Vector3& p) {
+                seedPoints(p) = p + Vector3::random(Vector3::origin, Vector3(1, 1));
+            });
+
+            GridV3 grad = result.gradient().resize(seedPoints.getDimensions(), RESIZE_MODE::NEAREST);
+            grad.iterateParallel([&](size_t i) {
+                grad[i].normalize();
+            });
+            intermediate.iterateParallel([&](const Vector3& p) {
+                Vector3 inGrid = p * ratio;
+                float sum = 0;
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dy = -2; dy <= 2; dy++) {
+                        if (!seedPoints.checkCoord(inGrid.x() + dx, inGrid.y() + dy)) continue;
+                        const Vector3i coordCell = (Vector3i)inGrid + Vector3i(dx, dy);
+                        const Vector3& cellPos = seedPoints[coordCell];
+                        float cosVal = getCos(grad[coordCell], (inGrid - cellPos)) / std::pow(2.f, octave);
+                        float coef = std::pow(std::clamp(1.f - ((inGrid - cellPos).norm() / float(std::sqrt(2) - .25f)), 0.f, 1.f), 1.f);
+                        sum += coef;
+                        intermediate[p] += coef * cosVal;
+                    }
+                }
+                intermediate[p] = 1.f - (intermediate[p] / sum);
+            });
+            GridV3 previousGradients = result.gradient();
+            previousGradients *= initial.getDimensions();
+            GridF coefficients(intermediate.getDimensions());
+            intermediate.iterateParallel([&](size_t i) {
+                const auto& previousGradient = previousGradients[i];
+                coefficients[i] = std::clamp(std::pow(std::clamp(previousGradient.norm(), 0.f, 1.f), .25f), 0.f, 1.f);
+            });
+            intermediate *= coefficients;
+            result = (result - intermediate * std::pow(gain, octave));
+        }
+    });
+    auto asOneUniqueImage = GridF(result.getDimensions() * Vector3(2, 1, 1))
+                                .paste(((result - smoothed) * erosionAmplitude + initial.normalize() * (1.f - erosionAmplitude)), Vector3(0, 0))
+                                .paste(initial.normalized().flip(true), result.getDimensions() * Vector3(1, 0, 0));
+    Image(asOneUniqueImage).writeToFile("test.png");
+    auto& viewer = ImageViewer::get();
+    viewer.addImage(asOneUniqueImage);
+    viewer.dataModel->imageData.displayParameters.colorRamp = CatmullRomSpline({Vector3::black, Vector3::white});
+    viewer.dataModel->imageData.displayParameters.normalized = true;
+    return viewer.exec();
+    */
+
+    /*
+    std::vector<Vector3> points = {Vector3(-10, 0), Vector3(0, 10), Vector3(10, 0)};
+    // auto points = Contour::circle(45.f, Vector3(50, 50), 5);
+    // points.pop_back();
+    // for (auto& p : points)
+        // p += Vector3::random(Vector3(-1, -1), Vector3(1, 1)) * 10.f;
+
+    auto& viewer = ImageViewer::get();
+
+    auto updateViewer = [&]() -> void {
+        // std::cout << viewer.dataModel->selectedScatterData.size() << std::endl;
+        if (viewer.dataModel->selectedScatterData.size() > 0) {
+            points = viewer.dataModel->scatterData.data[0];
+        }
+        CatmullRomSpline c1(points);
+        BezierCurve c2(points);
+        Polyline c3(points);
+        BSpline c4(points);
+
+        // c1.close();
+        // c2.close();
+        // c3.close();
+        // c4.close();
+
+        // c1.setClosed(false);
+        // c2.setClosed(false);
+        // c3.setClosed(false);
+        // c4.setClosed(false);
+
+        // c2.translate(Vector3(10, 10));
+        // c3.translate(Vector3(20, 20));
+
+        viewer.dataModel->reset();
+        viewer.chartView->setPlottingLimits(Vector3(-10, -10), Vector3(50, 50));
+
+
+
+        GridF img(100, 100, 1, .5f);
+        viewer.addImage(img);
+        displayProcessTime("Catmull...", [&]() {
+                img.iterateParallel([&](const Vector3& p) {
+                    img(p) += (c1.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+                });
+            });
+        displayProcessTime("Bezier...", [&]() {
+                img.iterateParallel([&](const Vector3& p) {
+                    img(p) += (c2.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+                });
+            });
+        displayProcessTime("Polyline...", [&]() {
+                img.iterateParallel([&](const Vector3& p) {
+                    img(p) += (c3.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+                });
+            });
+        displayProcessTime("BSpline...", [&]() {
+                img.iterateParallel([&](const Vector3& p) {
+                    img(p) += (c4.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+                });
+            });
+
+        // viewer.addImage(img.flip(false, true));
+
+        std::vector<Vector3> errors, validated;
+
+        viewer.addPlot(c1.getPath(1000), "Catmull", Vector3::green);
+        // viewer.addScatter(c1.getPoints());
+        viewer.addPlot(c2.translate(Vector3(10, 10)).getPath(1000), "Bezier", Vector3::blue);
+        // viewer.addScatter(c2.getPoints());
+        viewer.addPlot(c3.translate(Vector3(20, 20)).getPath(1000), "Polyline", Vector3::red);
+        // viewer.addScatter(c3.getPoints());
+        // auto pts = c4.getPath(3);
+        // for (auto& p : pts)
+            // std::cout << p << std::endl;
+        // return 0;
+        viewer.addPlot(c4.translate(Vector3(30, 30)).getPath(1000), "B-Spline", Vector3::yellow);
+        viewer.addScatter(c4.getPoints());
+
+        // for (auto p : Contour::circle(50.f, Vector3(50, 50), 50)) {
+        //     viewer.addPlot({p, c4.estimateClosestPos(p)}, "", Vector3::blue);
+        // }
+
+        // int samples = 200;
+        // float scale = 10.f;
+        // float tol = 0.01;
+        // for (int i = 0; i < samples; i++) {
+        //     float t = float(i) / float(samples - 1);
+        //     // if (t < 0.5) continue;
+        //     Vector3 p1 = c1.getPoint(t);
+        //     Vector3 p2 = c2.getPoint(t);
+        //     Vector3 p3 = c3.getPoint(t);
+        //     Vector3 d1 = c1.getDirection(t);
+        //     Vector3 d2 = c2.getDirection(t);
+        //     Vector3 d3 = c3.getDirection(t);
+        //     Vector3 n1 = c1.getNormal(t);
+        //     Vector3 n2 = c2.getNormal(t);
+        //     Vector3 n3 = c3.getNormal(t);
+        //     viewer.addPlot({p1, p1 + n1 * scale}, "", Vector3::red);
+        //     viewer.addPlot({p2, p2 + n2 * scale}, "", Vector3::yellow);
+        //     viewer.addPlot({p3, p3 + n3 * scale}, "", Vector3::green);
+        // }
+    };
+    updateViewer();
+    viewer.setOnMouseMoved([&](const Vector3&, const Vector3&, QMouseEvent*) { updateViewer(); });
+    return viewer.exec();
+    */
+
+    /*
+    viewer.addPlot(c1.translate(Vector3(1, 1)).getPath(1000), "Catmull (open [before])", Vector3::red);
+    viewer.addPlot(c1.translate(Vector3(2.5, 2.5)).setClosed(true).getPath(1000), "Catmull (closed)", Vector3::red);
+    viewer.addPlot(c1.translate(Vector3(2.5, 2.5)).setClosed(false).getPath(1000), "Catmull (open [after])", Vector3::red);
+
+
+    viewer.addPlot(c2.translate(Vector3(10, 10)).getPath(1000), "Bezier (open [before])", Vector3::yellow);
+    viewer.addPlot(c2.translate(Vector3(2.5, 2.5)).setClosed(true).getPath(1000), "Bezier (closed)", Vector3::yellow);
+    viewer.addPlot(c2.translate(Vector3(2.5, 2.5)).setClosed(false).getPath(1000), "Bezier (open [after])", Vector3::yellow);
+
+
+    viewer.addPlot(c3.translate(Vector3(20, 20)).getPath(1000), "Polyline (open [before])", Vector3::green);
+    viewer.addPlot(c3.translate(Vector3(2.5, 2.5)).setClosed(true).getPath(1000), "Polyline (closed)", Vector3::green);
+    viewer.addPlot(c3.translate(Vector3(2.5, 2.5)).setClosed(false).getPath(1000), "Polyline (open [after])", Vector3::green);
+
+    viewer.chartView->setPlottingLimits(Vector3(0, 0), Vector3(150, 150));
+
+    return viewer.exec();
+    */
+    /*
+    int nbPointsToDisplay = 1000;
+
+    std::vector<Vector3> points = {Vector3(10, 10), Vector3(40, 20), Vector3(20, 40), Vector3(50, 80), Vector3(60, 75), Vector3(80, 50), Vector3(100, 100), Vector3(80, 80), Vector3(10, 120)};
+    CatmullRomSpline c1a(points);
+    CatmullRomSpline c1b(c1a);
+    CatmullRomSpline c1c(c1a);
+    c1b.setAlpha(1.f);
+    c1b.setAlpha(0.5f);
+    c1c.setAlpha(0.f);
+    Polyline c2(points);
+    BezierCurve c3(points);
+    BezierCurve c4 = toBezier(c1c);
+
+    auto p1a = c1a.getPath(nbPointsToDisplay);
+    auto p1b = c1b.getPath(nbPointsToDisplay);
+    auto p1c = c1c.getPath(nbPointsToDisplay);
+    auto p2 = c2.getPath(nbPointsToDisplay);
+    auto p3 = c3.getPath(nbPointsToDisplay);
+    auto p4 = c4.getPath(nbPointsToDisplay);
+
+    auto& viewer = ImageViewer::get();
+
+    // viewer.addPlot(p1a, "Catmull (a=1.0)", Vector3::blue);
+    // viewer.addPlot(p1b, "Catmull (a=0.5)", Vector3::darkBlue);
+    // viewer.addPlot(p1c, "Catmull (a=0.0)", Vector3::black);
+    // viewer.addPlot(p2, "Polyline", Vector3::red);
+    // viewer.addPlot(p4, "Bezier", Vector3::green);
+    // viewer.addScatter(c4.getPoints());
+    // viewer.addScatter(c4.getHandles());
+
+    // auto controlPoints = c4.getPoints();
+    // auto handles = c4.getHandles();
+
+    // for (int i = 0; i < handles.size(); i++) {
+    //     int iPoint = int((i+1)/2);
+    //     viewer.addPlot(std::vector<Vector3>{handles[i], controlPoints[iPoint]});
+    // }
+
+    GridF img(120, 120);
+    displayProcessTime("Catmull...", [&]() {
+        img.iterateParallel([&](const Vector3& p) {
+            img(p) += (c1c.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+        });
+    }, true, 100);
+    displayProcessTime("Bezier...", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                img(p) += (c4.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+            });
+        }, true, 100);
+    displayProcessTime("Polyline...", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                img(p) += (c2.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+            });
+        }, true, 100);
+    c2 = Polyline(c4.getPath(100));
+    displayProcessTime("Polyline (high res)...", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                img(p) += (c2.estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+            });
+        }, true, 100);
+    displayProcessTime("Catmull to Bezier then dist...", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                img(p) += (toBezier(c1c).estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+            });
+        }, true, 100);
+    displayProcessTime("Catmull to Poly then dist...", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                img(p) += (Polyline(c1c.getPath(50)).estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+            });
+        }, true, 100);
+    displayProcessTime("Bezier to Poly then dist...", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                img(p) += (Polyline(c4.getPath(50)).estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+            });
+        }, true, 100);
+    displayProcessTime("Catmull to Bezier to Poly then dist...", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                img(p) += (Polyline(toBezier(c1c).getPath(50)).estimateDistanceFrom(p) < 1.0 ? 0.0 : 1.0);
+            });
+        }, true, 100);
+    viewer.addImage(img);
+
+    return viewer.exec();
+    */
+
+    /*
+    EnvironmentalScene scene;
+    auto initialMaterial = scene.readEnvMaterialsFile("EnvObjects/envMaterials_test.json");
+    auto initialObjects = scene.readEnvObjectsFile("EnvObjects/primitives_test2.json");
+
+    auto& viewer = EnvObjectEditor::get("");
+    viewer.addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
+    viewer.addEnvObject(scene.availableObjects["coralpolyp"]);
+    viewer.addEnvObject(scene.availableObjects["coralpolyp"]);
+    viewer.addEnvObject(scene.availableObjects["coralpolyp"]);
+    viewer.exec();
+
+    std::cout << "Saving" << std::endl;
+    scene.updateEnvObjectsFileContent("EnvObjects/primitives_test2.json");
+    std::cout << "Reading" << std::endl;
+    scene.readEnvObjectsFile("EnvObjects/primitives_test2.json");
+    std::cout << "OK" << std::endl;
+
+    viewer.addVectorField(GridV3(100, 100, 1, Vector3(0, 1, 0)));
+    viewer.addEnvObject(scene.availableObjects["coralpolyp"]);
+    viewer.exec();
+
+    std::vector<EnvObject*> allObjects;
+    std::vector<EnvMaterial> allMaterials;
+    for (const auto [name, obj] : scene.availableObjects)
+        allObjects.push_back(obj);
+
+    for (const auto [name, mat] : scene.materials)
+        allMaterials.push_back(mat);
+
+    nlohmann::ordered_json materialsJSON = allMaterials;
+    nlohmann::ordered_json envObjectsJSON = allObjects;
+
+    initialMaterial = scene.readEnvMaterialsFileContent(materialsJSON.dump(1));
+    initialObjects = scene.readEnvObjectsFileContent(envObjectsJSON.dump(1));
+
+    allMaterials.clear();
+    allObjects.clear();
+
+    for (const auto [name, obj] : scene.availableObjects)
+        allObjects.push_back(obj);
+
+    for (const auto [name, mat] : scene.materials)
+        allMaterials.push_back(mat);
+
+    materialsJSON = allMaterials;
+    envObjectsJSON = allObjects;
+
+    std::ofstream out = std::ofstream("EnvObjects/envMaterials_test.json", std::ios_base::out | std::ios_base::trunc);
+    out << materialsJSON.dump(1, '\t');
+    out.close();
+
+    std::ofstream outObjs = std::ofstream("EnvObjects/primitives_test.json", std::ios_base::out | std::ios_base::trunc);
+    outObjs << envObjectsJSON.dump(1, '\t');
+    outObjs.close();
+
+    std::cout << "Done." << std::endl;
+    return 0;
+    */
 
     /*
 
@@ -188,7 +640,6 @@ int main(int argc, char *argv[])
     viewer.addEnvObject(scene.instantiate("river")->definition);
     viewer.addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
     return viewer.exec();
-
     */
 
     /*
@@ -232,8 +683,8 @@ int main(int argc, char *argv[])
             preds[i] = best.activate_network(dataset[i].first)[0];
         }
         view.dataModel->reset();
-        view.addScatter(Xs, Ys, "GT", {}, {Qt::red});
-        view.addScatter(Xs, preds, "Preds", {}, {Qt::blue});
+        view.addScatter(Xs, Ys, "GT", {}, {Vector3::red});
+        view.addScatter(Xs, preds, "Preds", {}, {Vector3::blue});
         std::cout << "(Gen " << pop.current_generation-1 << ") Formula: " << best.get_symbolic_formula({"x", "x^2"}) << std::endl;
         view.show();
         if (pop.current_generation > pop.generations)
@@ -417,7 +868,7 @@ int main(int argc, char *argv[])
     /*
     BSpline s;
     for (int i = 0; i < 10; i++) {
-        s.points.push_back(Vector3::random(Vector3::origin, Vector3(100, 100)));
+        s.addPoint(Vector3::random(Vector3::origin, Vector3(100, 100)));
     }
 
     GridF d(100, 100);
@@ -574,10 +1025,10 @@ int main(int argc, char *argv[])
                                                0.7467830882352942, 0.8620689655172414, 0.04901960784313719, 0.0337009803921568,
                                              0.021446078431372473, 0.003063725490196012};
         for (int i = 0; i < profileData.size(); i++) {
-            profileCurve.points.push_back(Vector3(float(i)/float(profileData.size() + 1), profileData[i]));
+            profileCurve.addPoint(Vector3(float(i)/float(profileData.size() + 1), profileData[i]));
         }
         for (int i = 0; i < resistanceData.size(); i++) {
-            resistanceCurve.points.push_back(Vector3(float(i)/float(resistanceData.size() + 1), resistanceData[i]));
+            resistanceCurve.addPoint(Vector3(float(i)/float(resistanceData.size() + 1), resistanceData[i]));
         }
 
 
@@ -1443,7 +1894,7 @@ int main(int argc, char *argv[])
 //    for (int i = 0; i < 50; i++) {
 //        float t = float(i) / 48.f;
 //        float a = t * M_PI * 2.f;
-//        spline.points.push_back(Vector3(
+//        spline.addPoint(Vector3(
 //                                    std::cos(a) * r + 50,
 //                                    std::sin(a) * r + 50,
 //                                    0
@@ -1570,9 +2021,9 @@ int main(int argc, char *argv[])
                                   Vector3(1.5, 1, 0)
                               });
     ShapeCurve AB = A.merge(B);
-    ImageViewer::getInstance()->addPlot(A.closedPath(), "A", Qt::blue);
-    ImageViewer::getInstance()->addPlot(B.closedPath(), "B", Qt::green);
-    ImageViewer::getInstance()->addPlot(AB.closedPath(), "AB", Qt::red);
+    ImageViewer::getInstance()->addPlot(A.closedPath(), "A", Vector3::blue);
+    ImageViewer::getInstance()->addPlot(B.closedPath(), "B", Vector3::green);
+    ImageViewer::getInstance()->addPlot(AB.closedPath(), "AB", Vector3::red);
     ImageViewer::getInstance()->addScatter(AB.points, "");
     std::cout << A << std::endl;
     std::cout << B << std::endl;
@@ -1888,11 +2339,11 @@ int main(int argc, char *argv[])
     }
     std::cout << std::endl;
     G.draw();
-    ImageViewer::get().addPlot(pathDjikstra, "Djikstra", Qt::red);
-    ImageViewer::get().addPlot(pathBellman, "Bellman", Qt::black);
-    ImageViewer::get().addPlot(pathFloyd1, "Floyd", Qt::blue);
-    ImageViewer::get().addPlot(pathFloyd2, "Floyd improved", Qt::green);
-    ImageViewer::get().addPlot(pathJohnson, "Johnson", Qt::cyan);
+    ImageViewer::get().addPlot(pathDjikstra, "Djikstra", Vector3::red);
+    ImageViewer::get().addPlot(pathBellman, "Bellman", Vector3::black);
+    ImageViewer::get().addPlot(pathFloyd1, "Floyd", Vector3::blue);
+    ImageViewer::get().addPlot(pathFloyd2, "Floyd improved", Vector3::green);
+    ImageViewer::get().addPlot(pathJohnson, "Johnson", Vector3::cyan);
     ImageViewer::get().exec();
     std::cout << "End." << std::endl;
     return 0;
@@ -2358,7 +2809,7 @@ int main(int argc, char *argv[])
     /*
     HotreloadFile file("EnvObjects/envMaterials.json");
 
-    file.onChange([&](const std::string& content) {
+    file.setOnChange([&](const std::string& content) {
         std::cout << content << std::endl;
     });
     while (true) {
@@ -2901,7 +3352,7 @@ int main(int argc, char *argv[])
 
     // EnvObject::readEnvMaterialsFile("EnvObjects/envMaterials.json");
     // EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
-
+/*
     std::string preload_heightmap = "";
     MapMode displayMode = MapMode::GRID_MODE;
     if (argc > 1) {
@@ -2927,4 +3378,5 @@ int main(int argc, char *argv[])
     vi.show();
 
     return app.exec();
+*/
 }

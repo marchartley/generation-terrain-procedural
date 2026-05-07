@@ -43,6 +43,8 @@ public:
     void displayPlotLines();
     void displayScatterPoints();
 
+    ChartView& useCurrentPlottingLimits();
+
     QPoint previousMousePos;
 
 
@@ -53,6 +55,9 @@ public:
     std::map<std::string, bool>  overlayDisplayed;
     std::map<std::string, int>  overlayLayer;
 
+
+    QValueAxis* axisX = nullptr;
+    QValueAxis* axisY = nullptr;
 protected:
     bool viewportEvent(QEvent *event);
     void mousePressEvent(QMouseEvent *event);
@@ -62,9 +67,6 @@ protected:
     void wheelEvent(QWheelEvent *event);
 
     bool locked = false;
-
-    QValueAxis* axisX = nullptr;
-    QValueAxis* axisY = nullptr;
 
     AABBox plottingLimits;
 

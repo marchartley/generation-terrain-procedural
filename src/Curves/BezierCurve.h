@@ -9,6 +9,8 @@ public:
     BezierCurve();
     BezierCurve(const std::vector<Vector3>& points);
     BezierCurve(const std::vector<Vector3>& points, const std::vector<Vector3>& handles);
+    // BezierCurve(const BezierCurve& curve);
+    ~BezierCurve() = default;
 
     CLONE_FUNCTION(BezierCurve)
     std::vector<Vector3> getPath(int numberOfPoints = -1) const override;
@@ -72,7 +74,8 @@ public:
     std::vector<Vector3> getHandles() const { return handles; }
 
     BezierCurve& autosmooth(int pointIndex);
-protected:
+    BezierCurve& autosmooth();
+// protected:
     std::vector<Vector3> points;
     std::vector<Vector3> handles;
 };

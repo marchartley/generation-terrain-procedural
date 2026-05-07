@@ -37,7 +37,7 @@ public:
     virtual Curve& reverseVertices() = 0;
 
     virtual Vector3 getDirection(float x) const;
-    virtual Vector3 getNormal(float x) const;
+    virtual Vector3 getNormal(float x, Vector3 forcedUp = Vector3::invalid) const;
     virtual Vector3 getBinormal(float x) const;
     virtual float getCurvature(float x) const;
 

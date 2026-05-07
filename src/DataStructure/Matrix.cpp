@@ -86,7 +86,7 @@ Matrix Matrix::submatrix(size_t rowToIgnore, size_t colToIgnore) const
             if (row == rowToIgnore || col == colToIgnore) continue;
 
             temp.unsafe(i, j++) = this->unsafe(col, row);
-            if (j == int(cols() - 1)) {
+            if ((int)j == int(cols() - 1)) {
                 j = 0;
                 i++;
             }

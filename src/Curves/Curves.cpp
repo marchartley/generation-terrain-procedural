@@ -45,7 +45,7 @@ BezierCurve toBezier(const BSpline& curve)
     std::vector<Vector3> handles(points.size() * 2 - 2);
     size_t currentPointIdx = 0;
     size_t currentHandleIdx = 0;
-    for (int i = 1; i < curve.numPoints() - 2; i++) {
+    for (size_t i = 1; i < curve.numPoints() - 2; i++) {
         const auto& B0 = splinePoints[i - 1];
         const auto& B1 = splinePoints[i - 0];
         const auto& B2 = splinePoints[i + 1];

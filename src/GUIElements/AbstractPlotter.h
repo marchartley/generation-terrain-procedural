@@ -10,6 +10,8 @@
 #include "DataStructure/Image.h"
 #include "GUIElements/ChartView.h"
 
+#include "Utils/Signals.h"
+
 #include "GUIElements/PlottingUtils.h"
 
 #define DECLARE_PLOTTER_GETTER(Type)                    \
@@ -100,11 +102,10 @@ public:
 
     // AbstractPlotter& reset();
 
-    bool hasPlotValues() const { return !this->dataModel->plotLineData.data.empty(); }
-    bool hasScatterValues() const { return !this->dataModel->scatterData.data.empty(); }
+    bool hasPlotValues() const { return !this->dataModel->plotLineData.empty(); }
+    bool hasScatterValues() const { return !this->dataModel->scatterData.empty(); }
     bool hasImage() const { return !this->dataModel->getImage().empty(); }
     bool hasVectorField() const { return !this->dataModel->vectorData.field.empty(); }
-
 
     // void setOnMousePressed(const std::function<void(const Vector3&, Vector3, bool, bool)>& callback) { this->onMousePressedCallbacks.push_back(callback); }
     // void setOnMouseMoved(const std::function<void(const Vector3&, const Vector3&, QMouseEvent*)>& callback) { this->onMouseMovedCallbacks.push_back(callback); }
@@ -139,6 +140,7 @@ protected:
     DECLARE_EVENT(MousePressed, (const Vector3& mousePos, Vector3 value, bool leftClick, bool rightClick), (mousePos, value, leftClick, rightClick))
     DECLARE_EVENT(MouseReleased, (const Vector3& mousePos), (mousePos))
     DECLARE_EVENT(Update, (), ())
+    DECLARE_EVENT(UserModifiedData, (const std::vector<size_t>& affectedSeries), (affectedSeries))
 
 public Q_SLOTS:
     virtual void draw();

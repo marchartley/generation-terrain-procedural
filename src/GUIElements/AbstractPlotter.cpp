@@ -82,6 +82,9 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
         dataModel->selectedPlotData.clear();
     });
     QObject::connect(this->chartView, &ChartView::mousePressed, this, [&](QMouseEvent* e) {
+        auto p = chartView->chart()->mapToValue(e->pos(), this->chartView->chart()->series()[0]);
+        chartView->selectData(Vector3(p.x(), p.y()));
+        /*
         dataModel->selectedScatterData.clear();
         dataModel->selectedPlotData.clear();
         auto p = chartView->chart()->mapToValue(e->pos(), this->chartView->chart()->series()[0]);
@@ -97,6 +100,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
                 }
             }
         }
+        */
     });
     QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e){
         this->displayInfoUnderMouse(pos);
@@ -112,29 +116,18 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
         }
 
         if (this->hasScatterValues() || this->hasPlotValues()) {
-
             auto p = chartView->chart()->mapToValue(e->pos(), this->chartView->chart()->series()[0]);
             auto dataMousePos = Vector3(p.x(), p.y());
 
-            /*const float tol = 5.f;
-            for (size_t iSeries = 0; iSeries < dataModel->scatterData.data.size(); iSeries++) {
-                const auto& scatterSeries = dataModel->scatterData.data[iSeries];
-                for (size_t iDataPoint = 0; iDataPoint < scatterSeries.size(); iDataPoint++) {
-                    const auto& scatterData = scatterSeries[iDataPoint];
-                    if ((dataMousePos - scatterData).norm2() < tol * tol) {
-                        dataModel->selectedScatterData.push_back({iSeries, iDataPoint});
-                    }
-                }
-            }*/
-
-            // if (e->button() == Qt::RightButton) {
+            std::set<size_t> affectedSeriesIndices;
             for (auto& [iSeries, iData] : dataModel->selectedScatterData) {
-                std::cout << dataModel->scatterData.data[iSeries][iData] << " to " << dataMousePos << std::endl;
-                dataModel->scatterData.data[iSeries][iData] = dataMousePos;
+                dataModel->scatterData[iSeries][iData].pos = dataMousePos;
+                affectedSeriesIndices.insert(iSeries);
             }
-            // }
 
             if (dataModel->selectedScatterData.size() > 0) {
+                this->emitUserModifiedData(convertSetToVector(affectedSeriesIndices));
+                this->chartView->useCurrentPlottingLimits();
                 this->chartView->setPlotModel(dataModel);
             }
 

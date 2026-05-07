@@ -28,16 +28,28 @@ ChartView& ChartView::setPlotModel(std::shared_ptr<PlotModel> dataModel, const s
         chart()->addAxis(axisX, Qt::AlignBottom);
         chart()->addAxis(axisY, Qt::AlignLeft);
     }
+
+    Vector3 mini = Vector3::max();
+    Vector3 maxi = Vector3::min();
     for (auto* s : chart()->series()) {
         s->attachAxis(axisX);
         s->attachAxis(axisY);
+
+        if (auto series = qobject_cast<QXYSeries*>(s)) {
+            for (const auto& p : series->points()) {
+                mini = Vector3::min(mini, Vector3(p.x(), p.y()));
+                maxi = Vector3::max(maxi, Vector3(p.x(), p.y()));
+            }
+        }
     }
 
-    if (this->plottingLimits.maxi.isValid()) {
-        axisX->setRange(plottingLimits.min().x(), plottingLimits.max().x());
-        axisY->setRange(plottingLimits.min().y(), plottingLimits.max().y());
+    if (plottingLimits.dimensions().norm2() == 0) {
+        plottingLimits = AABBox(mini, maxi);
+        plottingLimits.expand({plottingLimits.min() - plottingLimits.dimensions() * .1f, plottingLimits.max() + plottingLimits.dimensions() * .1f});
     }
 
+    axisX->setRange(plottingLimits.min().x(), plottingLimits.max().x());
+    axisY->setRange(plottingLimits.min().y(), plottingLimits.max().y());
 
     return *this;
 }
@@ -53,14 +65,15 @@ ChartView& ChartView::updateLabelsPositions()
         QPointF qNewPoint = this->chart()->mapToValue(this->previousMousePos);
         Vector3 newPoint = Vector3(qNewPoint.x(), qNewPoint.y());
         for (auto& [iPlot, iPoint] : this->_dataModel->selectedPlotData)
-            plotLineData.data[iPlot][iPoint] = newPoint;
+            plotLineData[iPlot][iPoint].pos = newPoint;
         for (auto& [iPlot, iPoint] : this->_dataModel->selectedScatterData)
-            scatterData.data[iPlot][iPoint] = newPoint;
+            scatterData[iPlot][iPoint].pos = newPoint;
     }
 
-    for (size_t iScatter = 0; iScatter < scatterData.labels.size(); iScatter++) {
-        for (size_t iPoint = 0; iPoint < scatterData.labels[iScatter].size(); iPoint++) {
-            scatterData.graphicLabels[iScatter][iPoint]->setPos(this->chart()->mapToPosition(QPointF(scatterData.data[iScatter][iPoint].x(), scatterData.data[iScatter][iPoint].y())));
+    for (auto& series : scatterData) {
+        for (auto& point : series) {
+            auto graphicLabel = new QGraphicsTextItem(QString::fromStdString(point.label), this->chart());
+            graphicLabel->setPos(point.pos.x(), point.pos.y());
         }
     }
     if (!this->_dataModel->selectedPlotData.empty() || !this->_dataModel->selectedScatterData.empty()) {
@@ -91,15 +104,15 @@ bool ChartView::selectData(const Vector3& pos)
     this->_dataModel->selectedPlotData.clear();
 
     if (pos.isValid()) {
-        for (size_t i = 0; i < plotLineData.data.size(); i++) {
-            for (size_t j = 0; j < plotLineData.data[i].size(); j++) {
-                if ((plotLineData.data[i][j] - pos).norm2() < minDist*minDist)
+        for (size_t i = 0; i < plotLineData.size(); i++) {
+            for (size_t j = 0; j < plotLineData[i].size(); j++) {
+                if ((plotLineData[i][j].pos - pos).norm2() < minDist*minDist)
                     this->_dataModel->selectedPlotData.push_back({i, j});
             }
         }
-        for (size_t i = 0; i < scatterData.data.size(); i++) {
-            for (size_t j = 0; j < scatterData.data[i].size(); j++) {
-                if ((scatterData.data[i][j] - pos).norm2() < minDist*minDist)
+        for (size_t i = 0; i < scatterData.size(); i++) {
+            for (size_t j = 0; j < scatterData[i].size(); j++) {
+                if ((scatterData[i][j].pos - pos).norm2() < minDist*minDist)
                     this->_dataModel->selectedScatterData.push_back({i, j});
             }
         }
@@ -134,11 +147,6 @@ void ChartView::resetPlot()
     auto& plotLineData = _dataModel->plotLineData;
 
     this->chart()->removeAllSeries();
-
-    for (auto& labels : scatterData.graphicLabels)
-        for (auto& lab : labels)
-            delete lab;
-    scatterData.graphicLabels.clear();
 
     // this->chart()->createDefaultAxes();
 }
@@ -187,20 +195,20 @@ void ChartView::displayImages()
 void ChartView::displayPlotLines()
 {
     auto& plotLineData = _dataModel->plotLineData;
-    for (size_t i = 0; i < plotLineData.data.size(); i++) {
-        QLineSeries *series = new QLineSeries();
-        if (plotLineData.names.size() > 0 && plotLineData.names.size() == plotLineData.data.size())
-            series->setName(QString::fromStdString(plotLineData.names[i]));
-        for (auto pos : plotLineData.data[i])
-            series->append(pos.x(), pos.y());
-        QPen pen = series->pen();
-        QColor col = QColor(int(plotLineData.colors[i].r() * 255), int(plotLineData.colors[i].g() * 255), int(plotLineData.colors[i].b() * 255));
+    for (auto& series : plotLineData) {
+        QLineSeries *q_series = new QLineSeries();
+        for (const auto& point : series)
+            q_series->append(point.pos.x(), point.pos.y());
+        QPen pen = q_series->pen();
+        QColor col = QColor(int(series.color.r() * 255), int(series.color.g() * 255), int(series.color.b() * 255));
         pen.setColor(col);
-        series->setPen(pen);
-        series->setColor(col);
-        this->chart()->addSeries(series);
-        if (series->name().isEmpty()) {
-            this->chart()->legend()->markers(series)[0]->setVisible(false);
+        q_series->setPen(pen);
+        q_series->setColor(col);
+        this->chart()->addSeries(q_series);
+        if (series.name != "") {
+            q_series->setName(QString::fromStdString(series.name));
+        } else {
+            this->chart()->legend()->markers(q_series)[0]->setVisible(false);
         }
     }
 }
@@ -208,32 +216,30 @@ void ChartView::displayPlotLines()
 void ChartView::displayScatterPoints()
 {
     auto& scatterData = _dataModel->scatterData;
-    for (size_t i = 0; i < scatterData.data.size(); i++) {
-        QScatterSeries *series = new QScatterSeries();
-        if (scatterData.names.size() > 0 && scatterData.names.size() == scatterData.data.size())
-            series->setName(QString::fromStdString(scatterData.names[i]));
-        for (size_t j = 0; j < scatterData.data[i].size(); j++) {
-            auto pos = scatterData.data[i][j];
-            series->append(pos.x(), pos.y());
+    for (auto& series : scatterData) {
+        QScatterSeries *q_series = new QScatterSeries();
+        for (auto& point : series) {
+            q_series->append(point.pos.x(), point.pos.y());
         }
-        QPen pen = series->pen();
-        QColor col = QColor(int(scatterData.colors[i].r() * 255), int(scatterData.colors[i].g() * 255), int(scatterData.colors[i].b() * 255));
+        QPen pen = q_series->pen();
+        QColor col = QColor(int(series.color.r() * 255), int(series.color.g() * 255), int(series.color.b() * 255));
         pen.setColor(col);
-        series->setPen(pen);
-        series->setColor(col);
-        this->chart()->addSeries(series);
+        q_series->setPen(pen);
+        q_series->setColor(col);
+        this->chart()->addSeries(q_series);
+        if (series.name != "") {
+            q_series->setName(QString::fromStdString(series.name));
+        } else {
+            this->chart()->legend()->markers(q_series)[0]->setVisible(false);
+        }
+    }
+}
 
-        if (series->name().isEmpty()) {
-            this->chart()->legend()->markers(series)[0]->setVisible(false);
-        }
-    }
-    for (size_t iScatter = 0; iScatter < scatterData.labels.size(); iScatter++) {
-        scatterData.graphicLabels.push_back(std::vector<QGraphicsTextItem*>());
-        for (size_t iPoint = 0; iPoint < scatterData.labels[iScatter].size(); iPoint++) {
-            // QGraphicsTextItem *itm = new QGraphicsTextItem(QString::fromStdString(scatterData.scatter_labels[iScatter][iPoint]), this->chart());
-            // scatterData.graphicLabels[iScatter].push_back(itm);
-        }
-    }
+ChartView& ChartView::useCurrentPlottingLimits()
+{
+    this->plottingLimits.mini = Vector3(axisX->min(), axisY->min());
+    this->plottingLimits.maxi = Vector3(axisX->max(), axisY->max());
+    return *this;
 }
 
 const ChartView& ChartView::setOverlay(const GridV3 &image, std::string layerName, const GridF &alpha, int overlayLayer)
@@ -375,8 +381,8 @@ PlotModel& PlotModel::reset()
     plotLineData.reset();
     scatterData.reset();
 
-    this->selectedScatterData.clear();
-    this->selectedPlotData.clear();
+    // this->selectedScatterData.clear();
+    // this->selectedPlotData.clear();
 
     this->imageData = PlotImageData();
     this->vectorData = PlotVectorData();

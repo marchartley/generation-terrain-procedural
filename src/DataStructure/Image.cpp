@@ -1,6 +1,5 @@
 #include "Image.h"
 
-
 Image::Image() : _isColor(true), bitDepth(8) {}
 
 Image::Image(const GridF &image)
@@ -130,7 +129,7 @@ void Image::writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_
             for (int x = 0; x < width; x += 4) {
                 uint8_t byteValue = 0;
                 for (int bit = 0; bit < 4 && x + bit < width; ++bit) {
-                    float value = bwImage(x + bit, y);
+                    float value = clamp(bwImage(x + bit, y), 0.f, 1.f);
                     uint8_t pixelValue = static_cast<uint8_t>(value * 3); // scale 0-1 to 0-3
                     byteValue |= (pixelValue << ((3 - bit) * 2));
                 }
@@ -139,12 +138,12 @@ void Image::writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_
         }
         else if (bitDepth == 4) {
             for (int x = 0; x < width; x += 2) {
-                float value1 = bwImage(x, y);
+                float value1 = clamp(bwImage(x, y), 0.f, 1.f);
                 uint8_t pixelValue1 = static_cast<uint8_t>(value1 * 15); // scale 0-1 to 0-15
                 uint8_t byteValue = (pixelValue1 << 4);
 
                 if (x + 1 < width) {
-                    float value2 = bwImage(x + 1, y);
+                    float value2 = clamp(bwImage(x + 1, y), 0.f, 1.f);
                     uint8_t pixelValue2 = static_cast<uint8_t>(value2 * 15); // scale 0-1 to 0-15
                     byteValue |= pixelValue2;
                 }
@@ -153,7 +152,7 @@ void Image::writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_
             }
         } else {
             for (int x = 0; x < width; x++) {
-                float value = bwImage(x, y);
+                float value = clamp(bwImage(x, y), 0.f, 1.f);
                 if (bitDepth == 8) {
                     uint8_t scaledValue = static_cast<uint8_t>(std::round(value * 255)); // Assuming value is in range 0-1
                     row[x] = scaledValue;
@@ -190,9 +189,9 @@ void Image::writeOtherThanPNG(const std::string& filename, std::string ext)
     } else if (ext == "HDR") {
         std::vector<float> toFloatData(width*height*nbComp);
         for (size_t i = 0; i < img.size(); i++) {
-            toFloatData[nbComp * i + 0] = std::max(img[i].x(), 0.f);
-            toFloatData[nbComp * i + 1] = std::max(img[i].y(), 0.f);
-            toFloatData[nbComp * i + 2] = std::max(img[i].z(), 0.f);
+            toFloatData[nbComp * i + 0] = std::min(std::max(img[i].x(), 0.f), 1.f);
+            toFloatData[nbComp * i + 1] = std::min(std::max(img[i].y(), 0.f), 1.f);
+            toFloatData[nbComp * i + 2] = std::min(std::max(img[i].z(), 0.f), 1.f);
             toFloatData[nbComp * i + 3] = 1.f;
         }
         stbi_write_hdr(filename.c_str(), width, height, nbComp, toFloatData.data());
@@ -201,7 +200,7 @@ void Image::writeOtherThanPNG(const std::string& filename, std::string ext)
         std::vector<uint8_t> toIntData(width*height*nbComp);
 
         for (size_t i = 0; i < img.size(); i++) {
-            img[i] = Vector3::max(img[i] * 255.f, Vector3(0, 0, 0));
+            img[i] = Vector3::min(Vector3::max(img[i] * 255.f, Vector3(0, 0, 0)), Vector3(255, 255, 255));
             toIntData[nbComp * i + 0] = int(img[i].x());
             toIntData[nbComp * i + 1] = int(img[i].y());
             toIntData[nbComp * i + 2] = int(img[i].z());

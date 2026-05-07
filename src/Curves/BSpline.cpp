@@ -117,7 +117,7 @@ float BSpline::length() const
 
 BSpline& BSpline::setPoint(int i, const Vector3 &newPos)
 {
-    this->points[i] = newPos;
+    this->points[pointIndex(i)] = newPos;
     return *this;
 }
 
