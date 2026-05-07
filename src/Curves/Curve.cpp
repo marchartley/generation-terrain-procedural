@@ -29,9 +29,10 @@ Vector3 Curve::getDirection(float x) const {
     return this->getDerivative(x, true);
 }
 
-Vector3 Curve::getNormal(float x) const {
+Vector3 Curve::getNormal(float x, Vector3 forcedUp) const {
     const auto derivative = getDerivative(x);
-    return derivative.cross(this->getSecondDerivative(x)).cross(derivative) .normalize();
+    if (!forcedUp.isValid()) return derivative.cross(this->getSecondDerivative(x)).cross(derivative).normalize();
+    return derivative.cross(forcedUp).normalize();
 }
 
 Vector3 Curve::getBinormal(float x) const {

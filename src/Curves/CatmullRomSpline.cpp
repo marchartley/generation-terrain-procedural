@@ -365,7 +365,7 @@ float CatmullRomSpline::length() const
 CatmullRomSpline CatmullRomSpline::smooth(float factor) const
 {
     CatmullRomSpline newCurve = *this;
-    for (int i = 0; i < this->size(); i++) {
+    for (size_t i = 0; i < this->size(); i++) {
         if (i == 0 || i == this->size() - 1) continue;
 
         newCurve[i] = (*this)[i] - factor * ((*this)[i] - ((*this)[i+1] + (*this)[i-1]) * .5f);
@@ -377,11 +377,11 @@ CatmullRomSpline CatmullRomSpline::taubinSmooth(float factor) const
 {
     auto initCurve = *this;
     auto newCurve = *this;
-    for (int i = 1; i < initCurve.size() - 1; i++) {
+    for (size_t i = 1; i < initCurve.size() - 1; i++) {
         newCurve[i] = initCurve[i] - factor * (initCurve[i] - (initCurve[i+1] + initCurve[i-1]) * .5f).normalized();
     }
     initCurve = newCurve;
-    for (int i = 1; i < newCurve.size() - 1; i++) {
+    for (size_t i = 1; i < newCurve.size() - 1; i++) {
         initCurve[i] = newCurve[i] + factor * (newCurve[i] - (newCurve[i+1] + newCurve[i-1]) * .5f).normalized();
     }
     return initCurve;
@@ -389,7 +389,7 @@ CatmullRomSpline CatmullRomSpline::taubinSmooth(float factor) const
 
 CatmullRomSpline& CatmullRomSpline::setPoint(int i, const Vector3 &newPos)
 {
-    this->points[(i + this->size()) % this->size()] = newPos;
+    this->points[pointIndex(i)] = newPos;
     return *this;
 }
 
@@ -630,7 +630,7 @@ CatmullRomSpline &CatmullRomSpline::displacePointsRandomly(float maxDistance)
 CatmullRomSpline &CatmullRomSpline::displacePointsRandomly(const Vector3 &maxDistance)
 {
     std::vector<Vector3> newPoints(this->size());
-    for (int i = 0; i < this->size(); i++) {
+    for (size_t i = 0; i < this->size(); i++) {
         float x = float(i) / float(this->size());
         auto [pos, dir, normal] = this->pointAndDerivativeAndSecondDerivative(x);
         Vector3 binormal = this->getBinormal(x).normalized();
@@ -650,7 +650,7 @@ CatmullRomSpline &CatmullRomSpline::displacePointsRandomlyPerlin(float maxDistan
 CatmullRomSpline &CatmullRomSpline::displacePointsRandomlyPerlin(const Vector3& maxDistance, float scale, bool loop)
 {
     std::vector<Vector3> newPoints(this->size());
-    for (int i = 0; i < this->size(); i++) {
+    for (size_t i = 0; i < this->size(); i++) {
         float x = float(i) / float(this->size());
         auto [pos, dir, normal] = this->pointAndDerivativeAndSecondDerivative(x);
         Vector3 binormal = this->getBinormal(x).normalized();

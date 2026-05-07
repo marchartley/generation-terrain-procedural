@@ -11,19 +11,20 @@ public:
     Contour(const Curve& path);
     Contour(Curve* path);
     Contour(std::shared_ptr<Curve> path);
+    ~Contour();
 
     bool contains(const Vector3& pos, bool useNativeShape = true) const;
     bool containsXY(const Vector3& pos, bool useNativeShape = true, int increaseAccuracy = 0) const;
     float estimateDistanceFrom(const Vector3& pos) const;
     float estimateSignedDistanceFrom(const Vector3& pos) const;
-    float computeArea();
-    float computeSignedArea();
+    float computeArea() const;
+    float computeSignedArea() const;
 
     Vector3 centroid() const;
 
     // Contour intersect(Contour other);
 
-    Vector3 planeNormal();
+    Vector3 planeNormal() const;
     Contour grow(float increase);
     Contour shrink(float decrease);
     Contour& translate(const Vector3& translation);

@@ -90,7 +90,7 @@ std::vector<Contour> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
     this->boundingShape = boundingShape.removeDuplicates();
 
     if (boundingShape.curve->empty()) {
-        boundingShape = CatmullRomSpline({
+        boundingShape = Polyline({
             Vector3(minBoundarie.x(), minBoundarie.y(), minBoundarie.z()),
             Vector3(minBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
             Vector3(maxBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
@@ -104,7 +104,7 @@ std::vector<Contour> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
             return std::vector<Contour>{this->boundingShape};
     }
     jcv_point* points = (jcv_point*)malloc( sizeof(jcv_point) * pointset.size());
-    jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.curve->numPoints());
+    jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.curve->numPoints() - 1);
     for (size_t i = 0; i < pointset.size(); i++) {
         points[i].x = pointset[i].x();
         points[i].y = pointset[i].y();
@@ -114,8 +114,8 @@ std::vector<Contour> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
             points[i].weight = 1.f;
     }
     auto boundingShapePoints = boundingShape.curve->getPath();
+    boundingShapePoints.pop_back(); // Remove duplicate first-last point
     for (size_t i = 0; i < boundingShapePoints.size(); i++) {
-        if (i > 0 && boundingShapePoints[i] == boundingShapePoints.front()) continue;
         boundingPoints[i].x = boundingShapePoints[i].x();
         boundingPoints[i].y = boundingShapePoints[i].y();
     }
@@ -128,7 +128,7 @@ std::vector<Contour> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
     jcv_clipping_polygon polygon;
     if (!boundingShape.curve->empty()) {
 
-        polygon.num_points = boundingShape.curve->numPoints();
+        polygon.num_points = boundingShape.curve->numPoints() - 1;
         polygon.points = boundingPoints;
     } else {
         std::cout << "We should not be here" << std::endl;
@@ -161,7 +161,7 @@ std::vector<Contour> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
     for( int i = 0; i < diagram.numsites; ++i )
     {
         const jcv_site* site = &sites[i];
-        CatmullRomSpline areaShape;
+        Polyline areaShape;
 
         const jcv_graphedge* e = site->edges;
         while( e )

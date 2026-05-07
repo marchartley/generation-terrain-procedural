@@ -12,7 +12,7 @@
 #define DECLARE_EVENT(EVENT_NAME, PARAMS, ARGS)                             \
 private:                                                                    \
     std::vector<std::function<void PARAMS>> on##EVENT_NAME##Callbacks;          \
-    public:                                                                     \
+public:                                                                     \
     void setOn##EVENT_NAME(std::function<void PARAMS> func)         \
 {                                                                       \
     on##EVENT_NAME##Callbacks.push_back(std::move(func));                   \

@@ -42,9 +42,8 @@ Matrix3<T>& PlottingUtils::drawLine(Matrix3<T>& img, const T& color, const Vecto
     return img;
 }
 
-
-template<class T>
-Matrix3<T>& PlottingUtils::drawCircle(Matrix3<T> &img, const T &color, const Vector3 &center, float radius)
+template <class T>
+Matrix3<T>& drawCircleBorders(Matrix3<T> &img, const T &color, const Vector3 &center, float radius)
 {
     auto drawCircle = [&](int xc, int yc, int x, int y){
         img(Vector3i(xc + x, yc + y)) = color;
@@ -77,6 +76,23 @@ Matrix3<T>& PlottingUtils::drawCircle(Matrix3<T> &img, const T &color, const Vec
         drawCircle(xc, yc, x, y);
     }
     return img;
+}
+
+template <class T>
+Matrix3<T>& drawCircleInside(Matrix3<T> &img, const T &color, const Vector3 &center, float radius)
+{
+    Matrix3<T> mask(2 * radius + 1, 2 * radius + 1, 1, color);
+    Vector3 maskCenter = mask.getDimensions().xy() / 2.f;
+    mask.iterateParallel([&](const Vector3& p) { mask[p] *= ((p - maskCenter).norm2() < radius * radius ? 1.f : 0.f); });
+    return img.paste(mask, center - maskCenter);
+}
+template<class T>
+Matrix3<T>& PlottingUtils::drawCircle(Matrix3<T> &img, const T &color, const Vector3 &center, float radius)
+{
+    if (radius > 0)
+        return drawCircleBorders(img, color, center, radius);
+    else
+        return drawCircleInside(img, color, center, -radius);
 }
 
 
