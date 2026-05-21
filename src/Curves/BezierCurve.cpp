@@ -8,8 +8,8 @@ BezierCurve::BezierCurve() : BezierCurve(std::vector<Vector3>())
 BezierCurve::BezierCurve(const std::vector<Vector3> &points)
     : BezierCurve(points, std::vector<Vector3>())
 {
-    handles = std::vector<Vector3>(2 * (points.size() - 1));
-    for (size_t i = 1; i < points.size() - 1; i++) {
+    handles = std::vector<Vector3>(2 * (points.size()));
+    for (size_t i = 0; i < points.size(); i++) {
         // Vector3 proj = Collision::projectPointOnSegment(points[i], points[i - 1], points[i + 1]);
         // handles[2 * i - 1] = points[i] - (proj - points[i - 1]).normalize() * (points[i] - points[i - 1]).norm() / 3.f;
         // handles[2 * i] = points[i] + (points[i + 1] - proj).normalize() * (points[i + 1] - points[i]).norm() / 3.f;
@@ -21,12 +21,12 @@ BezierCurve::BezierCurve(const std::vector<Vector3> &points)
 
     // Strategy 2 : tangent computation use next/previous 2 points
     // Start endpoint: use direction from p0 based on p1 -> p2
-    Vector3 t0 = points[2] - points[1];
-    handles.front() = points[0] - t0.normalize() * (points[1] - points[0]).norm() / 3.f;
+    // Vector3 t0 = points[2] - points[1];
+    // handles.front() = points[0] - t0.normalize() * (points[1] - points[0]).norm() / 3.f;
     // End endpoint: use direction based on p[n-3] -> p[n-2]
-    size_t n = points.size();
-    Vector3 tn = points[n - 2] - points[n - 3];
-    handles.back() = points[n - 1] + tn.normalize() * (points[n - 1] - points[n - 2]).norm() / 3.f;
+    // size_t n = points.size();
+    // Vector3 tn = points[n - 2] - points[n - 3];
+    // handles.back() = points[n - 1] + tn.normalize() * (points[n - 1] - points[n - 2]).norm() / 3.f;
 }
 
 BezierCurve::BezierCurve(const std::vector<Vector3>& points, const std::vector<Vector3>& handles)
@@ -43,7 +43,7 @@ std::vector<Vector3> BezierCurve::getPath(int numberOfPoints) const
     if (numberOfPoints < 0 || numberOfPoints == numPoints()) return points;
     std::vector<Vector3> points(numberOfPoints);
     for (int i = 0; i < numberOfPoints; i++) {
-        float t = float(i) / float(numberOfPoints - 1);
+        float t = float(i) / float(numberOfPoints - (closed ? 1 : 0));
         points[i] = getPoint(t);
     }
     return points;
@@ -68,11 +68,11 @@ inline Vector3 cubicBezierSecondDerivative(const Vector3& P0, const Vector3& P1,
 Vector3 BezierCurve::getPoint(float x) const
 {
     int pointId = timeToLowerIndex(x);
-    int handleId = pointId * 2;
+    int nextPointId = pointIndex(pointId + 1);
     const auto& P0 = points[pointId];
-    const auto& P1 = handles[handleId];
-    const auto& P2 = handles[handleIndex(handleId + 1)];
-    const auto& P3 = points[pointIndex(pointId + 1)];
+    const auto& P1 = handlePos(handleOut(pointId));
+    const auto& P2 = handlePos(handleIn(nextPointId));
+    const auto& P3 = points[nextPointId];
 
     float t = (x * float(numSegments())) - pointId;
     return cubicBezier(P0, P1, P2, P3, t);
@@ -81,11 +81,11 @@ Vector3 BezierCurve::getPoint(float x) const
 Vector3 BezierCurve::getDerivative(float x, bool normalize) const
 {
     int pointId = timeToLowerIndex(x);
-    int handleId = pointId * 2;
+    int nextPointId = pointIndex(pointId + 1);
     const auto& P0 = points[pointId];
-    const auto& P1 = handles[handleId];
-    const auto& P2 = handles[handleIndex(handleId + 1)];
-    const auto& P3 = points[pointIndex(pointId + 1)];
+    const auto& P1 = handlePos(handleOut(pointId));
+    const auto& P2 = handlePos(handleIn(nextPointId));
+    const auto& P3 = points[nextPointId];
 
     float t = (x * float(numSegments())) - pointId;
     Vector3 res = cubicBezierDerivative(P0, P1, P2, P3, t);
@@ -95,13 +95,13 @@ Vector3 BezierCurve::getDerivative(float x, bool normalize) const
 Vector3 BezierCurve::getSecondDerivative(float x, bool normalize) const
 {
     int pointId = timeToLowerIndex(x);
-    int handleId = pointId * 2;
+    int nextPointId = pointIndex(pointId + 1);
     const auto& P0 = points[pointId];
-    const auto& P1 = handles[handleId];
-    const auto& P2 = handles[handleIndex(handleId + 1)];
-    const auto& P3 = points[pointIndex(pointId + 1)];
+    const auto& P1 = handlePos(handleOut(pointId));
+    const auto& P2 = handlePos(handleIn(nextPointId));
+    const auto& P3 = points[nextPointId];
 
-    float t = (x * float(numPoints() - 1)) - pointId;
+    float t = (x * float(numSegments())) - pointId;
     Vector3 res = cubicBezierSecondDerivative(P0, P1, P2, P3, t);
     return (normalize ? res.normalize() : res);
 }
@@ -121,7 +121,7 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
         for (int i = 0; i <= samplesPerSegment; ++i)
         {
             float t = float(i) / float(samplesPerSegment);
-            Vector3 p = cubicBezier(points[segment], handles[segment * 2], handles[segment * 2 + 1], points[segment + 1], t);
+            Vector3 p = cubicBezier(points[segment], handlePos(handleOut(segment)), handlePos(handleIn(segment + 1)), points[segment + 1], t);
 
             float dSq = (p - pos).norm2();
 
@@ -139,9 +139,9 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
 
     for (int i = 0; i < iterations; ++i)
     {
-        Vector3 p = cubicBezier(points[bestSegment], handles[bestSegment * 2], handles[bestSegment * 2 + 1], points[bestSegment + 1], bestT);
-        Vector3 d1 = cubicBezierDerivative(points[bestSegment], handles[bestSegment * 2], handles[bestSegment * 2 + 1], points[bestSegment + 1], bestT);
-        Vector3 d2 = cubicBezierSecondDerivative(points[bestSegment], handles[bestSegment * 2], handles[bestSegment * 2 + 1], points[bestSegment + 1], bestT);
+        Vector3 p = cubicBezier(points[bestSegment], handlePos(handleOut(bestSegment)), handlePos(handleIn(bestSegment + 1)), points[bestSegment + 1], bestT);
+        Vector3 d1 = cubicBezierDerivative(points[bestSegment], handlePos(handleOut(bestSegment)), handlePos(handleIn(bestSegment + 1)), points[bestSegment + 1], bestT);
+        Vector3 d2 = cubicBezierSecondDerivative(points[bestSegment], handlePos(handleOut(bestSegment)), handlePos(handleIn(bestSegment + 1)), points[bestSegment + 1], bestT);
 
         Vector3 r = p - pos;
 
@@ -183,26 +183,73 @@ BezierCurve& BezierCurve::setPoint(int _i, const Vector3 &newPos)
     size_t i = pointIndex(_i);
     Vector3 translation = newPos - points[i];
     this->points[i] = newPos;
-    this->handles[handleIn(i)] += translation;
-    this->handles[handleOut(i)] += translation;
+    // this->handles[handleIn(i)] += translation;
+    // this->handles[handleOut(i)] += translation;
     return *this;
 }
 
+int computeNewNbMultiplicatorForResampling(int initialNb, int wantedNb) {
+    int k = (wantedNb - 1) / (initialNb - 1);
+    return k;
+}
+int computeNewNbPointsForResampling(int initialNb, int wantedNb) {
+    return computeNewNbMultiplicatorForResampling(initialNb, wantedNb) * (initialNb - 1) + 1;
+}
 BezierCurve& BezierCurve::resamplePoints(int newNbPoints)
 {
     if (newNbPoints < 0 || newNbPoints == numPoints()) return *this;
+    int slicesPerSegment = (newNbPoints - (isClosed() ? 0 : 1)) / numSegments();
+    int realNewNbPoints = (slicesPerSegment - 1) * numSegments() + numPoints();
+    newNbPoints = realNewNbPoints;
+    int newNbSegments = newNbPoints - (isClosed() ? 0 : 1);
+    // int slicesPerSegment = computeNewNbMultiplicatorForResampling(numSegments(), newNbPoints);
+    // newNbPoints = computeNewNbPointsForResampling(numPoints(), newNbPoints);
     std::vector<Vector3> newPoints(newNbPoints);
-    std::vector<Vector3> newHandles(newNbPoints);
+    std::vector<Vector3> newHandles(newNbPoints * 2);
 
     for (int i = 0; i < newNbPoints; i++) {
-        float t = float(i) / (float(newNbPoints) - 1);
+        float t = float(i) / (float(newNbSegments));
         newPoints[i] = getPoint(t);
     }
-    for (int i = 0; i < newNbPoints - 1; i++) {
-        float t0 = float(i) / (float(newNbPoints) - 1);
-        float t1 = float(i+1) / (float(newNbPoints) - 1);
-        newHandles[i * 2] = newPoints[i] + getDerivative(t0);
-        newHandles[i * 2 + 1] = newPoints[i+1] - getDerivative(t1);
+    for (int i = 0; i < numPoints(); i++) {
+        newHandles[BezierCurve::handleIn(i * slicesPerSegment, newNbPoints, isClosed())] = handlePos(handleIn(i));
+        newHandles[BezierCurve::handleOut(i * slicesPerSegment, newNbPoints, isClosed())] = handlePos(handleOut(i));
+    }
+    for (int i = 1; i < newNbPoints; i++) {
+        float t = float(i) / (float(newNbSegments));
+        int currentIdx = timeToLowerIndex(t);
+        int nextIdx = pointIndex(currentIdx + 1);
+        if (i % slicesPerSegment == 0) {
+            newHandles[BezierCurve::handleIn(i, newNbPoints, isClosed())] = handlePos(handleIn(i / slicesPerSegment));
+            newHandles[BezierCurve::handleOut(i, newNbPoints, isClosed())] = handlePos(handleOut(i / slicesPerSegment));
+            continue;
+        }
+        float u = 1.f / float((slicesPerSegment) - (i % slicesPerSegment) + 1);
+
+        const Vector3 P0 = newPoints[i - 1];
+        const Vector3 P1 = newHandles[BezierCurve::handleOut(i - 1, newNbPoints, isClosed())];
+        const Vector3 P2 = handlePos(handleIn(nextIdx));
+        const Vector3 P3 = points[nextIdx];
+        const Vector3 Q0 = P0 + (P1 - P0) * u;
+        const Vector3 Q1 = P1 + (P2 - P1) * u;
+        const Vector3 Q2 = P2 + (P3 - P2) * u;
+        const Vector3 R0 = Q0 + (Q1 - Q0) * u;
+        const Vector3 R1 = Q1 + (Q2 - Q1) * u;
+
+        newHandles[BezierCurve::handleOut(i - 1, newNbPoints, isClosed())] = Q0;
+        newHandles[BezierCurve::handleIn(i, newNbPoints, isClosed())] = R0;
+        newHandles[BezierCurve::handleOut(i, newNbPoints, isClosed())] = R1;
+        handles[handleIn(nextIdx)] = Q2 - get(nextIdx);
+    }
+    if (!isClosed()) {
+        newHandles[BezierCurve::handleIn(-1, newNbPoints, isClosed())] = handlePos(handleIn(-1));
+        newHandles[BezierCurve::handleOut(-1, newNbPoints, isClosed())] = handlePos(handleOut(-1));
+    } else {
+        newHandles[0] = handlePos(0);
+    }
+    for (size_t i = 0; i < newNbPoints; i++) {
+        newHandles[BezierCurve::handleIn(i, newNbPoints, isClosed())] -= newPoints[i];
+        newHandles[BezierCurve::handleOut(i, newNbPoints, isClosed())] -= newPoints[i];
     }
     this->points = newPoints;
     this->handles = newHandles;
@@ -288,8 +335,8 @@ std::string BezierCurve::toString() const
 BezierCurve& BezierCurve::close()
 {
     Curve::close();
-    if (this->points.size() > 0 && this->points.front() != this->points.back()) {
-        handles.resize(handles.size() + 2);
+    // if (this->points.size() > 0 && this->points.front() != this->points.back()) {
+        // handles.resize(handles.size() + 2);
 
         /*
         // Handle connected to first (newly last) point
@@ -300,47 +347,87 @@ BezierCurve& BezierCurve::close()
         */
 
         // Or maybe apply autosmooth to the first point...
-        this->autosmooth(0);
+        // this->autosmooth(0);
 
 
-        // Add the point
-        this->points.push_back(points.front());
 
         // recompute handles for previously last point
-        this->autosmooth(points.size() - 2);
+        // this->autosmooth(-1);
+        // this->autosmooth(-2);
+        // Add the point
+        // this->points.push_back(points.front());
 
-    }
+    // }
     return *this;
+}
+
+size_t BezierCurve::handleIndex(int index, int nbPoints, bool closed)
+{
+    return (index + (2 * nbPoints)) % (2 * nbPoints);
+}
+
+size_t BezierCurve::handleIn(int pointIdx, int nbPoints, bool closed)
+{
+    return handleIndex(2 * pointIdx, nbPoints, closed);
+}
+
+size_t BezierCurve::handleOut(int pointIdx, int nbPoints, bool closed)
+{
+    return handleIndex(2 * pointIdx + 1, nbPoints, closed);
 }
 
 size_t BezierCurve::handleIndex(int index) const
 {
-    return (index + handles.size()) % handles.size();
+    return BezierCurve::handleIndex(index, numPoints(), closed);
 }
 
 size_t BezierCurve::handleIn(int pointIdx) const
 {
-    return handleIndex(2 * pointIdx - 1);
+    return handleIn(pointIdx, numPoints(), closed);
 }
 
 size_t BezierCurve::handleOut(int pointIdx) const
 {
-    return handleIndex(2 * pointIdx);
+    return handleOut(pointIdx, numPoints(), closed);
+}
+
+size_t BezierCurve::pointIndexFromHandleIndex(int handleIdx) const
+{
+    return handleIndex(handleIdx) / 2;
+}
+
+Vector3 BezierCurve::handlePos(int handleIdx) const
+{
+    return points[pointIndexFromHandleIndex(handleIdx)] + handles[handleIndex(handleIdx)];
 }
 
 BezierCurve& BezierCurve::autosmooth(int pointIdx)
 {
-    const auto& P = points[pointIndex(pointIdx)];
-    const auto& P_next = points[pointIndex(pointIdx + 1)];
-    const auto& P_prev = points[pointIndex(pointIdx - 1)];
-    Vector3 proj = Collision::projectPointOnSegment(P, P_prev, P_next);
-    handles[handleIn(pointIdx)] = P - (proj - P_prev).normalize() * (P - P_prev).norm() / 3.f;
-    handles[handleOut(pointIdx)] = P + (P_next - proj).normalize() * (P_next - P).norm() / 3.f;
+    const size_t currentIdx = pointIndex(pointIdx);
+    const size_t nextIdx = pointIndex(pointIdx + 1);
+    const size_t prevIdx = pointIndex(pointIdx - 1);
+    const auto& P = points[currentIdx];
+    const auto& P_next = points[nextIdx]; //(nextIdx == 0 ? nextIdx + 1 : nextIdx)];
+    const auto& P_prev = points[prevIdx];
+    // Vector3 proj = Collision::projectPointOnLine(P, P_prev, P_next);
+
+    Vector3 startToPoint = P - P_prev;
+    Vector3 segment = P_next - P_prev;
+    float t = (segment.norm2() > 0 ? startToPoint.dot(segment) / segment.dot(segment) : 0.f);
+    auto proj = P_prev + segment * t;
+    handles[handleIn(pointIdx)] = -(proj - P_prev).normalize() * (P - P_prev).norm() / 3.f * (t < 0 ? -1.f : 1.f);
+    handles[handleOut(pointIdx)] = (P_next - proj).normalize() * (P_next - P).norm() / 3.f * (t > 1 ? -1.f : 1.f);
+
+    if (handles[handleIn(pointIdx)].dot(handles[handleOut(pointIdx)]) > 0) {
+        std::cout << "WTF " << pointIdx << std::endl;
+    }
     return *this;
 }
 
 BezierCurve& BezierCurve::autosmooth()
 {
+    if (numPoints() <= 2) return *this;
+
     for (size_t i = 0; i < numPoints(); i++) {
         autosmooth(i);
     }

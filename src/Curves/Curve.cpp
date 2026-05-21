@@ -25,6 +25,11 @@ size_t Curve::timeToLowerIndex(float t) const {
     return size_t(std::floor(clamp(t, 0.f, 1.f) * (numSegments()))) - (t >= 1.f ? 1 : 0);
 }
 
+float Curve::indexToTime(int index) const
+{
+    return float(index) / float(numSegments());
+}
+
 Vector3 Curve::getDirection(float x) const {
     return this->getDerivative(x, true);
 }
@@ -77,7 +82,7 @@ size_t Curve::size() const {
 
 size_t Curve::numSegments() const
 {
-    return numPoints() - 1;
+    return numPoints() - (this->closed ? 0 : 1);
 }
 
 size_t Curve::pointIndex(int index) const

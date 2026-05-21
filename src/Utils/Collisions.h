@@ -21,6 +21,7 @@ Vector3 intersectionRayAABBox(const Vector3& orig, const Vector3& dir, const Vec
 
 float shortestDistanceSqrToSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);
 float shortestDistanceToSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);
+Vector3 projectPointOnLine(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);
 Vector3 projectPointOnSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);
 Vector3 projectPointOnSphere(const Vector3& point, const Vector3& sphereCenter, float sphereRadius);
 

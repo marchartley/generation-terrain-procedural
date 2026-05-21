@@ -27,6 +27,7 @@ public:
     virtual float estimateSignedDistanceFrom(const Vector3& pos) const;
     virtual float length() const = 0;
     virtual size_t timeToLowerIndex(float t) const;
+    virtual float indexToTime(int index) const;
     virtual Vector3& get(int i) = 0; // Get point by index instead of time
     virtual Vector3 get(int i) const { return get(i); }
 

@@ -1,22 +1,22 @@
 <!DOCTYPE QGLVIEWER>
 <QGLViewer version="2.6.3">
   <State stereo="false">
-    <foregroundColor red="0" blue="0" green="0"/>
-    <backgroundColor red="127" blue="127" green="127"/>
+    <foregroundColor blue="0" green="0" red="0"/>
+    <backgroundColor blue="127" green="127" red="127"/>
   </State>
-  <Display FPSIsDisplayed="false" gridIsDrawn="false" axisIsDrawn="false" cameraIsEdited="false"/>
-  <Geometry posY="27" height="1016" width="1848" posX="72" fullScreen="false"/>
+  <Display cameraIsEdited="false" gridIsDrawn="false" FPSIsDisplayed="false" axisIsDrawn="false"/>
+  <Geometry fullScreen="false" width="1848" posX="72" posY="27" height="1016"/>
   <Camera>
-    <Parameters Type="PERSPECTIVE" sceneRadius="500" zNearCoefficient="0.005" orthoCoef="7.12431e-98" fieldOfView="0.785398" zClippingCoefficient="1.73205">
-      <SceneCenter y="50" z="15" x="50"/>
+    <Parameters fieldOfView="0.785398" sceneRadius="500" Type="PERSPECTIVE" zNearCoefficient="0.005" zClippingCoefficient="1.73205" orthoCoef="6.68865e-100">
+      <SceneCenter z="15" y="50" x="50"/>
     </Parameters>
     <Stereo IODist="0.062" physScreenWidth="0.5" focusDistance="1207.11"/>
     <ManipulatedCameraFrame>
-      <position y="41.6185" z="146.948" x="-70.7238"/>
-      <orientation q0="0.19821" q1="-0.252156" q2="-0.689629" q3="0.649263"/>
-      <ManipulatedParameters spinSens="0.3" wheelSens="1" rotSens="1" zoomSens="1" transSens="1"/>
-      <ManipulatedCameraParameters flySpeed="5" rotatesAroundUpVector="false" zoomsOnPivotPoint="false">
-        <sceneUpVector y="1" z="0" x="0"/>
+      <position z="104.106" y="24.9327" x="-66.2803"/>
+      <orientation q0="0.28983" q1="-0.215924" q3="0.641865" q2="-0.676302"/>
+      <ManipulatedParameters spinSens="0.3" zoomSens="1" transSens="1" rotSens="1" wheelSens="1"/>
+      <ManipulatedCameraParameters rotatesAroundUpVector="false" zoomsOnPivotPoint="false" flySpeed="5">
+        <sceneUpVector z="0" y="1" x="0"/>
       </ManipulatedCameraParameters>
     </ManipulatedCameraFrame>
   </Camera>

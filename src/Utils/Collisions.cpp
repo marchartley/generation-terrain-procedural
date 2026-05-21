@@ -448,6 +448,14 @@ for (size_t i = 0; i < polygon.size() - 1; i++) {
 return (nb_intersections % 2) == 1;
 */
 
+Vector3 Collision::projectPointOnLine(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd)
+{
+    Vector3 startToPoint = point - segmentStart;
+    Vector3 segment = segmentEnd - segmentStart;
+    float t = (segment.norm2() > 0 ? startToPoint.dot(segment) / segment.dot(segment) : 0.f);
+    return segmentStart + t * segment;
+}
+
 Vector3 Collision::projectPointOnSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd)
 {
     Vector3 startToPoint = point - segmentStart;

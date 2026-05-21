@@ -66,9 +66,16 @@ public:
 
     BezierCurve& reset() { points.clear(); handles.clear(); return *this; }
 
+    inline static size_t handleIndex(int index, int nbPoints, bool closed);
+    inline static size_t handleIn(int pointIdx, int nbPoints, bool closed);
+    inline static size_t handleOut(int pointIdx, int nbPoints, bool closed);
+
     inline size_t handleIndex(int index) const;
     inline size_t handleIn(int pointIdx) const;
     inline size_t handleOut(int pointIdx) const;
+
+    inline size_t pointIndexFromHandleIndex(int handleIdx) const;
+    inline Vector3 handlePos(int handleIdx) const;
 
     std::vector<Vector3> getPoints() const { return points; }
     std::vector<Vector3> getHandles() const { return handles; }

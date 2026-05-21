@@ -106,61 +106,113 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    auto curve = std::make_shared<BezierCurve>(std::vector<Vector3>({
-        Vector3(.0f, .2f),
-        Vector3(.0f, 1.1f),
-        Vector3(.5f, 1.1f),
-        Vector3(.5f, 1.5f),
-        Vector3(.75f, 1.5f),
-        Vector3(.75f, .8f),
-        Vector3(.2f, 1.f),
-        Vector3(.2f, 0.f)
-    }));
-    Contour initial(curve);
 
-    std::cout << initial.curve << std::endl;
+    /*
+    auto initialCurve = std::make_shared<BezierCurve>(std::vector<Vector3>{
+        Vector3(.0f, .0f),
+        Vector3(1.f, 1.f),
+        // Vector3(.5f, 1.1f),
+        // Vector3(.5f, 1.5f),
+        // Vector3(.75f, 1.5f),
+        // Vector3(.75f, .8f),
+        // Vector3(.2f, 1.f),
+        // Vector3(.2f, 0.f)
+       }
+       , std::vector<Vector3>{
+                            Vector3(0.f, -.5f), Vector3(0.f, 1.f),
+                            Vector3(-1.f, 0.f), Vector3(.5f, 0.f)
+       }
+        );
+    // Contour initial(curve);
 
-    Contour grown = initial.grow(.05f);
-    Contour shrink = initial.shrink(.05f);
 
-    auto initialCurve = (dynamic_cast<BezierCurve*>(initial.curve.get()));
-    auto shrinkCurve = (dynamic_cast<BezierCurve*>(shrink.curve.get()));
-    auto grownCurve = (dynamic_cast<BezierCurve*>(grown.curve.get()));
+    // std::cout << initial.curve << std::endl;
 
-    initialCurve->removePoint(-1);
-    shrinkCurve->removePoint(-1);
-    grownCurve->removePoint(-1);
+    // Contour grown = initial.grow(.05f);
+    // Contour shrink = initial.shrink(.05f);
 
-    shrinkCurve->autosmooth();
-    grownCurve->autosmooth();
+    initialCurve->setClosed(false);
+    // auto initialCurve = (dynamic_cast<BezierCurve*>(initial.curve.get()));
+    auto shrinkCurve = initialCurve->clone(); // (dynamic_cast<BezierCurve*>(shrink.curve.get()));
+    auto grownCurve = initialCurve->clone(); //(dynamic_cast<BezierCurve*>(grown.curve.get()));
+
+    for (size_t i = 0; i < initialCurve->numPoints(); i++) {
+        initialCurve->setPoint(i, initialCurve->get(i));
+    }
+    // initialCurve->removePoint(-1);
+    // shrinkCurve->removePoint(-1);
+    // grownCurve->removePoint(-1);
+
 
     auto& viewer = AbstractPlotter::get();
     auto drawCurves = [&]() {
+
+        // grown = initial.grow(.05f);
+        // shrink = initial.shrink(.05f);
+
+        // initialCurve = (dynamic_cast<BezierCurve*>(initial.curve.get()));
+        // shrinkCurve = (dynamic_cast<BezierCurve*>(shrink.curve.get()));
+        // grownCurve = (dynamic_cast<BezierCurve*>(grown.curve.get()));
+
+        initialCurve->autosmooth();
+        shrinkCurve = initialCurve->clone();
+        grownCurve = initialCurve->clone();
+
+        int newNbPoints = 40;
+        grownCurve->resamplePoints(newNbPoints);
+        // shrinkCurve->autosmooth();
+        // grownCurve->autosmooth();
+
         viewer.dataModel->reset();
         viewer
-            .addScatter(initial.curve->getPath(), "", {}, Vector3::black)
-            .addScatter(shrink.curve->getPath(), "", {}, Vector3::red)
-            .addScatter(grown.curve->getPath(), "", {}, Vector3::green)
+            .addScatter(initialCurve->getPath(), "", {}, Vector3::black)
+            // .addScatter(shrink.curve->getPath(), "", {}, Vector3::red)
+            // .addScatter(grownCurve->getPath(), "", {}, Vector3::green)
 
-            .addPlot(initial.curve->getPath(100), "Original", Vector3::black)
-            .addPlot(shrink.curve->getPath(100), "", Vector3::red)
-            .addPlot(grown.curve->getPath(100), "", Vector3::green);
+            .addPlot(initialCurve->getPath(100), "Original", Vector3::black)
+            // .addPlot(shrink.curve->getPath(100), "", Vector3::red)
+            // .addPlot(grownCurve->getPath(100), "", Vector3::green)
+            ;
 
+        viewer.addPlot(grownCurve->getPath(100), "", Vector3::green);
+
+        for (int i = 0; i < newNbPoints; i++) {
+        }
+        for (int i = 0; i < grownCurve->numPoints(); i++) {
+            viewer
+                .addPlot({grownCurve->handlePos(grownCurve->handleIn(i)), grownCurve->get(i)}, "", Vector3::blue)
+                .addPlot({grownCurve->handlePos(grownCurve->handleOut(i)), grownCurve->get(i)}, "", Vector3::blue)
+                ;
+        }
         for (int i = 0; i < initialCurve->numPoints(); i++) {
-            if (i > 0) {
-                viewer.addPlot({initialCurve->handles[initialCurve->handleIn(i)], initialCurve->get(i)}, "", Vector3::black);
-                viewer.addPlot({shrinkCurve->handles[shrinkCurve->handleIn(i)], shrinkCurve->get(i)}, "", Vector3::black);
-                viewer.addPlot({grownCurve->handles[grownCurve->handleIn(i)], grownCurve->get(i)}, "", Vector3::black);
-            }
-            if (i < initialCurve->numPoints() - 1) {
-                viewer.addPlot({initialCurve->handles[initialCurve->handleOut(i)], initialCurve->get(i)}, "", Vector3::black);
-                viewer.addPlot({shrinkCurve->handles[shrinkCurve->handleOut(i)], shrinkCurve->get(i)}, "", Vector3::black);
-                viewer.addPlot({grownCurve->handles[grownCurve->handleOut(i)], grownCurve->get(i)}, "", Vector3::black);
-            }
+            viewer
+                // .addPlot({initialCurve->handlePos(initialCurve->handleIn(i)), initialCurve->get(i)}, "", Vector3::blue)
+                // .addPlot({shrinkCurve->handlePos(shrinkCurve->handleIn(i)), shrinkCurve->get(i)}, "", Vector3::black)
+                // .addPlot({grownCurve->handlePos(grownCurve->handleIn(i)), grownCurve->get(i)}, "", Vector3::black)
+                ;
+            viewer
+                // .addPlot({initialCurve->handlePos(initialCurve->handleOut(i)), initialCurve->get(i)}, "", Vector3::green)
+                // .addPlot({shrinkCurve->handlePos(shrinkCurve->handleOut(i)), shrinkCurve->get(i)}, "", Vector3::black)
+                // .addPlot({grownCurve->handlePos(grownCurve->handleOut(i)), grownCurve->get(i)}, "", Vector3::black)
+                ;
+
+            // auto proj = Collision::projectPointOnLine(initialCurve->get(i), initialCurve->get(i - 1), initialCurve->get(i+1));
+            // viewer
+            //     .addPlot({proj, initialCurve->get(i)}, "", Vector3::black)
+            //     .addPlot({initialCurve->get(i-1), initialCurve->get(i+1)}, "", Vector3::black)
+            //     .addScatter({proj}, "", {}, Vector3::yellow)
+            //     ;
         }
 
-        // viewer.chartView->setPlottingLimits(Vector3(-.5f, -.5f), Vector3(1.5f, 1.5f));
+        viewer.chartView->setPlottingLimits(Vector3(-.5f, -.5f), Vector3(1.5f, 1.5f));
 
+
+        float err = 0;
+        for (int i = 0; i < 1000; i++) {
+            float t = float(i) / float(1000 - 1);
+            err += (initialCurve->getPoint(t) - grownCurve->getPoint(t)).norm();
+        }
+        std::cout << err << std::endl;
         viewer.addImage(GridV3(1, 1, 1, Vector3(1, 1, .75f)));
     };
     drawCurves();
@@ -184,6 +236,7 @@ int main(int argc, char *argv[])
         drawCurves();
     });
     return viewer.exec();
+    */
     /*
     Vector3i imgDims(1000, 1000, 1);
     Voronoi v = Voronoi(100, imgDims);
@@ -3352,7 +3405,7 @@ int main(int argc, char *argv[])
 
     // EnvObject::readEnvMaterialsFile("EnvObjects/envMaterials.json");
     // EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
-/*
+
     std::string preload_heightmap = "";
     MapMode displayMode = MapMode::GRID_MODE;
     if (argc > 1) {
@@ -3378,5 +3431,4 @@ int main(int argc, char *argv[])
     vi.show();
 
     return app.exec();
-*/
 }
