@@ -18,7 +18,7 @@ CatmullRomSpline toCatmullRom(const BSpline& curve)
 BezierCurve toBezier(const CatmullRomSpline& curve)
 {
     std::vector<Vector3> points = curve.getPoints();
-    std::vector<Vector3> handles((points.size() - 1) * 2);
+    std::vector<Vector3> handles(points.size() * 2);
 
     for (size_t i = 0; i < points.size() - 1; i++) {
         float t0 = float(i+0) / float(points.size() - 1);

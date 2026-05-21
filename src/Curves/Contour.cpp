@@ -526,6 +526,7 @@ Contour Contour::grow(float increase)
         displacement[i] = curve->getNormal(t, normal) * increase;
     }
     for (size_t i = 0; i < points.size(); i++) {
+        std::cout << i << " " << displacement[i] << std::endl;
         copy.curve->setPoint(i, copy.curve->get(i) + displacement[i]);
     }
     if (sign(copy.computeArea() - previousArea) != sign(increase)) {
@@ -534,9 +535,9 @@ Contour Contour::grow(float increase)
             copy.curve->setPoint(i, copy.curve->get(i) - 2.f * displacement[i]);
         }
     }
-    Vector3 mid = (copy.curve->get(0) + copy.curve->get(-1)) * .5f;
-    copy.curve->setPoint(0, mid);
-    copy.curve->setPoint(-1, mid);
+    // Vector3 mid = (copy.curve->get(0) + copy.curve->get(-1)) * .5f;
+    // copy.curve->setPoint(0, mid);
+    // copy.curve->setPoint(-1, mid);
     return copy;
 }
 

@@ -220,18 +220,24 @@ public:
 
 
 
-    inline static constexpr Vec3 white  { T(1), T(1), T(1) };
-    inline static constexpr Vec3 gray   { T(.5), T(.5), T(.5)};
-    inline static constexpr Vec3 black  { T(0), T(0), T(0) };
-    inline static constexpr Vec3 red    { T(1), T(0), T(0) };
-    inline static constexpr Vec3 green  { T(0), T(1), T(0) };
-    inline static constexpr Vec3 blue   { T(0), T(0), T(1) };
-    inline static constexpr Vec3 yellow { T(1), T(1), T(0) };
-    inline static constexpr Vec3 magenta{ T(1), T(0), T(1) };
-    inline static constexpr Vec3 cyan   { T(0), T(1), T(1) };
+    inline static constexpr Vec3 white      { T(1), T(1), T(1) };
+    inline static constexpr Vec3 gray       { T(.5), T(.5), T(.5)};
+    inline static constexpr Vec3 black      { T(0), T(0), T(0) };
+    inline static constexpr Vec3 red        { T(1), T(0), T(0) };
+    inline static constexpr Vec3 green      { T(0), T(1), T(0) };
+    inline static constexpr Vec3 blue       { T(0), T(0), T(1) };
+    inline static constexpr Vec3 yellow     { T(1), T(1), T(0) };
+    inline static constexpr Vec3 magenta    { T(1), T(0), T(1) };
+    inline static constexpr Vec3 cyan       { T(0), T(1), T(1) };
+    inline static constexpr Vec3 orange     { T(1.0), T(0.5), T(0.0)};
+    inline static constexpr Vec3 pink       { T(1.0), T(0.0), T(0.5)};
+    inline static constexpr Vec3 indigo     { T(0.5), T(0.0), T(1.0)};
+    inline static constexpr Vec3 azure      { T(0.0), T(0.5), T(1.0)};
+    inline static constexpr Vec3 lime       { T(0.0), T(1.0), T(0.5)};
+    inline static constexpr Vec3 chartreuse { T(0.5), T(1.0), T(0.0)};
 
-    inline static constexpr Vec3 invalid { T(0), T(0), T(0), false };
-    inline static constexpr Vec3 origin { T(0), T(0), T(0) };
+    inline static constexpr Vec3 invalid    { T(0), T(0), T(0), false };
+    inline static constexpr Vec3 origin     { T(0), T(0), T(0) };
 
 // protected:
     T v[3];
