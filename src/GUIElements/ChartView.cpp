@@ -99,7 +99,8 @@ bool ChartView::selectData(const Vector3& pos)
     auto& scatterData = _dataModel->scatterData;
     auto& plotLineData = _dataModel->plotLineData;
 
-    float minDist = 0.05f;
+    float minDist = (this->axisX->max() - this->axisX->min()) * 0.05f;
+    // float minDist = 0.05f;
     this->_dataModel->selectedScatterData.clear();
     this->_dataModel->selectedPlotData.clear();
 
