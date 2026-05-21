@@ -75,7 +75,7 @@ Matrix3<int> Matrix3<int>::skeletonize() const
 }
 
 template <>
-std::vector<CatmullRomSpline> Matrix3<int>::skeletonizeToBSplines() const
+std::vector<Polyline> Matrix3<int>::skeletonizeToBSplines() const
 {
     Matrix3<int> initial = ((Matrix3<float>)*this).binarize(0.5f);
     skeleton_tracer_t* skel = new skeleton_tracer_t();
@@ -166,12 +166,12 @@ std::vector<CatmullRomSpline> Matrix3<int>::skeletonizeToBSplines() const
         }
         splines = merged;
     }
-    std::vector<CatmullRomSpline> allSplines(splines.size());
+    std::vector<Polyline> allSplines(splines.size());
     for (const auto& spline : splines) { allSplines.push_back(spline); }
     return allSplines;
 }
 template <>
-Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<CatmullRomSpline> splines) const {
+Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<Polyline> splines) const {
     Matrix3<Vector3> newImage(this->getDimensions());
     newImage.raiseErrorOnBadCoord = false;
     int pointsize = 5;
@@ -358,7 +358,7 @@ std::vector<Contour> Matrix3<int>::findContoursAsCurves() const
 
         for (auto& p : contour)
             p *= .5f;
-        curves.push_back(CatmullRomSpline(contour)/*.resamplePoints().simplifyByRamerDouglasPeucker(5.f).resamplePoints()*/);
+        curves.push_back(Polyline(contour)/*.resamplePoints().simplifyByRamerDouglasPeucker(5.f).resamplePoints()*/);
     }
     return curves;
 }

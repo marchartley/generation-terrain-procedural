@@ -113,15 +113,19 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
     float bestT = 0.f;
     float bestDistSq = std::numeric_limits<float>::max();
 
-    constexpr int samplesPerSegment = 20;
+    constexpr int samplesPerSegment = 4;
 
     // Coarse search
     for (int segment = 0; segment < segmentCount; ++segment)
     {
+        const auto point0 = points[segment];
+        const auto point1 = handlePos(handleOut(segment));
+        const auto point2 = handlePos(handleIn(segment + 1));
+        const auto point3 = points[segment + 1];
         for (int i = 0; i <= samplesPerSegment; ++i)
         {
             float t = float(i) / float(samplesPerSegment);
-            Vector3 p = cubicBezier(points[segment], handlePos(handleOut(segment)), handlePos(handleIn(segment + 1)), points[segment + 1], t);
+            const Vector3 p = cubicBezier(point0, point1, point2, point3, t);
 
             float dSq = (p - pos).norm2();
 
@@ -135,13 +139,17 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
     }
 
     // Newton refinement on the closest segment
-    constexpr int iterations = 8;
+    constexpr int iterations = 4;
 
+    const auto bestPoint0 = points[bestSegment];
+    const auto bestPoint1 = handlePos(handleOut(bestSegment));
+    const auto bestPoint2 = handlePos(handleIn(bestSegment + 1));
+    const auto bestPoint3 = points[bestSegment + 1];
     for (int i = 0; i < iterations; ++i)
     {
-        Vector3 p = cubicBezier(points[bestSegment], handlePos(handleOut(bestSegment)), handlePos(handleIn(bestSegment + 1)), points[bestSegment + 1], bestT);
-        Vector3 d1 = cubicBezierDerivative(points[bestSegment], handlePos(handleOut(bestSegment)), handlePos(handleIn(bestSegment + 1)), points[bestSegment + 1], bestT);
-        Vector3 d2 = cubicBezierSecondDerivative(points[bestSegment], handlePos(handleOut(bestSegment)), handlePos(handleIn(bestSegment + 1)), points[bestSegment + 1], bestT);
+        const Vector3 p = cubicBezier(bestPoint0, bestPoint1, bestPoint2, bestPoint3, bestT);
+        const Vector3 d1 = cubicBezierDerivative(bestPoint0, bestPoint1, bestPoint2, bestPoint3, bestT);
+        const Vector3 d2 = cubicBezierSecondDerivative(bestPoint0, bestPoint1, bestPoint2, bestPoint3, bestT);
 
         Vector3 r = p - pos;
 
@@ -415,12 +423,11 @@ BezierCurve& BezierCurve::autosmooth(int pointIdx)
     Vector3 segment = P_next - P_prev;
     float t = (segment.norm2() > 0 ? startToPoint.dot(segment) / segment.dot(segment) : 0.f);
     auto proj = P_prev + segment * t;
-    handles[handleIn(pointIdx)] = -(proj - P_prev).normalize() * (P - P_prev).norm() / 3.f * (t < 0 ? -1.f : 1.f);
-    handles[handleOut(pointIdx)] = (P_next - proj).normalize() * (P_next - P).norm() / 3.f * (t > 1 ? -1.f : 1.f);
+    if (currentIdx != 0 || isClosed())
+        handles[handleIn(pointIdx)] = -(proj - P_prev).normalize() * (P - P_prev).norm() / 3.f * (t < 0 ? -1.f : 1.f);
+    if (nextIdx != 0 || isClosed())
+        handles[handleOut(pointIdx)] = (P_next - proj).normalize() * (P_next - P).norm() / 3.f * (t > 1 ? -1.f : 1.f);
 
-    if (handles[handleIn(pointIdx)].dot(handles[handleOut(pointIdx)]) > 0) {
-        std::cout << "WTF " << pointIdx << std::endl;
-    }
     return *this;
 }
 

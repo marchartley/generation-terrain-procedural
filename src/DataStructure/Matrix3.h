@@ -10,7 +10,7 @@
 #include <iomanip>
 #include <complex>
 #include "DataStructure/Vector3.h"
-#include "Curves/CatmullRomSpline.h"
+#include "Curves/Curves.h"
 #include "Curves/Contour.h"
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
@@ -204,8 +204,8 @@ public:
     inline Vector3 gradient(float posX, float posY, float posZ = 0) const;
 
     Matrix3<int> skeletonize() const;
-    std::vector<CatmullRomSpline> skeletonizeToBSplines() const;
-    Matrix3<Vector3> fillWithBSplines(std::vector<CatmullRomSpline> splines) const;
+    std::vector<Polyline> skeletonizeToBSplines() const;
+    Matrix3<Vector3> fillWithBSplines(std::vector<Polyline> splines) const;
     Matrix3<T> dilate(bool use2D = false, float t = 1.f) const;
     Matrix3<T> erode(bool use2D = false, float t = 1.f) const;
     Matrix3<int> computeConnectedComponents(bool use4Connect = false) const;
@@ -216,10 +216,10 @@ public:
     T trace() const;
 
     Matrix3<T> warpWith(const Matrix3<Vector3>& warper, int precision = 1) const;
-    Matrix3<T> warpWith(const CatmullRomSpline& original, const CatmullRomSpline& warperCurve) const;
+    Matrix3<T> warpWith(const Curve& original, const Curve& warperCurve) const;
 
     Matrix3<T> warpWithoutInterpolation(const Matrix3<Vector3>& warper) const;
-    Matrix3<T> warpWithoutInterpolation(const CatmullRomSpline& original, const CatmullRomSpline& warperCurve) const;
+    Matrix3<T> warpWithoutInterpolation(const Curve& original, const Curve& warperCurve) const;
 
     static Matrix3<float> fbmNoise1D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
     static Matrix3<Vector3> fbmNoise2D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
@@ -2941,15 +2941,6 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
     // better results because we can fetch outside values (with mirror for ex)
     // But that's not the current definition.
     Matrix3<T> result(getDimensions());
-    // auto self = *this;
-    // self.raiseErrorOnBadCoord = false;
-    // self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
-    // result.raiseErrorOnBadCoord = false;
-
-    // auto valOrDefault = (this->returned_value_on_outside == RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE ?
-    //                      [&](const Vector3& q) -> T { return this->checkCoord(q) ? this->unsafe(q) : this->defaultValueOnBadCoord; } :
-    //                      [&](const Vector3& q) -> T { return this->unsafe(this->getMirrorPosition(q)); });
-
 
     auto valOrDefault = (this->returned_value_on_outside == RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE ?
                          std::function<T(const Vector3&)>([&](const Vector3& q) -> T { return this->checkCoord(q) ? this->unsafe(q) : this->defaultValueOnBadCoord; }) :
@@ -2969,7 +2960,7 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
             result.at(pos) = valOrDefault(warp);
         });
     } else {
-        iterateParallel([&](const Vector3& pos) {
+        iterate([&](const Vector3& pos) {
             const Vector3& warp = warper.at(pos);
             result.addValueAt(valOrDefault(pos), pos + warp);
         });
@@ -2978,90 +2969,21 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::warpWith(const CatmullRomSpline& original, const CatmullRomSpline& warperCurve) const
+Matrix3<T> Matrix3<T>::warpWith(const Curve& original, const Curve& warperCurve) const
 {
-    // For now, start from a straight line on the X-axis
-//    BSpline original = BSpline({this->getDimensions() * Vector3(0, .5, .5) + Vector3(1, 0, 0), this->getDimensions() * Vector3(1, .5, .5) - Vector3(1, 0, 0)});
-    float pathsResolution = 1000.f;
-    std::vector<Vector3> originalCurvePoints = original.getPath(pathsResolution);
-    std::vector<Vector3> warperCurvePoints = warperCurve.getPath(pathsResolution);
+    Matrix3<Vector3> warper(getDimensions());
 
-    Matrix3<Vector3> warper(this->getDimensions());
-    warper.raiseErrorOnBadCoord = false;
-    Matrix3<float> modifications(this->getDimensions(), 0.f);
-    modifications.raiseErrorOnBadCoord = false;
+    warper.iterateParallel([&](const Vector3& p) {
+        float closestT = original.estimateClosestTime(p);
+        Vector3 prevPos = original.getPoint(closestT);
+        Vector3 nextPos = warperCurve.getPoint(closestT);
 
-    // Vectors along the curve
-    for (size_t i = 0; i < originalCurvePoints.size(); i++) {
-        Vector3 pos = originalCurvePoints[i];
-        Vector3 dir = warperCurvePoints[i] - pos;
-        float curveWarpLength = dir.norm();
-        dir.normalize();
+        float distToCurve = (prevPos - p).norm();
+        float distToBorder = Vector3::distanceToBoundaries(p, Vector3::origin, (Vector3)warper.getDimensions(), true);
 
-        // In direction of the curve warping
-        Vector3 endingPropagationPoint = Collision::intersectionRayAABBox(pos + Vector3(.5, .5, .5), dir, Vector3(), getDimensions());
-        float distanceToBorder = (dir.norm2() > 0 ? (endingPropagationPoint - pos).norm() : 1.f);
-
-        for (int j = 0; j < distanceToBorder; j++) {
-            float warpLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWarpLength;
-//            warper.at(pos + dir * (float)j) += dir * warpLength;
-//            modifications.at(pos + dir * (float)j) += 1.f;
-            warper.addValueAt(dir * warpLength, pos + dir * (float)j);
-            modifications.addValueAt(1.f, pos + dir * (float)j);
-        }
-
-        // In opposite direction of the curve warping
-        endingPropagationPoint = Collision::intersectionRayAABBox(pos + Vector3(.5, .5, .5), dir * -1.f, Vector3(), getDimensions());
-        distanceToBorder = (dir.norm2() > 0 ? (endingPropagationPoint - pos).norm() : 1.f);
-
-        for (int j = 1; j < distanceToBorder; j++) {
-            float warpLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWarpLength;
-//            warper.at(pos - dir * (float)j) += dir * warpLength;
-//            modifications.at(pos - dir * (float)j) += 1.f;
-            warper.addValueAt(dir * warpLength, pos - dir * (float)j);
-            modifications.addValueAt(1.f, pos - dir * (float)j);
-        }
-    }
-
-    for (size_t i = 0; i < warper.size(); i++) {
-        warper[i] /= (modifications[i] > 0 ? modifications[i] : 1.f);
-        modifications[i] = (modifications[i] > 0 ? 1.f : 0.f);
-    }
-
-    // Fill the empty gaps left
-    while (modifications.min() <= 0) {
-        for (size_t i = 0; i < warper.size(); i++) {
-            if (modifications[i] == 0) {
-                Vector3 pos = warper.getCoordAsVector3(i);
-                Vector3 replaceValue;
-                float divisor = 0.f;
-                for (int x = -1; x <= 1; x++) {
-                    for (int y = -1; y <= 1; y++) {
-                        for (int z = -1; z <= 1; z++) {
-                            Vector3 offset(x, y, z);
-                            if (modifications.at(pos + offset) > 0) {
-                                replaceValue += warper.at(pos + offset);
-                                divisor++;
-                            }
-                        }
-                    }
-                }
-                if (divisor > 0.f) {
-                    warper.at(pos) = replaceValue / divisor;
-                    modifications.at(pos) = 1.f;
-                }
-
-            }
-        }
-    }
-//    Matrix3<float> tempReturn(warper.getDimensions());
-//    for (size_t i = 0; i < tempReturn.size(); i++) {
-//        tempReturn[i] = warper[i].x;
-//    }
-//    return tempReturn;
-    return this->warpWith(warper);
-
-    //    Matrix3<float> unit_ctrl(this->getDimensions(), 1.f);
+        warper(p) = (nextPos - prevPos) * (distToBorder / (distToCurve + distToBorder));
+    });
+    return warpWith(warper, 2);
 }
 
 template <class T>
@@ -3083,7 +3005,7 @@ Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Matrix3<Vector3>& warper) 
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const CatmullRomSpline &original, const CatmullRomSpline &warperCurve) const
+Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Curve &original, const Curve &warperCurve) const
 {
 //    bool previousRaise = this->raiseErrorOnBadCoord;
 //    T previousDefault  = this->returned_value_on_outside;
