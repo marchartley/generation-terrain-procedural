@@ -107,9 +107,10 @@ Polyline& Polyline::resamplePoints(int newNbPoints)
 {
     if (newNbPoints < 0) return *this;
 
+    int newNbSegments = newNbPoints - (isClosed() ? 0 : 1);
     std::vector<Vector3> newPoints(newNbPoints);
     for (int i = 0; i < newNbPoints; i++) {
-        float t = float(i) / (float(numPoints() - 1));
+        float t = float(i) / (float(newNbSegments));
         newPoints[i] = getPoint(t);
     }
     this->points = newPoints;
