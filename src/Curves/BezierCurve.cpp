@@ -78,8 +78,28 @@ Vector3 BezierCurve::getPoint(float x) const
     return cubicBezier(P0, P1, P2, P3, t);
 }
 
+Vector3 falseDerivativeOnTime0(const BezierCurve& curve) {
+    Vector3 possibleDerivative = -curve.handles[curve.handleIn(0)];
+    if (possibleDerivative.norm2() == 0) possibleDerivative = curve.handles[curve.handleOut(0)];
+    if (possibleDerivative.norm2() == 0) possibleDerivative = (curve.getPoint(.01f) - curve.get(0)) / .01f;
+    return possibleDerivative;
+}
+Vector3 falseDerivativeOnTime1(const BezierCurve& curve) {
+    Vector3 possibleDerivative = -curve.handles[curve.handleOut(-1)];
+    if (possibleDerivative.norm2() == 0) possibleDerivative = curve.handles[curve.handleIn(-1)];
+    if (possibleDerivative.norm2() == 0) possibleDerivative = (curve.get(-1) - curve.getPoint(.99f)) / .01f;
+    return possibleDerivative;
+}
 Vector3 BezierCurve::getDerivative(float x, bool normalize) const
 {
+    if (x <= 0.f && !isClosed()) {
+        Vector3 res = falseDerivativeOnTime0(*this);
+        return (normalize ? res.normalize() : res);
+    }
+    else if (x >= 1.f && !isClosed()) {
+        Vector3 res = falseDerivativeOnTime1(*this);
+        return (normalize ? res.normalize() : res);
+    }
     int pointId = timeToLowerIndex(x);
     int nextPointId = pointIndex(pointId + 1);
     const auto& P0 = points[pointId];
@@ -113,7 +133,7 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
     float bestT = 0.f;
     float bestDistSq = std::numeric_limits<float>::max();
 
-    constexpr int samplesPerSegment = 4;
+    constexpr int samplesPerSegment = 20;
 
     // Coarse search
     for (int segment = 0; segment < segmentCount; ++segment)
@@ -139,7 +159,7 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
     }
 
     // Newton refinement on the closest segment
-    constexpr int iterations = 4;
+    constexpr int iterations = 8;
 
     const auto bestPoint0 = points[bestSegment];
     const auto bestPoint1 = handlePos(handleOut(bestSegment));
@@ -309,8 +329,6 @@ BezierCurve& BezierCurve::translate(const Vector3 &translation)
 {
     for (auto& p : points)
         p += translation;
-    for (auto& p : handles)
-        p += translation;
     return *this;
 }
 
@@ -423,10 +441,15 @@ BezierCurve& BezierCurve::autosmooth(int pointIdx)
     Vector3 segment = P_next - P_prev;
     float t = (segment.norm2() > 0 ? startToPoint.dot(segment) / segment.dot(segment) : 0.f);
     auto proj = P_prev + segment * t;
-    if (currentIdx != 0 || isClosed())
+    if ((currentIdx != 0 && nextIdx != 0) || isClosed())
         handles[handleIn(pointIdx)] = -(proj - P_prev).normalize() * (P - P_prev).norm() / 3.f * (t < 0 ? -1.f : 1.f);
-    if (nextIdx != 0 || isClosed())
+    else
+        handles[handleIn(pointIdx)] = Vector3::origin;
+
+    if ((currentIdx != 0 && nextIdx != 0) || isClosed())
         handles[handleOut(pointIdx)] = (P_next - proj).normalize() * (P_next - P).norm() / 3.f * (t > 1 ? -1.f : 1.f);
+    else
+        handles[handleOut(pointIdx)] = Vector3::origin;
 
     return *this;
 }
