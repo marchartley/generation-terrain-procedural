@@ -66,6 +66,8 @@ public:
 
     BezierCurve& reset() { points.clear(); handles.clear(); return *this; }
 
+    using Curve::pointIndex;
+    inline static size_t pointIndex(int index, int nbPoints, bool closed);
     inline static size_t handleIndex(int index, int nbPoints, bool closed);
     inline static size_t handleIn(int pointIdx, int nbPoints, bool closed);
     inline static size_t handleOut(int pointIdx, int nbPoints, bool closed);
@@ -82,6 +84,18 @@ public:
 
     BezierCurve& autosmooth(int pointIndex);
     BezierCurve& autosmooth();
+
+    std::vector<BezierCurve> slice(float t) const;
+    std::vector<BezierCurve> slice(std::vector<float> ts) const;
+
+
+    static Vector3 linearBezier(const Vector3& P0, const Vector3& P1, float t);
+    static Vector3 quadraticBezier(const Vector3& P0, const Vector3& P1, const Vector3& P2, float t);
+    static Vector3 cubicBezier(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t);
+    static Vector3 cubicBezierDerivative(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t);
+    static Vector3 cubicBezierSecondDerivative(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t);
+
+
 // protected:
     std::vector<Vector3> points;
     std::vector<Vector3> handles;

@@ -245,6 +245,7 @@ InterfaceUI::~InterfaceUI()
         child->deleteLater();
     }
     elements.clear();
+    this->element->deleteLater();
 }
 
 QGroupBox* InterfaceUI::box() const

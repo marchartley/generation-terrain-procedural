@@ -2,6 +2,8 @@
 
 #include "Utils/Collisions.h"
 
+#include "GUIElements/ImageViewer.h"
+
 BezierCurve::BezierCurve() : BezierCurve(std::vector<Vector3>())
 {}
 
@@ -49,20 +51,20 @@ std::vector<Vector3> BezierCurve::getPath(int numberOfPoints) const
     return points;
 }
 
-inline Vector3 linearBezier(const Vector3& P0, const Vector3& P1, float t) {
+inline Vector3 BezierCurve::linearBezier(const Vector3& P0, const Vector3& P1, float t) {
     return P0 * (1.f - t) + P1 * t;
 }
-inline Vector3 quadraticBezier(const Vector3& P0, const Vector3& P1, const Vector3& P2, float t) {
+inline Vector3 BezierCurve::quadraticBezier(const Vector3& P0, const Vector3& P1, const Vector3& P2, float t) {
     return linearBezier(P0, P1, t) * (1.f - t) + linearBezier(P1, P2, t) * t;
 }
-inline Vector3 cubicBezier(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t) {
+inline Vector3 BezierCurve::cubicBezier(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t) {
     // return linearBezier(quadraticBezier(P0, P1, P2, t), quadraticBezier(P1, P2, P3, t), t);
     return std::pow(1.f-t, 3) * P0 + 3.f * std::pow(1.f - t, 2) * t * P1 + 3.f * (1.f - t) * t*t * P2 + t*t*t * P3;
 }
-inline Vector3 cubicBezierDerivative(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t) {
+inline Vector3 BezierCurve::cubicBezierDerivative(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t) {
     return 3.f * std::pow(1.f - t, 2) * (P1 - P0) + 6.f * (1.f - t) * t * (P2 - P1) + 3.f * t * t * (P3 - P2);
 }
-inline Vector3 cubicBezierSecondDerivative(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t) {
+inline Vector3 BezierCurve::cubicBezierSecondDerivative(const Vector3& P0, const Vector3& P1, const Vector3& P2, const Vector3& P3, float t) {
     return 6.f * (1.f - t) * (P0 + P2 - P1 * 2.f) + 6.f * t * (P1 + P3 - P2 * 2.f);
 }
 Vector3 BezierCurve::getPoint(float x) const
@@ -230,8 +232,6 @@ BezierCurve& BezierCurve::resamplePoints(int newNbPoints)
     int realNewNbPoints = (slicesPerSegment - 1) * numSegments() + numPoints();
     newNbPoints = realNewNbPoints;
     int newNbSegments = newNbPoints - (isClosed() ? 0 : 1);
-    // int slicesPerSegment = computeNewNbMultiplicatorForResampling(numSegments(), newNbPoints);
-    // newNbPoints = computeNewNbPointsForResampling(numPoints(), newNbPoints);
     std::vector<Vector3> newPoints(newNbPoints);
     std::vector<Vector3> newHandles(newNbPoints * 2);
 
@@ -387,6 +387,9 @@ BezierCurve& BezierCurve::close()
     return *this;
 }
 
+size_t BezierCurve::pointIndex(int index, int nbPoints, bool closed) {
+    return (index + nbPoints) % nbPoints;
+}
 size_t BezierCurve::handleIndex(int index, int nbPoints, bool closed)
 {
     return (index + (2 * nbPoints)) % (2 * nbPoints);
@@ -462,6 +465,105 @@ BezierCurve& BezierCurve::autosmooth()
         autosmooth(i);
     }
     return *this;
+}
+
+std::vector<BezierCurve> BezierCurve::slice(float t) const
+{
+    int lowerIndex = timeToLowerIndex(t);
+    int nextIdx = pointIndex(lowerIndex + 1);
+    int firstHalfNbPoints = lowerIndex + 2;
+    int secondHalfNbPoints = (numPoints() - (lowerIndex + 1)) + 1;
+
+
+    std::vector<Vector3> firstHalfPoints(firstHalfNbPoints);
+    std::vector<Vector3> firstHalfHandles(firstHalfNbPoints * 2);
+
+    std::vector<Vector3> secondHalfPoints(secondHalfNbPoints);
+    std::vector<Vector3> secondHalfHandles(secondHalfNbPoints * 2);
+
+    for (int i = 0; i < lowerIndex + 1; i++) {
+        firstHalfPoints[i] = points[i];
+        firstHalfHandles[BezierCurve::handleIn(i, firstHalfNbPoints, false)] = handles[handleIn(i)];
+        firstHalfHandles[BezierCurve::handleOut(i, firstHalfNbPoints, false)] = handles[handleOut(i)];
+    }
+    for (int i = 0; i < secondHalfNbPoints - 1; i++) {
+        secondHalfPoints[i + 1] = points[i + lowerIndex + 1];
+        secondHalfHandles[BezierCurve::handleIn(i + 1, secondHalfNbPoints, false)] = handles[handleIn(i + lowerIndex + 1)];
+        secondHalfHandles[BezierCurve::handleOut(i + 1, secondHalfNbPoints, false)] = handles[handleOut(i + lowerIndex + 1)];
+    }
+
+    float u = ::map(t, float(lowerIndex) / float(numSegments()), float(nextIdx) / float(numSegments()), 0.f, 1.f);
+
+    const Vector3 P0 = points[lowerIndex];
+    const Vector3 P1 = handlePos(handleOut(lowerIndex));
+    const Vector3 P2 = handlePos(handleIn(nextIdx));
+    const Vector3 P3 = points[nextIdx];
+    const Vector3 Q0 = P0 + (P1 - P0) * u;
+    const Vector3 Q1 = P1 + (P2 - P1) * u;
+    const Vector3 Q2 = P2 + (P3 - P2) * u;
+    const Vector3 R0 = Q0 + (Q1 - Q0) * u;
+    const Vector3 R1 = Q1 + (Q2 - Q1) * u;
+    const Vector3 S  = R0 + (R1 - R0) * u;
+
+    firstHalfPoints[BezierCurve::pointIndex(-1, firstHalfNbPoints, false)] = S;
+    firstHalfHandles[BezierCurve::handleOut(-2, firstHalfNbPoints, false)] = Q0 - P0;
+    firstHalfHandles[BezierCurve::handleIn(-1, firstHalfNbPoints, false)] = R0 - S;
+    firstHalfHandles[BezierCurve::handleOut(-1, firstHalfNbPoints, false)] = R1 - S;
+
+    secondHalfPoints[0] = S;
+    secondHalfHandles[handleIn(0)] = R0 - S;
+    secondHalfHandles[handleOut(0)] = R1 - S;
+    secondHalfHandles[handleIn(1)] = Q2 - P3;
+
+    if (this->isClosed()) {
+        secondHalfPoints.push_back(points[0]);
+        secondHalfHandles.push_back(handles[0]);
+        secondHalfHandles.push_back(handles[1]);
+    }
+
+    // ImageViewer::get().addScatter({P0, P1, P2, P3, Q0, Q1, Q2, R0, R1, S}, "", {}, Vector3::black);
+
+    BezierCurve firstCurve(firstHalfPoints, firstHalfHandles);
+    BezierCurve secondCurve(secondHalfPoints, secondHalfHandles);
+    return {firstCurve, secondCurve};
+}
+
+std::vector<BezierCurve> BezierCurve::slice(std::vector<float> ts) const
+{
+    std::sort(ts.begin(), ts.end(), std::greater<float>()); // sort in descending order, just to optimize the poping
+
+    std::vector<BezierCurve> subCurves;
+    // auto original = *this;
+    auto remaining = *this;
+    if (remaining.isClosed()) {
+        remaining.setClosed(false);
+        remaining.points.push_back(points[0]);
+        remaining.handles.push_back(handles[0]);
+        remaining.handles.push_back(handles[1]);
+    }
+    float previousT = -1.0f;
+    int nbPointsPassed = 0;
+    while (!ts.empty()) {
+        auto t = ts.back();
+        ts.pop_back();
+
+        int prevIndex = this->timeToLowerIndex(t);
+        bool previousIsSlice = (this->indexToTime(prevIndex) < previousT);
+        float oldTime = (previousIsSlice ? previousT : this->indexToTime(prevIndex));
+
+        float remapedU = (t - oldTime) / (this->indexToTime(prevIndex + 1) - oldTime);
+        float localT = ::map(remapedU, 0.f, 1.f, remaining.indexToTime(prevIndex - nbPointsPassed), remaining.indexToTime((prevIndex - nbPointsPassed) + 1));
+
+        nbPointsPassed += remaining.timeToLowerIndex(localT);
+
+        auto subs = remaining.slice(localT);
+        subCurves.push_back(subs[0]);
+        remaining = subs[1];
+
+        previousT = t;
+    }
+    subCurves.push_back(remaining);
+    return subCurves;
 }
 
 
