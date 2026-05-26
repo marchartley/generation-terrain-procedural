@@ -71,7 +71,7 @@ public:
 
     AbstractPlotter& addPlot(const std::vector<float>& data, std::string name = "", Vector3 color = Vector3::gray);
     AbstractPlotter& addPlot(const std::vector<Vector3>& data, std::string name = "", Vector3 color = Vector3::gray);
-    AbstractPlotter& addPlot(const CatmullRomSpline& data, std::string name = "", Vector3 color = Vector3::gray);
+    AbstractPlotter& addPlot(const Curve& data, std::string name = "", Vector3 color = Vector3::gray);
 
     AbstractPlotter& addScatter(const std::vector<float>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
     AbstractPlotter& addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);

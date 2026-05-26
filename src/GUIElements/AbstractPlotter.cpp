@@ -70,6 +70,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
     saveCopyInterface->add({saveButton, copyToClipboardButton});
 
     this->setLayout(layout->get()->layout());
+    // delete layout;
 
     this->resize(1100, 600);
     this->updateGeometry();
@@ -121,8 +122,10 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
 
             std::set<size_t> affectedSeriesIndices;
             for (auto& [iSeries, iData] : dataModel->selectedScatterData) {
-                dataModel->scatterData[iSeries][iData].pos = dataMousePos;
-                affectedSeriesIndices.insert(iSeries);
+                if ((int)dataModel->scatterData.size() > iSeries && (int)dataModel->scatterData[iSeries].size() > iData) {
+                    dataModel->scatterData[iSeries][iData].pos = dataMousePos;
+                    affectedSeriesIndices.insert(iSeries);
+                }
             }
 
             if (dataModel->selectedScatterData.size() > 0) {
@@ -160,9 +163,9 @@ AbstractPlotter& AbstractPlotter::addPlot(const std::vector<Vector3>& data, std:
     return *this;
 }
 
-AbstractPlotter& AbstractPlotter::addPlot(const CatmullRomSpline &data, std::string name, Vector3 color)
+AbstractPlotter& AbstractPlotter::addPlot(const Curve& data, std::string name, Vector3 color)
 {
-    return this->addPlot(data.getPoints(), name, color);
+    return this->addPlot(data.getPath(), name, color);
 }
 
 AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& data, std::string name, std::vector<std::string> labels, const Vector3& color)

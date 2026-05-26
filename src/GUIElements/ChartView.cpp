@@ -72,8 +72,10 @@ ChartView& ChartView::updateLabelsPositions()
 
     for (auto& series : scatterData) {
         for (auto& point : series) {
-            auto graphicLabel = new QGraphicsTextItem(QString::fromStdString(point.label), this->chart());
-            graphicLabel->setPos(point.pos.x(), point.pos.y());
+            if (point.label != "") {
+                auto graphicLabel = new QGraphicsTextItem(QString::fromStdString(point.label), this->chart());
+                graphicLabel->setPos(point.pos.x(), point.pos.y());
+            }
         }
     }
     if (!this->_dataModel->selectedPlotData.empty() || !this->_dataModel->selectedScatterData.empty()) {
@@ -223,7 +225,7 @@ void ChartView::displayScatterPoints()
             q_series->append(point.pos.x(), point.pos.y());
         }
         QPen pen = q_series->pen();
-        QColor col = QColor(int(series.color.r() * 255), int(series.color.g() * 255), int(series.color.b() * 255));
+        QColor col = QColor(int(series.color.r() * 255), int(series.color.g() * 255), int(series.color.b() * 255)/*, (series.color.isValid() ? 255 : 0)*/);
         pen.setColor(col);
         q_series->setPen(pen);
         q_series->setColor(col);

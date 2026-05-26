@@ -106,35 +106,204 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+    auto curve = BezierCurve(std::vector<Vector3>{
+        Vector3(.1f, 0.f),
+        Vector3(0.f, .5f),
+        Vector3(.5f, 1.f),
+        Vector3(1.f, .5f),
+        Vector3(.5f, .25f),
+        Vector3(.25f, .5f),
+        Vector3(.5f, .75f),
+        Vector3(.75f, .5f),
+        Vector3(.5f, .4f),
+        Vector3(.4f, .5f)
+    });
+    curve.close();
 
+    auto& viewer = ImageViewer::get();
+
+    /*
+    viewer.addScatter(curve.getPath(), "", {}, Vector3::black);
+
+    // auto curves = curve.slice(.4f);
+    auto curves = curve.slice({.3f, .4f, .625f});
+    for (size_t i = 0; i < curves.size(); i++) {
+        // if (i == 1) continue;
+        const auto& c = curves[i];
+        std::cout << c << std::endl;
+        Vector3 color = HSVtoRGB(float(i) / float(curves.size()), 1.f, 1.f);
+        viewer.addPlot(c.getPath(100), "", color);
+        viewer.addScatter(c.getPath(), "", {}, color);
+
+        for (size_t iPoint = 0; iPoint < c.numPoints(); iPoint++) {
+            viewer.addPlot({c.handlePos(c.handleIn(iPoint)), c.get(iPoint), c.handlePos(c.handleOut(iPoint))}, "", color);
+        }
+    }
+
+    viewer.addPlot(curve.translate(Vector3(0.1, 0.1)).getPath(1000), "Original", Vector3::black);
+    for (size_t i = 0; i < curve.numPoints(); i++) {
+        viewer.addPlot({curve.handlePos(curve.handleIn(i)), curve.handlePos(curve.handleOut(i))}, "", Vector3::black);
+    }
+
+    return viewer.exec();
+    */
+
+    auto drawCurves = [&]() {
+        viewer.dataModel->reset();
+        curve.autosmooth();
+        // viewer.addPlot(curve.getPath(1000), "Original", Vector3::black);
+        viewer.addScatter(curve.getPath(), "", {}, Vector3::black);
+
+        std::vector<BezierCurve> subCurves;
+
+        std::set<float> sliceIndices;
+        for (size_t i = 0; i < curve.numSegments(); i++) {
+            const auto& P0 = curve.points[curve.pointIndex(i)];
+            const auto& P1 = curve.handlePos(curve.handleOut(i));
+            const auto& P2 = curve.handlePos(curve.handleIn(i + 1));
+            const auto& P3 = curve.points[curve.pointIndex(i + 1)];
+
+            const auto a = (-P0 + P1 * 3.f - P2 * 3.f + P3) * 3.f;
+            const auto b = (P0 - P1 * 2.f + P2) * 6.f;
+            const auto c = (-P0 + P1) * 3.f;
+
+            const auto twoA = a * 2.f;
+
+            if (a.norm2() < 1e-5) continue;
+            const auto root = (b*b - 4.f*a*c);
+
+            if (root.x() > 0) {
+                float delta = std::sqrt(root.x());
+                float t1_x = (-b.x() - delta) / (twoA.x());
+                float t2_x = (-b.x() + delta) / (twoA.x());
+
+                if (0.f <= t1_x && t1_x < 1.f) {
+                    sliceIndices.insert(float(i) + t1_x);
+                }
+                if (0.f <= t2_x && t2_x < 1.f) {
+                    sliceIndices.insert(float(i) + t2_x);
+                }
+            }
+            if (root.y() > 0) {
+                float delta = std::sqrt(root.y());
+                float t1_y = (-b.y() - delta) / (twoA.y());
+                float t2_y = (-b.y() + delta) / (twoA.y());
+
+
+                if (0.f <= t1_y && t1_y < 1.f) {
+                    sliceIndices.insert(float(i) + t1_y);
+                }
+                if (0.f <= t2_y && t2_y < 1.f) {
+                    sliceIndices.insert(float(i) + t2_y);
+                }
+            }
+        }
+        std::vector<float> sortedTimes = convertSetToVector(sliceIndices);
+        std::sort(sortedTimes.begin(), sortedTimes.end());
+
+        for (auto& time : sortedTimes) {
+            time = ::map(time, 0.f, float(curve.numSegments()), 0.f, 1.f);
+        }
+        subCurves = curve.slice(sortedTimes);
+        for (size_t i = 0; i < subCurves.size(); i++) {
+            const auto& c = subCurves[i];
+            Vector3 color = HSVtoRGB(float(i) / float(subCurves.size()), 1.f, 1.f);
+            viewer.addPlot(c.getPath(100), "", color);
+            viewer.addScatter({c.get(0), c.get(-1)}, "", {}, color);
+        }
+    };
+    drawCurves();
+    viewer.setOnUserModifiedData([&](const std::vector<size_t>& modifiedSeriesIndices) {
+        for (auto& idx : modifiedSeriesIndices) {
+            int i = 0;
+            for (auto& point : viewer.dataModel->scatterData[idx]) {
+                if (idx == 0) {
+                    curve.setPoint(i, point.pos);
+                }
+                i++;
+            }
+        }
+        drawCurves();
+    });
+    return viewer.exec();
+
+    /*
+    Vector3i size(200, 200, 1);
+    GridV3 initialImage = Image::readFromFile("poster/profile.png").colorImage.resize(size) / 255.f;
+
+    auto initialCurve = BezierCurve(std::vector<Vector3>{
+        Vector3(0.f, .5f, 0.f),
+        Vector3(1.f, .5f, 0.f)
+                                 }).scale(size);
+    auto deformedCurve = *initialCurve.clone();
+    deformedCurve.resamplePoints(4);
+    auto& viewer = ImageViewer::get();
+    auto deformImage = [&]() {
+        auto deformed = initialImage.flip(false, true);
+        deformedCurve.autosmooth();
+        displayProcessTime("Deformation...", [&]() {
+            deformed = deformed.warpWith(initialCurve, deformedCurve);
+        });
+        GridV3 distances(size);
+        distances.iterateParallel([&](const Vector3& p) {
+            distances[p] = deformedCurve.getDirection(deformedCurve.estimateClosestTime(p)).abs();
+        });
+        viewer.dataModel->reset();
+        viewer.addImage(GridV3(size * Vector3i(3, 1, 1))
+                            .paste(initialImage, Vector3i::origin)
+                            .paste(deformed.flip(false, true), size * Vector3i(1, 0, 0))
+                            .paste(distances.flip(false, true), size * Vector3i(2, 0, 0))
+                        );
+        viewer.addPlot(deformedCurve.getPath(1000), "", Vector3::red)
+            .addPlot(deformedCurve.translate(size * Vector3i(1, 0, 0)).getPath(1000), "", Vector3::red)
+            .addPlot(deformedCurve.translate(size * Vector3i(1, 0, 0)).getPath(1000), "", Vector3::red);
+        deformedCurve.translate(-size * Vector3i(2, 0, 0));
+        viewer.addScatter(deformedCurve.getPath(), "", {}, Vector3::red);
+        viewer.chartView->setPlottingLimits(size * Vector3i(3, 1, 1));
+    };
+    deformImage();
+    viewer.setOnUserModifiedData([&](const std::vector<size_t>& modifiedSeriesIndices) {
+        for (auto& idx : modifiedSeriesIndices) {
+            int i = 0;
+            for (auto& point : viewer.dataModel->scatterData[idx]) {
+                if (idx == 0) {
+                    deformedCurve.setPoint(i, point.pos);
+                }
+                i++;
+            }
+        }
+        deformImage();
+    });
+    return viewer.exec();
+    */
     /*
     auto initialCurve = std::make_shared<BezierCurve>(std::vector<Vector3>{
         Vector3(.0f, .0f),
         Vector3(1.f, 1.f),
-        // Vector3(.5f, 1.1f),
-        // Vector3(.5f, 1.5f),
-        // Vector3(.75f, 1.5f),
+        Vector3(.5f, 1.1f),
+        Vector3(.5f, 1.5f),
+        Vector3(.75f, 1.5f),
         // Vector3(.75f, .8f),
         // Vector3(.2f, 1.f),
         // Vector3(.2f, 0.f)
        }
-       , std::vector<Vector3>{
-                            Vector3(0.f, -.5f), Vector3(0.f, 1.f),
-                            Vector3(-1.f, 0.f), Vector3(.5f, 0.f)
-       }
+       // , std::vector<Vector3>{
+                            // Vector3(0.f, -.5f), Vector3(0.f, 1.f),
+                            // Vector3(-1.f, 0.f), Vector3(.5f, 0.f)
+       // }
         );
-    // Contour initial(curve);
+    Contour initial(initialCurve);
 
 
     // std::cout << initial.curve << std::endl;
 
-    // Contour grown = initial.grow(.05f);
-    // Contour shrink = initial.shrink(.05f);
+    Contour grown = initial.grow(.05f);
+    Contour shrink = initial.shrink(.05f);
 
-    initialCurve->setClosed(false);
+    // initialCurve->setClosed(false);
     // auto initialCurve = (dynamic_cast<BezierCurve*>(initial.curve.get()));
-    auto shrinkCurve = initialCurve->clone(); // (dynamic_cast<BezierCurve*>(shrink.curve.get()));
-    auto grownCurve = initialCurve->clone(); //(dynamic_cast<BezierCurve*>(grown.curve.get()));
+    auto shrinkCurve = (dynamic_cast<BezierCurve*>(shrink.curve.get()));
+    auto grownCurve = (dynamic_cast<BezierCurve*>(grown.curve.get()));
 
     for (size_t i = 0; i < initialCurve->numPoints(); i++) {
         initialCurve->setPoint(i, initialCurve->get(i));
@@ -147,41 +316,40 @@ int main(int argc, char *argv[])
     auto& viewer = AbstractPlotter::get();
     auto drawCurves = [&]() {
 
-        // grown = initial.grow(.05f);
-        // shrink = initial.shrink(.05f);
+        initialCurve->autosmooth();
+        grown = initial.grow(.05f);
+        shrink = initial.shrink(.05f);
 
         // initialCurve = (dynamic_cast<BezierCurve*>(initial.curve.get()));
-        // shrinkCurve = (dynamic_cast<BezierCurve*>(shrink.curve.get()));
-        // grownCurve = (dynamic_cast<BezierCurve*>(grown.curve.get()));
+        shrinkCurve = (dynamic_cast<BezierCurve*>(shrink.curve.get()));
+        grownCurve = (dynamic_cast<BezierCurve*>(grown.curve.get()));
 
-        initialCurve->autosmooth();
-        shrinkCurve = initialCurve->clone();
-        grownCurve = initialCurve->clone();
+        // initialCurve->autosmooth();
+        // shrinkCurve = initialCurve->clone();
+        // grownCurve = initialCurve->clone();
 
-        int newNbPoints = 40;
-        grownCurve->resamplePoints(newNbPoints);
+        // int newNbPoints = 40;
+        // grownCurve->resamplePoints(newNbPoints);
         // shrinkCurve->autosmooth();
         // grownCurve->autosmooth();
 
         viewer.dataModel->reset();
         viewer
             .addScatter(initialCurve->getPath(), "", {}, Vector3::black)
-            // .addScatter(shrink.curve->getPath(), "", {}, Vector3::red)
-            // .addScatter(grownCurve->getPath(), "", {}, Vector3::green)
+            .addScatter(shrinkCurve->getPath(), "", {}, Vector3::red)
+            .addScatter(grownCurve->getPath(), "", {}, Vector3::green)
 
             .addPlot(initialCurve->getPath(100), "Original", Vector3::black)
-            // .addPlot(shrink.curve->getPath(100), "", Vector3::red)
-            // .addPlot(grownCurve->getPath(100), "", Vector3::green)
+            .addPlot(shrinkCurve->getPath(100), "", Vector3::red)
+            .addPlot(grownCurve->getPath(100), "", Vector3::green)
             ;
 
         viewer.addPlot(grownCurve->getPath(100), "", Vector3::green);
 
-        for (int i = 0; i < newNbPoints; i++) {
-        }
         for (int i = 0; i < grownCurve->numPoints(); i++) {
             viewer
-                .addPlot({grownCurve->handlePos(grownCurve->handleIn(i)), grownCurve->get(i)}, "", Vector3::blue)
-                .addPlot({grownCurve->handlePos(grownCurve->handleOut(i)), grownCurve->get(i)}, "", Vector3::blue)
+                // .addPlot({grownCurve->handlePos(grownCurve->handleIn(i)), grownCurve->get(i)}, "", Vector3::blue)
+                // .addPlot({grownCurve->handlePos(grownCurve->handleOut(i)), grownCurve->get(i)}, "", Vector3::blue)
                 ;
         }
         for (int i = 0; i < initialCurve->numPoints(); i++) {
@@ -226,9 +394,9 @@ int main(int argc, char *argv[])
                 if (idx == 0) {
                     initialCurve->setPoint(i, point.pos);
                 } else if (idx == 1) {
-                    shrinkCurve->setPoint(i, point.pos);
+                    // shrinkCurve->setPoint(i, point.pos);
                 } else if (idx == 2) {
-                    grownCurve->setPoint(i, point.pos);
+                    // grownCurve->setPoint(i, point.pos);
                 }
                 i++;
             }
