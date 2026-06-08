@@ -208,6 +208,18 @@ float BezierCurve::length() const
     return dist;
 }
 
+Vector3 &BezierCurve::get(int i) {
+    return this->points[pointIndex(i)];
+}
+
+Vector3 BezierCurve::get(int i) const {
+    return this->points[pointIndex(i)];
+}
+
+size_t BezierCurve::getIndex(int i) {
+    return (i + numPoints()) % numPoints();
+}
+
 BezierCurve& BezierCurve::setPoint(int _i, const Vector3 &newPos)
 {
     size_t i = pointIndex(_i);
@@ -344,9 +356,29 @@ BezierCurve& BezierCurve::removeDuplicates()
     return *this;
 }
 
+size_t BezierCurve::size() const {
+    return numPoints();
+}
+
 size_t BezierCurve::numPoints() const
 {
     return this->points.size();
+}
+
+std::vector<Vector3>::const_iterator BezierCurve::begin() const {
+    return points.begin();
+}
+
+std::vector<Vector3>::const_iterator BezierCurve::end() const {
+    return points.end();
+}
+
+std::vector<Vector3>::iterator BezierCurve::begin() {
+    return points.begin();
+}
+
+std::vector<Vector3>::iterator BezierCurve::end() {
+    return points.end();
 }
 
 std::string BezierCurve::toString() const
@@ -384,6 +416,12 @@ BezierCurve& BezierCurve::close()
         // this->points.push_back(points.front());
 
     // }
+    return *this;
+}
+
+BezierCurve &BezierCurve::reset() {
+    points.clear();
+    handles.clear();
     return *this;
 }
 
@@ -430,6 +468,14 @@ Vector3 BezierCurve::handlePos(int handleIdx) const
     return points[pointIndexFromHandleIndex(handleIdx)] + handles[handleIndex(handleIdx)];
 }
 
+std::vector<Vector3> BezierCurve::getPoints() const {
+    return points;
+}
+
+std::vector<Vector3> BezierCurve::getHandles() const {
+    return handles;
+}
+
 BezierCurve& BezierCurve::autosmooth(int pointIdx)
 {
     const size_t currentIdx = pointIndex(pointIdx);
@@ -467,7 +513,7 @@ BezierCurve& BezierCurve::autosmooth()
     return *this;
 }
 
-std::vector<BezierCurve> BezierCurve::slice(float t) const
+std::vector<std::shared_ptr<Curve>> BezierCurve::slice(float t) const
 {
     int lowerIndex = timeToLowerIndex(t);
     int nextIdx = pointIndex(lowerIndex + 1);
@@ -525,21 +571,22 @@ std::vector<BezierCurve> BezierCurve::slice(float t) const
 
     BezierCurve firstCurve(firstHalfPoints, firstHalfHandles);
     BezierCurve secondCurve(secondHalfPoints, secondHalfHandles);
-    return {firstCurve, secondCurve};
+    return {std::make_shared<BezierCurve>(firstCurve), std::make_shared<BezierCurve>(secondCurve)};
 }
 
-std::vector<BezierCurve> BezierCurve::slice(std::vector<float> ts) const
+std::vector<std::shared_ptr<Curve>> BezierCurve::slice(const std::vector<float>& _ts) const
 {
+    auto ts = _ts;
     std::sort(ts.begin(), ts.end(), std::greater<float>()); // sort in descending order, just to optimize the poping
 
-    std::vector<BezierCurve> subCurves;
+    std::vector<std::shared_ptr<Curve>> subCurves;
     // auto original = *this;
-    auto remaining = *this;
-    if (remaining.isClosed()) {
-        remaining.setClosed(false);
-        remaining.points.push_back(points[0]);
-        remaining.handles.push_back(handles[0]);
-        remaining.handles.push_back(handles[1]);
+    std::shared_ptr<BezierCurve> remaining(this->clone());
+    if (remaining->isClosed()) {
+        remaining->setClosed(false);
+        remaining->points.push_back(points[0]);
+        remaining->handles.push_back(handles[0]);
+        remaining->handles.push_back(handles[1]);
     }
     float previousT = -1.0f;
     int nbPointsPassed = 0;
@@ -552,13 +599,13 @@ std::vector<BezierCurve> BezierCurve::slice(std::vector<float> ts) const
         float oldTime = (previousIsSlice ? previousT : this->indexToTime(prevIndex));
 
         float remapedU = (t - oldTime) / (this->indexToTime(prevIndex + 1) - oldTime);
-        float localT = ::map(remapedU, 0.f, 1.f, remaining.indexToTime(prevIndex - nbPointsPassed), remaining.indexToTime((prevIndex - nbPointsPassed) + 1));
+        float localT = ::map(remapedU, 0.f, 1.f, remaining->indexToTime(prevIndex - nbPointsPassed), remaining->indexToTime((prevIndex - nbPointsPassed) + 1));
 
-        nbPointsPassed += remaining.timeToLowerIndex(localT);
+        nbPointsPassed += remaining->timeToLowerIndex(localT);
 
-        auto subs = remaining.slice(localT);
+        auto subs = remaining->slice(localT);
         subCurves.push_back(subs[0]);
-        remaining = subs[1];
+        remaining = std::dynamic_pointer_cast<BezierCurve>(subs[1]);
 
         previousT = t;
     }

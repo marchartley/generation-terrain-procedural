@@ -32,6 +32,18 @@ CatmullRomSpline& CatmullRomSpline::reverseVertices()
     return *this;
 }
 
+size_t CatmullRomSpline::nextID(int i) {
+    return (i + 1 + this->points.size()) % this->points.size();
+}
+
+size_t CatmullRomSpline::prevID(int i) {
+    return (i - 1 + this->points.size()) % this->points.size();
+}
+
+CatmullRomSpline::operator bool() const {
+    return (this->points.size() > 0);
+}
+
 std::vector<Vector3> CatmullRomSpline::getPath(int numberOfPoints) const
 {
     if (numberOfPoints < 0) return this->points;
@@ -362,6 +374,18 @@ float CatmullRomSpline::length() const
     return length;
 }
 
+std::vector<Vector3> CatmullRomSpline::getPoints() const {
+    return this->points;
+}
+
+Vector3 &CatmullRomSpline::get(int i) {
+    return this->points[pointIndex(i)];
+}
+
+Vector3 CatmullRomSpline::get(int i) const {
+    return this->points[pointIndex(i)];
+}
+
 CatmullRomSpline CatmullRomSpline::smooth(float factor) const
 {
     CatmullRomSpline newCurve = *this;
@@ -682,6 +706,38 @@ std::string CatmullRomSpline::toString() const
     return out.str();
 }
 
+std::vector<Vector3>::const_iterator CatmullRomSpline::begin() const {
+    return points.begin();
+}
+
+std::vector<Vector3>::const_iterator CatmullRomSpline::end() const {
+    return points.end();
+}
+
+std::vector<Vector3>::iterator CatmullRomSpline::begin() {
+    return points.begin();
+}
+
+std::vector<Vector3>::iterator CatmullRomSpline::end() {
+    return points.end();
+}
+
+std::size_t CatmullRomSpline::size() const {
+    return end() - begin();
+}
+
+std::size_t CatmullRomSpline::numPoints() const {
+    return size();
+}
+
+std::size_t CatmullRomSpline::numVertices() const {
+    return size();
+}
+
+bool CatmullRomSpline::empty() const {
+    return begin() == end();
+}
+
 Vector3 &CatmullRomSpline::operator[](size_t i)
 {
     return this->points[(i + size()) % size()];
@@ -944,6 +1000,51 @@ CatmullRomSpline CatmullRomSpline::random(int numberOfPoints) {
         curve.addPoint(Vector3::random());
     }
     return curve;
+}
+
+void CatmullRomSpline::setAlpha(float newAlpha) {
+    this->alpha = newAlpha;
+}
+
+float CatmullRomSpline::getAlpha() const {
+    return alpha;
+}
+
+void CatmullRomSpline::addPoint(const Vector3 &newPoint) {
+    this->points.push_back(newPoint);
+}
+
+CatmullRomSpline &CatmullRomSpline::insertPoint(int i, const Vector3 &newPos) {
+    this->points.insert(points.begin() + i, newPos); return *this;
+}
+
+CatmullRomSpline &CatmullRomSpline::removePoint(int i) {
+    this->points.erase(points.begin() + i); return *this;
+}
+
+CatmullRomSpline &CatmullRomSpline::reset() {
+    this->points.clear(); return *this;
+}
+
+std::vector<std::shared_ptr<Curve> > CatmullRomSpline::slice(float t) const
+{
+    size_t lowerIndex = this->timeToLowerIndex(t);
+    std::vector<Vector3> firstPoints(lowerIndex + 2);
+    std::vector<Vector3> lastPoints(numPoints() - lowerIndex);
+
+    for (size_t i = 0; i < numSegments() + 1; i++) {
+        if (i <= lowerIndex) {
+            firstPoints[i] = points[i];
+        } else {
+            lastPoints[i - lowerIndex] = points[pointIndex(i)];
+        }
+    }
+    const auto p = getPoint(t);
+    firstPoints.back() = p;
+    lastPoints.front() = p;
+    CatmullRomSpline p1(firstPoints);
+    CatmullRomSpline p2(lastPoints);
+    return {std::make_shared<CatmullRomSpline>(p1), std::make_shared<CatmullRomSpline>(p2)};
 }
 
 

@@ -18,4 +18,8 @@ Polyline toPolyline(const Curve& curve);
 // Polyline toPolyline(const CatmullRomSpline& curve);
 // Polyline toPolyline(const BezierCurve& curve);
 
+BSpline toBSpline(const CatmullRomSpline& curve);
+BSpline toBSpline(const BezierCurve& curve);
+BSpline toBSpline(const Polyline& curve);
+
 #endif // CURVES_H

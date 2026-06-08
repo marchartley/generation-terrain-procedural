@@ -7,7 +7,8 @@ class BSpline : public Curve
 {
 public:
     BSpline();
-    BSpline(const std::vector<Vector3>& points);
+    BSpline(const std::vector<Vector3>& points, bool clamped = true);
+    BSpline(const std::vector<Vector3>& points, const std::vector<float>& knots);
     BSpline(const Curve& curve);
 
     CLONE_FUNCTION(BSpline)
@@ -20,12 +21,14 @@ public:
     float estimateSqrDistanceFrom(const Vector3& pos) const override;
     float length() const override;
 
-    size_t getIndex(int i) { return (i + numPoints()) % numPoints(); }
+    size_t getIndex(int i);
     BSpline& setPoint(int i, const Vector3& newPos) override;
 
-    std::vector<Vector3> getPoints() const { return this->points; }
-    Vector3& get(int i) override { return this->points[pointIndex(i)]; }
-    Vector3 get(int i) const override { return this->points[pointIndex(i)]; }
+    std::vector<Vector3> getPoints() const;
+    Vector3& get(int i) override;
+    Vector3 get(int i) const override;
+
+    size_t numSegments() const override;
 
     BSpline& resamplePoints(int newNbPoints = -1) override;
 
@@ -40,29 +43,46 @@ public:
 
     BSpline& removeDuplicates() override;
 
-    inline size_t size() const { return numPoints(); }
+    size_t size() const;
     size_t numPoints() const override;
 
-    std::vector<Vector3>::const_iterator begin() const override { return points.begin(); }
-    std::vector<Vector3>::const_iterator end() const override { return points.end(); }
-    std::vector<Vector3>::iterator begin() override { return points.begin(); }
-    std::vector<Vector3>::iterator end() override { return points.end(); }
+    std::vector<Vector3>::const_iterator begin() const override;
+    std::vector<Vector3>::const_iterator end() const override;
+    std::vector<Vector3>::iterator begin() override;
+    std::vector<Vector3>::iterator end() override;
 
     Vector3& operator[](size_t i) override;
     const Vector3& operator[](size_t i) const override;
 
-    void addPoint(const Vector3& newPoint) override { this->points.push_back(newPoint); }
-    BSpline& insertPoint(int i, const Vector3& newPos) override { this->points.insert(points.begin() + i, newPos); return *this; }
-    BSpline& removePoint(int i) override { this->points.erase(points.begin() + i); return *this; }
+    void addPoint(const Vector3& newPoint) override;
+    BSpline& insertPoint(int i, const Vector3& newPos) override;
+    BSpline& removePoint(int i) override;
 
     std::string toString() const override;
 
     BSpline& close() override;
 
-    BSpline& reset() { points.clear(); return *this; }
+    BSpline& reset();
+
+    using Curve::slice;
+    std::vector<std::shared_ptr<Curve>> slice(float t) const override;
+
+    BSpline& setDegree(int newDegree);
+    int getDegree() const { return degree; }
+
+    std::vector<float> getKnots() const { return knots; }
+
+    std::vector<float> uniqueInternalKnots() const;
+
+    int knotMultiplicity(float u) const;
+
+    BSpline& insertKnot(float u);
 
 protected:
     std::vector<Vector3> points;
+    std::vector<float> knots;
+
+    int degree = 3;
 };
 
 #endif // BSPLINE_H

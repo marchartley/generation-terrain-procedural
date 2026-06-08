@@ -93,6 +93,10 @@ public:
     virtual std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
 
 
+    virtual std::vector<std::shared_ptr<Curve>> slice(float t) const = 0;
+    virtual std::vector<std::shared_ptr<Curve>> slice(const std::vector<float>& ts) const;
+
+
 protected:
     bool closed = false;
 };

@@ -97,10 +97,30 @@ float Polyline::length() const
     return length;
 }
 
+size_t Polyline::getIndex(int i) {
+    return (i + numPoints()) % numPoints();
+}
+
 Polyline& Polyline::setPoint(int i, const Vector3& newPos)
 {
     this->points[getIndex(i)] = newPos;
     return *this;
+}
+
+std::vector<Vector3> Polyline::getPoints() const {
+
+    return this->points
+        ;
+}
+
+Vector3 &Polyline::get(int i) {
+    return this->points[pointIndex(i)];
+}
+
+Vector3 Polyline::get(int i) const {
+
+    return this->points[pointIndex(i)]
+        ;
 }
 
 Polyline& Polyline::resamplePoints(int newNbPoints)
@@ -165,9 +185,29 @@ Polyline& Polyline::removeDuplicates()
     return *this;
 }
 
+size_t Polyline::size() const {
+    return numPoints();
+}
+
 size_t Polyline::numPoints() const
 {
     return points.size();
+}
+
+std::vector<Vector3>::const_iterator Polyline::begin() const {
+    return points.begin();
+}
+
+std::vector<Vector3>::const_iterator Polyline::end() const {
+    return points.end();
+}
+
+std::vector<Vector3>::iterator Polyline::begin() {
+    return points.begin();
+}
+
+std::vector<Vector3>::iterator Polyline::end() {
+    return points.end();
 }
 
 std::string Polyline::toString() const
@@ -187,10 +227,48 @@ Polyline& Polyline::close()
     return *this;
 }
 
+Polyline &Polyline::reset() {
+    points.clear(); return *this;
+}
+
+std::vector<std::shared_ptr<Curve> > Polyline::slice(float t) const
+{
+    size_t lowerIndex = this->timeToLowerIndex(t);
+    std::vector<Vector3> firstPoints(lowerIndex + 2);
+    std::vector<Vector3> lastPoints(numPoints() - lowerIndex);
+
+    for (size_t i = 0; i < numSegments() + 1; i++) {
+        if (i <= lowerIndex) {
+            firstPoints[i] = points[i];
+        } else {
+            lastPoints[i - lowerIndex] = points[pointIndex(i)];
+        }
+    }
+    const auto p = getPoint(t);
+    firstPoints.back() = p;
+    lastPoints.front() = p;
+    Polyline p1(firstPoints);
+    Polyline p2(lastPoints);
+    return {std::make_shared<Polyline>(p1), std::make_shared<Polyline>(p2)};
+}
+
 
 Vector3& Polyline::operator[](size_t i) {
     return this->points[i];
 }
+
+void Polyline::addPoint(const Vector3 &newPoint) {
+    this->points.push_back(newPoint);
+}
+
+Polyline &Polyline::insertPoint(int i, const Vector3 &newPos) {
+    this->points.insert(points.begin() + i, newPos); return *this;
+}
+
+Polyline &Polyline::removePoint(int i) {
+    this->points.erase(points.begin() + i); return *this;
+}
+
 const Vector3& Polyline::operator[](size_t i) const {
     return this->points[i];
 }
