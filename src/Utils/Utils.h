@@ -252,4 +252,15 @@ std::vector<T> where_masked(const std::vector<T>& values, const std::vector<U>& 
     return result;
 }
 
+template <class T>
+std::ostream &operator<<(std::ostream &io, const std::vector<T> &tab) {
+    io << "[";
+    if (!tab.empty()) {
+        for (size_t i = 0; i < tab.size() - 1; i++)
+            io << tab[i] << ", ";
+        io << tab[tab.size() - 1];
+    }
+    io << "]";
+    return io;
+}
 #endif // UTILS_H
