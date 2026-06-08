@@ -20,12 +20,12 @@ public:
     float estimateSqrDistanceFrom(const Vector3& pos) const override;
     float length() const override;
 
-    size_t getIndex(int i) { return (i + numPoints()) % numPoints(); }
+    size_t getIndex(int i);
     Polyline& setPoint(int i, const Vector3& newPos) override;
 
-    std::vector<Vector3> getPoints() const { return this->points; }
-    Vector3& get(int i) override { return this->points[pointIndex(i)]; }
-    Vector3 get(int i) const override { return this->points[pointIndex(i)]; }
+    std::vector<Vector3> getPoints() const;
+    Vector3& get(int i) override;
+    Vector3 get(int i) const override;
 
     Polyline& resamplePoints(int newNbPoints = -1) override;
 
@@ -40,26 +40,30 @@ public:
 
     Polyline& removeDuplicates() override;
 
-    inline size_t size() const { return numPoints(); }
+    size_t size() const;
     size_t numPoints() const override;
 
-    std::vector<Vector3>::const_iterator begin() const override { return points.begin(); }
-    std::vector<Vector3>::const_iterator end() const override { return points.end(); }
-    std::vector<Vector3>::iterator begin() override { return points.begin(); }
-    std::vector<Vector3>::iterator end() override { return points.end(); }
+    std::vector<Vector3>::const_iterator begin() const override;
+    std::vector<Vector3>::const_iterator end() const override;
+    std::vector<Vector3>::iterator begin() override;
+    std::vector<Vector3>::iterator end() override;
 
     Vector3& operator[](size_t i) override;
     const Vector3& operator[](size_t i) const override;
 
-    void addPoint(const Vector3& newPoint) override { this->points.push_back(newPoint); }
-    Polyline& insertPoint(int i, const Vector3& newPos) override { this->points.insert(points.begin() + i, newPos); return *this; }
-    Polyline& removePoint(int i) override { this->points.erase(points.begin() + i); return *this; }
+    void addPoint(const Vector3& newPoint) override;
+    Polyline& insertPoint(int i, const Vector3& newPos) override;
+    Polyline& removePoint(int i) override;
 
     std::string toString() const override;
 
     Polyline& close() override;
 
-    Polyline& reset() { points.clear(); return *this; }
+    Polyline& reset();
+
+    using Curve::slice;
+    std::vector<std::shared_ptr<Curve>> slice(float t) const override;
+    // std::vector<std::shared_ptr<Curve>> slice(std::vector<float> ts) const override;
 
 protected:
     std::vector<Vector3> points;

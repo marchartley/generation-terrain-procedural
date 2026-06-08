@@ -153,3 +153,39 @@ std::vector<std::pair<size_t, size_t> > Curve::checkAutointersections() const
     }
     return results;
 }
+
+std::vector<std::shared_ptr<Curve> > Curve::slice(const std::vector<float>& _ts) const
+{
+    auto ts = _ts;
+    std::sort(ts.begin(), ts.end(), std::greater<float>()); // sort in descending order, just to optimize the poping
+
+    std::vector<std::shared_ptr<Curve>> subCurves;
+    // auto original = *this;
+    std::shared_ptr<Curve> remaining(this->clone());
+    if (remaining->isClosed()) {
+        remaining->setClosed(false);
+    }
+    float previousT = -1.0f;
+    int nbPointsPassed = 0;
+    while (!ts.empty()) {
+        auto t = ts.back();
+        ts.pop_back();
+
+        int prevIndex = this->timeToLowerIndex(t);
+        bool previousIsSlice = (this->indexToTime(prevIndex) < previousT);
+        float oldTime = (previousIsSlice ? previousT : this->indexToTime(prevIndex));
+
+        float remapedU = (t - oldTime) / (this->indexToTime(prevIndex + 1) - oldTime);
+        float localT = ::map(remapedU, 0.f, 1.f, remaining->indexToTime(prevIndex - nbPointsPassed), remaining->indexToTime((prevIndex - nbPointsPassed) + 1));
+
+        nbPointsPassed += remaining->timeToLowerIndex(localT);
+
+        auto subs = remaining->slice(localT);
+        subCurves.push_back(subs[0]);
+        remaining = subs[1];
+
+        previousT = t;
+    }
+    subCurves.push_back(remaining);
+    return subCurves;
+}

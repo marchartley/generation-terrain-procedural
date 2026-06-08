@@ -22,10 +22,10 @@ public:
     float estimateSqrDistanceFrom(const Vector3& pos) const override;
     float length() const override;
 
-    Vector3& get(int i) override { return this->points[pointIndex(i)]; }
-    Vector3 get(int i) const override { return this->points[pointIndex(i)]; }
+    Vector3& get(int i) override;
+    Vector3 get(int i) const override;
 
-    size_t getIndex(int i) { return (i + numPoints()) % numPoints(); }
+    size_t getIndex(int i);
     BezierCurve& setPoint(int i, const Vector3& newPos) override;
 
     BezierCurve& resamplePoints(int newNbPoints = -1) override;
@@ -45,13 +45,13 @@ public:
 
     BezierCurve& removeDuplicates() override;
 
-    size_t size() const { return numPoints(); }
+    size_t size() const;
     size_t numPoints() const override;
 
-    std::vector<Vector3>::const_iterator begin() const override { return points.begin(); }
-    std::vector<Vector3>::const_iterator end() const override { return points.end(); }
-    std::vector<Vector3>::iterator begin() override { return points.begin(); }
-    std::vector<Vector3>::iterator end() override { return points.end(); }
+    std::vector<Vector3>::const_iterator begin() const override;
+    std::vector<Vector3>::const_iterator end() const override;
+    std::vector<Vector3>::iterator begin() override;
+    std::vector<Vector3>::iterator end() override;
 
     Vector3& operator[](size_t i) override;
     const Vector3& operator[](size_t i) const override;
@@ -64,7 +64,7 @@ public:
 
     BezierCurve& close() override;
 
-    BezierCurve& reset() { points.clear(); handles.clear(); return *this; }
+    BezierCurve& reset();
 
     using Curve::pointIndex;
     inline static size_t pointIndex(int index, int nbPoints, bool closed);
@@ -79,14 +79,14 @@ public:
     inline size_t pointIndexFromHandleIndex(int handleIdx) const;
     inline Vector3 handlePos(int handleIdx) const;
 
-    std::vector<Vector3> getPoints() const { return points; }
-    std::vector<Vector3> getHandles() const { return handles; }
+    std::vector<Vector3> getPoints() const;
+    std::vector<Vector3> getHandles() const;
 
     BezierCurve& autosmooth(int pointIndex);
     BezierCurve& autosmooth();
 
-    std::vector<BezierCurve> slice(float t) const;
-    std::vector<BezierCurve> slice(std::vector<float> ts) const;
+    std::vector<std::shared_ptr<Curve>> slice(float t) const override;
+    std::vector<std::shared_ptr<Curve>> slice(const std::vector<float>& ts) const override;
 
 
     static Vector3 linearBezier(const Vector3& P0, const Vector3& P1, float t);

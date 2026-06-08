@@ -165,7 +165,7 @@ AbstractPlotter& AbstractPlotter::addPlot(const std::vector<Vector3>& data, std:
 
 AbstractPlotter& AbstractPlotter::addPlot(const Curve& data, std::string name, Vector3 color)
 {
-    return this->addPlot(data.getPath(), name, color);
+    return this->addPlot(data.getPath(1000), name, color);
 }
 
 AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& data, std::string name, std::vector<std::string> labels, const Vector3& color)
@@ -177,7 +177,7 @@ AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& data, std
     return this->addScatter(_data, name, labels, color);
 }
 
-AbstractPlotter &AbstractPlotter::addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name, const std::vector<std::string>& labels, const Vector3& color)
+AbstractPlotter& AbstractPlotter::addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name, const std::vector<std::string>& labels, const Vector3& color)
 {
     std::vector<Vector3> _data;
     for (size_t i = 0; i < dataX.size(); i++) {
@@ -190,6 +190,11 @@ AbstractPlotter& AbstractPlotter::addScatter(const std::vector<Vector3>& data, s
 {
     this->dataModel->addScatter(data, name, labels, color);
     return *this;
+}
+
+AbstractPlotter& AbstractPlotter::addScatter(const Curve& data, std::string name, std::vector<std::string> labels, Vector3 color)
+{
+    return this->addScatter(data.getPath(), name, labels, color);
 }
 
 AbstractPlotter& AbstractPlotter::addImage(const GridV3& image)
@@ -350,9 +355,11 @@ QTimer *AbstractPlotter::animate(std::function<bool ()> callback, int interval_m
     QTimer* t = new QTimer(this);
     t->setInterval(interval_ms);
     t->setSingleShot(true);
-    QObject::connect(t, &QTimer::timeout, [t, callback, interval_ms]() {
-        if (callback())
+    QObject::connect(t, &QTimer::timeout, [this, t, callback, interval_ms]() {
+        if (callback()) {
+            this->show();
             t->start(interval_ms);
+        }
     });
     t->start();
     return t;

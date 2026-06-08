@@ -76,6 +76,7 @@ public:
     AbstractPlotter& addScatter(const std::vector<float>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
     AbstractPlotter& addScatter(const std::vector<float>& dataX, const std::vector<float>& dataY, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
     AbstractPlotter& addScatter(const std::vector<Vector3>& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), const Vector3& color = Vector3::gray);
+    AbstractPlotter& addScatter(const Curve& data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), Vector3 color = Vector3::gray);
 
     AbstractPlotter& addImage(const GridV3 &image);
     AbstractPlotter& addImage(const GridF& image);
