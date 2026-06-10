@@ -15,7 +15,7 @@ Polyline::Polyline(const Curve& curve)
 
 std::vector<Vector3> Polyline::getPath(int numberOfPoints) const
 {
-    if (numberOfPoints < 0 || size_t(numberOfPoints) == this->points.size()) return this->points;
+    if (numberOfPoints < 0 || size_t(numberOfPoints) == numPoints()) return this->points;
 
     Polyline resampled(this->points);
     resampled.resamplePoints(numberOfPoints);

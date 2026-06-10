@@ -182,6 +182,8 @@ std::vector<std::shared_ptr<Curve> > Curve::slice(const std::vector<float>& _ts)
 
         auto subs = remaining->slice(localT);
         subCurves.push_back(subs[0]);
+        if (subs.size() < 2) return subCurves; // No left-side spline left
+
         remaining = subs[1];
 
         previousT = t;

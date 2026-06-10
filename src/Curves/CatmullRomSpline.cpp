@@ -46,15 +46,16 @@ CatmullRomSpline::operator bool() const {
 
 std::vector<Vector3> CatmullRomSpline::getPath(int numberOfPoints) const
 {
-    if (numberOfPoints < 0) return this->points;
+    if (numberOfPoints < 0 || numberOfPoints == numPoints()) return this->points;
     /// I'm really not sure this is the best solution, but an easy fix :
     /// forcing user to have at least 2 points
     numberOfPoints = std::max(numberOfPoints, 2);
 
     std::vector<Vector3> path;
-    float resolution = 1.f / (float)(numberOfPoints - 1);
-    for (int i = 0; i < numberOfPoints; i ++)
-        path.push_back(this->getPoint(i * resolution));
+    for (int i = 0; i < numberOfPoints; i ++) {
+        float t = float(i) / (float)(numberOfPoints - 1);
+        path.push_back(this->getPoint(t));
+    }
     return path;
 }
 

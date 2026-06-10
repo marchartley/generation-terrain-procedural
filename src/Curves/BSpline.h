@@ -73,6 +73,7 @@ public:
     std::vector<float> getKnots() const { return knots; }
 
     std::vector<float> uniqueInternalKnots() const;
+    std::vector<float> uniqueInternalKnots(float minKnot, float maxKnot) const;
 
     int knotMultiplicity(float u) const;
 

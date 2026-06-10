@@ -30,7 +30,7 @@ BSpline::BSpline(const std::vector<Vector3> &points, bool clamped)
 }
 
 BSpline::BSpline(const std::vector<Vector3>& points, const std::vector<float>& knots)
-    : points(points), knots(knots), degree((knots.size() - 1) - (points.size() - 2))
+    : points(points), knots(knots), degree(knots.size() - (points.size() + 1))
 {
 }
 
@@ -210,11 +210,15 @@ size_t BSpline::numSegments() const
 BSpline& BSpline::resamplePoints(int newNbPoints)
 {
     if (newNbPoints < 0) newNbPoints = numPoints();
-    std::vector<Vector3> newPoints(newNbPoints);
+    /*std::vector<Vector3> newPoints(newNbPoints);
     for (int i = 0; i < newNbPoints; i++) {
         newPoints[i] = getPoint(float(i) / float(newNbPoints - 1));
     }
-    this->points = newPoints;
+    this->points = newPoints;*/
+    float res = 1.f / float(newNbPoints - 1);
+    for (size_t i = 0; i < newNbPoints; i++) {
+        insertKnot(res * i);
+    }
     return *this;
 }
 
@@ -323,6 +327,34 @@ BSpline &BSpline::reset() {
 
 std::vector<std::shared_ptr<Curve> > BSpline::slice(float t) const
 {
+    if (t <= 0.f || t >= 1.f) return { std::make_shared<BSpline>(*this) };
+    auto p1 = *this;
+    // Adding a clamped point
+    while (p1.knotMultiplicity(t) < p1.degree + 1) {
+        p1.insertKnot(t);
+    }
+    // Position of the knot in the array
+    size_t k = std::distance(p1.knots.begin(), std::find(p1.knots.begin(), p1.knots.end(), t));
+    auto p2 = p1;
+
+    // Removing right-side and left-side curves from p1 and p2
+    p1.knots.erase(p1.knots.begin() + k + p1.degree + 1, p1.knots.end());
+    p1.points.erase(p1.points.begin() + k, p1.points.end());
+    p2.knots.erase(p2.knots.begin(), p2.knots.begin() + k);
+    p2.points.erase(p2.points.begin(), p2.points.begin() + k);
+
+    // Remapping knots between  0 and 1
+    float min1 = p1.knots.front(), min2 = p2.knots.front();
+    float max1 = p1.knots.back(), max2 = p2.knots.back();
+
+    for (auto& k : p1.knots)
+        k = map(k, min1, max1, 0.f, 1.f);
+    for (auto& k : p2.knots)
+        k = map(k, min2, max2, 0.f, 1.f);
+
+    return {std::make_shared<BSpline>(p1), std::make_shared<BSpline>(p2)};
+}
+    /*
     size_t lowerIndex = this->timeToLowerIndex(t);
     std::vector<Vector3> firstPoints(lowerIndex + 2);
     std::vector<Vector3> lastPoints(numPoints() - lowerIndex);
@@ -344,7 +376,8 @@ std::vector<std::shared_ptr<Curve> > BSpline::slice(float t) const
     // p1.addPoint(p2.get(1));
     // p2.insertPoint(0, p1.get(-2));
     return {std::make_shared<BSpline>(p1), std::make_shared<BSpline>(p2)};
-}
+
+}*/
 
 BSpline& BSpline::setDegree(int newDegree)
 {
@@ -357,6 +390,16 @@ std::vector<float> BSpline::uniqueInternalKnots() const
     std::vector<float> res(this->knots.size() - 2 * (degree + 1));
     for (size_t i = 0; i < res.size(); i++) {
         res[i] = knots[degree + 1 + i];
+    }
+    return res;
+}
+
+std::vector<float> BSpline::uniqueInternalKnots(float minKnot, float maxKnot) const
+{
+    std::vector<float> res;
+    for (size_t i = 0; i < knots.size(); i++) {
+        if (minKnot < knots[i] && knots[i] < maxKnot)
+            res.push_back(knots[i]);
     }
     return res;
 }

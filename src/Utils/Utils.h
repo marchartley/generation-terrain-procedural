@@ -260,7 +260,7 @@ std::ostream &operator<<(std::ostream &io, const std::vector<T> &tab) {
             io << tab[i] << ", ";
         io << tab[tab.size() - 1];
     }
-    io << "]";
+    io << "] (" << tab.size() << " element" << (tab.size() > 1 ? "s" : "") << ")";
     return io;
 }
 #endif // UTILS_H
