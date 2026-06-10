@@ -80,44 +80,58 @@ BezierCurve toBezier(const BSpline& curve)
 {
     BSpline tmp = curve;
 
-    const int p = tmp.getDegree(); // 3
+    const int p = tmp.getDegree();
+    assert(p == 3);
 
     // 1. Insert every internal knot until its multiplicity == degree
-    for (float u : tmp.uniqueInternalKnots()) {
-        int mult = tmp.knotMultiplicity(u);
-        while (mult < p) {
-            tmp.insertKnot(u);
-            mult++;
-        }
-    }
+    auto a = tmp.getKnots()[p];
+    auto b = tmp.getKnots()[tmp.getKnots().size() - p - 1];
 
-    // 2. Now every knot span is one Bezier segment
-    const auto& P = tmp.getPoints();
-    const auto& U = tmp.getKnots();
+    while (tmp.knotMultiplicity(a) < p + 1)
+        tmp.insertKnot(a);
+
+    while (tmp.knotMultiplicity(b) < p + 1)
+        tmp.insertKnot(b);
+
+    auto internal = tmp.uniqueInternalKnots(a, b);
+
+    for (float u : internal) {
+        if (u <= a || u >= b)
+            continue;
+
+        while (tmp.knotMultiplicity(u) < p)
+            tmp.insertKnot(u);
+    }
 
     std::vector<Vector3> bezierPoints;
     std::vector<Vector3> handles;
+    const auto& P = tmp.getPoints();
+    const auto& U = tmp.getKnots();
 
-    // For cubic, each Bezier segment uses 4 consecutive control points.
-    // Consecutive segments share endpoints.
-    for (size_t i = 0; i + 3 < P.size(); i += 3) {
-        Vector3 C0 = P[i + 0];
-        Vector3 C1 = P[i + 1];
-        Vector3 C2 = P[i + 2];
-        Vector3 C3 = P[i + 3];
+    for (size_t j = p; j + 1 < U.size() - p; ++j) {
+        if (U[j] == U[j + 1])
+            continue;
+
+        if (U[j] < a || U[j + 1] > b)
+            continue;
+
+        Vector3 C0 = P[j - 3];
+        Vector3 C1 = P[j - 2];
+        Vector3 C2 = P[j - 1];
+        Vector3 C3 = P[j];
 
         if (bezierPoints.empty()) {
             bezierPoints.push_back(C0);
-            handles.push_back(Vector3::origin); // in handle of first point
-            handles.push_back(C1 - C0);         // out handle
+            handles.push_back(Vector3::origin);
+            handles.push_back(C1 - C0);
         } else {
-            handles.back() = C1 - C0;           // out handle of previous point
+            handles.back() = C1 - C0;
         }
 
         bezierPoints.push_back(C3);
 
-        handles.push_back(C2 - C3);             // in handle
-        handles.push_back(Vector3::origin);     // out handle, filled by next segment
+        handles.push_back(C2 - C3);
+        handles.push_back(Vector3::origin);
     }
     return BezierCurve(bezierPoints, handles);
 }
@@ -146,35 +160,49 @@ BSpline toBSpline(const CatmullRomSpline& curve)
 
 BSpline toBSpline(const BezierCurve& curve)
 {
-    const auto bezierPoints = curve.getPoints();
+    const size_t numSegments = curve.getPoints().size() - 1;
+    assert(numSegments >= 1);
 
-    const size_t numSegments = bezierPoints.size() - 1;
+    constexpr int p = 3;
 
-    std::vector<Vector3> splinePoints(numSegments * 4);
-    std::vector<float> knots((numSegments - 1) * 3 + 2 * (3 + 1));
-    for (size_t i = 0; i < numSegments; i++) {
-        float t = float(i) / float(numSegments);
+    std::vector<Vector3> splinePoints(3 * numSegments + 1);
+    std::vector<float> knots;
+    knots.reserve(3 * (numSegments - 1) + 2 * (p + 1));
 
-        const auto C0 = curve.get(i);
-        const auto C1 = curve.handlePos(curve.handleOut(i));
-        const auto C2 = curve.handlePos(curve.handleIn(i + 1));
-        const auto C3 = curve.get(i + 1);
+    // Start clamped knot: 0,0,0,0
+    for (int i = 0; i < p + 1; ++i)
+        knots.push_back(0.f);
 
-        if (i == 0) {
+    for (size_t i = 0; i < numSegments; ++i) {
+        const Vector3 C0 = curve.get(i);
+        const Vector3 C1 = curve.handlePos(curve.handleOut(i));
+        const Vector3 C2 = curve.handlePos(curve.handleIn(i + 1));
+        const Vector3 C3 = curve.get(i + 1);
+
+        if (i == 0)
             splinePoints[0] = C0;
-            knots[0] = 0;
-        }
+
         splinePoints[3 * i + 1] = C1;
         splinePoints[3 * i + 2] = C2;
         splinePoints[3 * i + 3] = C3;
-        knots[3 * i + 1] = t;
-        knots[3 * i + 2] = t;
-        knots[3 * i + 3] = t;
+
+        // Internal knot with multiplicity degree = 3
+        if (i > 0) {
+            const float u = float(i) / float(numSegments);
+            knots.push_back(u);
+            knots.push_back(u);
+            knots.push_back(u);
+        }
     }
-    for (size_t i = knots.size() - 4; i < knots.size(); i++) {
-        knots[i] = 1.f;
-    }
+
+    // End clamped knot: 1,1,1,1
+    for (int i = 0; i < p + 1; ++i)
+        knots.push_back(1.f);
+
+    assert(knots.size() == splinePoints.size() + p + 1);
+
     return BSpline(splinePoints, knots);
+
     /*
 
     std::vector<Vector3> splinePoints(numSegments + 3);

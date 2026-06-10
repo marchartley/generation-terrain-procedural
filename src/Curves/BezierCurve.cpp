@@ -45,7 +45,7 @@ std::vector<Vector3> BezierCurve::getPath(int numberOfPoints) const
     if (numberOfPoints < 0 || numberOfPoints == numPoints()) return points;
     std::vector<Vector3> points(numberOfPoints);
     for (int i = 0; i < numberOfPoints; i++) {
-        float t = float(i) / float(numberOfPoints - (closed ? 1 : 0));
+        float t = float(i) / float(numberOfPoints - 1);
         points[i] = getPoint(t);
     }
     return points;

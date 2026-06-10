@@ -576,8 +576,8 @@ Vector3 colorPalette(float t, const Vector3 &startColor, const Vector3 &endColor
 float displayProcessTime(const std::string& textToDisplay, const std::function<void ()>& func, bool verbose, int trials)
 {
     if (verbose) std::cout << textToDisplay << std::flush;
-    float time = timeIt(func, trials);
-    if (verbose) std::cout << " " << showTime(time) << std::endl;
+    float time = (trials > 0 ? timeIt(func, trials) : timeIt([=]() { return; }));
+    if (verbose) std::cout << " " << showTime(time) << (trials > 0 ? "" : " (skipped [trials <= 0])") << std::endl;
     return time;
 }
 
