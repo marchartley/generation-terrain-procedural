@@ -77,13 +77,19 @@ public:
 
     int knotMultiplicity(float u) const;
 
-    BSpline& insertKnot(float u);
+    size_t insertKnot(float u);
+    BSpline& removeKnotAtKnotIndex(int knotIndex, float tolerance = 1e-4);
+    BSpline& removeKnot(int pointIndex, float tolerance = 1e-4);
 
 protected:
     std::vector<Vector3> points;
     std::vector<float> knots;
 
     int degree = 3;
+
+    std::vector<Vector3> solveLinearSystem(std::vector<std::vector<float>> A, std::vector<Vector3> b);
+    float basis(int i, int p, float u, const std::vector<float>& U);
+    std::vector<float> makeUniformClampedKnots(int numCtrlPoints, int degree);
 };
 
 #endif // BSPLINE_H

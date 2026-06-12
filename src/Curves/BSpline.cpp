@@ -207,18 +207,134 @@ size_t BSpline::numSegments() const
     return numPoints() - (closed ? 0 : 3);
 }
 
+std::vector<Vector3> BSpline::solveLinearSystem(std::vector<std::vector<float>> A, std::vector<Vector3> b)
+{
+    const int n = int(b.size());
+
+    for (int i = 0; i < n; ++i)
+    {
+        int pivot = i;
+        for (int r = i + 1; r < n; ++r)
+        {
+            if (std::abs(A[r][i]) > std::abs(A[pivot][i]))
+                pivot = r;
+        }
+
+        std::swap(A[i], A[pivot]);
+        std::swap(b[i], b[pivot]);
+
+        float div = A[i][i];
+        if (std::abs(div) < 1e-8f)
+            continue;
+
+        for (int c = i; c < n; ++c)
+            A[i][c] /= div;
+
+        b[i] /= div;
+
+        for (int r = 0; r < n; ++r)
+        {
+            if (r == i)
+                continue;
+
+            float factor = A[r][i];
+
+            for (int c = i; c < n; ++c)
+                A[r][c] -= factor * A[i][c];
+
+            b[r] -= factor * b[i];
+        }
+    }
+
+    return b;
+}
+
+float BSpline::basis(int i, int p, float u, const std::vector<float>& U)
+{
+    if (p == 0)
+    {
+        if ((U[i] <= u && u < U[i + 1]) ||
+            (u == 1.f && U[i + 1] == 1.f))
+            return 1.f;
+
+        return 0.f;
+    }
+
+    float left = 0.f;
+    float right = 0.f;
+
+    float denom1 = U[i + p] - U[i];
+    if (denom1 != 0.f)
+        left = ((u - U[i]) / denom1) * basis(i, p - 1, u, U);
+
+    float denom2 = U[i + p + 1] - U[i + 1];
+    if (denom2 != 0.f)
+        right = ((U[i + p + 1] - u) / denom2) * basis(i + 1, p - 1, u, U);
+
+    return left + right;
+}
+
+std::vector<float> BSpline::makeUniformClampedKnots(int numCtrlPoints, int degree)
+{
+    const int p = degree;
+    const int n = numCtrlPoints - 1;
+    const int m = n + p + 1;
+
+    std::vector<float> U(m + 1, 0.f);
+
+    for (int i = 0; i <= p; ++i)
+        U[i] = 0.f;
+
+    for (int i = m - p; i <= m; ++i)
+        U[i] = 1.f;
+
+    const int numInterior = m - 2 * p;
+
+    for (int j = 1; j < numInterior; ++j)
+        U[p + j] = float(j) / float(numInterior);
+
+    return U;
+}
+
 BSpline& BSpline::resamplePoints(int newNbPoints)
 {
-    if (newNbPoints < 0) newNbPoints = numPoints();
-    /*std::vector<Vector3> newPoints(newNbPoints);
-    for (int i = 0; i < newNbPoints; i++) {
-        newPoints[i] = getPoint(float(i) / float(newNbPoints - 1));
+    const int p = degree;
+
+    if (newNbPoints < 0 || newNbPoints == numPoints())
+        newNbPoints = numPoints();
+
+    if (newNbPoints < p + 1)
+        newNbPoints = p + 1;
+
+    const int n = newNbPoints - 1;
+
+    BSpline old = *this;
+
+    std::vector<float> newKnots = makeUniformClampedKnots(newNbPoints, p);
+
+    std::vector<float> params(newNbPoints);
+    for (int i = 0; i < newNbPoints; ++i)
+        params[i] = float(i) / float(newNbPoints - 1);
+
+    std::vector<Vector3> samples(newNbPoints);
+    for (int i = 0; i < newNbPoints; ++i)
+        samples[i] = old.getPoint(params[i]);
+
+    std::vector<std::vector<float>> A(newNbPoints, std::vector<float>(newNbPoints, 0.f));
+
+    for (int row = 0; row < newNbPoints; ++row)
+    {
+        float u = params[row];
+
+        for (int col = 0; col < newNbPoints; ++col)
+            A[row][col] = basis(col, p, u, newKnots);
     }
-    this->points = newPoints;*/
-    float res = 1.f / float(newNbPoints - 1);
-    for (size_t i = 0; i < newNbPoints; i++) {
-        insertKnot(res * i);
-    }
+
+    std::vector<Vector3> newPoints = solveLinearSystem(A, samples);
+
+    knots = std::move(newKnots);
+    points = std::move(newPoints);
+
     return *this;
 }
 
@@ -409,7 +525,7 @@ int BSpline::knotMultiplicity(float u) const
     return std::count(knots.begin(), knots.end(), u);
 }
 
-BSpline& BSpline::insertKnot(float u)
+size_t BSpline::insertKnot(float u)
 {
     const int p = degree;
     const int n = int(points.size()) - 1;
@@ -463,7 +579,140 @@ BSpline& BSpline::insertKnot(float u)
 
     points = std::move(newPoints);
 
+    return k;
+}
+
+BSpline& BSpline::removeKnotAtKnotIndex(int knotIndex, float tolerance)
+{
+    const int p = degree;
+    const int n = static_cast<int>(points.size()) - 1;
+
+    if (p < 1 || n < p)
+        return *this;
+
+    if (knotIndex < 0 || knotIndex >= static_cast<int>(knots.size()))
+        return *this;
+
+    const float u = knots[knotIndex];
+
+    // Find multiplicity and last occurrence of u.
+    int r = knotIndex;
+    while (r + 1 < static_cast<int>(knots.size()) &&
+           std::abs(knots[r + 1] - u) < 1e-6f)
+    {
+        ++r;
+    }
+
+    int firstOccurrence = r;
+    while (firstOccurrence - 1 >= 0 &&
+           std::abs(knots[firstOccurrence - 1] - u) < 1e-6f)
+    {
+        --firstOccurrence;
+    }
+
+    const int s = r - firstOccurrence + 1; // multiplicity
+
+    const int first = r - p;
+    const int last  = r - s;
+
+    if (first < 1 || last + 1 > n)
+        return *this;
+
+    std::vector<Vector3> temp(last - first + 2);
+
+    temp[0] = points[first - 1];
+    temp[last + 1 - first] = points[last + 1];
+
+    int i = first;
+    int j = last;
+    int ii = 1;
+    int jj = last - first;
+
+    bool removable = true;
+
+    while (j - i > 0)
+    {
+        const float alphaI =
+            (u - knots[i]) /
+            (knots[i + p + 1] - knots[i]);
+
+        const float alphaJ =
+            (u - knots[j]) /
+            (knots[j + p + 1] - knots[j]);
+
+        if (std::abs(alphaI) < 1e-6f ||
+            std::abs(1.f - alphaJ) < 1e-6f)
+        {
+            removable = false;
+            break;
+        }
+
+        temp[ii] =
+            (points[i] - (1.f - alphaI) * temp[ii - 1]) / alphaI;
+
+        temp[jj] =
+            (points[j] - alphaJ * temp[jj + 1]) / (1.f - alphaJ);
+
+        ++i;
+        --j;
+        ++ii;
+        --jj;
+    }
+
+    if (!removable)
+        return *this;
+
+    // Final consistency check.
+    if (j - i == 0)
+    {
+        const float alpha =
+            (u - knots[i]) /
+            (knots[i + p + 1] - knots[i]);
+
+        const Vector3 reconstructed =
+            (1.f - alpha) * temp[ii - 1] + alpha * temp[jj + 1];
+
+        if ((reconstructed - points[i]).length() > tolerance)
+            return *this;
+    }
+    else
+    {
+        if ((temp[ii - 1] - temp[jj + 1]).length() > tolerance)
+            return *this;
+    }
+
+    // Commit: replace affected control-point block with the recovered one.
+    std::vector<Vector3> newPoints;
+
+    for (int k = 0; k < first - 1; ++k)
+        newPoints.push_back(points[k]);
+
+    for (const Vector3& q : temp)
+        newPoints.push_back(q);
+
+    for (int k = last + 2; k <= n; ++k)
+        newPoints.push_back(points[k]);
+
+    points = std::move(newPoints);
+
+    knots.erase(knots.begin() + r);
+
     return *this;
+}
+
+BSpline& BSpline::removeKnot(int pointIndex, float tolerance)
+{
+    const int p = degree;
+
+    if (p < 1)
+        return *this;
+
+    int knotIndex = pointIndex + p - 1;
+
+    if (knotIndex < 0 || knotIndex >= static_cast<int>(knots.size()))
+        return *this;
+
+    return removeKnotAtKnotIndex(knotIndex, tolerance);
 }
 
 Vector3& BSpline::operator[](size_t i)
