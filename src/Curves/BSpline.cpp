@@ -91,26 +91,77 @@ std::vector<Vector3> BSpline::getPath(int numberOfPoints) const
 Vector3 BSpline::getPoint(float t) const
 {
     const int p = degree;
-    const int n = int(points.size()) - 1;
 
     if (points.empty()) return Vector3::invalid;
     if (points.size() == 1) return points[0];
+    if (p < 0) return Vector3::invalid;
 
-    const auto& U = knots;
+    std::vector<Vector3> controlPoints = points;
+    std::vector<float> U = knots;
+
+    const int pointCount = int(points.size());
 
     // Valid knot vector size:
     // knots.size() == points.size() + degree + 1
-
-    const float uMin = U[p];
-    const float uMax = U[n + 1];
-
-    float u = std::clamp(t, uMin, uMax);
-
-    // Special case only because the span convention is U[k] <= u < U[k + 1]
-    if (u == uMax) {
-        u = std::nextafter(uMax, uMin);
+    if (int(U.size()) != pointCount + p + 1) {
+        return Vector3::invalid;
     }
 
+    if (closed) {
+        if (pointCount < p + 1) {
+            return Vector3::invalid;
+        }
+
+        const float start = U[p];
+        const float end   = U.back();
+
+        if (end <= start) {
+            return Vector3::invalid;
+        }
+
+        // Append first p control points.
+        for (int i = 0; i < p; ++i) {
+            controlPoints.push_back(points[i]);
+        }
+
+        // Extend knot vector periodically past 1.
+        //
+        // If original U is:
+        // [0/n, 1/n, 2/n, ..., n/n]
+        //
+        // then this appends:
+        // [(n+1)/n, (n+2)/n, ..., (n+p)/n]
+        //
+        // because U[p + i] - U[p] == i/n.
+        for (int i = 1; i <= p; ++i) {
+            U.push_back(end + (U[p + i] - start));
+        }
+    }
+
+    const int n = int(controlPoints.size()) - 1;
+
+    // const float uMin = U[p];
+    // const float uMax = U[n + 1];
+
+    float u = BSpline::u_from_t(t, U, n, p);
+
+    /*
+    if (closed) {
+        // Option A:
+        // t is a normalized cyclic parameter.
+        // Therefore getPoint(0) and getPoint(1) evaluate at the same u.
+        float wrappedT = t - std::floor(t);
+
+        u = uMin + wrappedT * (uMax - uMin);
+    } else {
+        u = std::clamp(t, uMin, uMax);
+
+        // Span convention: U[k] <= u < U[k + 1]
+        if (u == uMax) {
+            u = std::nextafter(uMax, uMin);
+        }
+    }
+    */
     int k = p;
 
     for (int i = p; i <= n; ++i) {
@@ -123,7 +174,7 @@ Vector3 BSpline::getPoint(float t) const
     std::vector<Vector3> d(p + 1);
 
     for (int j = 0; j <= p; ++j) {
-        d[j] = points[k - p + j];
+        d[j] = controlPoints[k - p + j];
     }
 
     for (int r = 1; r <= p; ++r) {
@@ -143,6 +194,88 @@ Vector3 BSpline::getPoint(float t) const
 
     return d[p];
 }
+
+// Vector3 BSpline::getPoint(float t) const
+// {
+//     const int p = degree;
+//     auto controlPoints = points;
+//     const int N = /*numSegments(); //*/int(points.size()) - 1;
+
+//     if (controlPoints.empty()) return Vector3::invalid;
+//     if (controlPoints.size() == 1) return controlPoints[0];
+
+//     auto U = knots;
+
+//     if (closed) {
+//         const int _U = U.size();
+//         for(size_t i = 0; i < U.size(); i++) {
+//             U[i] = map(U[i], 0.f, 1.f, 0.f, float(_U) / float(_U + p));
+//         }
+//         const float prev_uMin = U[0];
+//         const float prev_uMax = U[p - 1];
+//         if (prev_uMin == prev_uMax) {
+//             for (int i = 0; i < p; i++) {
+//                 U.push_back(1.f);
+//                 controlPoints.push_back(points[i]);
+//             }
+//         } else {
+//             for (int i = 0; i < p; i++) {
+//                 U.push_back(map(U[i], prev_uMin, prev_uMax, float(_U + 1) / float(_U + p), 1.f));
+//                 controlPoints.push_back(points[i]);
+//             }
+//         }
+//     }
+//     const int n = int(controlPoints.size()) - 1;
+
+//     // Valid knot vector size:
+//     // knots.size() == points.size() + degree + 1
+
+//     for (size_t i = 0; i < U.size() - 1; i++) {
+//         // std::cout << U[i + 1] - U[i] << std::endl;
+//     }
+
+//     const float uMin = U[p];
+//     const float uMax = U[n + 1];
+
+//     float u = std::clamp(t, uMin, uMax);
+
+//     // Special case only because the span convention is U[k] <= u < U[k + 1]
+//     if (u == uMax) {
+//         u = std::nextafter(uMax, uMin);
+//     }
+
+//     int k = p;
+
+//     for (int i = p; i <= n; ++i) {
+//         if (U[i] <= u && u < U[i + 1]) {
+//             k = i;
+//             break;
+//         }
+//     }
+
+//     std::vector<Vector3> d(p + 1);
+
+//     for (int j = 0; j <= p; ++j) {
+//         d[j] = controlPoints[k - p + j];
+//     }
+
+//     for (int r = 1; r <= p; ++r) {
+//         for (int j = p; j >= r; --j) {
+//             const int i = k - p + j;
+
+//             const float denom = U[i + p + 1 - r] - U[i];
+
+//             float alpha = 0.f;
+//             if (denom != 0.f) {
+//                 alpha = (u - U[i]) / denom;
+//             }
+
+//             d[j] = d[j - 1] * (1.f - alpha) + d[j] * alpha;
+//         }
+//     }
+
+//     return d[p];
+// }
 
 
 Vector3 BSpline::getDerivative(float x, bool normalize) const
@@ -204,7 +337,7 @@ Vector3 BSpline::get(int i) const {
 
 size_t BSpline::numSegments() const
 {
-    return numPoints() - (closed ? 0 : 3);
+    return numPoints() - (closed ? 0 : degree);
 }
 
 std::vector<Vector3> BSpline::solveLinearSystem(std::vector<std::vector<float>> A, std::vector<Vector3> b)
@@ -294,6 +427,52 @@ std::vector<float> BSpline::makeUniformClampedKnots(int numCtrlPoints, int degre
         U[p + j] = float(j) / float(numInterior);
 
     return U;
+}
+
+float BSpline::u_from_t(float t, const std::vector<float>& U, int nbPoints, int degree)
+{
+    const float uMin = U[degree];
+    const float uMax = U[nbPoints + 1];
+
+    return clamp(map(clamp(t, 0.f, 1.f), 0.f, 1.f, uMin, uMax), std::nextafter(uMin, uMax), std::nextafter(uMax, uMin));
+}
+
+float BSpline::u_from_t(float t) const
+{
+    return BSpline::u_from_t(t, knots, points.size() - 1, degree);
+}
+
+BSpline BSpline::generateFakeClosedCurve() const
+{
+    const int p = degree;
+    std::vector<Vector3> controlPoints = points;
+    std::vector<float> U = knots;
+
+    // const int pointCount = int(points.size());
+
+    const float start = U[p];
+    const float end   = U.back();
+
+    // Append first p control points.
+    for (int i = 0; i < p; ++i) {
+        controlPoints.push_back(points[i]);
+    }
+
+    for (int i = 1; i <= p; ++i) {
+        U.push_back(end + (U[p + i] - start));
+    }
+
+    float min = std::numeric_limits<float>::max();
+    float max = std::numeric_limits<float>::lowest();
+    for (const auto& u : U) {
+        min = std::min(min, u);
+        max = std::max(max, u);
+    }
+    for (auto& u : U) {
+        u = map(u, min, max, 0.f, 1.f);
+    }
+
+    return BSpline(controlPoints, U);
 }
 
 BSpline& BSpline::resamplePoints(int newNbPoints)
@@ -441,9 +620,117 @@ BSpline &BSpline::reset() {
     return *this;
 }
 
-std::vector<std::shared_ptr<Curve> > BSpline::slice(float t) const
+/*std::vector<std::shared_ptr<Curve> > BSpline::slice(const std::vector<float> &_ts) const
 {
-    if (t <= 0.f || t >= 1.f) return { std::make_shared<BSpline>(*this) };
+    auto ts = _ts;
+    std::sort(ts.begin(), ts.end(), std::greater<float>()); // sort in descending order, just to optimize the poping
+
+    std::vector<std::shared_ptr<Curve>> subCurves;
+    // auto original = *this;
+    std::shared_ptr<Curve> remaining(this->clone());
+    if (remaining->isClosed()) {
+        *remaining = this->generateFakeClosedCurve();
+    }
+    float previousT = -1.0f;
+    int nbPointsPassed = 0;
+    while (!ts.empty()) {
+        auto t = ts.back();
+        ts.pop_back();
+
+        int prevIndex = this->timeToLowerIndex(t);
+        bool previousIsSlice = (this->indexToTime(prevIndex) < previousT);
+        float oldTime = (previousIsSlice ? previousT : this->indexToTime(prevIndex));
+
+        float remapedU = (t - oldTime) / (this->indexToTime(prevIndex + 1) - oldTime);
+        float localT = ::map(remapedU, 0.f, 1.f, remaining->indexToTime(prevIndex - nbPointsPassed), remaining->indexToTime((prevIndex - nbPointsPassed) + 1));
+
+        nbPointsPassed += remaining->timeToLowerIndex(localT);
+
+        auto subs = remaining->slice(localT);
+        subCurves.push_back(subs[0]);
+        if (subs.size() < 2) return subCurves; // No left-side spline left
+
+        remaining = subs[1];
+
+        previousT = t;
+    }
+    subCurves.push_back(remaining);
+    return subCurves;
+}*/
+std::vector<std::shared_ptr<Curve>>
+BSpline::slice(const std::vector<float>& _ts) const
+{
+    if (closed) {
+        return this->generateFakeClosedCurve().slice(_ts);
+    }
+
+    constexpr float eps = 1e-6f;
+
+    std::vector<float> ts;
+    ts.reserve(_ts.size());
+
+    for (float t : _ts) {
+        if (std::isfinite(t) && t > eps && t < 1.f - eps) {
+            ts.push_back(t);
+        }
+    }
+
+    std::sort(ts.begin(), ts.end());
+
+    ts.erase(
+        std::unique(ts.begin(), ts.end(),
+                    [](float a, float b) {
+                        return std::abs(a - b) < 1e-6f;
+                    }),
+        ts.end()
+        );
+
+    if (ts.empty()) {
+        return { std::make_shared<BSpline>(*this) };
+    }
+
+    std::vector<std::shared_ptr<Curve>> result;
+
+    BSpline remaining = *this;
+    float previousT = 0.f;
+
+    for (float t : ts) {
+        // Convert original [0,1] parameter into the current remaining curve space
+        float localT = (t - previousT) / (1.f - previousT);
+
+        if (localT <= eps || localT >= 1.f - eps) {
+            continue;
+        }
+
+        auto parts = remaining.slice(localT);
+
+        if (parts.size() < 2) {
+            continue;
+        }
+
+        result.push_back(parts[0]);
+
+        auto right = std::dynamic_pointer_cast<BSpline>(parts[1]);
+        if (!right) {
+            break;
+        }
+
+        remaining = *right;
+        previousT = t;
+    }
+
+    result.push_back(std::make_shared<BSpline>(remaining));
+
+    return result;
+}
+
+std::vector<std::shared_ptr<Curve> > BSpline::slice(float _t) const
+{
+    if (closed) {
+        return this->generateFakeClosedCurve().slice(_t);
+    }
+    if (_t <= 0.f || _t >= 1.f) return { std::make_shared<BSpline>(*this) };
+    float t = this->u_from_t(_t);
     auto p1 = *this;
     // Adding a clamped point
     while (p1.knotMultiplicity(t) < p1.degree + 1) {
@@ -533,6 +820,79 @@ size_t BSpline::insertKnot(float u)
     auto oldPoints = points;
     auto oldKnots = knots;
 
+    const int expectedKnotCount = int(points.size()) + p + 1;
+    if (int(oldKnots.size()) != expectedKnotCount) {
+        throw std::runtime_error("Invalid B-spline: knots.size() must equal points.size() + degree + 1");
+    }
+
+    const float uMin = oldKnots[p];
+    const float uMax = oldKnots[n + 1];
+
+    if (u < uMin || u > uMax) {
+        auto it = std::upper_bound(knots.begin(), knots.end(), u);
+        knots.insert(it, u);
+        if (u < uMin) {
+            points.insert(points.begin(), points.front());
+        } else {
+            points.push_back(points.back());
+        }
+        // Not classical knot insertion.
+        // Control points are unchanged, so knots.size() relation changes unless you also
+        // define how many control points this curve should now have.
+        return size_t(std::distance(knots.begin(), it));
+    }
+
+    int k = p;
+
+    if (u == uMax) {
+        k = n;
+    } else {
+        for (int i = p; i <= n; ++i) {
+            if (oldKnots[i] <= u && u < oldKnots[i + 1]) {
+                k = i;
+                break;
+            }
+        }
+    }
+
+    knots.insert(knots.begin() + k + 1, u);
+
+    std::vector<Vector3> newPoints(oldPoints.size() + 1);
+
+    for (int i = 0; i <= k - p; ++i) {
+        newPoints[i] = oldPoints[i];
+    }
+
+    for (int i = k; i <= n; ++i) {
+        newPoints[i + 1] = oldPoints[i];
+    }
+
+    for (int i = k - p + 1; i <= k; ++i) {
+        float denom = oldKnots[i + p] - oldKnots[i];
+
+        float alpha = 0.f;
+        if (denom != 0.f) {
+            alpha = (u - oldKnots[i]) / denom;
+        }
+
+        newPoints[i] =
+            oldPoints[i - 1] * (1.f - alpha)
+            + oldPoints[i] * alpha;
+    }
+
+    points = std::move(newPoints);
+
+    return size_t(k);
+}
+/*
+size_t BSpline::insertKnot(float u)
+{
+    const int p = degree;
+    const int n = int(points.size()) - 1;
+
+    auto oldPoints = points;
+    auto oldKnots = knots;
+
     // Find span k such that oldKnots[k] <= u < oldKnots[k + 1]
     int k = p;
 
@@ -580,7 +940,7 @@ size_t BSpline::insertKnot(float u)
     points = std::move(newPoints);
 
     return k;
-}
+}*/
 
 BSpline& BSpline::removeKnotAtKnotIndex(int knotIndex, float tolerance)
 {
