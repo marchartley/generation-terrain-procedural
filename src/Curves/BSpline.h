@@ -64,7 +64,7 @@ public:
 
     BSpline& reset();
 
-    using Curve::slice;
+    std::vector<std::shared_ptr<Curve>> slice(const std::vector<float>& _ts) const override;
     std::vector<std::shared_ptr<Curve>> slice(float t) const override;
 
     BSpline& setDegree(int newDegree);
@@ -81,6 +81,7 @@ public:
     BSpline& removeKnotAtKnotIndex(int knotIndex, float tolerance = 1e-4);
     BSpline& removeKnot(int pointIndex, float tolerance = 1e-4);
 
+    BSpline generateFakeClosedCurve() const;
 protected:
     std::vector<Vector3> points;
     std::vector<float> knots;
@@ -90,6 +91,10 @@ protected:
     std::vector<Vector3> solveLinearSystem(std::vector<std::vector<float>> A, std::vector<Vector3> b);
     float basis(int i, int p, float u, const std::vector<float>& U);
     std::vector<float> makeUniformClampedKnots(int numCtrlPoints, int degree);
+
+    static float u_from_t(float t, const std::vector<float>& U, int nbPoints, int degree);
+    float u_from_t(float t) const;
+
 };
 
 #endif // BSPLINE_H
