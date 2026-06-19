@@ -32,14 +32,6 @@ CatmullRomSpline& CatmullRomSpline::reverseVertices()
     return *this;
 }
 
-size_t CatmullRomSpline::nextID(int i) {
-    return (i + 1 + this->points.size()) % this->points.size();
-}
-
-size_t CatmullRomSpline::prevID(int i) {
-    return (i - 1 + this->points.size()) % this->points.size();
-}
-
 CatmullRomSpline::operator bool() const {
     return (this->points.size() > 0);
 }
@@ -497,12 +489,12 @@ Vector3 CatmullRomSpline::getCenterCircle(float x) const
 CatmullRomSpline& CatmullRomSpline::close()
 {
     Curve::close();
-    if (this->points.size() > 0 && this->points.front() != this->points.back())
-        this->points.push_back(points.front());
+    // if (this->points.size() > 0 && this->points.front() != this->points.back())
+        // this->points.push_back(points.front());
     return *this;
 }
 
-CatmullRomSpline &CatmullRomSpline::cleanPoints()
+CatmullRomSpline& CatmullRomSpline::cleanPoints()
 {
     for (int i = this->size() - 1; i >= 0; i--) {
         if (!this->points[i].isValid()) this->points.erase(this->points.begin() + i);
@@ -596,8 +588,15 @@ CatmullRomSpline CatmullRomSpline::simplifyByRamerDouglasPeucker(float epsilon, 
     return returningSpline;
 }
 
-std::pair<Vector3, Vector3> CatmullRomSpline::AABBox() const
+AABBox CatmullRomSpline::getAABBox() const
 {
+    std::vector<Vector3> samples(numSegments());
+    for (size_t i = 0; i < samples.size(); i++) {
+        float t = float(i + 0.5f) / float(samples.size());
+        samples[i] = getPoint(t);
+    }
+    return AABBox(points).expand(samples);  // I guess good enough approximation, using control points and middle of each subcurve.
+    /*
     if (this->points.empty()) return {Vector3::invalid, Vector3::invalid};
     if (this->points.size() == 1) return {points[0], points[0]};
 
@@ -614,6 +613,7 @@ std::pair<Vector3, Vector3> CatmullRomSpline::AABBox() const
         maxVec.z() = std::max(point.z(), maxVec.z());
     }
     return {minVec, maxVec};
+    */
 }
 
 CatmullRomSpline& CatmullRomSpline::scale(const Vector3 &factor)
@@ -749,7 +749,7 @@ std::string CatmullRomSpline::display1DPlot(int sizeX, int sizeY) const
     std::ostringstream oss;
     CatmullRomSpline translated = *this;
     std::vector<Vector3> roundedPositions(translated.size());
-    auto [mini, maxi] = AABBox();
+    auto [mini, maxi] = getAABBox().minMax();
     for (auto& p : translated) {
         p = (p - mini) / (maxi - mini); // between (0, 0) and (1, 1)
         p.y() = 1.f - p.y();
@@ -884,24 +884,12 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
     float x = std::clamp(_x, 0.f, 1.f);
 
     std::vector<Vector3> displayedPoints = this->points;
+    if (closed && points.size() > 0) displayedPoints.push_back(points[0]);
     size_t nbPoints = displayedPoints.size();
 
     if (nbPoints == 0) return {Vector3::invalid, Vector3::invalid, Vector3::invalid};
     else if (nbPoints == 1) return {displayedPoints[0], Vector3::invalid, Vector3::invalid};
     else if (nbPoints == 2) return {displayedPoints[0] * (1.f - x) + displayedPoints[1] * x, displayedPoints[1] - displayedPoints[0], Vector3(0, 0, 0)};
-
-    /*if (!isClosed()) {
-        displayedPoints.insert(displayedPoints.begin(), displayedPoints.front());
-        displayedPoints.push_back(displayedPoints.back());
-        nbPoints = displayedPoints.size();
-    }
-
-    float res = 1 / (float)(nbPoints - 1);
-    int iFloor = int(x / res);
-    int iCeil = int(x / res) + 1;
-    float resFloor = iFloor * res;
-    float resCeil = iCeil * res;
-    float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);*/
 
     float res = 1 / (float)(nbPoints - 1);
     int iFloor = int(x / res);
@@ -909,17 +897,10 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
     float resFloor = iFloor * res;
     float resCeil = iCeil * res;
     float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
-
-    if (!isClosed()) {
-        displayedPoints.insert(displayedPoints.begin(), displayedPoints.front());
-        displayedPoints.push_back(displayedPoints.back());
-        if (_x < 1.f) {
-            iFloor++;
-            iCeil++;
-        } else {
-            x_prime = 1.f; // Small problem when t = 1.0
-        }
-        // nbPoints = displayedPoints.size();
+    if (_x >= 1.f) {
+        iFloor--;
+        iCeil--;
+        x_prime = 1.f;
     }
 
     Vector3 P0;
@@ -933,14 +914,14 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
 
     const float artificialCurvature = 0.1f;
     if (!isClosed() && iFloor == 0) {
-        P0 = (2.f * P1 - P2) - (Collision::projectPointOnSegment(P2, P1, P3) - P2) * artificialCurvature; // Introduce a bit of curvature
         P3 = displayedPoints[iCeil + 1];
+        P0 = (2.f * P1 - P2) - (Collision::projectPointOnSegment(P2, P1, P3) - P2) * artificialCurvature; // Introduce a bit of curvature
     } else if (!isClosed() && iCeil == nbPoints - 1) {
         P0 = displayedPoints[iFloor - 1];
         P3 = (2.f * P2 - P1) + (Collision::projectPointOnSegment(P1, P0, P2) - P1) * artificialCurvature; // Introduce a bit of curvature
     } else {
-        P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
-        P3 = displayedPoints[(iCeil >= int(nbPoints-1) ? (this->closed ? 1 : displayedPoints.size()-2) : iCeil + 1)];
+        P0 = get(iFloor - 1);
+        P3 = get(iCeil + 1);
     }
 
     float t0 = 0;
@@ -978,7 +959,7 @@ std::tuple<Vector3, Vector3, Vector3> CatmullRomSpline::pointAndDerivativeAndSec
 
     return {C, Cp * dtdx, Cpp * (dtdx * dtdx)};
 }
-const Vector3 &CatmullRomSpline::operator[](size_t i) const
+const Vector3& CatmullRomSpline::operator[](size_t i) const
 {
     return this->points[(i + size()) % size()];
 }
@@ -1033,7 +1014,7 @@ std::vector<std::shared_ptr<Curve> > CatmullRomSpline::slice(float t) const
     std::vector<Vector3> firstPoints(lowerIndex + 2);
     std::vector<Vector3> lastPoints(numPoints() - lowerIndex);
 
-    for (size_t i = 0; i < numSegments() + 1; i++) {
+    for (size_t i = 0; i < numPoints(); i++) {
         if (i <= lowerIndex) {
             firstPoints[i] = points[i];
         } else {
@@ -1043,6 +1024,9 @@ std::vector<std::shared_ptr<Curve> > CatmullRomSpline::slice(float t) const
     const auto p = getPoint(t);
     firstPoints.back() = p;
     lastPoints.front() = p;
+
+    if (closed) lastPoints.push_back(points[0]);
+
     CatmullRomSpline p1(firstPoints);
     CatmullRomSpline p2(lastPoints);
     return {std::make_shared<CatmullRomSpline>(p1), std::make_shared<CatmullRomSpline>(p2)};

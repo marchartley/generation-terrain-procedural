@@ -291,8 +291,10 @@ std::vector<Vector3> Contour::randomPointsInside(int numberOfPoints)
     }
 
     int maxFailures = 10000 * numberOfPoints;
-    Vector3 minVec, maxVec;
-    std::tie(minVec, maxVec) = this->curve->AABBox();
+
+    auto bbox = this->curve->getAABBox().min();
+    Vector3 minVec = bbox.min();
+    Vector3 maxVec = bbox.max();
     minVec.z() = -1;
     maxVec.z() =  1;
     Vector3 normalRay = this->planeNormal() * (maxVec - minVec).norm();

@@ -34,7 +34,7 @@ public:
 
     BSpline& reverseVertices() override;
 
-    std::pair<Vector3, Vector3> AABBox() const override;
+    AABBox getAABBox() const override;
 
     using Curve::scale;
     BSpline& scale(const Vector3& factor) override;

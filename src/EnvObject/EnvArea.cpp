@@ -122,7 +122,7 @@ void EnvAreaInstance::applyDeposition(EnvMaterial& material)
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
     Contour translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(depositionProperties.radius);
-    AABBox box = AABBox(translatedCurve.curve->AABBox());
+    AABBox box = translatedCurve.curve->getAABBox();
     translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
     // for (auto& p : translatedCurve)
         // p = p + Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min();
@@ -143,7 +143,7 @@ void EnvAreaInstance::applyAbsorption(EnvMaterial& material)
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
     Contour translatedCurve = this->curve;
     translatedCurve = translatedCurve.grow(absorptionProperties.radius);
-    AABBox box = AABBox(translatedCurve.curve->AABBox());
+    AABBox box = translatedCurve.curve->getAABBox();
     translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
     // for (auto& p : translatedCurve)
     // p = p + Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min();
@@ -163,7 +163,7 @@ void EnvAreaInstance::applyDepositionOnDeath()
     for (auto& [materialName, depos] : this->getDefinition()->materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
         if (depos.rate == 0) return;
-        AABBox box = AABBox(this->curve.curve->AABBox());
+        AABBox box = this->curve.curve->getAABBox();
         Contour translatedCurve = this->curve;
         for (auto& p : *translatedCurve.curve)
             p = p + Vector3(depos.radius, depos.radius, 0) - box.min();
@@ -210,7 +210,7 @@ ImplicitPatch* EnvAreaInstance::createImplicitPatch(const GridF &heights, Implic
     for (Vector3& p : translatedCurve) {
         p.z() = heights(p.xy());
     }
-    AABBox box(translatedCurve.AABBox());
+    AABBox box = translatedCurve.getAABBox();
     float growingState = 1.f;
     Vector3 offset(this->getDefinition()->width, this->getDefinition()->width, this->getDefinition()->height * growingState);
     translatedCurve.translate(-(box.min() - offset * .5f));

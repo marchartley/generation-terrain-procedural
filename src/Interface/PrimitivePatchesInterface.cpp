@@ -1574,9 +1574,9 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(const Vector
     } else {
         Vector3 funcSize = this->functionSize * layerGrid->scaling;
         if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
-            auto AABBox = this->parametricCurve.AABBox();
-            finalPos = std::get<0>(AABBox) - funcSize * .5f;
-            funcSize = (std::get<1>(AABBox) + funcSize * .5f) - finalPos;
+            auto AABBox = this->parametricCurve.getAABBox();
+            finalPos = AABBox.min() - funcSize * .5f;
+            funcSize = (AABBox.max() + funcSize * .5f) - finalPos;
         }
         CatmullRomSpline translatedSpline = this->parametricCurve;
         for (auto& p : translatedSpline)

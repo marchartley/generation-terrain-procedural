@@ -34,9 +34,6 @@ public:
 
     CatmullRomSpline& reverseVertices() override;
 
-    size_t nextID(int i);
-    size_t prevID(int i);
-
     operator bool() const;
 
     std::tuple<Vector3, Vector3, Vector3> getFrenetFrame(float x) const;
@@ -54,7 +51,7 @@ public:
 
     CatmullRomSpline simplifyByRamerDouglasPeucker(float epsilon, CatmullRomSpline subspline = CatmullRomSpline());
 
-    std::pair<Vector3, Vector3> AABBox() const;
+    AABBox getAABBox() const;
 
     using Curve::scale;
     CatmullRomSpline& scale(const Vector3& factor) override;

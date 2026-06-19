@@ -1,21 +1,21 @@
 <!DOCTYPE QGLVIEWER>
 <QGLViewer version="2.6.3">
   <State stereo="false">
-    <foregroundColor blue="0" green="0" red="0"/>
-    <backgroundColor blue="127" green="127" red="127"/>
+    <foregroundColor red="0" green="0" blue="0"/>
+    <backgroundColor red="127" green="127" blue="127"/>
   </State>
-  <Display cameraIsEdited="false" gridIsDrawn="false" FPSIsDisplayed="false" axisIsDrawn="false"/>
-  <Geometry fullScreen="false" width="1848" posX="72" posY="27" height="1016"/>
+  <Display FPSIsDisplayed="false" gridIsDrawn="false" cameraIsEdited="false" axisIsDrawn="false"/>
+  <Geometry width="1848" height="1016" fullScreen="false" posX="72" posY="27"/>
   <Camera>
-    <Parameters fieldOfView="0.785398" sceneRadius="500" Type="PERSPECTIVE" zNearCoefficient="0.005" zClippingCoefficient="1.73205" orthoCoef="6.68865e-100">
+    <Parameters Type="PERSPECTIVE" orthoCoef="2.9767e-101" zNearCoefficient="0.005" zClippingCoefficient="1.73205" fieldOfView="0.785398" sceneRadius="500">
       <SceneCenter z="15" y="50" x="50"/>
     </Parameters>
-    <Stereo IODist="0.062" physScreenWidth="0.5" focusDistance="1207.11"/>
+    <Stereo physScreenWidth="0.5" focusDistance="1207.11" IODist="0.062"/>
     <ManipulatedCameraFrame>
-      <position z="104.106" y="24.9327" x="-66.2803"/>
-      <orientation q0="0.28983" q1="-0.215924" q3="0.641865" q2="-0.676302"/>
-      <ManipulatedParameters spinSens="0.3" zoomSens="1" transSens="1" rotSens="1" wheelSens="1"/>
-      <ManipulatedCameraParameters rotatesAroundUpVector="false" zoomsOnPivotPoint="false" flySpeed="5">
+      <position z="151.28" y="-43.097" x="7.65257"/>
+      <orientation q0="0.242126" q3="0.757374" q2="-0.606046" q1="0.0216517"/>
+      <ManipulatedParameters wheelSens="1" transSens="1" zoomSens="1" spinSens="0.3" rotSens="1"/>
+      <ManipulatedCameraParameters zoomsOnPivotPoint="false" flySpeed="5" rotatesAroundUpVector="false">
         <sceneUpVector z="0" y="1" x="0"/>
       </ManipulatedCameraParameters>
     </ManipulatedCameraFrame>

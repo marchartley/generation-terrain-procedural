@@ -33,7 +33,7 @@ Voronoi::Voronoi(int numberRandomPoints, const Vector3& minBoundarie, const Vect
 Voronoi::Voronoi(int numberRandomPoints, Contour boundingShape)
     : boundingShape(boundingShape.removeDuplicates())
 {
-    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.curve->AABBox();
+    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.curve->getAABBox().minMax();
     this->pointset = boundingShape/*.shrink(1.f)*/.randomPointsInside(numberRandomPoints);
     this->solve(false, 0);
 }
@@ -81,7 +81,7 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& minBoundarie, con
 Voronoi::Voronoi(std::vector<Vector3> pointset, Contour boundingShape)
     : pointset(pointset), boundingShape(boundingShape.removeDuplicates())
 {
-    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.curve->AABBox();
+    std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.curve->getAABBox().minMax();
     this->solve(false, 0);
 }
 

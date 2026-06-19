@@ -92,8 +92,8 @@ Graph subsetToFitMostBiomes(Graph graph, [[maybe_unused]] std::vector<std::strin
         biomesHull.curve->addPoint(graph.nodes[iNode]->pos);
     }
     biomesHull = biomesHull.computeConvexHull();
-    Vector3 AABBoxMin, AABBoxMax;
-    std::tie(AABBoxMin, AABBoxMax) = biomesHull.curve->AABBox();
+    Vector3 AABBoxMin = biomesHull.curve->getAABBox().min();
+    Vector3 AABBoxMax = biomesHull.curve->getAABBox().max();
     Vector3 desiredAABBoxMin = AABBoxMin + (AABBoxMax - AABBoxMin) * .3f;
     Vector3 desiredAABBoxMax = AABBoxMin + (AABBoxMax - AABBoxMin) * .6f;
 

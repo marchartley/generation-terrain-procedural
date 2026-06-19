@@ -15,6 +15,7 @@ public:
     Vector3 getPoint(float x) const override;
     Vector3 getDerivative(float x, bool normalize = false) const override;
     Vector3 getSecondDerivative(float x, bool normalize = false) const override;
+    Vector3 getNormal(float x, Vector3 forcedUp = Vector3::invalid) const override;
     float estimateClosestTime(const Vector3& pos) const override;
     Vector3 estimateClosestPos(const Vector3& pos) const override;
     float estimateSqrDistanceFrom(const Vector3& pos) const override;
@@ -31,7 +32,7 @@ public:
 
     Polyline& reverseVertices() override;
 
-    std::pair<Vector3, Vector3> AABBox() const override;
+    AABBox getAABBox() const override;
 
     using Curve::scale;
     Polyline& scale(const Vector3& factor) override;
@@ -62,6 +63,7 @@ public:
     Polyline& reset();
 
     using Curve::slice;
+    // std::vector<std::shared_ptr<Curve> > slice(const std::vector<float>& _ts) const;
     std::vector<std::shared_ptr<Curve>> slice(float t) const override;
     // std::vector<std::shared_ptr<Curve>> slice(std::vector<float> ts) const override;
 

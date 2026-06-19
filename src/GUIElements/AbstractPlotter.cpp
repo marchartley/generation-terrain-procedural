@@ -83,25 +83,10 @@ AbstractPlotter::AbstractPlotter(const std::string& name, const std::string &tit
         dataModel->selectedPlotData.clear();
     });
     QObject::connect(this->chartView, &ChartView::mousePressed, this, [&](QMouseEvent* e) {
+        if (chartView->chart()->series().empty()) return;
+
         auto p = chartView->chart()->mapToValue(e->pos(), this->chartView->chart()->series()[0]);
         chartView->selectData(Vector3(p.x(), p.y()));
-        /*
-        dataModel->selectedScatterData.clear();
-        dataModel->selectedPlotData.clear();
-        auto p = chartView->chart()->mapToValue(e->pos(), this->chartView->chart()->series()[0]);
-        auto dataMousePos = Vector3(p.x(), p.y());
-
-        const float tol = 5.f;
-        for (size_t iSeries = 0; iSeries < dataModel->scatterData.data.size(); iSeries++) {
-            const auto& scatterSeries = dataModel->scatterData.data[iSeries];
-            for (size_t iDataPoint = 0; iDataPoint < scatterSeries.size(); iDataPoint++) {
-                const auto& scatterData = scatterSeries[iDataPoint];
-                if ((dataMousePos - scatterData).norm2() < tol * tol) {
-                    dataModel->selectedScatterData.push_back({iSeries, iDataPoint});
-                }
-            }
-        }
-        */
     });
     QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e){
         this->displayInfoUnderMouse(pos);
@@ -350,14 +335,14 @@ void AbstractPlotter::hideEvent(QHideEvent *event)
     // Flag the Chartview updater
 }
 
-QTimer *AbstractPlotter::animate(std::function<bool ()> callback, int interval_ms)
+QTimer* AbstractPlotter::animate(std::function<bool ()> callback, int interval_ms)
 {
     QTimer* t = new QTimer(this);
     t->setInterval(interval_ms);
     t->setSingleShot(true);
     QObject::connect(t, &QTimer::timeout, [this, t, callback, interval_ms]() {
         if (callback()) {
-            this->show();
+            this->draw();
             t->start(interval_ms);
         }
     });

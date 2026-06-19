@@ -106,47 +106,257 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    auto curve = BezierCurve(std::vector<Vector3>{
-        Vector3(.1f, 0.f),
-        Vector3(0.f, .5f),
-        Vector3(.5f, 1.f),
-        Vector3(1.f, .5f),
-        Vector3(.5f, .25f),
-        Vector3(.25f, .5f),
-        Vector3(.5f, .75f),
-        Vector3(.75f, .5f),
-        Vector3(.5f, .4f),
-        Vector3(.4f, .5f)
-    });
+
+    /*
+
+    #define CurveType BSpline
+
+    auto curve = CurveType(std::vector<Vector3>{
+                               Vector3(0.f, 0.f),
+                               Vector3(.5f, .5f),
+                               Vector3(1.f, .5f),
+                               Vector3(1.5f, 0.f),
+                               Vector3(2.f, 1.f)
+    }, false);
     curve.close();
 
     auto& viewer = ImageViewer::get();
+    Vector3 mousePos;
 
-    /*
-    viewer.addScatter(curve.getPath(), "", {}, Vector3::black);
+    float time = 0.f;
+    auto drawCurves = [&]() {
+        viewer.dataModel->reset();
 
-    // auto curves = curve.slice(.4f);
-    auto curves = curve.slice({.3f, .4f, .625f});
-    for (size_t i = 0; i < curves.size(); i++) {
-        // if (i == 1) continue;
-        const auto& c = curves[i];
-        std::cout << c << std::endl;
-        Vector3 color = HSVtoRGB(float(i) / float(curves.size()), 1.f, 1.f);
-        viewer.addPlot(c.getPath(100), "", color);
-        viewer.addScatter(c.getPath(), "", {}, color);
+        auto modified = curve.clone()->translate(Vector3(cos(time), sin(time)) * 0.3f);
+        auto poly = toPolyline(curve);
+        auto catmull = toCatmullRom(curve);
+        auto bezier = toBezier(curve);
+        auto bspline = toBSpline(curve);
 
-        for (size_t iPoint = 0; iPoint < c.numPoints(); iPoint++) {
-            viewer.addPlot({c.handlePos(c.handleIn(iPoint)), c.get(iPoint), c.handlePos(c.handleOut(iPoint))}, "", color);
+
+        float width = curve.getAABBox().dimensions().x();
+
+        viewer
+            // .addScatter(Polyline(curveIntersection(curve, modified)).translate(, "", {}, Vector3::black)
+            .addScatter(Polyline(curveIntersection(poly, modified)).translate(Vector3(width * 1, 0)), "", {}, Vector3::blue)
+            .addScatter(Polyline(curveIntersection(catmull, modified)).translate(Vector3(width * 2, 0)), "", {}, Vector3::green)
+            .addScatter(Polyline(curveIntersection(bezier, modified)).translate(Vector3(width * 3, 0)), "", {}, Vector3::orange)
+            .addScatter(Polyline(curveIntersection(bspline, modified)).translate(Vector3(width * 4, 0)), "", {}, Vector3::red)
+            ;
+        viewer
+            .addPlot(curve, "Original", Vector3::black)
+            .addPlot(modified, "", Vector3::azure)
+            .addPlot(modified.translate(Vector3(width, 0)), "", Vector3::azure)
+            .addPlot(modified.translate(Vector3(width, 0)), "", Vector3::azure)
+            .addPlot(modified.translate(Vector3(width, 0)), "", Vector3::azure)
+            .addPlot(modified.translate(Vector3(width, 0)), "", Vector3::azure)
+            .addPlot(poly.translate(Vector3(width * 1, 0)), "Poly", Vector3::blue)
+            .addPlot(catmull.translate(Vector3(width * 2, 0)), "Catmull", Vector3::green)
+            .addPlot(bezier.translate(Vector3(width * 3, 0)), "Bezier", Vector3::orange)
+            .addPlot(bspline.translate(Vector3(width * 4, 0)), "B-Spline", Vector3::red)
+            ;
+        viewer.addImage(GridF(1, 1, 1, .5f));
+
+    };
+    drawCurves();
+    viewer.setOnMouseMoved([&](const Vector3& p, const Vector3& v, QMouseEvent* e) {
+        auto qmouse = viewer.chartView->chart()->mapToValue(e->pos());
+        mousePos = Vector3(qmouse.x(), qmouse.y());
+    });
+    viewer.setOnUserModifiedData([&](const std::vector<size_t>& modifiedSeriesIndices) {
+        for (auto& idx : modifiedSeriesIndices) {
+            int i = 0;
+            for (auto& point : viewer.dataModel->scatterData[idx]) {
+                if (idx == 0) {
+                    curve.setPoint(i, point.pos);
+                }
+                i++;
+            }
         }
-    }
+        drawCurves();
+    });
 
-    viewer.addPlot(curve.translate(Vector3(0.1, 0.1)).getPath(1000), "Original", Vector3::black);
-    for (size_t i = 0; i < curve.numPoints(); i++) {
-        viewer.addPlot({curve.handlePos(curve.handleIn(i)), curve.handlePos(curve.handleOut(i))}, "", Vector3::black);
-    }
-
+    viewer.animate([&]() {
+        time += 0.1f;
+        drawCurves();
+        return true;
+    }, 30);
     return viewer.exec();
     */
+
+    /*
+    #define CurveType BSpline
+
+    auto curve = CurveType(std::vector<Vector3>{
+        Vector3(0.f, 0.f),
+        Vector3(.5f, .5f),
+        Vector3(1.f, .5f),
+        Vector3(1.5f, 0.f),
+        Vector3(2.f, 1.f)
+    }, false);
+    // curve.close();
+
+    auto& viewer = ImageViewer::get();
+    Vector3 mousePos;
+
+    float division = .1f;
+    auto drawCurves = [&]() {
+        viewer.dataModel->reset();
+
+        auto poly = toPolyline(curve);
+        auto catmull = toCatmullRom(curve);
+        auto bezier = toBezier(curve);
+        auto bspline = toBSpline(curve);
+
+        float width = (curve.AABBox().second - curve.AABBox().first).x();
+
+        viewer
+            .addPlot(curve, "Original", Vector3::black)
+            .addPlot(poly.translate(Vector3(width * 1, 0)), "Poly", Vector3::blue)
+            .addPlot(catmull.translate(Vector3(width * 2, 0)), "Catmull", Vector3::green)
+            .addPlot(bezier.translate(Vector3(width * 3, 0)), "Bezier", Vector3::orange)
+            .addPlot(bspline.translate(Vector3(width * 4, 0)), "B-Spline", Vector3::red)
+            ;
+        viewer
+            .addScatter(curve.getPath(), "", {}, Vector3::black)
+            .addScatter({curve.getPoint(division)}, "", {}, Vector3::black)
+            .addScatter({poly.getPoint(division)}, "", {}, Vector3::blue)
+            .addScatter({catmull.getPoint(division)}, "", {}, Vector3::green)
+            .addScatter({bezier.getPoint(division)}, "", {}, Vector3::orange)
+            .addScatter({bspline.getPoint(division)}, "", {}, Vector3::red)
+            ;
+
+        viewer.addImage(GridF(1, 1, 1, .5f));
+
+    };
+    drawCurves();
+    viewer.setOnMouseMoved([&](const Vector3& p, const Vector3& v, QMouseEvent* e) {
+        auto qmouse = viewer.chartView->chart()->mapToValue(e->pos());
+        mousePos = Vector3(qmouse.x(), qmouse.y());
+    });
+    viewer.setOnUserModifiedData([&](const std::vector<size_t>& modifiedSeriesIndices) {
+        for (auto& idx : modifiedSeriesIndices) {
+            int i = 0;
+            for (auto& point : viewer.dataModel->scatterData[idx]) {
+                if (idx == 0) {
+                    curve.setPoint(i, point.pos);
+                }
+                i++;
+            }
+        }
+        drawCurves();
+    });
+    viewer.animate([&]() {
+        division += 0.01f;
+        if (division > 1.f) {
+            division = 0.f;
+        }
+        drawCurves();
+        return true;
+    }, 30);
+    return viewer.exec();
+    */
+
+    /*
+    #define CurveType BSpline
+
+    auto curve = CurveType(std::vector<Vector3>{
+        Vector3(0.f, 0.f),
+        Vector3(.5f, .5f),
+        Vector3(1.f, .5f),
+        Vector3(1.5f, 0.f),
+        Vector3(2.f, 1.f)
+    }, false);
+    // curve.close();
+
+
+    std::vector<std::string> labels;
+    for (size_t i = 0; i < curve.numPoints(); i++) {labels.push_back(std::to_string(i)); }
+
+    auto& viewer = ImageViewer::get();
+    Vector3 mousePos;
+
+    float division = .1f;
+    auto drawCurves = [&]() {
+        viewer.dataModel->reset();
+
+        viewer
+            .addPlot(curve, "Original", Vector3::black)
+            ;
+        viewer
+            .addScatter(curve.getPath(), "", labels, Vector3::black)
+            .addScatter({curve.getPoint(division)}, "", {}, Vector3::black)
+            ;
+
+        const int samples = 100;
+        const float vecScale = 0.5f;
+        for (size_t i = 0; i < samples; i++) {
+            float t = float(i) / float(samples - 1);
+            Vector3 p = curve.getPoint(t);
+            Vector3 dir = curve.getDirection(t);
+            Vector3 normal = curve.getNormal(t, Vector3(0, 0, 1));
+
+            viewer
+                .addPlot({p, p + dir * vecScale}, "", Vector3::green)
+                .addPlot({p, p + normal * vecScale}, "", Vector3::yellow)
+                ;
+        }
+
+        auto slices = std::vector<float>{.3f, .4f, .625f};
+        auto miniCurvesA = curve.slice(slices);
+        for (size_t i = 0; i < miniCurvesA.size(); i++) {
+            auto c = *(dynamic_cast<CurveType*>(miniCurvesA[i].get()));
+            Vector3 color = HSVtoRGB(float(i) / float(miniCurvesA.size()), 1.f, 1.f);
+            viewer.addPlot(c.clone()->translate(Vector3(0.f, 0.01f)), "", color);
+        }
+        auto miniCurvesB = curve.slice(division);
+        for (size_t i = 0; i < miniCurvesB.size(); i++) {
+            auto c = *(dynamic_cast<CurveType*>(miniCurvesB[i].get()));
+            Vector3 color = HSVtoRGB(float(i) / float(miniCurvesB.size()), 1.f, 1.f);
+            viewer.addPlot(c.clone()->translate(Vector3(0.f, -0.01f)), "", color);
+        }
+
+        Vector3 closestPoint = curve.estimateClosestPos(mousePos);
+        std::cout << "Closest p = " << closestPoint << "( dist = " << (closestPoint - mousePos).norm() << " )" << std::endl;
+        viewer
+            .addScatter({closestPoint}, "", {}, Vector3::indigo)
+            .addPlot({mousePos, closestPoint}, "", Vector3::indigo)
+            ;
+
+        viewer.addImage(GridF(1, 1, 1, .5f));
+        std::cout << "Closest t = " << curve.estimateClosestTime(mousePos) << " (division = " << division << ")" << std::endl;
+
+        viewer.addPlot(curve.clone()->scale(0.5f).translate(curve.center()).open().close().open(), "Open/closed");
+
+    };
+    drawCurves();
+    viewer.setOnMouseMoved([&](const Vector3& p, const Vector3& v, QMouseEvent* e) {
+        auto qmouse = viewer.chartView->chart()->mapToValue(e->pos());
+        mousePos = Vector3(qmouse.x(), qmouse.y());
+    });
+    viewer.setOnUserModifiedData([&](const std::vector<size_t>& modifiedSeriesIndices) {
+        for (auto& idx : modifiedSeriesIndices) {
+            int i = 0;
+            for (auto& point : viewer.dataModel->scatterData[idx]) {
+                if (idx == 0) {
+                    curve.setPoint(i, point.pos);
+                }
+                i++;
+            }
+        }
+        drawCurves();
+    });
+    viewer.animate([&]() {
+        division += 0.01f;
+        if (division > 1.f) {
+            division = 0.f;
+        }
+        drawCurves();
+        return true;
+    }, 30);
+    return viewer.exec();
+    */
+    /*
 
     auto drawCurves = [&]() {
         viewer.dataModel->reset();
@@ -154,7 +364,7 @@ int main(int argc, char *argv[])
         // viewer.addPlot(curve.getPath(1000), "Original", Vector3::black);
         viewer.addScatter(curve.getPath(), "", {}, Vector3::black);
 
-        std::vector<BezierCurve> subCurves;
+        std::vector<std::shared_ptr<Curve>> subCurves;
 
         std::set<float> sliceIndices;
         for (size_t i = 0; i < curve.numSegments(); i++) {
@@ -204,12 +414,15 @@ int main(int argc, char *argv[])
         for (auto& time : sortedTimes) {
             time = ::map(time, 0.f, float(curve.numSegments()), 0.f, 1.f);
         }
+        auto C1 = std::shared_ptr<Curve>(curve.clone());
+        auto C2 = std::shared_ptr<Curve>(curve.clone());
+        C2->translate(Vector3(0.5, 0, 0));
         subCurves = curve.slice(sortedTimes);
         for (size_t i = 0; i < subCurves.size(); i++) {
             const auto& c = subCurves[i];
             Vector3 color = HSVtoRGB(float(i) / float(subCurves.size()), 1.f, 1.f);
-            viewer.addPlot(c.getPath(100), "", color);
-            viewer.addScatter({c.get(0), c.get(-1)}, "", {}, color);
+            viewer.addPlot(c->getPath(100), "", color);
+            viewer.addScatter({c->get(0), c->get(-1)}, "", {}, color);
         }
     };
     drawCurves();
@@ -226,7 +439,7 @@ int main(int argc, char *argv[])
         drawCurves();
     });
     return viewer.exec();
-
+    */
     /*
     Vector3i size(200, 200, 1);
     GridV3 initialImage = Image::readFromFile("poster/profile.png").colorImage.resize(size) / 255.f;

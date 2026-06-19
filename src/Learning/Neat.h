@@ -80,8 +80,8 @@ public:
 
     Genome(int nb_inputs = 0, int nb_outputs = 0);
 
-    inline static std::vector<AggregationKind> available_aggregation_funcs();
-    inline static std::vector<ActivationFunction> available_activation_funcs();
+    static std::vector<AggregationKind> available_aggregation_funcs();
+    static std::vector<ActivationFunction> available_activation_funcs();
 
     static float apply_activation(ActivationFunction func, float x);
     static std::string get_activation_name(ActivationFunction func);

@@ -1,18 +1,24 @@
 #include "Curves.h"
 
+#include "Utils/Collisions.h"
+
 CatmullRomSpline toCatmullRom(const BezierCurve& curve)
 {
-    return CatmullRomSpline(curve.getPoints());
+    auto result = CatmullRomSpline(curve.getPoints());
+    result.setClosed(curve.isClosed());
+    return result;
 }
 
 CatmullRomSpline toCatmullRom(const Polyline& curve)
 {
-    return CatmullRomSpline(curve.getPoints());
+    auto result = CatmullRomSpline(curve.getPoints());
+    result.setClosed(curve.isClosed());
+    return result;
 }
 
 CatmullRomSpline toCatmullRom(const BSpline& curve)
 {
-    return toCatmullRom(toBezier(curve));
+    return CatmullRomSpline(curve.getPath(curve.numSegments() * 4)).setClosed(curve.isClosed());
 }
 
 BezierCurve toBezier(const CatmullRomSpline& curve)
@@ -20,22 +26,30 @@ BezierCurve toBezier(const CatmullRomSpline& curve)
     std::vector<Vector3> points = curve.getPoints();
     std::vector<Vector3> handles(points.size() * 2);
 
-    for (size_t i = 0; i < points.size() - 1; i++) {
-        float t0 = float(i+0) / float(points.size() - 1);
-        float t1 = float(i+1) / float(points.size() - 1);
+    for (size_t i = 0; i < points.size(); i++) {
+        float t0 = float(i+0) / float(points.size() - (curve.isClosed() ? 0 : 1));
+        float t1 = float(i+1) / float(points.size() - (curve.isClosed() ? 0 : 1));
 
-        float scale = std::pow((points[i+1]-points[i]).norm(), curve.alpha) / 3.f;
+        // float scale = std::pow((points[i+1]-points[i]).norm(), curve.alpha) / 3.f;
+        float scale = 1.f / (3.f * float(points.size() - 1));
 
-        handles[2 * i + 0] = points[i + 0] + curve.getDerivative(t0) * scale; //points[i-1], points[i], points[i+1], points[i+2], curve.alpha, 0.f) * scale;
-        handles[2 * i + 1] = points[i + 1] - curve.getDerivative(t1) * scale; //points[i-1], points[i], points[i+1], points[i+2], curve.alpha, 1.f) * scale;
+
+        const Vector3 hOut = curve.getDerivative(t0) * scale;
+        const Vector3 hIn = -curve.getDerivative(t1) * scale;
+        handles[BezierCurve::handleOut(i, points.size(), curve.isClosed())] = hOut;
+        handles[BezierCurve::handleIn(i + 1, points.size(), curve.isClosed())] = hIn;
     }
 
-    return BezierCurve(points, handles);
+    auto result = BezierCurve(points, handles);
+    result.setClosed(curve.isClosed());
+    return result;
 }
 
 BezierCurve toBezier(const Polyline& curve)
 {
-    return BezierCurve(curve.getPoints());
+    auto result = BezierCurve(curve.getPoints());
+    result.setClosed(curve.isClosed());
+    return result;
 }
 /*
 BezierCurve toBezier(const BSpline& curve)
@@ -73,12 +87,14 @@ BezierCurve toBezier(const BSpline& curve)
         handles[BezierCurve::handleIn(nextPointIdx, nbBezierPoints, false)]  = P2 - P3;
     }
 
-    return BezierCurve(points, handles);
+    auto result = BezierCurve(points, handles);
+    result.setClosed(curve.isClosed());
+    return result;
 }
 */
 BezierCurve toBezier(const BSpline& curve)
 {
-    BSpline tmp = curve;
+    BSpline tmp = (curve.isClosed() ? curve.generateFakeClosedCurve() : curve);
 
     const int p = tmp.getDegree();
     assert(p == 3);
@@ -133,14 +149,21 @@ BezierCurve toBezier(const BSpline& curve)
         handles.push_back(C2 - C3);
         handles.push_back(Vector3::origin);
     }
-    return BezierCurve(bezierPoints, handles);
+    auto result = BezierCurve(bezierPoints, handles);
+    result.setClosed(curve.isClosed());
+    return result;
 }
 
 
 
 
-Polyline toPolyline(const Curve& curve) {
-    return Polyline(curve.getPath(curve.numPoints()));
+Polyline toPolyline(const Curve& curve, int samplesFactor) {
+    auto result = Polyline(curve.getPath(curve.numPoints() * samplesFactor));
+    result.setClosed(curve.isClosed());
+    return result;
+}
+Polyline toPolyline(const Polyline& curve) {
+    return curve;
 }
 /*Polyline toPolyline(const CatmullRomSpline& curve)
 {
@@ -155,7 +178,9 @@ Polyline toPolyline(const BezierCurve& curve)
 
 BSpline toBSpline(const CatmullRomSpline& curve)
 {
-    return BSpline(curve.getPoints());
+    auto result = BSpline(curve.getPoints());
+    result.setClosed(curve.isClosed());
+    return result;
 }
 
 BSpline toBSpline(const BezierCurve& curve)
@@ -199,9 +224,11 @@ BSpline toBSpline(const BezierCurve& curve)
     for (int i = 0; i < p + 1; ++i)
         knots.push_back(1.f);
 
-    assert(knots.size() == splinePoints.size() + p + 1);
+    // assert(knots.size() == splinePoints.size() + p + 1);
 
-    return BSpline(splinePoints, knots);
+    auto result = BSpline(splinePoints, knots);
+    result.setClosed(curve.isClosed());
+    return result;
 
     /*
 
@@ -235,5 +262,79 @@ BSpline toBSpline(const BezierCurve& curve)
 
 BSpline toBSpline(const Polyline& curve)
 {
-    return BSpline(curve.getPoints());
+    auto result = BSpline(curve.getPoints());
+    result.setClosed(curve.isClosed());
+    return result;
+}
+
+CatmullRomSpline toCatmullRom(const CatmullRomSpline& curve)
+{
+    return curve;
+}
+
+BezierCurve toBezier(const BezierCurve& curve)
+{
+    return curve;
+}
+
+BSpline toBSpline(const BSpline& curve)
+{
+    return curve;
+}
+
+std::vector<Vector3> curveIntersection(const Polyline &a, const Polyline &b)
+{
+    std::vector<Vector3> intersections;
+    for (size_t i = 0; i < a.numSegments(); i++) {
+        for (size_t j = 0; j < b.numSegments(); j++) {
+            auto collide = Collision::intersectionBetweenTwoSegments(a.get(i), a.get(i+1), b.get(j), b.get(j+1), 1e-8);
+            if (collide.isValid()) intersections.push_back(collide);
+        }
+    }
+    return intersections;
+}
+
+std::vector<Vector3> curveIntersection(const Polyline& a, const CatmullRomSpline& b)
+{
+    return curveIntersection(a, toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const Polyline& a, const BezierCurve& b)
+{
+    return curveIntersection(a, toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const Polyline& a, const BSpline& b)
+{
+    return curveIntersection(a, toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const CatmullRomSpline& a, const CatmullRomSpline& b)
+{
+    return curveIntersection(toPolyline(a, 5), toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const CatmullRomSpline& a, const BezierCurve& b)
+{
+    return curveIntersection(toPolyline(a, 5), toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const CatmullRomSpline& a, const BSpline& b)
+{
+    return curveIntersection(toPolyline(a, 5), toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const BezierCurve& a, const BezierCurve& b)
+{
+    return curveIntersection(toPolyline(a, 5), toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const BezierCurve& a, const BSpline& b)
+{
+    return curveIntersection(toPolyline(a, 5), toPolyline(b, 5));
+}
+
+std::vector<Vector3> curveIntersection(const BSpline& a, const BSpline& b)
+{
+    return curveIntersection(toPolyline(a, 5), toPolyline(b, 5));
 }

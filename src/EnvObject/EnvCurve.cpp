@@ -125,7 +125,7 @@ void EnvCurveInstance::applyDeposition(EnvMaterial& material)
     auto depositionProperties = this->getDefinition()->materialDepositionRate[material.name];
     if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
 
-    AABBox box = AABBox(this->curve.AABBox());
+    AABBox box = this->curve.getAABBox();
     CatmullRomSpline translatedCurve = this->curve; //.getPath(100);
     translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
 
@@ -161,7 +161,7 @@ void EnvCurveInstance::applyAbsorption(EnvMaterial& material)
     auto absorptionProperties = this->getDefinition()->materialAbsorptionRate[material.name];
     if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
 
-    AABBox box = AABBox(this->curve.AABBox());
+    AABBox box = this->curve.getAABBox();
     CatmullRomSpline translatedCurve = this->curve; //.getPath(100);
     translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
 
@@ -209,7 +209,7 @@ void EnvCurveInstance::applyDepositionOnDeath()
         auto& material = this->scene->materials[materialName];
         if (depos.rate == 0) return;
 
-        AABBox box = AABBox(this->curve.AABBox());
+        AABBox box = this->curve.getAABBox();
         CatmullRomSpline translatedCurve = this->curve;
         for (auto& p : translatedCurve)
             p = p + Vector3(depos.radius , depos.radius , 0) - box.min();
@@ -326,7 +326,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
         previousPrimitive = nullptr;
         return nullptr;
     }
-    AABBox box(this->curve.AABBox());
+    AABBox box = this->curve.getAABBox();
     float growingState = 1.f; // this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
     // float height = this->height;
@@ -352,7 +352,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
             box = AABBox({box.center()});
             offset = Vector3();
         }
-        box = AABBox(translatedCurve.AABBox());
+        box = translatedCurve.getAABBox();
         box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
         translatedCurve.translate(-(box.min() - offset * .5f));
         *patch = *ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
@@ -373,7 +373,7 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
             box = AABBox({box.center()});
             offset = Vector3();
         }
-        box = AABBox(translatedCurve.AABBox());
+        box = translatedCurve.getAABBox();
         box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
         translatedCurve.translate(-(box.min() - offset * .5f));
         patch = ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);

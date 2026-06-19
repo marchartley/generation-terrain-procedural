@@ -25,7 +25,7 @@ public:
     Vector3& get(int i) override;
     Vector3 get(int i) const override;
 
-    size_t getIndex(int i);
+    size_t getIndex(int i) const;
     BezierCurve& setPoint(int i, const Vector3& newPos) override;
 
     BezierCurve& resamplePoints(int newNbPoints = -1) override;
@@ -34,7 +34,7 @@ public:
 
     // BezierCurve simplifyByRamerDouglasPeucker(float epsilon, BezierCurve subBezierCurve = BezierCurve()) override;
 
-    std::pair<Vector3, Vector3> AABBox() const override;
+    AABBox getAABBox() const override;
 
     using Curve::scale;
     BezierCurve& scale(const Vector3& factor) override;
@@ -67,17 +67,17 @@ public:
     BezierCurve& reset();
 
     using Curve::pointIndex;
-    inline static size_t pointIndex(int index, int nbPoints, bool closed);
-    inline static size_t handleIndex(int index, int nbPoints, bool closed);
-    inline static size_t handleIn(int pointIdx, int nbPoints, bool closed);
-    inline static size_t handleOut(int pointIdx, int nbPoints, bool closed);
+    static size_t pointIndex(int index, int nbPoints, bool closed);
+    static size_t handleIndex(int index, int nbPoints, bool closed);
+    static size_t handleIn(int pointIdx, int nbPoints, bool closed);
+    static size_t handleOut(int pointIdx, int nbPoints, bool closed);
 
-    inline size_t handleIndex(int index) const;
-    inline size_t handleIn(int pointIdx) const;
-    inline size_t handleOut(int pointIdx) const;
+    size_t handleIndex(int index) const;
+    size_t handleIn(int pointIdx) const;
+    size_t handleOut(int pointIdx) const;
 
-    inline size_t pointIndexFromHandleIndex(int handleIdx) const;
-    inline Vector3 handlePos(int handleIdx) const;
+    size_t pointIndexFromHandleIndex(int handleIdx) const;
+    Vector3 handlePos(int handleIdx) const;
 
     std::vector<Vector3> getPoints() const;
     std::vector<Vector3> getHandles() const;
