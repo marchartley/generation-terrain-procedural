@@ -18,9 +18,11 @@ EnvObjectEditor::EnvObjectEditor(const std::string& name, QWidget* parent)
     animationTimer->start();*/
 
     this->animate([=]() {
-        displayDepositionSimulation();
-        if (this->animating) {
-            updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+        if (this->currentObject) {
+            displayDepositionSimulation();
+            if (this->animating) {
+                updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+            }
         }
         return true;
     });
@@ -59,9 +61,9 @@ EnvObjectEditor& EnvObjectEditor::updateToolsInterface()
         } else {
             anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Curve", CURVE), true);
         }
+        this->currentAnchorPoint = dynamic_cast<ComboboxLineElement<KELVINLET_ANCHOR_POINT>*>(anchorSelectionCombobox->choices[0])->value;
+        this->kelvinletAnchors[kelvinletParams.currentKelvinlet] = {currentAnchorPoint, Vector3::invalid};
     }
-    this->currentAnchorPoint = dynamic_cast<ComboboxLineElement<KELVINLET_ANCHOR_POINT>*>(anchorSelectionCombobox->choices[0])->value;
-    this->kelvinletAnchors[kelvinletParams.currentKelvinlet] = {currentAnchorPoint, Vector3::invalid};
 
     angleInitialFlow->setAngle(0.f);
     strengthInitialFlow->setValue(1.f);

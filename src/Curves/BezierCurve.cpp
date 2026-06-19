@@ -140,10 +140,10 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
     // Coarse search
     for (int segment = 0; segment < segmentCount; ++segment)
     {
-        const auto point0 = points[segment];
+        const auto point0 = get(segment);
         const auto point1 = handlePos(handleOut(segment));
         const auto point2 = handlePos(handleIn(segment + 1));
-        const auto point3 = points[segment + 1];
+        const auto point3 = get(segment + 1);
         for (int i = 0; i <= samplesPerSegment; ++i)
         {
             float t = float(i) / float(samplesPerSegment);
@@ -163,10 +163,10 @@ float BezierCurve::estimateClosestTime(const Vector3 &pos) const
     // Newton refinement on the closest segment
     constexpr int iterations = 8;
 
-    const auto bestPoint0 = points[bestSegment];
+    const auto bestPoint0 = get(bestSegment);
     const auto bestPoint1 = handlePos(handleOut(bestSegment));
     const auto bestPoint2 = handlePos(handleIn(bestSegment + 1));
-    const auto bestPoint3 = points[bestSegment + 1];
+    const auto bestPoint3 = get(bestSegment + 1);
     for (int i = 0; i < iterations; ++i)
     {
         const Vector3 p = cubicBezier(bestPoint0, bestPoint1, bestPoint2, bestPoint3, bestT);
@@ -216,9 +216,9 @@ Vector3 BezierCurve::get(int i) const {
     return this->points[pointIndex(i)];
 }
 
-size_t BezierCurve::getIndex(int i) {
+/*size_t BezierCurve::pointIndex(int i) const {
     return (i + numPoints()) % numPoints();
-}
+}*/
 
 BezierCurve& BezierCurve::setPoint(int _i, const Vector3 &newPos)
 {
@@ -304,8 +304,14 @@ BezierCurve& BezierCurve::reverseVertices()
 }
 
 
-std::pair<Vector3, Vector3> BezierCurve::AABBox() const
+AABBox BezierCurve::getAABBox() const
 {
+    std::vector<Vector3> handlePositions(handles.size());
+    for (size_t i = 0; i < handlePositions.size(); i++) {
+        handlePositions[i] = handlePos(i);
+    }
+    return AABBox(points).expand(handlePositions);
+    /*
     Vector3 mini = Vector3::max();
     Vector3 maxi = Vector3::min();
 
@@ -326,6 +332,7 @@ std::pair<Vector3, Vector3> BezierCurve::AABBox() const
         maxi.z() = std::max(maxi.z(), p.z());
     }
     return {mini, maxi};
+    */
 }
 
 BezierCurve& BezierCurve::scale(const Vector3 &factor)
@@ -528,12 +535,12 @@ std::vector<std::shared_ptr<Curve>> BezierCurve::slice(float t) const
     std::vector<Vector3> secondHalfHandles(secondHalfNbPoints * 2);
 
     for (int i = 0; i < lowerIndex + 1; i++) {
-        firstHalfPoints[i] = points[i];
+        firstHalfPoints[i] = points[pointIndex(i)];
         firstHalfHandles[BezierCurve::handleIn(i, firstHalfNbPoints, false)] = handles[handleIn(i)];
         firstHalfHandles[BezierCurve::handleOut(i, firstHalfNbPoints, false)] = handles[handleOut(i)];
     }
     for (int i = 0; i < secondHalfNbPoints - 1; i++) {
-        secondHalfPoints[i + 1] = points[i + lowerIndex + 1];
+        secondHalfPoints[i + 1] = points[pointIndex(i + lowerIndex + 1)];
         secondHalfHandles[BezierCurve::handleIn(i + 1, secondHalfNbPoints, false)] = handles[handleIn(i + lowerIndex + 1)];
         secondHalfHandles[BezierCurve::handleOut(i + 1, secondHalfNbPoints, false)] = handles[handleOut(i + lowerIndex + 1)];
     }
@@ -559,12 +566,13 @@ std::vector<std::shared_ptr<Curve>> BezierCurve::slice(float t) const
     secondHalfPoints[0] = S;
     secondHalfHandles[handleIn(0)] = R0 - S;
     secondHalfHandles[handleOut(0)] = R1 - S;
-    secondHalfHandles[handleIn(1)] = Q2 - P3;
-
     if (this->isClosed()) {
         secondHalfPoints.push_back(points[0]);
         secondHalfHandles.push_back(handles[0]);
         secondHalfHandles.push_back(handles[1]);
+    }
+    if (secondHalfPoints.size() > 1) {
+        secondHalfHandles[handleIn(1)] = Q2 - P3;
     }
 
     // ImageViewer::get().addScatter({P0, P1, P2, P3, Q0, Q1, Q2, R0, R1, S}, "", {}, Vector3::black);

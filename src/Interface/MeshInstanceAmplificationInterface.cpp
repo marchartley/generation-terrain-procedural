@@ -179,7 +179,7 @@ std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface
         } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(obj)) {
 //            float totalArea = asArea->area.computeArea();
             std::vector<Vector3> randomPoints;
-            AABBox box = AABBox(asArea->curve.curve->AABBox());
+            AABBox box = asArea->curve.curve->getAABBox();
             for (int x = box.min().x(); x < box.max().x(); x += 5) {
                 for (int y = box.min().y(); y < box.max().y(); y += 5) {
                     Vector3 pos(x, y, 0);

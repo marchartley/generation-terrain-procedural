@@ -191,7 +191,7 @@ Polyline CurveOptimizer::followIsolevel(const Vector3& seedPosition, const GridF
         }
     }
     // Run check for detecting spiral (This is my own algo, I don't think it's a good one...)
-    AABBox boundingBox(path.AABBox());
+    AABBox boundingBox = path.getAABBox();
     float ratioAreaPerimeter = (std::pow(boundingBox.dimensions().maxComp(), 2) / totalDistance);
     float ratioLimit = .5f * totalDistance / (2.f * PI); // Approximatively the ratio for a circle...
     if (ratioAreaPerimeter < ratioLimit) return Polyline();
@@ -412,7 +412,7 @@ Polyline ContinuousCurveOptimizer::followIsolevel(const Vector3& seedPosition, c
         }
     }
     // Run check for detecting spiral (This is my own algo, I don't think it's a good one...)
-    AABBox boundingBox(path.AABBox());
+    AABBox boundingBox = path.getAABBox();
     float ratioAreaPerimeter = (std::pow(boundingBox.dimensions().maxComp(), 2) / totalDistance);
     float ratioLimit = .5f * totalDistance / (2.f * PI); // Approximatively the ratio for a circle...
     if (ratioAreaPerimeter < ratioLimit) return Polyline();

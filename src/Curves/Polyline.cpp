@@ -17,18 +17,24 @@ std::vector<Vector3> Polyline::getPath(int numberOfPoints) const
 {
     if (numberOfPoints < 0 || size_t(numberOfPoints) == numPoints()) return this->points;
 
-    Polyline resampled(this->points);
+    /*Polyline resampled(this->points);
     resampled.resamplePoints(numberOfPoints);
-    return resampled.getPath();
+    return resampled.getPath();*/
+    std::vector<Vector3> samples(numberOfPoints);
+    for (size_t i = 0; i < numberOfPoints; i++) {
+        float t = float(i) / float(numberOfPoints - 1);
+        samples[i] = getPoint(t);
+    }
+    return samples;
 }
 
 Vector3 Polyline::getPoint(float x) const
 {
     x = clamp(x, 0.f, 1.f);
     size_t startId = timeToLowerIndex(x);
-    size_t endId = startId + 1;
+    size_t endId = pointIndex(startId + 1);
 
-    float frac = (x * (points.size() - 1)) - startId;
+    float frac = (x * numSegments()) - startId;
 
     return Curve::linear(frac, points[startId], points[endId]); // Linear
 }
@@ -37,18 +43,20 @@ Vector3 Polyline::getDerivative(float x, bool normalize) const
 {
     x = std::max(x, 0.f);
     size_t startId = timeToLowerIndex(x);
-    Vector3 derivative;
-    if (x >= 1.f) {
-        derivative = points[numPoints() - 1] - points[numPoints() - 2];
-    } else {
-        derivative = points[startId + 1] - points[startId];
-    }
+    Vector3 derivative = get(startId + 1) - get(startId);
     return (normalize ? derivative.normalize() : derivative);
 }
 
 Vector3 Polyline::getSecondDerivative(float x, bool normalize) const
 {
-    return Vector3(0.f, 0.f, 0.f); // Consider no second derivative since linear piece-wise.
+    return Vector3::origin; // Consider no second derivative since linear piece-wise.
+}
+
+
+Vector3 Polyline::getNormal(float x, Vector3 forcedUp) const {
+    const auto derivative = getDerivative(x);
+    if (!forcedUp.isValid()) return derivative.cross(Vector3(0, 0, 1)).normalize();
+    return derivative.cross(forcedUp).normalize();
 }
 
 float Polyline::estimateClosestTime(const Vector3& pos) const
@@ -56,8 +64,8 @@ float Polyline::estimateClosestTime(const Vector3& pos) const
     size_t closestStartPoint = 0;
     float minDist = std::numeric_limits<float>::max();
 
-    for (size_t i = 0; i < numPoints() - 1; i++) {
-        Vector3 proj = Collision::projectPointOnSegment(pos, points[i], points[i+1]);
+    for (size_t i = 0; i < numSegments(); i++) {
+        Vector3 proj = Collision::projectPointOnSegment(pos, get(i), get(i+1));
         float dist = (proj - pos).norm2();
         if (dist < minDist) {
             minDist = dist;
@@ -65,7 +73,10 @@ float Polyline::estimateClosestTime(const Vector3& pos) const
         }
     }
 
-    return (float(closestStartPoint) + (Collision::projectPointOnSegment(pos, points[closestStartPoint], points[closestStartPoint + 1]) - points[closestStartPoint]).norm() / (points[closestStartPoint + 1] - points[closestStartPoint]).norm()) / float(numPoints() - 1);
+    const auto p1 = get(closestStartPoint);
+    const auto p2 = get(closestStartPoint + 1);
+
+    return (float(closestStartPoint) + (Collision::projectPointOnSegment(pos, p1, p2) - p1).norm() / (p2 - p1).norm()) / float(numSegments());
 }
 
 Vector3 Polyline::estimateClosestPos(const Vector3& pos) const
@@ -143,8 +154,10 @@ Polyline& Polyline::reverseVertices()
     return *this;
 }
 
-std::pair<Vector3, Vector3> Polyline::AABBox() const
+AABBox Polyline::getAABBox() const
 {
+    return AABBox(points);
+    /*
     Vector3 mini = Vector3::max();
     Vector3 maxi = Vector3::min();
 
@@ -157,6 +170,7 @@ std::pair<Vector3, Vector3> Polyline::AABBox() const
         maxi.z() = std::max(maxi.z(), p.z());
     }
     return {mini, maxi};
+    */
 }
 
 Polyline& Polyline::scale(const Vector3& factor)
@@ -222,8 +236,8 @@ std::string Polyline::toString() const
 Polyline& Polyline::close()
 {
     Curve::close();
-    if (points.size() > 0 && points.front() != points.back())
-        this->points.push_back(points[0]);
+    // if (points.size() > 0 && points.front() != points.back())
+        // this->points.push_back(points[0]);
     return *this;
 }
 
@@ -231,19 +245,61 @@ Polyline &Polyline::reset() {
     points.clear(); return *this;
 }
 
+/*
+std::vector<std::shared_ptr<Curve> > Polyline::slice(const std::vector<float>& _ts) const
+{
+    auto ts = _ts;
+    std::sort(ts.begin(), ts.end(), std::greater<float>()); // sort in descending order, just to optimize the poping
+
+    std::vector<std::shared_ptr<Curve>> subCurves;
+    // auto original = *this;
+    std::shared_ptr<Curve> remaining(this->clone());
+    // if (remaining->isClosed()) {
+        // remaining->setClosed(false);
+    // }
+    float previousT = -1.0f;
+    int nbPointsPassed = 0;
+    while (!ts.empty()) {
+        auto t = ts.back();
+        ts.pop_back();
+
+        int prevIndex = this->timeToLowerIndex(t);
+        bool previousIsSlice = (this->indexToTime(prevIndex) < previousT);
+        float oldTime = (previousIsSlice ? previousT : this->indexToTime(prevIndex));
+
+        float remapedU = (t - oldTime) / (this->indexToTime(prevIndex + 1) - oldTime);
+        float localT = ::map(remapedU, 0.f, 1.f, remaining->indexToTime(prevIndex - nbPointsPassed), remaining->indexToTime((prevIndex - nbPointsPassed) + 1));
+
+        nbPointsPassed += remaining->timeToLowerIndex(localT);
+
+        auto subs = remaining->slice(localT);
+        subCurves.push_back(subs[0]);
+        if (subs.size() < 2) return subCurves; // No left-side spline left
+
+        remaining = subs[1];
+
+        previousT = t;
+    }
+    subCurves.push_back(remaining);
+    return subCurves;
+}
+*/
+
 std::vector<std::shared_ptr<Curve> > Polyline::slice(float t) const
 {
     size_t lowerIndex = this->timeToLowerIndex(t);
     std::vector<Vector3> firstPoints(lowerIndex + 2);
     std::vector<Vector3> lastPoints(numPoints() - lowerIndex);
 
-    for (size_t i = 0; i < numSegments() + 1; i++) {
+    for (size_t i = 0; i < numPoints(); i++) {
         if (i <= lowerIndex) {
-            firstPoints[i] = points[i];
+            firstPoints[i] = get(i);
         } else {
-            lastPoints[i - lowerIndex] = points[pointIndex(i)];
+            lastPoints[i - lowerIndex] = get(i);
         }
     }
+    if (closed) lastPoints.push_back(points.front());
+
     const auto p = getPoint(t);
     firstPoints.back() = p;
     lastPoints.front() = p;

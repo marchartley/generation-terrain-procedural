@@ -178,7 +178,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         // int level = current->getLevel();
 //        area = area.grow(1.f); // Grow the area to fill all artefacts
         Vector3 AABBoxMin, AABBoxMax;
-        std::tie(AABBoxMin, AABBoxMax) = area.curve->AABBox();
+        std::tie(AABBoxMin, AABBoxMax) = area.curve->getAABBox().minMax();
         BiomeInstance::registerBiomeInstance(current);
         possibleBiomeInstances.push_back(*current);
         std::ostringstream out;

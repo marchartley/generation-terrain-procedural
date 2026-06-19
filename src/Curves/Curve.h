@@ -44,7 +44,7 @@ public:
 
     // virtual Curve simplifyByRamerDouglasPeucker(float epsilon, Curve subcurve = Curve()) = 0;
 
-    virtual std::pair<Vector3, Vector3> AABBox() const = 0;
+    virtual AABBox getAABBox() const = 0;
     virtual Vector3 containingBoxSize() const;
 
     virtual Curve& scale(float factor);
@@ -87,6 +87,7 @@ public:
     bool isClosed() const;
     Curve& setClosed(bool close);
     virtual Curve& close();
+    virtual Curve& open();
 
     virtual Curve& reset() = 0;
 

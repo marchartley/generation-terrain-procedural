@@ -49,8 +49,7 @@ float Curve::getCurvature(float x) const {
 }
 
 Vector3 Curve::containingBoxSize() const {
-    auto box = AABBox();
-    return box.second - box.first;
+    return getAABBox().dimensions();
 }
 
 Curve& Curve::scale(float factor) {
@@ -120,6 +119,11 @@ Curve& Curve::close()
     return *this;
 }
 
+Curve &Curve::open()
+{
+    return this->setClosed(false);
+}
+
 
 
 std::vector<std::pair<size_t, size_t> > Curve::checkAutointersections() const
@@ -162,9 +166,9 @@ std::vector<std::shared_ptr<Curve> > Curve::slice(const std::vector<float>& _ts)
     std::vector<std::shared_ptr<Curve>> subCurves;
     // auto original = *this;
     std::shared_ptr<Curve> remaining(this->clone());
-    if (remaining->isClosed()) {
-        remaining->setClosed(false);
-    }
+    // if (remaining->isClosed()) {
+        // remaining->setClosed(false);
+    // }
     float previousT = -1.0f;
     int nbPointsPassed = 0;
     while (!ts.empty()) {

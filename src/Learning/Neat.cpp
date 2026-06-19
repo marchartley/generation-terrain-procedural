@@ -44,7 +44,7 @@ std::vector<AggregationKind> Genome::available_aggregation_funcs()
     };
 }
 
-inline std::vector<ActivationFunction> Genome::available_activation_funcs() {
+std::vector<ActivationFunction> Genome::available_activation_funcs() {
     return {
         // ActivationFunction::Cos,
         ActivationFunction::Linear,

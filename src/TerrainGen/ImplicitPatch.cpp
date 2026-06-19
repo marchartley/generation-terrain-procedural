@@ -1844,7 +1844,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
     Contour polygon(path);
     for (auto& p : *polygon.curve)
         p.z() = 0;
-    AABBox bbox(polygon.curve->AABBox());
+    AABBox bbox = polygon.curve->getAABBox();
     Vector3 size = bbox.dimensions();
     polygon.translate(-bbox.min()); //(-(bbox.min()));
     // auto points = ShapeCurve(path).randomPointsInside(50);

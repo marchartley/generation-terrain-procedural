@@ -284,6 +284,7 @@ public:
     AABBox(const std::vector<Vector3>& allPointsToContain);
     Vector3 min() const { return this->mini; }
     Vector3 max() const { return this->maxi; }
+    std::pair<Vector3, Vector3> minMax() const { return {min(), max()}; }
     Vector3 dimensions() const { return max() - min(); }
     bool contains(const Vector3& position) const { return Vector3::isInBox(position, min(), max()); }
     bool containsXY(const Vector3& position) const { return Vector3::isInBox(position.xy(), min().xy(), max().xy()); }
