@@ -142,17 +142,8 @@ uniform mat4 norm_matrix;
 
 void main(void)
 {
-    Material ground_material;
-    ground_material.ambiant = vec4(.2, .2, .2, 1.);
-    ground_material.diffuse = vec4(.6, .6, .6, 1.);
-    ground_material.ambiant = vec4(.1, .1, .1, 1.);
-    ground_material.shininness = 5.;
-
-    Material grass_material;
-    ground_material.ambiant = vec4(.1, .5, .2, 1.);
-    ground_material.diffuse = vec4(.1, .8, .1, 1.);
-    ground_material.ambiant = vec4(.5, .5, .5, 1.);
-    ground_material.shininness = 32.;
+    Material ground_material = Material(vec4(.2, .2, .2, 1.), vec4(.6, .6, .6, 1.), vec4(.1, .1, .1, 1.), 5.);
+    Material grass_material = Material(vec4(.1, .5, .2, 1.), vec4(.1, .8, .1, 1.), vec4(.5, .5, .5, 1.), 32.);
     if (min_vertice_positions.x > instanceOffset.x || instanceOffset.x > max_vertice_positions.x || min_vertice_positions.y > instanceOffset.y || instanceOffset.y > max_vertice_positions.y || min_vertice_positions.z > instanceOffset.z || instanceOffset.z > max_vertice_positions.z)
         discard;
 
@@ -163,7 +154,8 @@ void main(void)
     }
 
     Material material = ground_material;
-    vec3 N = -normalize(varyingNormal + fbm3ToVec3(initialVertPos)*0.5);
+    vec3 surfaceNoise = fbm3ToVec3(initialVertPos);
+    vec3 N = -normalize(varyingNormal + surfaceNoise * 0.5);
     vec3 L = normalize(varyingLightDir);
     vec3 V = normalize(-varyingVertPos);
     vec3 R = reflect(-L, N);
@@ -171,7 +163,7 @@ void main(void)
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
-    float upValue = clamp(dot(normalize(realNormal), normalize(vec3(0.0, 0.0, 1.0) + fbm3ToVec3(initialVertPos) * 0.5)), 0.0, 1.0);
+    float upValue = clamp(dot(normalize(realNormal), normalize(vec3(0.0, 0.0, 1.0) + surfaceNoise * 0.5)), 0.0, 1.0);
     vec4 material_ambiant = (ground_material.ambiant * (1 - upValue) + grass_material.ambiant * upValue) * .8;
     vec4 material_diffuse = (ground_material.diffuse * (1 - upValue) + grass_material.diffuse * upValue) * .8;
     vec4 material_specular = (ground_material.specular * (1 - upValue) + grass_material.specular * upValue) * 1.;

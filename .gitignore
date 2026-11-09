@@ -20,7 +20,17 @@ Python_tests/sketch-to-terrain/outputs/*
 Python_tests/sketch-to-terrain/data_downsampled_blurred/*
 Python_tests/sketch-to-terrain/world_map/*
 
-tests/
+# Yeah, let's not share this folder at all...
+tests/*
+!tests/README.md
+!tests/render-performance.md
+!tests/opengl-lifecycle.pro
+!tests/opengl_lifecycle_smoke.cpp
+!tests/terrain-conversions.pro
+!tests/terrain_conversions.cpp
+!tests/terrain-render-benchmark.pro
+!tests/terrain_render_benchmark.cpp
+Papers/
 
 doc/
 
