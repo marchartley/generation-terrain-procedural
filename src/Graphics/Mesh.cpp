@@ -5,7 +5,6 @@
 #include "Utils/stl_reader.h"
 #include "Graphics/ofbx.h"
 
-std::vector<Mesh*> Mesh::all_meshes;
 
 Mesh::Mesh(std::shared_ptr<Shader> shader, bool isDisplayed, GLenum displayShape)
     : Mesh(std::vector<Vector3>(), shader, isDisplayed, displayShape)
@@ -16,7 +15,6 @@ Mesh::Mesh(std::vector<Vector3> _vertexArray, std::shared_ptr<Shader> shader, bo
     : vertexArray(_vertexArray), shader(shader), isDisplayed(isDisplayed), displayShape(displayShape)
 {
     this->fromArray(_vertexArray);
-    Mesh::all_meshes.push_back(this);
 }
 Mesh::Mesh(std::vector<float> _vertexArrayFloat, std::shared_ptr<Shader> shader, bool isDisplayed, GLenum displayShape)
     : shader(shader), isDisplayed(isDisplayed), displayShape(displayShape)
@@ -28,7 +26,6 @@ Mesh::Mesh(std::vector<float> _vertexArrayFloat, std::shared_ptr<Shader> shader,
                                             _vertexArrayFloat[i + 2]));
     }*/
     this->fromArray(_vertexArrayFloat); // This is time consuming, but less code to do
-    Mesh::all_meshes.push_back(this);
 }
 
 void Mesh::clear()
@@ -444,20 +441,24 @@ Mesh Mesh::extractGeometryFromShaders(GridF& values)
     return *this;
 }
 
-void Mesh::setShaderToAllMeshesWithoutShader([[maybe_unused]] Shader newShader)
-{
-    /*for (Mesh*& mesh : Mesh::all_meshes) {
-        if (!mesh->shader || mesh->shader->vShader < 0)
-            mesh->shader = std::make_shared<Shader>(newShader);
-    }*/
-}
-
 void Mesh::update()
 {
+    GlobalsGL::ContextScope contextScope;
+    // A copied mesh shares the lease until it is uploaded again. Allocate its own
+    // buffers before writing, so modifying a copy cannot corrupt the original.
+    if (!gpuResources || !gpuResources.unique() || gpuResources->released ||
+        gpuResources->owner != QOpenGLContext::currentContext()) {
+        gpuResources = GlobalsGL::Resources::create();
+        vao = 0;
+        bufferReady = false;
+        needToUpdatePositions = needToUpdateColors = needToUpdateNormals = needToUpdateTextures = true;
+    }
     if (!bufferReady || this->vao == 0)
     {
         GlobalsGL::f()->glGenVertexArrays(1, &this->vao);
         GlobalsGL::f()->glGenBuffers(4, this->vbo);
+        gpuResources->arrays.push_back(vao);
+        gpuResources->buffers.insert(gpuResources->buffers.end(), vbo, vbo + 4);
         GlobalsGL::checkOpenGLError();
     }
     if (!this->shader && Shader::default_shader) {
@@ -474,14 +475,14 @@ void Mesh::update()
 
 void Mesh::pushToBuffer()
 {
+    GlobalsGL::ContextScope contextScope;
 #if useModernOpenGL
-        this->shader->use();
-//        if(!this->shader->use()) return;
+        if (!this->shader || !this->shader->use()) return;
         GlobalsGL::f()->glBindVertexArray(this->vao); //GlobalsGL::vao[this->bufferID]);
         // Vertex
         GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, this->vbo[0]); // GlobalsGL::vbo[this->bufferID * 10 + 0]);
         if (needToUpdatePositions)
-            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), &this->vertexArrayFloat.front(), GL_STATIC_DRAW);
+            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), this->vertexArrayFloat.data(), GL_STATIC_DRAW);
         GlobalsGL::f()->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         GlobalsGL::f()->glEnableVertexAttribArray(0);
 
@@ -490,22 +491,29 @@ void Mesh::pushToBuffer()
         // Normals
         GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, this->vbo[2]); // GlobalsGL::vbo[this->bufferID * 10 + 2]);
         if (needToUpdateNormals)
-            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), &this->normalsArrayFloat.front(), GL_STATIC_DRAW);
+            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), this->normalsArrayFloat.data(), GL_STATIC_DRAW);
         GlobalsGL::f()->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        GlobalsGL::f()->glEnableVertexAttribArray(2);
+        if (normalsArrayFloat.empty()) {
+            GlobalsGL::f()->glDisableVertexAttribArray(2);
+            GlobalsGL::f()->glVertexAttrib3f(2, 0.f, 0.f, 1.f);
+        } else GlobalsGL::f()->glEnableVertexAttribArray(2);
 
         // Colors
         GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, this->vbo[3]); // GlobalsGL::vbo[this->bufferID * 10 + 3]);
         if (needToUpdateColors)
-            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), &this->colorsArrayFloat.front(), GL_STATIC_DRAW);
+            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), this->colorsArrayFloat.data(), GL_STATIC_DRAW);
         GlobalsGL::f()->glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        GlobalsGL::f()->glEnableVertexAttribArray(3);
+        if (colorsArrayFloat.empty()) {
+            GlobalsGL::f()->glDisableVertexAttribArray(3);
+            GlobalsGL::f()->glVertexAttrib3f(3, 0.f, 0.f, 0.f);
+        } else GlobalsGL::f()->glEnableVertexAttribArray(3);
 //        if(this->shader->use()) return;
 #endif
     this->bufferReady = true;
 }
 void Mesh::display(GLenum shape, float lineWeight)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!isDisplayed)
         return;
     if (shape != -1) this->displayShape = shape;
@@ -514,7 +522,7 @@ void Mesh::display(GLenum shape, float lineWeight)
         this->shader->use();
         this->shader->setBool("cullFace", this->cullFace);
     }
-    if(!this->shader->use()) return;
+    if(!this->shader || !this->shader->use()) return;
     //    glEnable(GL_DEPTH_TEST);
     //    glDepthFunc(GL_LEQUAL);
     GLfloat previousLineWidth[1];
@@ -558,6 +566,7 @@ void Mesh::display(GLenum shape, float lineWeight)
 
 void Mesh::displayWithOutlines(std::vector<float> faceColor, GLenum shape, float lineWeight)
 {
+    GlobalsGL::ContextScope contextScope;
     this->shader->setVector("color", faceColor);
     this->display(shape, lineWeight);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -569,6 +578,7 @@ void Mesh::displayWithOutlines(std::vector<float> faceColor, GLenum shape, float
 
 void Mesh::displayNormals()
 {
+    GlobalsGL::ContextScope contextScope;
     glBegin(GL_LINES);
     for (size_t i = 0; i < this->vertexArray.size(); i++) {
         glVertex3f(this->vertexArray[i].x(), this->vertexArray[i].y(), this->vertexArray[i].z());
@@ -579,6 +589,7 @@ void Mesh::displayNormals()
 
 void Mesh::displayStrips(std::vector<int> counts, float lineWeight)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!isDisplayed)
         return;
 
@@ -596,7 +607,7 @@ void Mesh::displayStrips(std::vector<int> counts, float lineWeight)
         this->shader->use();
         this->shader->setBool("cullFace", this->cullFace);
     }
-    if(!this->shader->use()) return;
+    if(!this->shader || !this->shader->use()) return;
     GLfloat previousLineWidth[1];
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(lineWeight);
@@ -622,6 +633,9 @@ void Mesh::displayStrips(std::vector<int> counts, float lineWeight)
 
 void Mesh::displayAsScalarField(GridF field, const Vector3& cameraPosition, std::vector<float> isoValues)
 {
+    GlobalsGL::ContextScope lookupContext;
+    auto lookupResources = GlobalsGL::Resources::create();
+    GlobalsGL::ContextScope contextScope;
     std::vector<Vector3> positions(field.size());
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = field.getCoordAsVector3(i);
@@ -651,6 +665,7 @@ void Mesh::displayAsScalarField(GridF field, const Vector3& cameraPosition, std:
 
     GLuint edgeTableTex, triTableTex;
     GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+    lookupResources->textures.push_back(edgeTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, edgeTableTex);
@@ -671,6 +686,7 @@ void Mesh::displayAsScalarField(GridF field, const Vector3& cameraPosition, std:
     //(cf. MarchingCubes.cpp)
 
     glGenTextures(1, &triTableTex);
+    lookupResources->textures.push_back(triTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, triTableTex);
@@ -1197,6 +1213,8 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
 
 void Mesh::displayScalarField(GridF field, Mesh &mesh, const Vector3& cameraPosition, std::vector<float> isoValues, Vector3 desiredDimensions)
 {
+    GlobalsGL::ContextScope lookupContext;
+    auto lookupResources = GlobalsGL::Resources::create();
     if (desiredDimensions.isValid())
         mesh.shader->setVector("scale", desiredDimensions / field.getDimensions());
     std::vector<Vector3> positions(field.size());
@@ -1228,6 +1246,7 @@ void Mesh::displayScalarField(GridF field, Mesh &mesh, const Vector3& cameraPosi
 
     GLuint edgeTableTex, triTableTex;
     GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+    lookupResources->textures.push_back(edgeTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, edgeTableTex);
@@ -1248,6 +1267,7 @@ void Mesh::displayScalarField(GridF field, Mesh &mesh, const Vector3& cameraPosi
     //(cf. MarchingCubes.cpp)
 
     glGenTextures(1, &triTableTex);
+    lookupResources->textures.push_back(triTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, triTableTex);

@@ -15,8 +15,13 @@ ComputeShader::ComputeShader(const std::string& shaderPath)
 
 void ComputeShader::compileShadersFromSource()
 {
+    GlobalsGL::ContextScope contextScope;
+    ensureResources();
+    if (programID) GlobalsGL::f()->glDeleteProgram(programID);
+    gpuResources->programs.clear();
 #if useModernOpenGL || !useModernOpenGL
     this->programID = GlobalsGL::f()->glCreateProgram();
+    gpuResources->programs.push_back(programID);
     if (computeShaderFilename != "")
     {
         std::string content = Shader::readShaderSource(computeShaderFilename);
@@ -33,10 +38,13 @@ void ComputeShader::compileShadersFromSource()
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
+    if (cShader >= 0) GlobalsGL::f()->glDeleteShader(cShader);
+    cShader = -1;
 #endif
 }
 
 void ComputeShader::apply(int nbWorkersX, int nbWorkersY, int nbWorkersZ) {
+    GlobalsGL::ContextScope contextScope;
     if (this->use()) {
         if (nbWorkersX < 0)
             GlobalsGL::f()->glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &nbWorkersX);

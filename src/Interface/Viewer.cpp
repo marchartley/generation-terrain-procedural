@@ -51,20 +51,44 @@ Viewer::Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent)
 }
 Viewer::~Viewer()
 {
+    if (isValid()) {
+        makeCurrent();
+        // Resource leases release on context teardown, while makeCurrent is usable.
+        GlobalsGL::Resources::releaseContext(context());
+        doneCurrent();
+    }
+    if (GlobalsGL::viewer == this) GlobalsGL::setViewer(nullptr);
 }
 
 void Viewer::init() {
+    GlobalsGL::setViewer(this);
     auto* context = QOpenGLContext::currentContext();
     if (!context)
         qFatal("Viewer initialization requires a current context");
 
+    // QGLViewer clears during initializeGL(), before QOpenGLWidget creates its FBO.
+    // Consume and identify that upstream startup error, not errors from our shaders.
+    for (GLenum error = glGetError(); error != GL_NO_ERROR; error = glGetError()) {
+        if (error == GL_INVALID_FRAMEBUFFER_OPERATION)
+            qDebug() << "QGLViewer cleared before Qt allocated the widget framebuffer";
+        else
+            qWarning() << "OpenGL error before Viewer::init():" << error;
+    }
     qDebug() << "Context valid: " << context->isValid();
     qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
     qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
     qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-    GlobalsGL::f();
+    auto* gl = GlobalsGL::f();
+    if (qEnvironmentVariableIsSet("TERRAIN_GL_DEBUG")) {
+        gl->glEnable(GL_DEBUG_OUTPUT);
+        gl->glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        gl->glDebugMessageCallback([](GLenum, GLenum type, GLuint, GLenum, GLsizei,
+                                     const GLchar* message, const void*) {
+            if (type == GL_DEBUG_TYPE_ERROR) qWarning() << "OpenGL driver:" << message;
+        }, nullptr);
+    }
 
     restoreStateFromFile();
     setSceneRadius(500.0);
@@ -115,6 +139,7 @@ void Viewer::init() {
 //    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
+    Shader::default_shader->initializeGL();
     this->mainGrabber = std::make_shared<ControlPoint>(Vector3(), 1.f, ControlPoint::GrabberState::DEFAULT, false);
 
 
@@ -232,7 +257,7 @@ TerrainModel *Viewer::getCurrentTerrainModel()
 }
 void Viewer::drawingProcess() {
     bool displayTiming = false;
-    this->makeCurrent();
+    GlobalsGL::ContextScope contextScope;
     this->frame_num ++;
     current_frame ++;
     std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
@@ -352,17 +377,19 @@ void Viewer::drawingProcess() {
         std::cout << "\tOpenGL uniforms : " << showTime(GLUniformsTime) << std::endl;
     }
     glFlush();
-    this->doneCurrent();
+    // The caller (Qt painting or ContextScope) owns the current-context lifetime.
 }
 
 void Viewer::reloadAllShaders()
 {
+    GlobalsGL::ContextScope contextScope;
     Shader::applyToAllShaders([](std::shared_ptr<Shader> shader) {
-        shader->compileShadersFromSource();
+        shader->initializeGL();
     });
-//    for (auto& [name, action] : this->interfaces) {
-//        action->reloadShaders();
-//    }
+    // Relinking resets sampler/uniform bindings. Let each tool restore its setup.
+    for (auto& [name, action] : interfaces) {
+        action->reloadShaders();
+    }
 }
 
 void Viewer::setupViewFromFile(const std::string& filename)

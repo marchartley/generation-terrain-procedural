@@ -52,6 +52,9 @@ void ErosionInterface::computePredefinedRocksLocations()
     std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, FROM_BIG_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
 
     Vector3 dimensions = voxelGrid->getDimensions();
+    // Fixed 20-unit margins invert the random interval on shallow/small terrains.
+    const float marginY = std::min(20.f, dimensions.y() * .25f);
+    const float marginZ = std::min(20.f, dimensions.z() * .25f);
     for (auto& loc : locs) {
         initialPositionsAndDirections[loc] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(20, std::vector<std::pair<Vector3, Vector3>>(maxParticles));
         auto& poses = initialPositionsAndDirections[loc];
@@ -73,10 +76,10 @@ void ErosionInterface::computePredefinedRocksLocations()
                     position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, dimensions.y() * .4, dimensions.z() * .2f), Vector3(0, dimensions.y() *.6, dimensions.z() * .5f));
                     direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
                 } else if (loc == FROM_X) {
-                    position = Vector3::random(Vector3(0, 20, 20), Vector3(0, dimensions.y() - 20, dimensions.z() - 20)) - Vector3(1, 0, 0);
+                    position = Vector3::random(Vector3(0, marginY, marginZ), Vector3(0, dimensions.y() - marginY, dimensions.z() - marginZ)) - Vector3(1, 0, 0);
                     direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z()));
                 } else if (loc == FROM_BIG_X) {
-                    position = Vector3::random(Vector3(0, 0, 20), Vector3(0, dimensions.y(), dimensions.z() - 20)) - Vector3(1, 0, 0);
+                    position = Vector3::random(Vector3(0, 0, marginZ), Vector3(0, dimensions.y(), dimensions.z() - marginZ)) - Vector3(1, 0, 0);
                     direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z()));
                 } else if (loc == CENTER_TOP) {
                     position = Vector3::random(Vector3(voxelGrid->getSizeX() * .45f, voxelGrid->getSizeY() * .45f, voxelGrid->getSizeZ() + 2.f), Vector3(voxelGrid->getSizeX() * .55f, voxelGrid->getSizeY()*.55f, voxelGrid->getSizeZ() + 2.f));

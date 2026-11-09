@@ -12,6 +12,7 @@ public:
     void apply(int nbWorkersX = -1, int nbWorkersY = -1, int nbWorkersZ = -1);
 
     void compileShadersFromSource();
+    void initializeGL() override { compileShadersFromSource(); }
 
     std::string computeShaderFilename = "";
     int cShader = -1;
