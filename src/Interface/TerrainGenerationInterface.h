@@ -129,15 +129,6 @@ protected:
     size_t layersPreviousHistoryIndex = -1;
 
     GridF initialTerrainValues;
-    struct HeightTextureCache {
-        bool valid = false;
-        GridF source;
-        Matrix3<std::vector<int>> biomes;
-        std::vector<std::pair<int, std::string>> biomeNames;
-        std::map<std::string, int> colorPalette, normalPalette, displacementPalette;
-        float ompFactor = 0.f;
-        float maxHeight = 0.f;
-    } heightTextureCache;
 
 public:
     Mesh waterLevelMesh;

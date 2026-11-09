@@ -8,7 +8,6 @@ layout ( triangle_strip, max_vertices = 24 ) out; // Outputs a box
 
 uniform sampler3D matIndicesTex;
 uniform sampler3D matHeightsTex;
-uniform bool heightsAreCumulative = false;
 
 uniform float min_isolevel = -1000.0;
 uniform float max_isolevel =  1000.0;
@@ -65,8 +64,6 @@ bool isMatter(vec3 texPos)
 
 float getMinHeight(vec3 texPos)
 {
-    if (heightsAreCumulative)
-        return texPos.z < 1.0 ? 0.0 : texelFetch(matHeightsTex, ivec3(texPos.xy, texPos.z - 1), 0).a;
     ivec3 currentPos = ivec3(texPos.xy, texPos.z - 1);
     float currentHeight = 0.0;
     while (currentPos.z >= 0) {
@@ -78,8 +75,7 @@ float getMinHeight(vec3 texPos)
 
 float getHeight(vec3 texPos)
 {
-    float height = texelFetch(matHeightsTex, ivec3(texPos), 0).a;
-    return heightsAreCumulative ? height - getMinHeight(texPos) : height;
+    return texelFetch(matHeightsTex, ivec3(texPos), 0).a;
 }
 
 float mincomp(vec2 v) { return min(v.x, v.y); }
@@ -95,7 +91,6 @@ vec4 getPosition(vec4 position, vec3 _offset)
 //    return clamp(position + vec4(.5, .5, .0, .0) + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
 }
 float getAmbiantOcclusion(vec3 pos) {
-    if (ambiantOcclusionFactor == 0.0) return 1.0;
     int radius = 5;
     float occlusion = 0.0;
     float total = 0.0;
