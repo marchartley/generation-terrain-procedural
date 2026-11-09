@@ -1,7 +1,9 @@
 #include "Utils/Globals.h"
+#include "Utils/Random.h"
 
 #include <string>
 #include <fstream>
+#include <algorithm>
 
 #define UNUSED(expr) (void)(expr)
 
@@ -20,53 +22,104 @@ GLuint GlobalsGL::vbo[numVBOs];
 GLuint GlobalsGL::currentBufferId = 0;
 bool GlobalsGL::buffersGenerated = false;
 
-QOpenGLContext* GlobalsGL::context() {
-    if (GlobalsGL::_context == nullptr)
-        GlobalsGL::_context = QOpenGLContext::currentContext();
-    return GlobalsGL::_context;
-}
-QOpenGLFunctions_4_5_Compatibility* GlobalsGL::f() {
-    return f45();
-}
-/*QOpenGLFunctions_4_6_Compatibility* GlobalsGL::f() {
-    return f46();
-}*/
+QPointer<QOpenGLWidget> GlobalsGL::viewer;
 
-QOpenGLFunctions_4_5_Compatibility *GlobalsGL::f45()
-{
-    if (GlobalsGL::_ef45 == nullptr) {
-        _ef45 = GlobalsGL::context()->versionFunctions<QOpenGLFunctions_4_5_Compatibility>();
-        if (_ef45) {
-            _ef45->initializeOpenGLFunctions();
-        } else {
-            std::cerr << "No access to GL 4.5 functions" << std::endl;
-        }
-//        std::cout << _ef45->initializeOpenGLFunctions() << std::endl;
-//        _ef45->glInvalidateFramebuffer();
-//        GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
+namespace { std::vector<std::weak_ptr<GlobalsGL::Resources>> resourceLeases; }
+
+void GlobalsGL::Resources::releaseContext(QOpenGLContext* context) {
+    for (auto it = resourceLeases.begin(); it != resourceLeases.end();) {
+        if (auto lease = it->lock()) {
+            if (lease->owner == context) lease->release();
+            ++it;
+        } else it = resourceLeases.erase(it);
     }
-    return GlobalsGL::_ef45;
 }
-/*
-QOpenGLFunctions_4_6_Compatibility *GlobalsGL::f46()
-{
-    if (GlobalsGL::_ef46 == nullptr) {
-        _ef46 = GlobalsGL::context()->versionFunctions<QOpenGLFunctions_4_6_Compatibility>();
-        if(!_ef46) {
-            std::cerr << "No access to GL 4.6 functions" << std::endl;
-        }
-        std::cout << _ef46->initializeOpenGLFunctions() << std::endl;
-//        _ef45->glInvalidateFramebuffer();
-//        GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
-    }
-    return GlobalsGL::_ef46;
-}*/
-QOpenGLExtraFunctions* GlobalsGL::ef() {
-    if (GlobalsGL::_ef == nullptr) {
-        GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
-    }
-    return GlobalsGL::_ef;
+
+std::shared_ptr<GlobalsGL::Resources> GlobalsGL::Resources::create() {
+    auto resources = std::make_shared<Resources>();
+    resources->owner = GlobalsGL::context();
+    resourceLeases.erase(std::remove_if(resourceLeases.begin(), resourceLeases.end(),
+        [](const auto& weak) { return weak.expired(); }), resourceLeases.end());
+    resourceLeases.push_back(resources);
+    std::weak_ptr<Resources> weak = resources;
+    resources->destructionConnection = QObject::connect(resources->owner, &QOpenGLContext::aboutToBeDestroyed,
+                     resources->owner, [weak]() {
+        if (auto live = weak.lock()) live->release();
+    }, Qt::DirectConnection);
+    return resources;
 }
+
+GlobalsGL::Resources::~Resources() {
+    QObject::disconnect(destructionConnection);
+    release();
+}
+
+void GlobalsGL::Resources::release() {
+    if (released) return;
+    // A destroyed context has already reclaimed its objects. Never delete its IDs
+    // in a replacement context, where the same numbers may identify other objects.
+    if (owner && (QOpenGLContext::currentContext() == owner ||
+                  (GlobalsGL::isReady() && viewer->context() == owner &&
+                   QThread::currentThread() == viewer->thread()))) {
+        ContextScope scope;
+        if (QOpenGLContext::currentContext() == owner) {
+            auto* gl = GlobalsGL::f();
+            for (auto program : programs) gl->glDeleteProgram(program);
+            gl->glDeleteTextures(GLsizei(textures.size()), textures.data());
+            gl->glDeleteBuffers(GLsizei(buffers.size()), buffers.data());
+            gl->glDeleteVertexArrays(GLsizei(arrays.size()), arrays.data());
+        }
+    }
+    programs.clear(); textures.clear(); buffers.clear(); arrays.clear();
+    released = true;
+}
+
+
+void GlobalsGL::setViewer(QOpenGLWidget* widget) { viewer = widget; }
+bool GlobalsGL::isReady() { return viewer && viewer->isValid(); }
+
+GlobalsGL::ContextScope::ContextScope()
+    : previous(QOpenGLContext::currentContext())
+{
+    if (!GlobalsGL::isReady()) {
+        if (!previous) qFatal("OpenGL resources requested before viewer initialization");
+        return;
+    }
+    if (QThread::currentThread() != viewer->thread())
+        qFatal("Viewer OpenGL operations must run on the GUI thread");
+    if (previous == viewer->context()) return;
+    if (previous) previousSurface = previous->surface();
+    viewer->makeCurrent();
+    if (QOpenGLContext::currentContext() != viewer->context())
+        qFatal("Could not make the viewer OpenGL context current");
+    switched = true;
+}
+
+GlobalsGL::ContextScope::~ContextScope()
+{
+    if (!switched) return;
+    if (previous && previousSurface) previous->makeCurrent(previousSurface);
+    else if (auto* current = QOpenGLContext::currentContext()) current->doneCurrent();
+}
+
+QOpenGLContext* GlobalsGL::context() {
+    auto* ctx = QOpenGLContext::currentContext();
+    if (!ctx) qFatal("OpenGL operation requires a current context");
+    return ctx;
+}
+
+QOpenGLFunctions_4_5_Compatibility* GlobalsGL::f() { return f45(); }
+
+QOpenGLFunctions_4_5_Compatibility* GlobalsGL::f45() {
+    // Qt owns the wrapper and caches it per context. Never cache a raw pointer here.
+    auto* functions = QOpenGLVersionFunctionsFactory::
+        get<QOpenGLFunctions_4_5_Compatibility>(context());
+    if (!functions) qFatal("OpenGL 4.5 compatibility profile unavailable");
+    return functions;
+}
+
+QOpenGLExtraFunctions* GlobalsGL::ef() { return context()->extraFunctions(); }
+
 void GlobalsGL::generateBuffers()
 {
 #if useModernOpenGL

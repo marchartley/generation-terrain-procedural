@@ -111,10 +111,9 @@ public:
 
     Mesh extractGeometryFromShaders(GridF &values);
 
-    static void setShaderToAllMeshesWithoutShader(Shader newShader);
 
-    static std::vector<Mesh*> all_meshes;
 
+    std::shared_ptr<GlobalsGL::Resources> gpuResources;
     GLuint vao = 0;
     GLuint vbo[4] = {0};
 };

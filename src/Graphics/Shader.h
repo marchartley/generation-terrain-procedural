@@ -22,7 +22,12 @@ public:
     static std::shared_ptr<Shader> default_shader;
     static std::set<std::shared_ptr<Shader>> allShaders;
     Shader();
-    Shader(Shader& copy);
+    Shader(const Shader& copy);
+    virtual ~Shader() = default;
+    Shader& operator=(const Shader& copy);
+    void ensureResources();
+    std::shared_ptr<GlobalsGL::Resources> gpuResources;
+    virtual void initializeGL() { compileShadersFromSource(definitions); }
     Shader(const std::string& vertexShaderFilename);
     Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename);
     Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename,
@@ -78,6 +83,8 @@ public:
 
     void setMat4(const std::string& pname, glm::mat4& values)
     {
+        GlobalsGL::ContextScope contextScope;
+        if (!use()) return;
         GlobalsGL::f()->glUniformMatrix4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
                                            1, GL_FALSE, &values[0][0]);
     }
@@ -136,6 +143,7 @@ public:
 //            std::cerr << "No shader defined" << std::endl;
 //            return;
 //        }
+        GlobalsGL::ContextScope contextScope;
         if (!this->use()) return;
         std::string numberOfElements = std::to_string(n) + "x" + std::to_string(m);
         if (numberOfElements == "2x2")

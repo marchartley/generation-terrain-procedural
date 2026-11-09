@@ -321,16 +321,30 @@ bool GizmoInteractor::pickRotationRing(const GizmoState &state, GizmoAxis axis, 
 
 GizmoRenderer::GizmoRenderer()
 {
-    this->centerMesh.update();
-    this->rotationMesh.update();
-    this->translationMesh.update();
+    // A shader descriptor must exist before renderCenter/axis/ring sets uniforms.
+    // Constructing Shader is CPU-only; compilation and uploads remain deferred.
+    // Do not read the mutable global default_shader here: workers can prepare gizmos.
+    auto shader = std::make_shared<Shader>("src/Shaders/no_shader.vert",
+                                           "src/Shaders/no_shader.frag");
+    centerMesh.shareShader(shader);
+    translationMesh.shareShader(shader);
+    rotationMesh.shareShader(shader);
 }
 
 void GizmoRenderer::render(GizmoState &state)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!state.settings.visible)
         return;
 
+
+    // A newly visible gizmo can appear after the viewer's shared uniform pass.
+    // Give its lazily compiled shader the current camera matrices on this frame.
+    GLfloat modelView[16], projection[16];
+    glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
+    glGetFloatv(GL_PROJECTION_MATRIX, projection);
+    centerMesh.shader->setMatrix("mv_matrix", modelView, 4, 4);
+    centerMesh.shader->setMatrix("proj_matrix", projection, 4, 4);
 
     GLboolean m_origin_blend, m_origin_depth, m_origin_cull;
     glGetBooleanv(GL_BLEND, &m_origin_blend);
@@ -507,6 +521,7 @@ const GizmoState &Gizmo3D::state() const
 
 void Gizmo3D::render()
 {
+    GlobalsGL::ContextScope contextScope;
     this->renderer_.render(state());
 }
 

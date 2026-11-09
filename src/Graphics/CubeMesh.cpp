@@ -39,7 +39,7 @@ void CubeMesh::pushToBuffer(std::vector<Vector3> positions)
 
     // Vertex
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 0]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), &this->vertexArrayFloat.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), this->vertexArrayFloat.data(), GL_STATIC_DRAW);
     GlobalsGL::f()->glEnableVertexAttribArray(0);
     GlobalsGL::f()->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
@@ -47,19 +47,19 @@ void CubeMesh::pushToBuffer(std::vector<Vector3> positions)
 
     // Normals
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 2]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), &this->normalsArrayFloat.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), this->normalsArrayFloat.data(), GL_STATIC_DRAW);
     GlobalsGL::f()->glEnableVertexAttribArray(2);
     GlobalsGL::f()->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
     // Colors
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 3]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), &this->colorsArrayFloat.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), this->colorsArrayFloat.data(), GL_STATIC_DRAW);
     GlobalsGL::f()->glEnableVertexAttribArray(3);
     GlobalsGL::f()->glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
     // Offsets
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 4]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->positionsFloat.size() * sizeof(float), &this->positionsFloat.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->positionsFloat.size() * sizeof(float), this->positionsFloat.data(), GL_STATIC_DRAW);
     GlobalsGL::f()->glEnableVertexAttribArray(4);
     GlobalsGL::f()->glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
     GlobalsGL::f()->glVertexAttribDivisor(4, 1);

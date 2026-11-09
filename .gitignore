@@ -20,6 +20,8 @@ Python_tests/sketch-to-terrain/outputs/*
 Python_tests/sketch-to-terrain/data_downsampled_blurred/*
 Python_tests/sketch-to-terrain/world_map/*
 
+tests/
+
 doc/
 
 *.stl
@@ -71,12 +73,6 @@ Python_tests/saved_runs
 *.app
 *.user
 *.2b2237b
-build/.qglviewer.xml
-build/.qglviewer.xml
-build/generation-terrain-procedural
-build/Makefile
-build/qrc_qmake_qmake_immediate.cpp
-generation-terrain-procedural.pro.user
 *.dat
 src/assets/models/coral_1_bottom_watertight.stl
 src/assets/models/coral_1_top_watertight.stl
@@ -102,15 +98,98 @@ src/assets/textures/underwater_ground/Material_1283.jpg
 src/assets/textures/underwater_sand/Material_1573.jpg
 
 saved_maps/Geometry/*
-shared_images\*
 DataShomData/*
 Other_Data/*
 
-Python_tests\.ipynb_checkpoints\*
 
 usersmarchappdata*
 *.pth
 .qglviewer.xml
-.tmp/screenshots/screen.png
-.tmp/screenshots/screen.png
 src/assets/models/FBX/coralRestorationSite.fbx
+
+# Qt Creator, qmake, CMake and Ninja build output
+/build-*/
+/cmake-build-*/
+/Makefile
+/Makefile.*
+/.qmake.cache
+/.qmake.stash
+/.qmake.super
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+compile_commands.json
+build.ninja
+rules.ninja
+.ninja_deps
+.ninja_log
+moc_*.cpp
+moc_predefs.h
+qrc_*.cpp
+ui_*.h
+*.moc
+*.prl
+*.qmlc
+*.jsc
+*.so.*
+*.dSYM/
+/interface
+
+# Local IDE settings and temporary files
+/.tmp/
+/.cache/
+.cache/clangd/
+.vscode/
+*.autosave
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+*.rej
+
+# Python bytecode, environments, packaging and tool caches
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+/Python_tests/build/
+/Python_tests/dist/
+
+# Logs, profiling output and crash dumps
+*.log
+*.cprof
+*.prof
+*.gcda
+*.gcno
+*.gcov
+callgrind.out.*
+cachegrind.out.*
+core
+core.[0-9]*
+
+# Operating-system metadata
+.DS_Store
+._*
+Thumbs.db
+Thumbs.db:*
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Generated experiment previews and timestamped demo heightmaps
+/Python_tests/snake-tests/
+/Python_tests/test_island_heightmap/heightmaps/result_height-demo-*.png

@@ -26,13 +26,14 @@ Shader::Shader(const std::string& vertexShaderFilename, std::string fragmentShad
     : vertexShaderFilename(vertexShaderFilename), fragmentShaderFilename(fragmentShaderFilename),
       geometryShaderFilename(geometryShaderFilename)
 {
-    this->compileShadersFromSource();
+    // GPU compilation is deferred until initializeGL()/use().
 }
-Shader::Shader(Shader& copy) {
+Shader::Shader(const Shader& copy) {
     this->vertexShaderFilename = copy.vertexShaderFilename;
     this->fragmentShaderFilename = copy.fragmentShaderFilename;
     this->geometryShaderFilename = copy.geometryShaderFilename;
-    this->compileShadersFromSource();
+    this->definitions = copy.definitions;
+    // GPU compilation is deferred until initializeGL()/use().
 }
 /*
 Shader::Shader()
@@ -55,7 +56,7 @@ Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilen
     : vertexShaderFilename(vertexShaderFilename), fragmentShaderFilename(fragmentShaderFilename),
       geometryShaderFilename(geometryShaderFilename)
 {
-    this->compileShadersFromSource();
+    // GPU compilation is deferred until initializeGL()/use().
 }
 
 Shader::Shader(const std::string& vertexShaderFilename)
@@ -75,12 +76,43 @@ Shader::Shader(const std::string& vertexShaderFilename, std::string fragmentShad
 {
 
 }*/
+Shader& Shader::operator=(const Shader& copy) {
+    if (this == &copy) return *this;
+    gpuResources.reset();
+    programID = 0;
+    vShader = fShader = gShader = -1;
+    textureSlotIndices.clear();
+    vertexShaderFilename = copy.vertexShaderFilename;
+    fragmentShaderFilename = copy.fragmentShaderFilename;
+    geometryShaderFilename = copy.geometryShaderFilename;
+    definitions = copy.definitions;
+    return *this;
+}
+
+void Shader::ensureResources() {
+    auto* ctx = GlobalsGL::context();
+    if (!gpuResources || gpuResources->released || gpuResources->owner != ctx) {
+        gpuResources = GlobalsGL::Resources::create();
+        programID = 0;
+        vShader = fShader = gShader = -1;
+        textureSlotIndices.clear();
+    }
+}
+
 void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDefinitions, std::vector<std::string> feedbackValues)
 {
 #if useModernOpenGL || !useModernOpenGL
-    if (this->programID != 0)
+    GlobalsGL::ContextScope contextScope;
+    if (addedDefinitions.empty()) addedDefinitions = definitions;
+    definitions = addedDefinitions;
+    ensureResources();
+    vShader = fShader = gShader = -1;
+    if (this->programID != 0) {
         GlobalsGL::f()->glDeleteProgram(this->programID);
+        gpuResources->programs.clear();
+    }
     this->programID = GlobalsGL::f()->glCreateProgram();
+    gpuResources->programs.push_back(programID);
     if (vertexShaderFilename != "")
     {
         std::string content = Shader::addDefinitionsToSource(Shader::readShaderSource(vertexShaderFilename), addedDefinitions);
@@ -129,10 +161,10 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
 
     if (!feedbackValues.empty())
     {
-        GLchar** variables = new GLchar*[feedbackValues.size()];
+        std::vector<const GLchar*> variables(feedbackValues.size());
         for (size_t i = 0; i < feedbackValues.size(); i++)
             variables[i] = (GLchar*)feedbackValues[i].c_str();
-        GlobalsGL::f()->glTransformFeedbackVaryings(this->programID, feedbackValues.size(), variables, GL_INTERLEAVED_ATTRIBS);
+        GlobalsGL::f()->glTransformFeedbackVaryings(this->programID, feedbackValues.size(), variables.data(), GL_INTERLEAVED_ATTRIBS);
     }
 
     GlobalsGL::checkOpenGLError();
@@ -143,6 +175,8 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
         GlobalsGL::f()->glDeleteShader(this->fShader);
     if (this->gShader > -1)
         GlobalsGL::f()->glDeleteShader(this->gShader);
+    vShader = fShader = gShader = -1;
+    GlobalsGL::printProgramErrors(programID);
     GlobalsGL::checkOpenGLError();
 
 #endif
@@ -150,21 +184,25 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
 
 bool Shader::use(bool update_source_file)
 {
+    GlobalsGL::ContextScope contextScope;
+    ensureResources();
     if (update_source_file)
     {
-        this->compileShadersFromSource();
+        this->initializeGL();
     }
     if (programID == 0)
     {
-        this->compileShadersFromSource();
+        this->initializeGL();
     }
 
     GlobalsGL::checkOpenGLError();
     if (programID > 0) {
+        GLint linked = GL_FALSE;
+        GlobalsGL::f()->glGetProgramiv(programID, GL_LINK_STATUS, &linked);
+        if (!linked) return false;
         GlobalsGL::f()->glUseProgram(this->programID);
         GlobalsGL::printProgramErrors(this->programID);
-        GlobalsGL::printShaderErrors(this->vShader);
-        GlobalsGL::printShaderErrors(this->fShader);
+        // Shader objects are deleted after linking; inspect the program here.
 //        return true;
     }
     GlobalsGL::checkOpenGLError();
@@ -173,35 +211,42 @@ bool Shader::use(bool update_source_file)
 
 void Shader::setBool(const std::string& pname, bool value)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), (int)value);
 }
 void Shader::setInt(const std::string& pname, int value)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setFloat(const std::string& pname, float value)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setVector(const std::string& pname, const Vector3& value)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     this->setVector(pname, value.data(), 3);
 }
 
 void Shader::setVector(const std::string& pname, const Vector4 &value)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    this->setVector(pname, (float*)value, 4);
+    const float components[] = {value.x(), value.y(), value.z(), value.w};
+    this->setVector(pname, components, 4);
 }
 
 void Shader::setVector(const std::string& pname, glm::vec2 value)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     GlobalsGL::f()->glUniform2fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 }
@@ -214,11 +259,13 @@ void Shader::setVector(const std::string& pname, glm::vec2 value)
 
 /*void Shader::setVector(const std::string& pname, glm::vec4 value)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     GlobalsGL::f()->glUniform4fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 }*/
 void Shader::setVector(const std::string& pname, const float* value, int n)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());
     switch (n) {
@@ -273,49 +320,12 @@ void Shader::setMaterial(const std::string& pname, Material &value)
 // Todo : change the integer type to a template (or select int or float)
 void Shader::setTexture2D(const std::string& pname, int index, GridI texture)
 {
-    int **data = new int*[texture.sizeY];
-    for (int i = 0; i < texture.sizeY; i++) {
-        data[i] = new int[texture.sizeX];
-        for (int j = 0; j < texture.sizeX; j++) {
-            data[i][j] = texture.at(j, i);
-        }
-    }
-
-    int textureSlot = GL_TEXTURE0 + index;
-
-    GLuint texIndex;
-    bool justUpdateTexture = true;
-    if (!this->use()) return;
-    if (textureSlotIndices.count(textureSlot) == 0) {
-        glGenTextures(1, &texIndex);
-        textureSlotIndices[textureSlot] = texIndex;
-        justUpdateTexture = false;
-    }
-    texIndex = textureSlotIndices[textureSlot];
-    GlobalsGL::f()->glActiveTexture(textureSlot);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, texIndex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    if (justUpdateTexture) {
-        GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.sizeX, texture.sizeY,
-        GL_ALPHA_INTEGER_EXT, GL_INT, data);
-    } else {
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, texture.sizeX, texture.sizeY, 0,
-        GL_ALPHA_INTEGER_EXT, GL_INT, data);
-    }
-    this->setInt(pname, index);
-
-    for (int i = 0; i < texture.sizeX; i++)
-        delete[] data[i];
-    delete[] data;
+    setTexture2D(pname, index, texture.sizeX, texture.sizeY, texture.data.data());
 }
 
 void Shader::setTexture2D(const std::string& pname, int index, int width, int height, int *data)
 {
+    GlobalsGL::ContextScope contextScope;
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
@@ -323,6 +333,7 @@ void Shader::setTexture2D(const std::string& pname, int index, int width, int he
     if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
+        gpuResources->textures.push_back(texIndex);
         textureSlotIndices[textureSlot] = texIndex;
         justUpdateTexture = false;
     }
@@ -347,38 +358,17 @@ void Shader::setTexture2D(const std::string& pname, int index, int width, int he
 
 void Shader::setTexture2D(const std::string& pname, int index, int width, int height, int **data)
 {
-    int textureSlot = GL_TEXTURE0 + index;
-
-    GLuint texIndex;
-    bool justUpdateTexture = true;
-    if (!this->use()) return;
-    if (textureSlotIndices.count(textureSlot) == 0) {
-        glGenTextures(1, &texIndex);
-        textureSlotIndices[textureSlot] = texIndex;
-        justUpdateTexture = false;
-    }
-    texIndex = textureSlotIndices[textureSlot];
-    GlobalsGL::f()->glActiveTexture(textureSlot);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, texIndex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    if (justUpdateTexture) {
-        GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
-        GL_ALPHA_INTEGER_EXT, GL_INT, data);
-    } else {
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, width, height, 0,
-        GL_ALPHA_INTEGER_EXT, GL_INT, data);
-    }
-    this->setInt(pname, index);
+    // OpenGL requires contiguous pixels, not an array of pointers to rows.
+    std::vector<int> pixels(size_t(width) * size_t(height));
+    for (int y = 0; y < height; ++y)
+        std::copy(data[y], data[y] + width, pixels.begin() + size_t(y) * width);
+    setTexture2D(pname, index, width, height, pixels.data());
 }
 
 // Todo : change the integer type to a template (or select int or float)
 void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
     for (auto& val : texture)
         val = std::max(val, 0.f);
@@ -390,6 +380,7 @@ void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
     // if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
+        gpuResources->textures.push_back(texIndex);
         textureSlotIndices[textureSlot] = texIndex;
         justUpdateTexture = false;
     }
@@ -422,10 +413,14 @@ void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
 
 void Shader::applyToAllShaders(std::function<void (std::shared_ptr<Shader>)> func)
 {
-    std::set<std::shared_ptr<Shader>>::iterator it;
-    for (it = Shader::allShaders.begin(); it != Shader::allShaders.end(); it++) {
-        if (bool(*it)) {
-            func(*it);
+    GlobalsGL::ContextScope contextScope;
+    for (auto it = allShaders.begin(); it != allShaders.end();) {
+        // The registry must not keep shaders from discarded meshes alive forever.
+        if (!*it || it->use_count() == 1) {
+            it = allShaders.erase(it);
+        } else {
+            auto shader = *it++;
+            func(shader);
         }
     }
 }
