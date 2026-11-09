@@ -428,6 +428,7 @@ HEADERS += \
     src/TerrainGen/ImplicitPatch.h \
     src/TerrainGen/LayerBasedGrid.h \
     src/TerrainGen/TerrainModel.h \
+    src/TerrainGen/TerrainSampling.h \
     src/TerrainGen/VoxelChunk.h \
     src/TerrainGen/VoxelGrid.h \
     src/TerrainModification/CoralGrowth.h \

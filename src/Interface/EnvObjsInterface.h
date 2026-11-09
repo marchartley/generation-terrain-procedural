@@ -19,6 +19,7 @@ public:
 
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
+    void detachImplicitRoot();
     void display(const Vector3& camPos = Vector3::invalid);
 
     void replay(nlohmann::json action);
@@ -183,7 +184,7 @@ public:
     HotreloadFile scenarioFile;
 
     std::map<EnvObjectInstance*, ImplicitPatch*> implicitPatchesFromObjects;
-    ImplicitNaryOperator* rootPatch;
+    ImplicitNaryOperator* rootPatch = nullptr;
     // Implicit2DNary* rootPatch;
 
     std::vector<EnvObjectInstance*> currentSelections;

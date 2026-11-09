@@ -31,6 +31,7 @@ public:
     void keyPressEvent(QKeyEvent *e);
 
     ImplicitPatch* selectedPatch();
+    void clearSelection();
 
 public Q_SLOTS:
     void mouseMovedOnMapEvent(const Vector3& newPosition, TerrainModel *model);

@@ -977,7 +977,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
 
                 std::vector<float> cubeVals(8);
                 for (int i = 0; i < 8; i++)
-                    cubeVals[i] = values.checkCoord(voxPos + vertDecals[i]) && (voxPos + vertDecals[i]).minComp() > 0 ? values.at(voxPos + vertDecals[i]) : -100000.f;
+                    cubeVals[i] = values.checkCoord(voxPos + vertDecals[i]) ? values.at(voxPos + vertDecals[i]) : -1.f;
 
                 int cubeindex = 0;
                 for (int i = 0; i < 8; i++)

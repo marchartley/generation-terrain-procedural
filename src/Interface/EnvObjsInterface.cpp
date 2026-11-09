@@ -107,13 +107,21 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     });
 }
 
+void EnvObjsInterface::detachImplicitRoot()
+{
+    // The scene keeps references to these object patches. A converted snapshot
+    // bakes their shape, so detach them without destroying the scene's objects.
+    if (!implicitTerrain || !rootPatch) return;
+    auto& children = implicitTerrain->composables;
+    children.erase(std::remove(children.begin(), children.end(), rootPatch), children.end());
+    rootPatch->parent = nullptr;
+    implicitTerrain->updateCache();
+}
+
 void EnvObjsInterface::display(const Vector3 &camPos)
 {
     if (!this->visible)
         return;
-
-    if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
-        this->implicitTerrain->addChild(this->rootPatch);
 
     if (this->waitAtEachFrame) {
 

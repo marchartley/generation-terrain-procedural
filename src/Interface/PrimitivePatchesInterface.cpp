@@ -284,6 +284,13 @@ void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
     }
 }
 
+void PrimitivePatchesInterface::clearSelection()
+{
+    currentlySelectedPatch = nullptr;
+    storedPatches.clear();
+    if (primitiveSelectionGui) primitiveSelectionGui->clear();
+}
+
 ImplicitPatch *PrimitivePatchesInterface::selectedPatch()
 {
     if (this->currentlySelectedPatch != nullptr && this->currentlySelectedPatch != this->implicitTerrain.get()) {
@@ -435,9 +442,7 @@ void PrimitivePatchesInterface::updateMapWithCurrentPatch()
     this->implicitTerrain->updateCache();
 //    this->implicitTerrain->augment();
 //    this->layerGrid->layers = this->layerGrid->previousState;
-    this->layerGrid->reset();
-//    this->implicitTerrain->cleanCache();
-    this->layerGrid->add(this->implicitTerrain.get()/*, SAND, false*/);
+    this->layerGrid->fromImplicit(this->implicitTerrain.get());
     voxelGrid->fromImplicit(implicitTerrain.get());
 //    voxelGrid->smoothVoxels();
 //    voxelGrid->fromCachedData();

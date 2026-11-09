@@ -596,11 +596,12 @@ Vector3 Viewer::minVoxelsShown()
     if (this->mapMode == MapMode::VOXEL_MODE)
         return voxelGrid->getDimensions() * minVec;
     else if (this->mapMode == MapMode::LAYER_MODE)
-        return layerGrid->getDimensions() * minVec;
+        return Vector3(layerGrid->getSizeX(), layerGrid->getSizeY(),
+            algorithm == MARCHING_CUBES ? std::max(2.f, std::ceil(layerGrid->getSizeZ()) + 2.f) : layerGrid->getSizeZ()) * minVec;
     else if (this->mapMode == MapMode::GRID_MODE)
         return heightmap->getDimensions() * minVec;
     else if (this->mapMode == MapMode::IMPLICIT_MODE)
-        return Vector3(); // implicitTerrain->getDimensions() * minVec;
+        return implicitTerrain->getSamplingDimensions() * minVec;
     return Vector3();
 }
 
@@ -610,11 +611,12 @@ Vector3 Viewer::maxVoxelsShown()
     if (this->mapMode == MapMode::VOXEL_MODE)
         return voxelGrid->getDimensions() * maxVec;
     else if (this->mapMode == MapMode::LAYER_MODE)
-        return layerGrid->getDimensions() * maxVec;
+        return Vector3(layerGrid->getSizeX(), layerGrid->getSizeY(),
+            algorithm == MARCHING_CUBES ? std::max(2.f, std::ceil(layerGrid->getSizeZ()) + 2.f) : layerGrid->getSizeZ()) * maxVec;
     else if (this->mapMode == MapMode::GRID_MODE)
         return heightmap->getDimensions() * maxVec;
     else if (this->mapMode == MapMode::IMPLICIT_MODE)
-        return voxelGrid->getDimensions() * maxVec; //heightmap->getDimensions() * maxVec;
+        return implicitTerrain->getSamplingDimensions() * maxVec;
     return Vector3();
 }
 
