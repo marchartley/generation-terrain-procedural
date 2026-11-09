@@ -338,8 +338,9 @@ void Shader::setTexture2D(const std::string& pname, int index, int width, int he
         justUpdateTexture = false;
     }
     texIndex = textureSlotIndices[textureSlot];
+    GLint previousTextureUnit = GL_TEXTURE0;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &previousTextureUnit);
     GlobalsGL::f()->glActiveTexture(textureSlot);
-    glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texIndex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -354,6 +355,7 @@ void Shader::setTexture2D(const std::string& pname, int index, int width, int he
         GL_ALPHA_INTEGER_EXT, GL_INT, data);
     }
     this->setInt(pname, index);
+    GlobalsGL::f()->glActiveTexture(previousTextureUnit);
 }
 
 void Shader::setTexture2D(const std::string& pname, int index, int width, int height, int **data)
@@ -370,9 +372,6 @@ void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
 {
     GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    for (auto& val : texture)
-        val = std::max(val, 0.f);
-    glEnable(GL_TEXTURE_3D);
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
@@ -386,6 +385,8 @@ void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
     }
     texIndex = textureSlotIndices[textureSlot];
 
+    GLint previousTextureUnit = GL_TEXTURE0;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &previousTextureUnit);
     GlobalsGL::f()->glActiveTexture(textureSlot);
     glBindTexture(GL_TEXTURE_3D, texIndex);
 //    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -403,6 +404,7 @@ void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
         GL_ALPHA, GL_FLOAT, texture.data.data());
     }
     this->setInt(pname, index);
+    GlobalsGL::f()->glActiveTexture(previousTextureUnit);
 }
 
 //void Shader::setMatrix(const std::string& pname, Matrix value)

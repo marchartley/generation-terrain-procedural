@@ -59,6 +59,8 @@ public:
     };
 
     virtual float evaluate(const Vector3& pos) const = 0;
+    float getSignedEvaluation(const Vector3& pos) const;
+    Vector3 getSamplingDimensions() const;
 //    virtual std::map<TerrainMaterial, float> getMaterials(const Vector3& pos) = 0;
     virtual std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const = 0;
     virtual float getMaxHeight(const Vector3& pos);
@@ -177,6 +179,7 @@ public:
     GridF _cachedMinHeight;
     GridF _cachedMaxHeight;
     GridF _cachedVoxelized;
+    Vector3 _cachedVoxelScale = Vector3(1, 1, 1);
     bool _cached = false;
 };
 
@@ -214,6 +217,9 @@ public:
 
     std::string heightmapFilename = "";
     GridF cachedHeightmap;
+    bool sampledVolume = false;
+    float sampledFieldScale = 1.f;
+    static ImplicitPrimitive* fromVoxelField(const GridF& values, ImplicitPrimitive* prim = nullptr);
 
     static ImplicitPrimitive* fromHeightmap(const std::string& filename, const Vector3& dimensions = Vector3::invalid, ImplicitPrimitive *prim = nullptr);
     static ImplicitPrimitive* fromHeightmap(GridF heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);

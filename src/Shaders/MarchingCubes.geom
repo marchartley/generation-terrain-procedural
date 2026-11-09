@@ -91,16 +91,16 @@ vec3 cubePos(vec3 voxelPos, int i){
 //Get vertex i value within current marching cube
 float cubeVal(vec3 pos){
     vec3 texSize = textureSize(dataFieldTex, 0);
-    if (pos.x <= 0 || pos.y <= 0 || pos.z <= 0) return -1;
-    if (pos.x <= min_vertice_positions.x || max_vertice_positions.x <= pos.x ||
-        pos.y <= min_vertice_positions.y || max_vertice_positions.y <= pos.y ||
-        pos.z <= min_vertice_positions.z || max_vertice_positions.z <= pos.z) return -.1;
+    if (pos.x < 0 || pos.y < 0 || pos.z < 0) return -1;
+    if (pos.x < min_vertice_positions.x || max_vertice_positions.x <= pos.x ||
+        pos.y < min_vertice_positions.y || max_vertice_positions.y <= pos.y ||
+        pos.z < min_vertice_positions.z || max_vertice_positions.z <= pos.z) return -1;
     if (pos.x >= texSize.x || pos.y >= texSize.y || pos.z >= texSize.z) return -1;
 
     // TEMP FIX
 //    if (pos.z <= texSize.z * waterRelativeHeight) return 1.0;
 
-    float val = texture(dataFieldTex, pos/texSize).a;
+    float val = texture(dataFieldTex, (pos + vec3(.5))/texSize).a;
 //    if (pos.z <= 1)
 //        val = 1.0;
     val = (val < min_isolevel || val > max_isolevel) ? -1 : val;
@@ -112,7 +112,7 @@ float cubeVal(vec3 voxelPos, int i){
 }
 
 float __cubeVal(vec3 pos) {
-    return cubeVal(pos + .5);
+    return cubeVal(pos);
 }
 vec3 getNormal(vec3 p) {
     if (p.x <= 1.0) return vec3(-1, 0, 0);
@@ -138,10 +138,11 @@ vec3 getNormal(vec3 p) {
         vec3 z0 = clamp(p + vec3(0, 0, resolution), minDims, maxDims);
         vec3 z1 = clamp(p - vec3(0, 0, resolution), minDims, maxDims);
 
-        float dx = (length(x1 - x0) != 0 ? __cubeVal(x0) - __cubeVal(x1) / length(x1 - x0) : 0.0);
-        float dy = (length(y1 - y0) != 0 ? __cubeVal(y0) - __cubeVal(y1) / length(y1 - y0) : 0.0);
-        float dz = (length(z1 - z0) != 0 ? __cubeVal(z0) - __cubeVal(z1) / length(z1 - z0) : 0.0);
-        normal += normalize(-vec3(dx, dy, dz));
+        float dx = (length(x1 - x0) != 0 ? (__cubeVal(x0) - __cubeVal(x1)) / length(x1 - x0) : 0.0);
+        float dy = (length(y1 - y0) != 0 ? (__cubeVal(y0) - __cubeVal(y1)) / length(y1 - y0) : 0.0);
+        float dz = (length(z1 - z0) != 0 ? (__cubeVal(z0) - __cubeVal(z1)) / length(z1 - z0) : 0.0);
+        vec3 gradient = -vec3(dx, dy, dz);
+        if (length(gradient) > 1e-8) normal += normalize(gradient);
     }
     normal /= float(nbResolutions);
 //    if (length(normal) < 0.5) normal = vec3(0, 0, 1);

@@ -85,12 +85,12 @@ float bicubicInterpolate(sampler2D tex, vec2 uv, vec2 texSize, float maxHeight) 
 float getHeight(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     // return linearInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
-    return bicubicInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
+    return texture(heightmapFieldTex, (pos + vec2(.5)) / texSize).a * maxHeight;
 }
 float getHeightLinear(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     // return linearInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
-    return texture(heightmapFieldTex, pos / texSize).a * maxHeight;
+    return texture(heightmapFieldTex, (pos + vec2(.5)) / texSize).a * maxHeight;
 }
 /*float getHeight(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
@@ -164,7 +164,7 @@ void sendInfoVertex(vec4 vecPos) {
     grealNormal = getNormal(vecPos.xy);
     gcolor = vec4(texture(heightmapFieldTex, vecPos.xy/texSize).rgb, 1.0);
     vecPos.z = getHeight(vecPos.xy);
-    vecPos += vec4(grealNormal * getDisplacementLength(vecPos.xy) * displacementStrength, 0.0);
+    // Texture selection must not displace the terrain surface.
     vecPos.z *= heightFactor;
     ginitialVertPos = vecPos.xyz;
     gambiantOcclusion = getAmbiantOcclusion(vecPos.xyz, grealNormal.xyz);

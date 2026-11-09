@@ -1,3 +1,4 @@
+#include "TerrainGen/TerrainSampling.h"
 #include "Utils/Collisions.h"
 #include "Utils/Globals.h"
 #include "TerrainGen/Heightmap.h"
@@ -416,29 +417,16 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
     });
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
-Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
-    GridF voxels = voxelGrid.getVoxelValues();
-    int sizeX = voxelGrid.getSizeX();
-    int sizeY = voxelGrid.getSizeY();
-
-    this->heights = GridF(sizeX, sizeY, 1, 0.f);
-    #pragma omp parallel for collapse(2)
-    for (int x = 0; x < sizeX; x++) {
-        for (int y = 0; y < sizeY; y++) {
-            for (int z = voxelGrid.getSizeZ() - 1; z >= 0; z--)
-                if (voxels.at(x, y, z) > 0.f) {
-                   float current = voxels.at(x, y, z); // Is > 0.f
-                   float above = voxels.at(x, y, z + 1); // can be == 0.f
-                   if (std::abs(above) <= 1e-5) this->heights.at(x, y) = z;
-                   else this->heights.at(x, y) = z + current / (current - above);
-                    // this->heights.at(x, y) = z + std::min(current / above, above / current);
-                    break;
-                }
-        }
-    }
-//    this->computeNormals();
-//    this->createMesh();
-//    this->heights = this->heights.meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true);
+Heightmap& Heightmap::fromVoxelGrid(VoxelGrid& voxelGrid)
+{
+    const auto values = voxelGrid.getVoxelValues();
+    heights = GridF(values.sizeX, values.sizeY, 1, 0.f);
+    heights.iterateParallel([&](int x, int y, int) {
+        heights(x, y) = TerrainSampling::topHeight(values, x, y);
+    });
+    scaling = voxelGrid.scaling;
+    translation = voxelGrid.translation;
+    ++_historyIndex;
     return *this;
 }
 
@@ -450,36 +438,24 @@ Heightmap& Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
             this->heights.at(x, y) = layerGrid.getHeight(x, y);
         }
     }
+    scaling = layerGrid.scaling;
+    translation = layerGrid.translation;
+    ++_historyIndex;
     return *this;
 }
 
 Heightmap& Heightmap::fromImplicit(ImplicitPatch* implicitTerrain)
 {
-    this->heights = GridF(implicitTerrain->getSizeX(), implicitTerrain->getSizeY());
-    int sX = this->getSizeX(), sY = this->getSizeY();
-//    GridF evalTimeParts(heights.getDimensions());
-//    int nb = sX * sY;
-//    float time = timeIt([&]() {
-        #pragma omp parallel for collapse(2)
-        for (int x = 0; x < sX; x++) {
-            for (int y = 0; y < sY; y++) {
-//                evalTimeParts(x, y) = timeIt([&]() {
-                    this->heights.at(x, y) = implicitTerrain->getHeight(x, y);
-//                });
-//                nb++;
-            }
-        }
-//    });
-//    std::cout << "Evaluation time for implicit->heightmap: " << showTime(time) << " for " << nb << " cells (x20) => " << showTime(time / float(nb * 20)) << " per eval, or " << showTime(time / float(nb)) << " per cell" << std::endl;
-//    std::cout << evalTimeParts.displayAsPlot() << std::endl;
-    return *this;
+    LayerBasedGrid layers;
+    layers.fromImplicit(implicitTerrain);
+    return fromLayerGrid(layers);
 }
 
 GridF Heightmap::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
-    VoxelGrid v;
-    v.from2DGrid(*this);
-    return v.getVoxelValues();
+    const Vector3 extent = dimensions.isValid() ? dimensions :
+        Vector3(getSizeX(), getSizeY(), std::max(2.f, std::ceil(std::max(0.f, getMaxHeight())) + 2.f));
+    return TerrainSampling::heightField(heights, extent, scale);
 }
 
 Heightmap& Heightmap::loadFromHeightmap(const std::string& heightmap_filename, int nx, int ny, float heightFactor)

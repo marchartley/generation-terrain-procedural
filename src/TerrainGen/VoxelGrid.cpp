@@ -2,6 +2,7 @@
 #include "TerrainModification/UnderwaterErosion.h"
 #include "Curves/Contour.h"
 #include "DataStructure/Image.h"
+#include "TerrainGen/TerrainSampling.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float noise_shifting)
 //    : /*blockSize(blockSize),*/ noise_shifting(noise_shifting)
@@ -21,58 +22,43 @@ VoxelGrid::~VoxelGrid()
 {
 //    this->chunks.clear();
 }
-void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
-    float height = this->getSizeZ();
-
-    this->initMap();
+void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor)
+{
+    if (!std::isfinite(scaleFactor) || scaleFactor <= 0.f)
+        throw std::invalid_argument("Heightmap conversion requires a positive finite scale");
     if (subsectionEnd == subsectionStart) {
-        // If they are not set, we want the entire map
         subsectionStart = Vector3();
         subsectionEnd = Vector3(grid.getSizeX(), grid.getSizeY());
-    } else {
-        // Otherwise, we want a subset of the map, we just need to clamp the dimensions
-        subsectionStart.x() = std::max(subsectionStart.x(), 0.f);
-        subsectionStart.y() = std::max(subsectionStart.y(), 0.f);
-        subsectionEnd.x() = std::min(subsectionEnd.x(), (float)grid.getSizeX());
-        subsectionEnd.y() = std::min(subsectionEnd.y(), (float)grid.getSizeY());
     }
-    this->_cachedVoxelValues = GridF((subsectionEnd.x() - subsectionStart.x()) * scaleFactor, (subsectionEnd.y() - subsectionStart.y()) * scaleFactor, height, 0.f);
-    this->initMap();
-
-    GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions().xy() + Vector3(0, 0, 1));
-    gridHeights.raiseErrorOnBadCoord = false;
-
-    size_t sizeZ = this->getSizeZ();
-    float gridMaxHeight = grid.getMaxHeight();
-
-    _cachedVoxelValues.iterateParallel([&](int x, int y, int z) {
-        float grid_height = gridHeights.unsafe(x, y) * (sizeZ / float(gridMaxHeight - 1));
-        if (gridMaxHeight < 1e-5) grid_height = 0;
-        float grid_z = std::max(grid_height, 2.f);
-        _cachedVoxelValues.unsafe(x, y, z) = (z < grid_z ? 1.f : -1.f); //interpolation::inv_linear(clamp(grid_z - z, -1.f, 1.f), -.5f, .5f);
-    });
-    this->fromCachedData();
+    subsectionStart = Vector3::max(subsectionStart.xy(), Vector3());
+    subsectionEnd = Vector3::min(subsectionEnd.xy(), Vector3(grid.getSizeX(), grid.getSizeY()));
+    if (subsectionEnd.x() <= subsectionStart.x() || subsectionEnd.y() <= subsectionStart.y())
+        throw std::invalid_argument("Empty heightmap subsection");
+    auto heights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy());
+    const float depth = std::max(float(getSizeZ()), std::max(2.f, std::ceil(std::max(0.f, grid.getMaxHeight())) + 2.f));
+    // Horizontal resampling must not normalize or stretch elevations.
+    setVoxelValues(TerrainSampling::heightField(heights,
+        Vector3(heights.sizeX, heights.sizeY, depth), Vector3(scaleFactor, scaleFactor, 1.f)));
+    scaling = grid.scaling * Vector3(scaleFactor, scaleFactor, 1.f);
+    translation = (grid.translation + subsectionStart) * Vector3(scaleFactor, scaleFactor, 1.f);
 }
 
-void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
+void VoxelGrid::fromLayerBased(const LayerBasedGrid& layerBased, int fixedHeight)
 {
-    this->setVoxelValues(layerBased.voxelize(fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight));
-    this->smoothVoxels();
+    const int depth = fixedHeight < 0 ? std::max(int(getSizeZ()), int(std::ceil(layerBased.getSizeZ())) + 2) : fixedHeight;
+    setVoxelValues(layerBased.voxelize(depth));
+    scaling = layerBased.scaling;
+    translation = layerBased.translation;
 }
 
-VoxelGrid& VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
+VoxelGrid& VoxelGrid::fromImplicit(ImplicitPatch* implicitTerrain, int fixedHeight)
 {
-//    this->setVoxelValues(implicitTerrain->getVoxelized(/*implicitTerrain->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? 40.f : fixedHeight)*/).meanSmooth(3, 3, 3, true));
-    auto voxels = implicitTerrain->getVoxelized(this->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? getSizeZ() : fixedHeight)).meanSmooth(3, 3, 3, true);
-#pragma omp parallel for collapse(2)
-    for (int x = 0; x < voxels.sizeX; x++) {
-        for (int y = 0; y < voxels.sizeY; y++) {
-//            voxels(x, y, 0) = .5f;
-//            voxels(x, y, 1) = .5f;
-        }
-    }
-    this->setVoxelValues(voxels);
-//    this->smoothVoxels();
+    if (!implicitTerrain) throw std::invalid_argument("Missing implicit terrain");
+    Vector3 dimensions = implicitTerrain->getSamplingDimensions();
+    dimensions.z() = fixedHeight < 0 ? std::max(dimensions.z(), getSizeZ()) : fixedHeight;
+    setVoxelValues(implicitTerrain->getVoxelized(dimensions));
+    scaling = implicitTerrain->scaling;
+    translation = implicitTerrain->translation;
     return *this;
 }
 
@@ -564,11 +550,12 @@ size_t VoxelGrid::getCurrentHistoryIndex() const
 
 GridF VoxelGrid::getHeights() const
 {
+    const_cast<VoxelGrid*>(this)->getVoxelValues();
     return _cachedMaxHeights;
 }
 
 float VoxelGrid::getHeight(float x, float y) {
-    return this->getHeights().at(x, y);
+    return TerrainSampling::heightAt(getHeights(), x, y);
 //    for (int z = this->getSizeZ() - 1; z >= 0; z--)
 //        if (this->getVoxelValue(x, y, z) > 0.f)
 //            return z;
@@ -670,20 +657,19 @@ GridF VoxelGrid::getVoxelValues()
         for (int i = 0; i < this->currentHistoryIndex; i++)
             _cachedVoxelValues.add(this->voxelsValuesStack[i], this->voxelsValuesAnchorStack[i]);
 
-        _cachedMaxHeights = GridF(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, 1, -1);
-        for (int i = _cachedVoxelValues.size() - 1; i >= 0; i--) {
-            Vector3 p = _cachedVoxelValues.getCoordAsVector3(i);
-            if (_cachedMaxHeights.at(p.x(), p.y()) < 0 && _cachedVoxelValues[i] > 0) {
-                _cachedMaxHeights.at(p.x(), p.y()) = p.z();
-            }
-        }
+        _cachedMaxHeights = GridF(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, 1, 0.f);
+        _cachedMaxHeights.iterateParallel([&](int x, int y, int) {
+            _cachedMaxHeights(x, y) = TerrainSampling::topHeight(_cachedVoxelValues, x, y);
+        });
     }
     return this->_cachedVoxelValues;
 }
 
 GridF VoxelGrid::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
-    return this->getVoxelValues();
+    const auto values = getVoxelValues();
+    if (!dimensions.isValid() && scale == Vector3(1, 1, 1)) return values;
+    return TerrainSampling::resample(values, dimensions.isValid() ? dimensions : getDimensions(), scale);
 }
 
 Mesh VoxelGrid::getGeometry(const Vector3& dimensions)
@@ -693,12 +679,6 @@ Mesh VoxelGrid::getGeometry(const Vector3& dimensions)
     if (!dimensions.isValid())
         finalDimensions = originalDimensions;
     auto values = this->getVoxelValues().resize(finalDimensions); //.meanSmooth(5, 5, 5);
-    for (int x = 0; x < values.sizeX; x++) {
-        for (int y = 0; y < values.sizeY; y++) {
-            values.at(x, y, 0) = 1.f;
-            values.at(x, y, 1) = 1.f;
-        }
-    }
     Mesh m = Mesh::applyMarchingCubes(values);
     m.scale(originalDimensions / finalDimensions);
     return m;

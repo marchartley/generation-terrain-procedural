@@ -1,3 +1,4 @@
+#include "Interface/PrimitivePatchesInterface.h"
 #include "TerrainGenerationInterface.h"
 
 #include "Biomes/BiomeInstance.h"
@@ -124,8 +125,15 @@ void TerrainGenerationInterface::heightmapToLayers()
 
 void TerrainGenerationInterface::heightmapToImplicit()
 {
-    implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(heightmap->getHeights())};
-    implicitTerrain->_cached = false;
+    if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches")))
+        editor->clearSelection();
+    if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
+        environment->detachImplicitRoot();
+    implicitTerrain->deleteAllChildren();
+    implicitTerrain->addChild(ImplicitPrimitive::fromHeightmap(heightmap->getHeights()));
+    implicitTerrain->scaling = heightmap->scaling;
+    implicitTerrain->translation = heightmap->translation;
+    implicitTerrain->updateCache();
 }
 
 void TerrainGenerationInterface::heightmapToAll()
@@ -133,6 +141,7 @@ void TerrainGenerationInterface::heightmapToAll()
     displayProcessTime("Heightmap to voxels... ", [&]() { heightmapToVoxels(); });
     displayProcessTime("Heightmap to layers... ", [&]() { heightmapToLayers(); }, false);
     displayProcessTime("Heightmap to implicit.. ", [&]() { heightmapToImplicit(); }, false);
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::voxelsToHeightmap()
@@ -147,8 +156,15 @@ void TerrainGenerationInterface::voxelsToLayers()
 
 void TerrainGenerationInterface::voxelsToImplicit()
 {
-    implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())}; // Yeah, I can pass a 3D grid in this function
-    implicitTerrain->_cached = false;
+    if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches")))
+        editor->clearSelection();
+    if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
+        environment->detachImplicitRoot();
+    implicitTerrain->deleteAllChildren();
+    implicitTerrain->addChild(ImplicitPrimitive::fromVoxelField(voxelGrid->getVoxelValues()));
+    implicitTerrain->scaling = voxelGrid->scaling;
+    implicitTerrain->translation = voxelGrid->translation;
+    implicitTerrain->updateCache();
 }
 
 void TerrainGenerationInterface::voxelsToAll()
@@ -157,6 +173,7 @@ void TerrainGenerationInterface::voxelsToAll()
     displayProcessTime("Voxels to layers... ", [&]() { voxelsToLayers(); });
 //    heightmapToLayers();
     displayProcessTime("Voxels to implicit... ", [&]() { voxelsToImplicit(); });
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::layersToVoxels()
@@ -171,7 +188,15 @@ void TerrainGenerationInterface::layersToHeightmap()
 
 void TerrainGenerationInterface::layersToImplicit()
 {
-    // ..?!
+    if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches")))
+        editor->clearSelection();
+    if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
+        environment->detachImplicitRoot();
+    implicitTerrain->deleteAllChildren();
+    implicitTerrain->addChild(ImplicitPrimitive::fromVoxelField(layerGrid->voxelize()));
+    implicitTerrain->scaling = layerGrid->scaling;
+    implicitTerrain->translation = layerGrid->translation;
+    implicitTerrain->updateCache();
 }
 
 void TerrainGenerationInterface::layersToAll()
@@ -179,6 +204,7 @@ void TerrainGenerationInterface::layersToAll()
     displayProcessTime("Layers to voxels... ", [&]() { layersToVoxels(); });
     displayProcessTime("Layers to heightmap... ", [&]() { layersToHeightmap(); });
     displayProcessTime("Layers to implicit... ", [&]() { layersToImplicit(); });
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::implicitToVoxels()
@@ -188,13 +214,12 @@ void TerrainGenerationInterface::implicitToVoxels()
 
 void TerrainGenerationInterface::implicitToLayers()
 {
-    layerGrid->reset();
-    layerGrid->add(implicitTerrain.get());
+    layerGrid->fromImplicit(implicitTerrain.get());
 }
 
 void TerrainGenerationInterface::implicitToHeightmap()
 {
-    // ..?!
+    heightmap->fromImplicit(implicitTerrain.get());
 }
 
 void TerrainGenerationInterface::implicitToAll()
@@ -202,6 +227,7 @@ void TerrainGenerationInterface::implicitToAll()
     displayProcessTime("Implicit to heightmap... ", [&]() { implicitToHeightmap(); });
     displayProcessTime("Implicit to voxels... ", [&]() { implicitToVoxels(); });
     displayProcessTime("Implicit to layers... ", [&]() { implicitToLayers(); });
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, [[maybe_unused]] bool _displayParticles)
@@ -1134,7 +1160,7 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
             heightmapData[i * 4 + 0] = colorTextureOffset;
             heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
             heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
-            heightmapData[i * 4 + 3] = heights[i] / maxHeight; //1.0; //heightmap->heights[i] / maxHeight;
+            heightmapData[i * 4 + 3] = maxHeight > 0.f ? heights[i] / maxHeight : 0.f; //1.0; //heightmap->heights[i] / maxHeight;
         }
 
         glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, heightmap->getSizeX(), heightmap->getSizeY(), 0, GL_RGBA, GL_FLOAT, heightmapData);
@@ -1167,18 +1193,21 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                 this->heightmapMesh.display(GL_POINTS);
             }
         }
-        else if (mapMode == VOXEL_MODE) {
+        else if (mapMode == VOXEL_MODE || mapMode == IMPLICIT_MODE ||
+                 (mapMode == LAYER_MODE && smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES)) {
             if (this->voxelGrid == nullptr) {
                 std::cerr << "No voxel grid to display" << std::endl;
             } else {
                 GridF values;
                 meshCreationTime = timeIt([&]() {
-                    values = voxelGrid->getVoxelValues().meanSmooth(3, 3, 3, true);
+                    if (mapMode == IMPLICIT_MODE) values = implicitTerrain->getVoxelized();
+                    else if (mapMode == LAYER_MODE) values = layerGrid->getVoxelized();
+                    else values = voxelGrid->getVoxelValues();
                     // values.iterateParallel([&](size_t i) { values[i] = std::max(std::abs(values[i]), 0.f); });
-                    if (marchingCubeMesh.vertexArray.size() != values.size()) {
+                    if (marchingCubeMesh.vertexArray.size() != values.size() ||
+                        (!marchingCubeMesh.vertexArray.empty() && marchingCubeMesh.vertexArray.back() != values.getDimensions() - Vector3(1, 1, 1))) {
                         std::vector<Vector3> points(values.size());
                         values.iterateParallel([&](size_t i) {
-                            values[i] = (std::max(-3.f, std::min(3.f, values[i])) / 6.f) + 0.5;
                             points[i] = values.getCoordAsVector3(i);
                         });
                         marchingCubeMesh.useIndices = false;
@@ -1243,33 +1272,6 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                     layersMesh.update();
     //            }
                 this->layersMesh.display(GL_POINTS);
-            }
-        } else if (mapMode == IMPLICIT_MODE) {
-            if (this->implicitTerrain == nullptr) {
-                std::cerr << "No implicit terrain to display" << std::endl;
-            } else {
-                GridF values;
-                values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
-                implicitMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
-                implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
-                implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
-                implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
-                implicitMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
-                implicitMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-                implicitMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
-                implicitMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-                implicitMesh.shader->setFloat("heightFactor", heightFactor);
-                implicitMesh.display( GL_POINTS );
-                if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
-                    implicitMesh.shader->setBool("displayingIgnoredVoxels", true);
-                    implicitMesh.shader->setFloat("min_isolevel", -1000.f);
-                    implicitMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
-                    implicitMesh.display( GL_POINTS );
-                    implicitMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
-                    implicitMesh.shader->setFloat("max_isolevel",  1000.f);
-                    implicitMesh.display( GL_POINTS );
-                    implicitMesh.shader->setBool("displayingIgnoredVoxels", false);
-                }
             }
         }
     }, verbose);
