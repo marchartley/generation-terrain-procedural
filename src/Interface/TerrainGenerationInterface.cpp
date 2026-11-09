@@ -636,6 +636,7 @@ InterfaceUI* TerrainGenerationInterface::createGUI()
 
 void TerrainGenerationInterface::prepareShader([[maybe_unused]] bool reload)
 {
+    GlobalsGL::ContextScope contextScope;
     bool verbose = true;
 
     colorTexturesIndex = {
@@ -756,7 +757,9 @@ void TerrainGenerationInterface::prepareShader([[maybe_unused]] bool reload)
     //(edge cut by isosurface or totally in or out).
     //(cf. MarchingCubes.cpp)
 
+    lookupResources = GlobalsGL::Resources::create();
     GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+    lookupResources->textures.push_back(edgeTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, edgeTableTex);
@@ -777,6 +780,7 @@ void TerrainGenerationInterface::prepareShader([[maybe_unused]] bool reload)
     //(cf. MarchingCubes.cpp)
 
     glGenTextures(1, &triTableTex);
+    lookupResources->textures.push_back(triTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, triTableTex);
@@ -1064,6 +1068,7 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 
 void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
 {
+    GlobalsGL::ContextScope contextScope;
     const bool verbose = false;
     float maxHeight;
     float meshCreationTime = 0;

@@ -93,15 +93,17 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
         envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
     }
 
+    auto toolsConnected = std::make_shared<bool>(false);
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
+        GlobalsGL::ContextScope contextScope;
         for (auto& actionInterface : actionInterfaces) {
             actionInterface.second->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
         }
-        if (preloaded_heightmap == "") {
-           // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
-            terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
-        } else {
-            terrainGenerationInterface->createTerrainFromFile(preloaded_heightmap);
+        if (!terrainGenerationInterface->heightmap) {
+            const auto filename = preloaded_heightmap.empty()
+                ? "saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png"
+                : preloaded_heightmap;
+            terrainGenerationInterface->createTerrainFromFile(filename);
         }
 
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;
@@ -115,13 +117,15 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
             actionInterface.second->reloadShaders();
         }
 
+        if (*toolsConnected) return;
+        *toolsConnected = true;
         for (auto& actionInterface : this->actionInterfaces) {
             displayProcessTime("Updating interface '" + actionInterface.first + "'", [=]() {
                 actionInterface.second->hide();
 
                 QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
                     this->viewer->update();
-                    qApp->processEvents();
+                    // update() schedules painting without reentering initialization.
                 });
                 QObject::connect(this->viewer, &Viewer::mouseClickOnMap, actionInterface.second.get(), &ActionInterface::mouseClickedOnMapEvent);
                 QObject::connect(this->viewer, &Viewer::mouseMovedOnMap, actionInterface.second.get(), &ActionInterface::mouseMovedOnMapEvent);
@@ -129,20 +133,19 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
                 QObject::connect(this->viewer, &Viewer::mouseReleasedOnMap, actionInterface.second.get(), &ActionInterface::mouseReleasedOnMapEvent);
 
                 for (auto& otherActionInterface : this->actionInterfaces) {
-                    QObject::connect(actionInterface.second.get(), &ActionInterface::terrainUpdated, this, [&]() {
-                        QObject::blockSignals(true);
-                        displayProcessTime("Processing 'afterTerrainUpdate' from '" + otherActionInterface.first + "'... ", [&]() {
-                            otherActionInterface.second->afterTerrainUpdated();
-                        }, false);
-                        QObject::blockSignals(false);
-                        this->viewer->update();
+                    // Connections outlive this loop: capture the target by value.
+                    auto* target = otherActionInterface.second.get();
+                    QObject::connect(actionInterface.second.get(), &ActionInterface::terrainUpdated,
+                                     target, [this, target]() {
+                        QSignalBlocker blocker(target);
+                        target->afterTerrainUpdated();
+                        viewer->update();
                     });
-
-                    QObject::connect(actionInterface.second.get(), &ActionInterface::waterLevelChanged, this, [&](float newLevel) {
-                        QObject::blockSignals(true);
-                        otherActionInterface.second->afterWaterLevelChanged();
-                        QObject::blockSignals(false);
-                        this->viewer->update();
+                    QObject::connect(actionInterface.second.get(), &ActionInterface::waterLevelChanged,
+                                     target, [this, target](float) {
+                        QSignalBlocker blocker(target);
+                        target->afterWaterLevelChanged();
+                        viewer->update();
                     });
                 }
             });
@@ -163,7 +166,7 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
 
 
         this->openInterface(envObjectsInterface);
-    });
+    }, Qt::DirectConnection);
     viewer->installEventFilter(this);
     setupUi();
 }

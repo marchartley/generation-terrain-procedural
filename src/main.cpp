@@ -91,8 +91,6 @@ int main(int argc, char *argv[])
     glFormat.setSampleBuffers(true);
     glFormat.setDefaultFormat(glFormat);
     glFormat.setSwapInterval(1);
-    QGLWidget widget(glFormat);
-    widget.makeCurrent();
     #else
     QSurfaceFormat format;
     format.setRenderableType(QSurfaceFormat::OpenGL);

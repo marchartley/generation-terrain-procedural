@@ -5,6 +5,10 @@
 
 #include <QOpenGLFunctions_4_5_Compatibility>
 #include <QtWidgets>
+#include <QOpenGLWidget>
+#include <QPointer>
+#include <memory>
+#include <vector>
 #include <QOpenGLVersionFunctionsFactory>
 
 #define numVAOs 1000
@@ -12,6 +16,33 @@
 
 class GlobalsGL {
 public:
+    // GPU entry points use this scope; construction and CPU work need no context.
+    class ContextScope {
+    public:
+        ContextScope();
+        ~ContextScope();
+        ContextScope(const ContextScope&) = delete;
+        ContextScope& operator=(const ContextScope&) = delete;
+    private:
+        QPointer<QOpenGLContext> previous;
+        QSurface* previousSurface = nullptr;
+        bool switched = false;
+    };
+    // Shared leases prevent copied meshes from double-deleting GPU objects.
+    // Each lease is also released before its context is destroyed.
+    struct Resources {
+        QPointer<QOpenGLContext> owner;
+        bool released = false;
+        QMetaObject::Connection destructionConnection;
+        std::vector<GLuint> programs, textures, buffers, arrays;
+        ~Resources();
+        void release();
+        static std::shared_ptr<Resources> create();
+        static void releaseContext(QOpenGLContext* context);
+    };
+    static void setViewer(QOpenGLWidget* viewer);
+    static bool isReady();
+    static QPointer<QOpenGLWidget> viewer;
     static QOpenGLContext *_context;
     static QOpenGLContext *context();
     static QOpenGLFunctions* _f;

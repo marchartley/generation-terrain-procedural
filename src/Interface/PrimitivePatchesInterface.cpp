@@ -31,6 +31,7 @@ PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
 
 void PrimitivePatchesInterface::display(const Vector3& camPos)
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->isVisible())
         return;
 
@@ -1757,6 +1758,7 @@ void PrimitivePatchesInterface::cleanPatch(ImplicitPatch *_patch)
 
 void PrimitivePatchesInterface::displayDebuggingVoxels()
 {
+    GlobalsGL::ContextScope contextScope;
     if (!this->selectedPatch())
         return;
     std::vector<float> isoValues = {0.9f, 0.5f, 0.2f};
@@ -1789,8 +1791,10 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
     //(edge cut by isosurface or totally in or out).
     //(cf. MarchingCubes.cpp)
 
+    auto lookupResources = GlobalsGL::Resources::create();
     GLuint edgeTableTex, triTableTex;
     GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+    lookupResources->textures.push_back(edgeTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, edgeTableTex);
@@ -1811,6 +1815,7 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
     //(cf. MarchingCubes.cpp)
 
     glGenTextures(1, &triTableTex);
+    lookupResources->textures.push_back(triTableTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, triTableTex);
