@@ -542,7 +542,7 @@ def on_key_press(event):
             paths_coll.set_linewidth(4.5)
 
             fig.canvas.draw_idle()
-            fig.savefig(f"snake-test-{iSnake}.png")
+            fig.savefig(f"snake-tests/snake-test-{iSnake}.png")
             print(f"Saved {iSnake}/{n}")
         paths_coll.set_linewidth(1.0)
         paths_coll.set_alpha(0.6)
@@ -1096,7 +1096,7 @@ def on_key_press(event):
             paths_coll.set_linewidth(4.5)
 
             fig.canvas.draw_idle()
-            fig.savefig(f"snake-test-{iSnake}.png")
+            fig.savefig(f"snake-tests/snake-test-{iSnake}.png")
             # plt.pause(1)
             print(f"Saved {iSnake}/{n}")
         paths_coll.set_linewidth(1.0)

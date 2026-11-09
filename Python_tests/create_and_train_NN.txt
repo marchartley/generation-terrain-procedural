@@ -22,6 +22,20 @@ python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset-features_undeformed/AB/ --name labels_to_terrain_features_undeformed --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --continue_train
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset-no_dendritic/AB/ --name labels_to_terrain_no_dendritic --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --continue_train
 
+
+python ~/generation-terrain-procedural/Python_tests/arrange_dataset_for_pix2pix.py /media/marc/Data/synthetic_terrains_dataset-using-saturation/
+python ~/codes/NN/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A /media/marc/Data/synthetic_terrains_dataset-using-saturation/features/ --fold_B /media/marc/Data/synthetic_terrains_dataset-using-saturation/heightmaps/ --fold_AB /media/marc/Data/synthetic_terrains_dataset-using-saturation/AB
+python ~/codes/NN/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset-using-saturation/AB/ --name labels_to_terrain_features_with_saturation --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --continue_train
+
+python ~/generation-terrain-procedural/Python_tests/arrange_dataset_for_pix2pix.py /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/
+python ~/codes/NN/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/features/ --fold_B /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/heightmaps/ --fold_AB /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/AB
+python ~/codes/NN/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/AB/ --name labels_to_terrain_features_with_saturation_volcano --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --continue_train
+
+python ~/codes/NN/BicycleGAN/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/AB/ --name labels_to_terrain_features_with_saturation_volcano--bicycleGAN --direction AtoB --display_id 1 --save_epoch_freq 1 --continue_train
+
+# SPADE requires to keep A and B datasets separated...
+python ~/codes/NN/SPADE/train.py --dataset_mode custom --dataroot /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/ --label_dir /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/features --image_dir /media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/heightmaps --no_instance --name labels_to_terrain_features_with_saturation_volcano--SPADE --save_epoch_freq 1 --continue_train
+
 sudo rmmod nvidia_uvm
 sudo modprobe nvidia_uvm
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py --input /media/marc/Data/NN\ Datasets/1/input_label.png --output /media/marc/Data/NN\ Datasets/1/result_height.png --name labels_to_terrain_pacific_graphics_2025_larger_reef --model pix2pix --direction AtoB --continue_train
@@ -58,3 +72,17 @@ python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A ./foldA/ --fold_B ./foldB/ --fold_AB ./foldAB
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot ./foldAB/ --name heightmap2textures_multiscale_A2B --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py --input ./testimg.png --output ./result.png --name heightmap2textures_multiscale_A2B --model pix2pix --direction AtoB
+
+
+
+
+
+python ~/codes/NN/pytorch-CycleGAN-and-pix2pix/test.py --dataroot /media/marc/Data/test_images/ --name labels_to_terrain_features_with_saturation_volcano --model pix2pix --direction AtoB --results_dir /media/marc/Data/test_images
+python ~/codes/NN/pytorch-CycleGAN-and-pix2pix/test.py --dataroot /media/marc/Data/test_images/ --name labels_to_terrain_features_with_saturation --model pix2pix --direction AtoB --results_dir /media/marc/Data/test_images
+
+python ~/codes/NN/BicycleGAN/test.py \
+    --dataroot /media/marc/Data/test_images/ \
+    --name labels_to_terrain_features_with_saturation_volcano--bicycleGAN \
+    --direction AtoB \
+    --results_dir /media/marc/Data/test_images \
+    --num_test 100000

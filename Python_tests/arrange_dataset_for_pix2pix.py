@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 import shutil
-from random import shuffle
+from random import shuffle, seed
 
 import pandas as pd
 import numpy as np
@@ -51,13 +51,13 @@ def moveToFolders(path):
     shuffle(sortedFiles)
     print(f"Arranging {path}")
     for i in range(len(sortedFiles)):
-        if i % 50 == 0:
+        if i % (len(sortedFiles) // 20) == 0:
             print(f"{i + 1} / {len(sortedFiles)}")
         previous_filename = sortedFiles[i][1]
         fileID = sortedFiles[i][0]
         newFilename = path + ("train" if i < trainLimit else "val" if i < valLimit else "test") + "/" + str(
             fileID) + ".png"
-        shutil.move(previous_filename, newFilename)
+        shutil.copyfile(previous_filename, newFilename)
 
 
 def main():
@@ -72,8 +72,11 @@ def main():
     pathDistortions = mainPath + "distortions/"
     os.makedirs(mainPath + "AB", exist_ok=True)
 
+    seed(42)
     moveToFolders(pathHeightmap)
+    seed(42)
     moveToFolders(pathFeatures)
+    seed(42)
     moveToFolders(pathDistortions)
 
 

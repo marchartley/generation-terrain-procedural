@@ -5,6 +5,8 @@
 #include <chrono>
 
 #include "Curves/CatmullRomSpline.h"
+#include "qdir.h"
+#include "qdiriterator.h"
 
 std::vector<std::string> split(const std::string& _str, std::string c)
 {

@@ -29,7 +29,7 @@ outputImageDims = [256, 256]
 singleDistortionMap = np.zeros((outputImageDims[0], outputImageDims[1], 2)) #: List[List[Vector2D]] = []
 fig, fig2 = None, None
 axesResults = []
-dataset_path = "/media/marc/Data/synthetic_terrains_dataset-no_dendritic/"
+dataset_path = "/media/marc/Data/synthetic_terrains_dataset-using-saturation-volcano/"
 
 
 def numpyIndicesToCoords(_x: int, _y: int, sizeX: int, sizeY: int) -> Tuple[float, float] :
@@ -457,7 +457,7 @@ def getRandom(mini: float, maxi: float) -> float:
 
 
 class IslandSketch:
-    def __init__(self, topViewAx: plt.Axes, profileAx: plt.Axes, distortionAx: plt.Axes, resistanceAx: plt.Axes, waterLevelSlider: Slider, coralMinMaxSlider: RangeSlider, subsidenceSlider: Slider, names: List[str], colors: List[str]):
+    def __init__(self, topViewAx: plt.Axes, profileAx: plt.Axes, distortionAx: plt.Axes, resistanceAx: plt.Axes, waterLevelSlider: Slider, coralMinMaxSlider: RangeSlider, subsidenceSlider: Slider, erosionSlider: Slider, names: List[str], colors: List[str]):
         self.topView = SketchManagement(topViewAx)
         # self.sketches = [
         #     # "islandBorders":
@@ -491,14 +491,18 @@ class IslandSketch:
             self.update()
         def updateSubsidence(val: float):
             self.subsidenceFactor = val
+        def updateErosion(val: float):
+            self.erosionFactor = val
         def updateCoralMinMax(valMinMax: Tuple[float, float]):
             self.coralMin, self.coralMax = valMinMax
 
         waterLevelSlider.on_changed(updateWaterLevel)
         subsidenceSlider.on_changed(updateSubsidence)
+        erosionSlider.on_changed(updateErosion)
         coralMinMaxSlider.on_changed(updateCoralMinMax)
         self.waterLevel = waterLevelSlider.val
         self.subsidenceFactor = subsidenceSlider.val
+        self.erosionFactor = erosionSlider.val
         self.coralMin, self.coralMax = coralMinMaxSlider.val
 
         self.sequences = [
@@ -726,26 +730,29 @@ class IslandSketch:
         for i in range(nbSamples):
             if randomize_parameters:
                 subsidence = getRandom(0.1, 1.0)
+                erosion_rate = getRandom(0.1, 1.0)
             else:
                 subsidence = self.subsidenceFactor
+                erosion_rate = self.erosionFactor
+            erosion_samples = int(erosion_rate * 100)
             _resistanceMap = np.clip(resistanceMap + np.array([[n.noise2(x / 30, y / 30 + 100 * i) * 0.1 * n.noise2(x / 100 + 100 * i, y / 100 + 500 * i) for x in range(heightmap.shape[0])] for y in range(heightmap.shape[1])]), 0.0, 1.0)
             _heightmap = np.array(heightmap)
-            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap*0+1, iterations=100, talus_angle=1.0, erosion_factor=0.2)
-            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=1.0, solubility=0.99, evaporation=0.05, capacity=1.0)
-            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.1)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap*0+1, iterations=erosion_samples, talus_angle=1.0, erosion_factor=0.2)
+            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=erosion_samples // 2, water=1.0, solubility=0.99, evaporation=0.05, capacity=1.0)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=erosion_samples, talus_angle=0.5, erosion_factor=0.1)
             _features = np.array(features)
             for x in range(features.shape[0]):
                 for y in range(features.shape[1]):
-                    _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2], L=subsidence*.5)
+                    _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2], L=subsidence*.5, S=erosion_rate)
 
             _distances = deform_image(distances, _singleDistortionMap * (1.0 - _resistanceMap).reshape((256, 256, 1)), scale = 128.0)
             terrain = _heightmap
             if self.includeCoralSimulation:
                 _heightmap, terrain, corals = coralize_my_island.method2Create(_heightmap, _distances, subsidence, waterLevel)
             if self.includeDentriticSimulation:
-                _heightmap = self.fractal_erosion(_heightmap, _resistanceMap, radialFreq=getRandom(3.0, 6.0), strength=getRandom(15.0, 20.0), randomnessStrength=getRandom(1.0, 3.0))
-            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=0.5, solubility=0.99, evaporation=0.05, capacity=1.0)
-            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.01)
+                _heightmap = self.fractal_erosion(_heightmap, _resistanceMap, radialFreq=getRandom(3.0, 6.0), strength=getRandom(15.0, 20.0) * erosion_rate, randomnessStrength=getRandom(1.0, 3.0))
+            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=erosion_samples // 2, water=0.5, solubility=0.99, evaporation=0.05, capacity=1.0)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=erosion_samples, talus_angle=0.5, erosion_factor=0.01)
             _heightmap = coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0))
             # return _heightmap, _features, distortionsToRGB(distortions)
 
@@ -1180,9 +1187,18 @@ def main():
         valinit=0.8,
         orientation="vertical"
     )
+    axErosion = fig.add_axes((0.98, 0.2, 0.0225, 0.68))
+    erosion_slider = Slider(
+        ax=axErosion,
+        label="Erosion\nfactor",
+        valmin=0,
+        valmax=1,
+        valinit=1.0,
+        orientation="vertical"
+    )
 
     # islandSketch = IslandSketch(topViewAx, sideViewAx, topViewAx, sideViewAx, water_slider, coral_slider, subsid_slider, sketch_names, sketch_colors)
-    islandSketch = IslandSketch(topViewAx, sideViewAx, distortionsAx, resistanceAx, water_slider, coral_slider, subsid_slider, sketch_names, sketch_colors)
+    islandSketch = IslandSketch(topViewAx, sideViewAx, distortionsAx, resistanceAx, water_slider, coral_slider, subsid_slider, erosion_slider, sketch_names, sketch_colors)
 
 
     buttons: List[Button] = []
@@ -1275,7 +1291,7 @@ def main():
 
     def genDataset():
         print(f"Generating dataset at {dataset_path}heightmaps/")
-        createDatasetOfRandomIslands(islandSketch, 1000, use_user_input=False, deform_features_with_wind = True)
+        createDatasetOfRandomIslands(islandSketch, 1000, use_user_input=True, deform_features_with_wind = True)
 
 
     distance_button.on_clicked(lambda e: genIsland()) # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut))

@@ -1,7 +1,7 @@
 #ifndef TOPOMAP_H
 #define TOPOMAP_H
 
-#include <boost/graph/graph_concepts.hpp>
+// #include <boost/graph/graph_concepts.hpp>
 #include <vector>
 #include "Graph/Graph.h"
 

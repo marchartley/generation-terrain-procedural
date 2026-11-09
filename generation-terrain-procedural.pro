@@ -49,7 +49,10 @@ QMAKE_LFLAGS_RELEASE -= -Wl,-s
 
 
 unix {
-    LIBS *= -lQGLViewer-qt5
+    LIBS += -L/usr/local/lib
+    QMAKE_RPATHDIR += /usr/local/lib
+
+    LIBS *= -lQGLViewer-qt6
     LIBS *= -lpng
 
     INCLUDEPATH *= src/third-party/glad/include
