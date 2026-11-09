@@ -54,6 +54,18 @@ Viewer::~Viewer()
 }
 
 void Viewer::init() {
+    auto* context = QOpenGLContext::currentContext();
+    if (!context)
+        qFatal("Viewer initialization requires a current context");
+
+    qDebug() << "Context valid: " << context->isValid();
+    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
+    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
+    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
+    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
+    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+    GlobalsGL::f();
+
     restoreStateFromFile();
     setSceneRadius(500.0);
     glEnable(GL_LIGHT0);
@@ -151,7 +163,7 @@ void Viewer::draw() {
 
 void Viewer::saveScreenshotPNG(const std::string& filename)
 {
-    QImage img = this->grabFrameBuffer();
+    QImage img = this->grabFramebuffer();
     img.save(QString::fromStdString(filename));
     return;
     int w = this->camera()->screenWidth();

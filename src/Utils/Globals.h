@@ -1,16 +1,11 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include "Utils/stb_image.h"
-#include "Utils/stb_image_write.h"
-#include "Utils/stb_image_resize.h"
 #define useModernOpenGL 1
 
 #include <QOpenGLFunctions_4_5_Compatibility>
 #include <QtWidgets>
-#include <fstream>
-#include <iostream>
-#include "Utils/Random.h"
+#include <QOpenGLVersionFunctionsFactory>
 
 #define numVAOs 1000
 #define numVBOs 4000
@@ -21,7 +16,8 @@ public:
     static QOpenGLContext *context();
     static QOpenGLFunctions* _f;
 //    static QOpenGLFunctions_4_6_Compatibility *f(); // Alias for ef()
-    static QOpenGLFunctions_4_5_Compatibility *f(); // Alias for ef()
+    // static QOpenGLFunctions_4_5_Compatibility *f(); // Alias for ef()
+    static QOpenGLFunctions_4_5_Compatibility* f();
     static QOpenGLExtraFunctions* _ef;
     static QOpenGLFunctions_4_5_Compatibility* f45();
     static QOpenGLFunctions_4_5_Compatibility* _ef45;

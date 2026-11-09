@@ -1,4 +1,5 @@
 #include "Utils/Globals.h"
+#include "Utils/Random.h"
 
 #include <string>
 #include <fstream>
@@ -25,6 +26,8 @@ QOpenGLContext* GlobalsGL::context() {
         GlobalsGL::_context = QOpenGLContext::currentContext();
     return GlobalsGL::_context;
 }
+
+// QOpenGLFunctions_4_5_Compatibility
 QOpenGLFunctions_4_5_Compatibility* GlobalsGL::f() {
     return f45();
 }
@@ -35,12 +38,17 @@ QOpenGLFunctions_4_5_Compatibility* GlobalsGL::f() {
 QOpenGLFunctions_4_5_Compatibility *GlobalsGL::f45()
 {
     if (GlobalsGL::_ef45 == nullptr) {
-        _ef45 = GlobalsGL::context()->versionFunctions<QOpenGLFunctions_4_5_Compatibility>();
-        if (_ef45) {
-            _ef45->initializeOpenGLFunctions();
-        } else {
-            std::cerr << "No access to GL 4.5 functions" << std::endl;
-        }
+        auto* ctx = QOpenGLContext::currentContext();
+        if (!ctx)
+            qFatal("OpenGL operation requires a current context");
+
+        GlobalsGL::_ef45 = QOpenGLVersionFunctionsFactory::
+            get<QOpenGLFunctions_4_5_Compatibility>(ctx);
+
+        if (!GlobalsGL::_ef45)
+            qFatal("OpenGL 4.5 compatibility profile unavailable");
+
+        GlobalsGL::_ef45->initializeOpenGLFunctions();
 //        std::cout << _ef45->initializeOpenGLFunctions() << std::endl;
 //        _ef45->glInvalidateFramebuffer();
 //        GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();

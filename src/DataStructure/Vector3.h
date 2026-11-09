@@ -1,7 +1,7 @@
 #ifndef VECTOR3_H
 #define VECTOR3_H
 
-#include "Utils/Globals.h"
+#include "Utils/Random.h"
 #include <iostream>
 #include <vector>
 #include <QGLViewer/vec.h>
@@ -220,24 +220,24 @@ public:
 
 
 
-    inline static constexpr Vec3 white      { T(1), T(1), T(1) };
-    inline static constexpr Vec3 gray       { T(.5), T(.5), T(.5)};
-    inline static constexpr Vec3 black      { T(0), T(0), T(0) };
-    inline static constexpr Vec3 red        { T(1), T(0), T(0) };
-    inline static constexpr Vec3 green      { T(0), T(1), T(0) };
-    inline static constexpr Vec3 blue       { T(0), T(0), T(1) };
-    inline static constexpr Vec3 yellow     { T(1), T(1), T(0) };
-    inline static constexpr Vec3 magenta    { T(1), T(0), T(1) };
-    inline static constexpr Vec3 cyan       { T(0), T(1), T(1) };
-    inline static constexpr Vec3 orange     { T(1.0), T(0.5), T(0.0)};
-    inline static constexpr Vec3 pink       { T(1.0), T(0.0), T(0.5)};
-    inline static constexpr Vec3 indigo     { T(0.5), T(0.0), T(1.0)};
-    inline static constexpr Vec3 azure      { T(0.0), T(0.5), T(1.0)};
-    inline static constexpr Vec3 lime       { T(0.0), T(1.0), T(0.5)};
-    inline static constexpr Vec3 chartreuse { T(0.5), T(1.0), T(0.0)};
+    static const Vec3 white;
+    static const Vec3 gray;
+    static const Vec3 black;
+    static const Vec3 red;
+    static const Vec3 green;
+    static const Vec3 blue;
+    static const Vec3 yellow;
+    static const Vec3 magenta;
+    static const Vec3 cyan;
+    static const Vec3 orange;
+    static const Vec3 pink;
+    static const Vec3 indigo;
+    static const Vec3 azure;
+    static const Vec3 lime;
+    static const Vec3 chartreuse;
 
-    inline static constexpr Vec3 invalid    { T(0), T(0), T(0), false };
-    inline static constexpr Vec3 origin     { T(0), T(0), T(0) };
+    static const Vec3 invalid;
+    static const Vec3 origin;
 
 // protected:
     T v[3];
@@ -1234,5 +1234,50 @@ float Vec3<T>::distanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, c
     return std::abs(Vec3::signedDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
 }
 
+
+
+
+
+
+
+
+
+
+
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::white      { T(1), T(1), T(1) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::gray       { T(.5), T(.5), T(.5)};
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::black      { T(0), T(0), T(0) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::red        { T(1), T(0), T(0) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::green      { T(0), T(1), T(0) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::blue       { T(0), T(0), T(1) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::yellow     { T(1), T(1), T(0) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::magenta    { T(1), T(0), T(1) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::cyan       { T(0), T(1), T(1) };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::orange     { T(1.0), T(0.5), T(0.0)};
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::pink       { T(1.0), T(0.0), T(0.5)};
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::indigo     { T(0.5), T(0.0), T(1.0)};
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::azure      { T(0.0), T(0.5), T(1.0)};
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::lime       { T(0.0), T(1.0), T(0.5)};
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::chartreuse { T(0.5), T(1.0), T(0.0)};
+
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::invalid    { T(0), T(0), T(0), false };
+template <class T>
+inline constexpr Vec3<T> Vec3<T>::origin     { T(0), T(0), T(0) };
 
 #endif // VECTOR3_H
