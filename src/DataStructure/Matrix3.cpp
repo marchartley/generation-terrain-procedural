@@ -1,5 +1,6 @@
 #include "DataStructure/Matrix3.h"
 //#include "Utils/stb_image.h"
+#include "DataStructure/Image.h"
 #include "Utils/Skeletonize.h"
 #include <queue>
 #include <sstream>

@@ -84,6 +84,7 @@ public Q_SLOTS:
     InterfaceUI* terrainViewerUI();
 
 public:
+    std::shared_ptr<GlobalsGL::Resources> lookupResources;
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
 

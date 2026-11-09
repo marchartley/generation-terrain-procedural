@@ -1,4 +1,5 @@
 #include "ImageData.h"
+#include "qpainter.h"
 
 
 PlotImageData::PlotImageData() : PlotImageData(GridV3())

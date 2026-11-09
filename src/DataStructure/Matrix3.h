@@ -1844,8 +1844,8 @@ template <class T>
 Matrix3<T> Matrix3<T>::laplacian() const
 {
     Matrix3 returningGrid = *this;
-    this->raiseErrorOnBadCoord = false;
-    this->defaultValueOnBadCoord = T();
+    // this->raiseErrorOnBadCoord = false;
+    // this->defaultValueOnBadCoord = T();
     iterateParallel([&](int x, int y, int z) {
         T val = T();
         val += this->at(x    , y    , z + 1);
@@ -1872,7 +1872,7 @@ Matrix3<T> Matrix3<T>::laplacian() const
             }
         }
     }*/
-    this->raiseErrorOnBadCoord = true;
+    // this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
 

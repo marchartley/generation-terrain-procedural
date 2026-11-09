@@ -316,14 +316,14 @@ def addResistance(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, positi
 #             # plt.show()
 def main():
     parser = argparse.ArgumentParser(description="Program to increase the dataset of radial islands.")
-    parser.add_argument('path', nargs='?', default='/media/marc/Data/synthetic_terrains_dataset/', help='Path of the dataset')
+    parser.add_argument('path', nargs='?', default='/media/marc/Data/synthetic_terrains_dataset-using-saturation/', help='Path of the dataset')
     args = parser.parse_args()
 
     dataset_folder = args.path
-    heightmaps_folder = dataset_folder + "heightmaps/"
-    features_folder = dataset_folder + "features/"
-    distortions_folder = dataset_folder + "distortions/"
-    resistance_folder = dataset_folder + "resistance/"
+    heightmaps_folder = dataset_folder + "/heightmaps/"
+    features_folder = dataset_folder + "/features/"
+    distortions_folder = dataset_folder + "/distortions/"
+    resistance_folder = dataset_folder + "/resistance/"
 
     allHeightmaps = glob.glob(heightmaps_folder + "*.png")
 
@@ -422,9 +422,9 @@ def main():
             for i, res in enumerate(results):
                 base_name = nbToAlpha(iTransfoCombi) + "_" + original_filename
                 res.rotate(0).save(folders[i] + "a_" + base_name)
-                res.rotate(90).save(folders[i] + "b_" + base_name)
-                res.rotate(180).save(folders[i] + "c_" + base_name)
-                res.rotate(270).save(folders[i] + "d_" + base_name)
+                # res.rotate(90).save(folders[i] + "b_" + base_name)
+                # res.rotate(180).save(folders[i] + "c_" + base_name)
+                # res.rotate(270).save(folders[i] + "d_" + base_name)
 
 
 if __name__ == "__main__":

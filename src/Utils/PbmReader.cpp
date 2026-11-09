@@ -1,5 +1,6 @@
 #include "PbmReader.h"
 
+#include <fstream>
 
 std::string readLineAndIgnoreComments(std::ifstream& file) {
     std::string line;

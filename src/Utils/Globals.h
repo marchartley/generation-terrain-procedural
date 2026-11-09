@@ -1,27 +1,54 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include "Utils/stb_image.h"
-#include "Utils/stb_image_write.h"
-#include "Utils/stb_image_resize.h"
 #define useModernOpenGL 1
 
 #include <QOpenGLFunctions_4_5_Compatibility>
 #include <QtWidgets>
-#include <fstream>
-#include <iostream>
-#include "Utils/Random.h"
+#include <QOpenGLWidget>
+#include <QPointer>
+#include <memory>
+#include <vector>
+#include <QOpenGLVersionFunctionsFactory>
 
 #define numVAOs 1000
 #define numVBOs 4000
 
 class GlobalsGL {
 public:
+    // GPU entry points use this scope; construction and CPU work need no context.
+    class ContextScope {
+    public:
+        ContextScope();
+        ~ContextScope();
+        ContextScope(const ContextScope&) = delete;
+        ContextScope& operator=(const ContextScope&) = delete;
+    private:
+        QPointer<QOpenGLContext> previous;
+        QSurface* previousSurface = nullptr;
+        bool switched = false;
+    };
+    // Shared leases prevent copied meshes from double-deleting GPU objects.
+    // Each lease is also released before its context is destroyed.
+    struct Resources {
+        QPointer<QOpenGLContext> owner;
+        bool released = false;
+        QMetaObject::Connection destructionConnection;
+        std::vector<GLuint> programs, textures, buffers, arrays;
+        ~Resources();
+        void release();
+        static std::shared_ptr<Resources> create();
+        static void releaseContext(QOpenGLContext* context);
+    };
+    static void setViewer(QOpenGLWidget* viewer);
+    static bool isReady();
+    static QPointer<QOpenGLWidget> viewer;
     static QOpenGLContext *_context;
     static QOpenGLContext *context();
     static QOpenGLFunctions* _f;
 //    static QOpenGLFunctions_4_6_Compatibility *f(); // Alias for ef()
-    static QOpenGLFunctions_4_5_Compatibility *f(); // Alias for ef()
+    // static QOpenGLFunctions_4_5_Compatibility *f(); // Alias for ef()
+    static QOpenGLFunctions_4_5_Compatibility* f();
     static QOpenGLExtraFunctions* _ef;
     static QOpenGLFunctions_4_5_Compatibility* f45();
     static QOpenGLFunctions_4_5_Compatibility* _ef45;

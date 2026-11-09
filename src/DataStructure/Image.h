@@ -2,10 +2,13 @@
 #define IMAGE_H
 
 #include <png.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include "DataStructure/Matrix3.h"
+
+
+#include "Utils/stb_image.h"
+#include "Utils/stb_image_write.h"
+#include "Utils/stb_image_resize.h"
 
 class Image {
 private:
