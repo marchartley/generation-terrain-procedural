@@ -15,6 +15,6 @@ void main(void)
 {
     if (!gl_FrontFacing && cullFace)
         discard;
-    fragColor = (length(vColor) > 0 ? vec4(vColor, color.a) : color); // Use vertex color if possible, but keep alpha value
+    fragColor = (dot(vColor, vColor) > 0 ? vec4(vColor, color.a) : color); // Use vertex color if possible, but keep alpha value
 //    fragColor = color;
 }

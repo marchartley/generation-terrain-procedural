@@ -107,6 +107,7 @@ uniform vec3 clipPlaneDirection;
 
 uniform float waterRelativeHeight = 0.0;
 uniform float heightFactor;
+uniform vec3 terrainDimensions = vec3(0);
 
 uniform vec3 subterrainOffset = vec3(0, 0, 0);
 uniform float subterrainScale = 1.0;
@@ -273,68 +274,59 @@ float wyvill(float x) {
     return pow((1 - pow(x, 2)), 3);
 }
 
+// A fixed stratified kernel avoids hundreds of fractal-noise evaluations per
+// fragment. Per-fragment phase rotation decorrelates the twenty soft-shadow rays.
 float computeShadowOcclusion(vec3 pos) {
-    vec3 texSize = vec3(textureSize(dataFieldTex, 0));
-
-    float occlusions = 0;
-    int evaluatingLights = 1;
-    int nbSamples = 20;
-    for (int iLight = 0; iLight < evaluatingLights; iLight++) {
-        for (int iSample = 0; iSample < nbSamples; iSample++) {
-            vec3 seed = lights[iLight].position + pos + iSample + iLight;
-            vec3 toLight = lights[iLight].position - pos;
-            vec3 dir = normalize(normalize(toLight * vec3(1, 1, 1.0/heightFactor)) + (fbm3ToVec3(seed) - vec3(.5f)) * 0.10);
-            vec3 currentPosition = pos + (ceil(abs(dir)) * sign(dir) * ((2.f * iSample / float(nbSamples)) + 1.f));
-            // int try = 0;
-            vec3 offset = grealNormal * (fbm3ToVec3(grealNormal + seed) * 0.1f);
-            if (dot(offset, grealNormal) <= 0) {
-                offset *= -1;
+    ivec3 size = textureSize(dataFieldTex, 0);
+    if (any(lessThanEqual(size, ivec3(0)))) return 0.0;
+    const int rayCount = 20;
+    const float goldenAngle = 2.39996323;
+    float phase = hash(pos.xy + pos.z) * 6.28318531;
+    vec3 toLight = (lights[0].position - pos) * vec3(1, 1, 1.0 / max(abs(heightFactor), .0001));
+    if (dot(toLight, toLight) < .000001) return 0.0;
+    vec3 mainDirection = normalize(toLight);
+    vec3 tangent = normalize(cross(mainDirection, abs(mainDirection.z) < .99 ? vec3(0,0,1) : vec3(0,1,0)));
+    vec3 bitangent = cross(mainDirection, tangent);
+    float occlusions = 0.0;
+    int maximumSteps = size.x + size.y + size.z + 3;
+    for (int ray = 0; ray < rayCount; ++ray) {
+        float angle = phase + goldenAngle * float(ray);
+        float radius = .025 * sqrt((float(ray) + .5) / float(rayCount));
+        vec3 direction = normalize(mainDirection + radius * (cos(angle) * tangent + sin(angle) * bitangent));
+        vec3 normal = dot(grealNormal, grealNormal) > .000001 ? normalize(grealNormal) : mainDirection;
+        vec3 origin = pos + normal * .75 + direction * .25;
+        ivec3 cell = ivec3(floor(origin));
+        ivec3 stepDirection = ivec3(sign(direction));
+        vec3 delta = 1.0 / max(abs(direction), vec3(.000001));
+        vec3 nextBoundary = vec3(cell) + step(vec3(0), direction);
+        vec3 travel = abs(nextBoundary - origin) * delta;
+        // A zero direction never crosses that axis's boundary.
+        if (abs(direction.x) < .000001) travel.x = 1e30;
+        if (abs(direction.y) < .000001) travel.y = 1e30;
+        if (abs(direction.z) < .000001) travel.z = 1e30;
+        for (int iteration = 0; iteration < maximumSteps; ++iteration) {
+            if (any(lessThan(cell, ivec3(0))) || any(greaterThanEqual(cell, size))) break;
+            if (texelFetch(dataFieldTex, cell, 0).a > .6) {
+                occlusions += 1.0;
+                break;
             }
-            currentPosition += offset;
-            vec3 stepSizes = vec3(1) / dir;
-            float tMaxX = (dir.x > 0) ? (ceil(currentPosition.x) - currentPosition.x) / dir.x :
-                              (currentPosition.x - floor(currentPosition.x)) / (-dir.x);
-            float tMaxY = (dir.y > 0) ? (ceil(currentPosition.y) - currentPosition.y) / dir.y :
-                          (currentPosition.y - floor(currentPosition.y)) / (-dir.y);
-            float tMaxZ = (dir.z > 0) ? (ceil(currentPosition.z) - currentPosition.z) / dir.z :
-                          (currentPosition.z - floor(currentPosition.z)) / (-dir.z);
-
-            // Calculate steps in each axis based on stepSizes
-            float tDeltaX = abs(stepSizes.x * dir.x);
-            float tDeltaY = abs(stepSizes.y * dir.y);
-            float tDeltaZ = abs(stepSizes.z * dir.z);
-
-            while (0 <= currentPosition.x && currentPosition.x < texSize.x && 0 <= currentPosition.y && currentPosition.y < texSize.y && 0 <= currentPosition.z && currentPosition.z < texSize.z) {
-                if (texture(dataFieldTex, round(currentPosition) / texSize).a > 0.6) {
-                    occlusions += 1.0 * length(lights[iLight].diffuse);
-                    break;
-                }
-
-                if (tMaxX < tMaxY && tMaxX < tMaxZ) {
-                    currentPosition.x += dir.x;
-                    tMaxX += tDeltaX;
-                } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
-                    currentPosition.y += dir.y;
-                    tMaxY += tDeltaY;
-                } else {
-                    currentPosition.z += dir.z;
-                    tMaxZ += tDeltaZ;
-                }
+            if (travel.x < travel.y && travel.x < travel.z) {
+                cell.x += stepDirection.x; travel.x += delta.x;
+            } else if (travel.y < travel.z) {
+                cell.y += stepDirection.y; travel.y += delta.y;
+            } else {
+                cell.z += stepDirection.z; travel.z += delta.z;
             }
         }
     }
-    float total = 0;
-    for (int i = 0; i < evaluatingLights; i++) {
-        total += nbSamples * length(lights[i].diffuse);
-    }
-    return occlusions / total;
+    return occlusions / float(rayCount);
 }
 
 void main(void)
 {
+    fragColor = vec4(0.0);
     /*fragColor = vec4(vec3(texture(heightmapFieldTex, ginitialVertPos.xy / vec2(textureSize(heightmapFieldTex, 0))).a), 1.0);
     return;*/
-
 
     if (clipPlaneActive) {
         if (dot((ginitialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
@@ -366,7 +358,7 @@ void main(void)
     vec3 cam_pos = vec4(mv_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
     vec3 realFragmentPosition = (ginitialVertPos.xyz / vec3(subterrainScale, subterrainScale, 1.0)) + subterrainOffset;
-    vec3 dataTexSize = textureSize(dataFieldTex, 0);
+    vec3 dataTexSize = terrainDimensions.z > 0.0 ? terrainDimensions : vec3(textureSize(dataFieldTex, 0));
 
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     vec2 fbmWrap = clamp(ginitialVertPos.xy + 2.0 * (fbm3ToVec2(realFragmentPosition) - vec2(.5, .5)) * 5.0 * subterrainScale, vec2(0.51, 0.51), texSize - vec2(0.51, 0.51)) - ginitialVertPos.xy;
@@ -408,9 +400,10 @@ void main(void)
         vec3 yaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 zaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 normalMap = (TBNx * xaxis * blending.x + TBNy * yaxis * blending.y + TBNz * zaxis * blending.z);
-        N = vec4(transpose(inverse(mv_matrix)) * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
+        N = vec4(norm_matrix * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
     }
 
+    N = dot(N, N) > 1e-8 ? normalize(N) : varyingNormal;
     float upValue = 1.0; // clamp(dot(normalize(varyingNormal), normalize(vec3(0.0, 0.0, 1.0) /*+ fbm3ToVec3(ginitialVertPos) * 0.5*/)), 0.0, 1.0);
     vec4 material_ambiant = (ground_material.ambiant * (1 - upValue) + grass_material.ambiant * upValue) * .8;
     vec4 material_diffuse = (ground_material.diffuse * (1 - upValue) + grass_material.diffuse * upValue) * .8;
@@ -436,6 +429,16 @@ void main(void)
 //    changeVal = 0.0;
 
     vec4 col = colorNull;
+    /*if (!displayAsComparisonTerrain && maxBiomesColorTextures > 0 && realBiomeColorValue < 1.0) {
+        vec3 weights = getTriPlanarBlend(varyingNormal);
+        vec2 tileSize = vec2(1.0 / float(maxBiomesColorTextures), 1.0);
+        vec2 offset = vec2(realBiomeColorValue, 0.0);
+        vec3 albedo = weights.x * texture(allBiomesColorTextures, offset + fract(realFragmentPosition.yz / 10.0) * tileSize * .99).rgb
+                    + weights.y * texture(allBiomesColorTextures, offset + fract(realFragmentPosition.xz / 10.0) * tileSize * .99).rgb
+                    + weights.z * texture(allBiomesColorTextures, offset + fract(realFragmentPosition.xy / 10.0) * tileSize * .99).rgb;
+        col.rgb *= clamp(albedo * 2.0, vec3(.35), vec3(1.6));
+    }*/
+
 //    vec4 col = mix(colorErod, colorDepo, (changeVal + 1.0) / 2.0);
 //    col = mix(col, colorNull, clamp(1.0 - abs(changeVal), 0.0, 1.0));
 
@@ -451,7 +454,7 @@ void main(void)
         vec3 R = reflect(-L, N);
         vec3 H = normalize(varyingHalfH);
         float cosTheta = dot(L, N);
-        float cosPhi = dot(H, N);
+        float cosPhi = clamp(dot(H, N), 0.0, 1.0);
 
         float lumin = 1.0;
         if (isSpotlight) {
