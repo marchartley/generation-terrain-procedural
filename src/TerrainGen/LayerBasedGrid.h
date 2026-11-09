@@ -51,7 +51,6 @@ public:
     Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
 
     std::pair<GridI, GridF> getMaterialAndHeightsGrid();
-    GridF getLayerTopHeights();
 
     virtual GridV3 getNormals();
 
@@ -98,12 +97,6 @@ public:
     Matrix3<std::vector<std::pair<TerrainTypes, float>>>& getLayers() { return this->layers; }
 protected:
     std::pair<GridI, GridF > _cachedMaterialAndHeights;
-    Matrix3<std::vector<std::pair<TerrainTypes, float>>> _materialLayersSnapshot;
-    GridF _cachedLayerTops;
-    mutable Matrix3<std::vector<std::pair<TerrainTypes, float>>> _fieldLayersSnapshot;
-    mutable GridF _sampledField;
-    mutable Vector3 _sampledScale = Vector3::invalid;
-    GridF sampledField(const Vector3& extent, const Vector3& scale) const;
 
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> previousState;

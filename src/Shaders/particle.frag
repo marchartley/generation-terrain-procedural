@@ -29,10 +29,7 @@ void main(void)
 //        }
 //    }
 
-    vec2 radial = uv * 2.0 - 1.0;
-    float radiusSquared = dot(radial, radial);
-    if (radiusSquared >= 1.0) discard;
-    float alpha = 1.0 - sqrt(radiusSquared);
+    float alpha = clamp(1.0 - length((uv * 2.) - 1.0), 0.0, 1.0);
     fragColor = vec4(particleColor.xyz, alpha);
 
 }

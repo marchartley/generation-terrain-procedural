@@ -38,7 +38,6 @@ uniform PositionalLight lights[nbLights];
 
 void main(void)
 {
-    fragColor = vec4(0.0);
     if (!gl_FrontFacing && cullFace)
         discard;
 

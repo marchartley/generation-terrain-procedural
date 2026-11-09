@@ -105,7 +105,7 @@ void LayerBasedGrid::reorderLayers()
 //                if (densA > 0.f && densB > 0.f) { // If it's AIR or WATER, don't do anything, I guess
                 if ((isIn(stack[i].first, std::vector<TerrainTypes>{TerrainTypes::SAND, TerrainTypes::DIRT}) ||
                      isIn(stack[i+1].first, std::vector<TerrainTypes>{TerrainTypes::SAND, TerrainTypes::DIRT})) &&
-                        ((LayerBasedGrid::invisibleLayers.count(stack[i].first) != 0) || (LayerBasedGrid::invisibleLayers.count(stack[i+1].first) != 0))) {
+                        (isIn(stack[i].first, LayerBasedGrid::invisibleLayers) || isIn(stack[i+1].first, LayerBasedGrid::invisibleLayers))) {
                     float densA = LayerBasedGrid::densityFromMaterial(stack[i].first);
                     float densB = LayerBasedGrid::densityFromMaterial(stack[i + 1].first);
                     if (densA < densB) {
@@ -137,7 +137,7 @@ float LayerBasedGrid::getSizeZ() const
         for (size_t i = 0; i < stack.size() - 1; i++) {
             height += stack[i].second;
         }
-        if ((LayerBasedGrid::invisibleLayers.count(stack.back().first) == 0)) { // != TerrainTypes::AIR && stack.back().first != TerrainTypes::WATER) {
+        if (!isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) { // != TerrainTypes::AIR && stack.back().first != TerrainTypes::WATER) {
             height += stack.back().second;
         }
         maxHeight = std::max(maxHeight, height);
@@ -156,7 +156,7 @@ float LayerBasedGrid::getHeight(float x, float y)
     for (int i = materials.size() - 1; i >= 0; i--) {
         auto [mat, height] = materials[i];
         if (!startCounting)
-            startCounting = (LayerBasedGrid::invisibleLayers.count(mat) == 0); //(mat != AIR && mat != WATER);
+            startCounting = !isIn(mat, LayerBasedGrid::invisibleLayers); //(mat != AIR && mat != WATER);
         if (startCounting) {
             currentHeight += height;
         }
@@ -235,7 +235,7 @@ void LayerBasedGrid::fromImplicit(ImplicitPatch* implicitTerrain)
         TerrainTypes selected = SAND;
         float greatest = 0.f;
         for (const auto& [material, amount] : materialSource->getMaterials(p)) {
-            if ((LayerBasedGrid::invisibleLayers.count(material) == 0) && amount > greatest) {
+            if (!isIn(material, invisibleLayers) && amount > greatest) {
                 selected = material;
                 greatest = amount;
             }
@@ -293,13 +293,13 @@ float LayerBasedGrid::sampleSignedField(const Vector3& pos) const
         if (stack.empty()) return -std::max(1.f, pos.z());
         float height = 0.f;
         float distance = std::numeric_limits<float>::infinity();
-        bool inside = pos.z() < 0.f && (LayerBasedGrid::invisibleLayers.count(stack.front().first) == 0);
+        bool inside = pos.z() < 0.f && !isIn(stack.front().first, invisibleLayers);
         for (size_t i = 0; i < stack.size(); ++i) {
             const auto [material, thickness] = stack[i];
-            const bool solid = (LayerBasedGrid::invisibleLayers.count(material) == 0);
+            const bool solid = !isIn(material, invisibleLayers);
             if (height <= pos.z() && pos.z() < height + thickness) inside = solid;
             height += thickness;
-            const bool nextSolid = i + 1 < stack.size() && (LayerBasedGrid::invisibleLayers.count(stack[i + 1].first) == 0);
+            const bool nextSolid = i + 1 < stack.size() && !isIn(stack[i + 1].first, invisibleLayers);
             if (solid != nextSolid) distance = std::min(distance, std::abs(pos.z() - height));
         }
         if (!std::isfinite(distance)) return -1.f;
@@ -358,7 +358,7 @@ GridF LayerBasedGrid::voxelize(int fixedHeight, float kernelSize) const
 {
     const float depth = fixedHeight < 0 ? std::max(2.f, std::ceil(getSizeZ()) + 2.f) : fixedHeight;
     if (kernelSize <= 0.f)
-        return sampledField(Vector3(getSizeX(), getSizeY(), depth), Vector3(1, 1, 1));
+        return sampleLayerField(*this, Vector3(getSizeX(), getSizeY(), depth), Vector3(1, 1, 1));
     GridF values(TerrainSampling::sampleDimensions(Vector3(getSizeX(), getSizeY(), depth), Vector3(1, 1, 1)), -1.f);
     values.iterateParallel([&](int x, int y, int z) {
         if (kernelSize <= 0.f) {
@@ -366,7 +366,7 @@ GridF LayerBasedGrid::voxelize(int fixedHeight, float kernelSize) const
         } else {
             float solidVolume = 0.f;
             for (const auto& [material, volume] : getKernel(Vector3(x + .5f, y + .5f, z), kernelSize))
-                if ((LayerBasedGrid::invisibleLayers.count(material) == 0)) solidVolume += volume;
+                if (!isIn(material, invisibleLayers)) solidVolume += volume;
             values(x, y, z) = 2.f * solidVolume / (kernelSize * kernelSize * kernelSize) - 1.f;
         }
     });
@@ -374,25 +374,11 @@ GridF LayerBasedGrid::voxelize(int fixedHeight, float kernelSize) const
     return values;
 }
 
-GridF LayerBasedGrid::sampledField(const Vector3& extent, const Vector3& scale) const
-{
-    const auto counts = TerrainSampling::sampleDimensions(extent, scale);
-    // Public layer stacks are mutable, so history counters alone cannot detect
-    // edits. Compare the intervals, not the much larger sampled volume.
-    if (_sampledField.getDimensions() != counts || _sampledScale != scale ||
-        _fieldLayersSnapshot.getDimensions() != layers.getDimensions() || _fieldLayersSnapshot.data != layers.data) {
-        _sampledField = sampleLayerField(*this, extent, scale);
-        _fieldLayersSnapshot = layers;
-        _sampledScale = scale;
-    }
-    return _sampledField;
-}
-
 GridF LayerBasedGrid::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
     const auto extent = dimensions.isValid() ? dimensions :
         Vector3(getSizeX(), getSizeY(), std::max(2.f, std::ceil(getSizeZ()) + 2.f));
-    return sampledField(extent, scale);
+    return sampleLayerField(*this, extent, scale);
 }
 
 std::map<TerrainTypes, float> LayerBasedGrid::getKernel(const Vector3& pos, float kernelSize) const
@@ -485,8 +471,7 @@ Vector3 LayerBasedGrid::getIntersection(const Vector3& origin, const Vector3& di
 std::pair<GridI, GridF> LayerBasedGrid::getMaterialAndHeightsGrid()
 {
 //    int x = 0;
-    if (_materialLayersSnapshot.getDimensions() != layers.getDimensions() ||
-        _materialLayersSnapshot.data != layers.data)
+    if (true || currentHistoryIndex != _historyIndex)
     {
         int maxStackSize = 0;
         for (auto& cell : layers)
@@ -494,29 +479,18 @@ std::pair<GridI, GridF> LayerBasedGrid::getMaterialAndHeightsGrid()
 
         GridI materials(this->getSizeX(), this->getSizeY(), maxStackSize);
         GridF heights(materials.getDimensions());
-        _cachedLayerTops = GridF(materials.getDimensions());
 
         for (size_t i = 0; i < layers.size(); i++) {
-            float top = 0.f;
             for (size_t iStack = 0; iStack < layers[i].size(); iStack++) {
                 Vector3 index = layers.getCoordAsVector3(i) + Vector3(0, 0, iStack);
                 materials.at(index) = (int) layers[i][iStack].first;
                 heights.at(index) = (float) layers[i][iStack].second;
-                top += layers[i][iStack].second;
-                _cachedLayerTops.at(index) = top;
             }
         }
         this->_cachedMaterialAndHeights = {materials, heights};
-        _materialLayersSnapshot = layers;
         currentHistoryIndex = _historyIndex;
     }
     return this->_cachedMaterialAndHeights;
-}
-
-GridF LayerBasedGrid::getLayerTopHeights()
-{
-    getMaterialAndHeightsGrid();
-    return _cachedLayerTops;
 }
 
 GridV3 LayerBasedGrid::getNormals()
@@ -610,7 +584,7 @@ void LayerBasedGrid::cleanLayer(int x, int y, float minLayerHeight)
             stack.erase(stack.begin() + i);
         } else ++i;
     }
-    while (!stack.empty() && (LayerBasedGrid::invisibleLayers.count(stack.back().first) != 0)) stack.pop_back();
+    while (!stack.empty() && isIn(stack.back().first, invisibleLayers)) stack.pop_back();
 }
 
 void LayerBasedGrid::cleanLayers(float minLayerHeight)
@@ -620,7 +594,7 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
         auto& stack = layers[iStack];
         Vector3 pos = layers.getCoordAsVector3(iStack);
         cleanLayer(pos.x(), pos.y(), minLayerHeight);
-        /*while (stack.size() > 0 && (LayerBasedGrid::invisibleLayers.count(stack.back().first) != 0)) //(stack.back().first == WATER || stack.back().first == AIR))
+        /*while (stack.size() > 0 && isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) //(stack.back().first == WATER || stack.back().first == AIR))
             stack.pop_back();
         for (size_t i = 0; i < stack.size(); i++) {
             if (stack[i].second < minLayerHeight) {
@@ -923,6 +897,6 @@ float LayerBasedGrid::maxDensityFromMaterial(TerrainTypes material)
 
 bool LayerBasedGrid::checkIsInGround(const Vector3& position)
 {
-    return !((LayerBasedGrid::invisibleLayers.count(this->getValue(position)) != 0));
+    return !(isIn(this->getValue(position), LayerBasedGrid::invisibleLayers));
 }
 
