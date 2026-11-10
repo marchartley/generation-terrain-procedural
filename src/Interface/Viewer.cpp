@@ -5,8 +5,7 @@
 #include <QGLViewer/manipulatedCameraFrame.h>
 #include <QGLViewer/manipulatedFrame.h>
 #include <chrono>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/matrix_inverse.hpp>
+#include "Graphics/RenderMatrices.h"
 #include "TerrainModification/UnderwaterErosion.h"
 #include "DataStructure/Matrix.h"
 #include "Utils/Utils.h"
@@ -42,6 +41,8 @@ Viewer::Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxel
     if (parent != nullptr)
         parent->installEventFilter(this);
     this->mainCamera = this->camera();
+    shadowOrbitTimer.setInterval(33);
+    connect(&shadowOrbitTimer, &QTimer::timeout, this, [this]() { update(); });
 }
 Viewer::Viewer(std::shared_ptr<Heightmap> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
@@ -149,7 +150,7 @@ void Viewer::init() {
                 {.5, .5, .5, 1.},
                 {.2, .2, .2, 1.},
                 {.5, .5, .5, 1.},
-                Vector3(0.0, 0.0, -100.0)
+                Vector3(0.0, 0.0, 100.0)
                 );
 
     this->setAnimationPeriod(0);
@@ -257,6 +258,74 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     }
     return nullptr;
 }
+void Viewer::setTerrainLightShadows(int index, bool enabled)
+{
+    if (index < 0 || index >= int(terrainLights.size())) return;
+    terrainLights[index].castsShadows = enabled;
+    update();
+}
+
+void Viewer::setShadowTestMode(bool enabled)
+{
+    if (shadowTestMode == enabled) return;
+    shadowTestMode = enabled;
+    if (enabled) {
+        shadowOrbitClock.restart();
+        shadowOrbitTimer.start();
+        const auto terrain = interfaces.find("terraingeneration");
+        if (terrain != interfaces.end())
+            static_cast<TerrainGenerationInterface*>(terrain->second.get())->changeDisplayShadowsMode(true);
+    } else {
+        shadowOrbitTimer.stop();
+    }
+    update();
+}
+
+void Viewer::updateTerrainLights(double orbitSeconds)
+{
+    if (!voxelGrid) return;
+    const auto model = getCurrentTerrainModel();
+    const Vector3 size = model ? model->getDimensions() : voxelGrid->getDimensions();
+    const Vector3 center = size * .5f;
+
+    const float span = std::max(1.f, std::max(size.x(), size.y()));
+    const float radius = std::max(10.f, span * 1.5f);
+
+    float exaggeration = 1.f;
+    const auto terrain = interfaces.find("terraingeneration");
+
+    if (terrain!=interfaces.end())
+        exaggeration = static_cast<TerrainGenerationInterface*>(terrain->second.get())->heightFactor;
+
+    const float lightHeight = std::max(1.f, size.z() * exaggeration) + span * .35f;
+
+    int nbShadows = 0;
+    for (size_t i = 0; i < terrainLights.size(); i++) {
+        nbShadows += (terrainLights[i].castsShadows ? 1 : 0);
+    }
+
+    for (size_t i = 0; i < terrainLights.size(); i++) {
+        auto& source = terrainLights[i];
+        // A dominant key and low-energy fill preserve visible cast shadows even
+        // when the fill lights are configured not to cast shadows themselves.
+        const float gain = 1.f / float(nbShadows); // (i == 0 ? 3.f : .12f);
+        source.ambiant = Vector4(light.ambiant * .16f, 1.f); // (i==0 ? Vector4(light.ambiant * .16f, 1.f) : Vector4(0, 0, 0, 0));
+        source.diffuse = Vector4(light.diffuse * gain, 1.f);
+        source.specular = Vector4(light.specular * gain, 1.f);
+        // if (i == 0) {
+            // source.position = Vector3(center.x() - radius * .8f, center.y() - radius * .6f, lightHeight);
+        // } else {
+        const double angle = (double(i) - 1.0) * (2.0 * M_PI / 5.0) + (shadowTestMode ? orbitSeconds * (2.0 * M_PI / 20.0) : 0.0);
+            source.position = Vector3(center.x() + float(std::cos(angle)) * radius, center.y() + float(std::sin(angle)) * radius, lightHeight + span * .25f);
+        // }
+        // castsShadows is independently editable and survives frame updates.
+    }
+    /*if (shadowTestMode) {
+        const double angle = orbitSeconds * (2.0 * PI / 20.0);
+        terrainLights[0].position = Vector3(center.x() + float(std::cos(angle)) * radius, center.y() + float(std::sin(angle)) * radius, lightHeight);
+    }*/
+}
+
 void Viewer::drawingProcess() {
     bool displayTiming = qEnvironmentVariableIsSet("TERRAIN_RENDER_TIMINGS");
     GlobalsGL::ContextScope contextScope;
@@ -302,21 +371,23 @@ void Viewer::drawingProcess() {
             auto normMatrix = Matrix(4, 4, mvMatrix).transpose().inverse();
             // Layer bounds scan the material columns. Evaluate them once per
             // frame, rather than once for every live shader program.
-            auto shaderInverseTranspose = glm::transpose(glm::inverse(glm::make_mat4(mvMatrix)));
+            auto shaderInverseTranspose = RenderMatrices::inverseTranspose(mvMatrix);
             const Vector3 visibleMin = minVoxelsShown();
             const Vector3 visibleMax = maxVoxelsShown();
-            const Vector3 terrainMid = getCurrentTerrainModel()->getDimensions() * .5f;
+            updateTerrainLights(shadowOrbitClock.isValid() ? shadowOrbitClock.elapsed()/1000.0 : 0.0);
             Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
                 shader->setMatrix("proj_matrix", pMatrix);
-                shader->setMat4("shaderInverseTranspose", shaderInverseTranspose);
+                shader->setMatrix("shaderInverseTranspose", shaderInverseTranspose.data.data(), 4, 4);
                 shader->setMatrix("mv_matrix", mvMatrix);
-                shader->setPositionalLight("light", this->light);
+                shader->setPositionalLight("light", shadowTestMode ? terrainLights[0] : this->light);
                 shader->setMaterial("ground_material", ground_material);
                 shader->setMaterial("grass_material", grass_material);
                 shader->setVector("globalAmbiant", globalAmbiant);
                 shader->setMatrix("norm_matrix", &(normMatrix.data()[0]), 4, 4);
-                shader->setBool("isSpotlight", this->usingSpotlight);
-                if (this->usingSpotlight) {
+                shader->setBool("isSpotlight", this->usingSpotlight && !shadowTestMode);
+                if (shadowTestMode) {
+                    shader->setVector("light.position", terrainLights[0].position);
+                } else if (this->usingSpotlight) {
                     shader->setVector("light.position", this->camera()->position());
                 } else {
                     shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
@@ -326,18 +397,10 @@ void Viewer::drawingProcess() {
                 shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
 
 
-                shader->setPositionalLight("lights[0]", this->light);
-                shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200) * 1000.f);
-                shader->setPositionalLight("lights[1]", this->light);
-                shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0) * 1000.f);
-                shader->setPositionalLight("lights[2]", this->light);
-                shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200) * 1000.f);
-                shader->setPositionalLight("lights[3]", this->light);
-                shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100) * 1000.f);
-                shader->setPositionalLight("lights[4]", this->light);
-                shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200) * 1000.f);
-                shader->setPositionalLight("lights[5]", this->light);
-                shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10) * 1000.f);
+                shader->setBool("shadowTestLighting", shadowTestMode);
+                shader->setInt("terrainLightCount", shadowTestMode ? 1 : int(terrainLights.size()));
+                for (size_t i=0; i<terrainLights.size(); ++i)
+                    shader->setPositionalLight("lights["+std::to_string(i)+"]", terrainLights[i]);
             });
         });
 

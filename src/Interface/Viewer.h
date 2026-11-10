@@ -34,6 +34,9 @@ enum DebugMeshesNames {
 #include "TerrainGen/LayerBasedGrid.h"
 #include <QGLViewer/qglviewer.h>
 #include <QKeyEvent>
+#include <QTimer>
+#include <QElapsedTimer>
+#include <array>
 #include <qmessagebox.h>
 #include "TerrainModification/RockErosion.h"
 #include "Graphics/Shader.h"
@@ -63,6 +66,9 @@ Q_SIGNALS:
     void mouseReleasedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
 
 public Q_SLOTS:
+    void setShadowTestMode(bool enabled);
+    void setTerrainLightShadows(int index, bool enabled);
+
     bool startRecording(const std::string& folderUsed = "");
     bool stopRecording();
     bool startStopRecording();
@@ -147,6 +153,11 @@ public:
     int voxelsSmoothedOnBorders = 1;
 
     PositionalLight light;
+    std::array<PositionalLight,6> terrainLights;
+    bool shadowTestMode = false;
+    QTimer shadowOrbitTimer;
+    QElapsedTimer shadowOrbitClock;
+    void updateTerrainLights(double orbitSeconds);
 
     std::string main_screenshotFolder;
     std::string screenshotFolder;

@@ -115,8 +115,8 @@ PositionalLight::PositionalLight()
 {
 
 }
-PositionalLight::PositionalLight(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, const Vector3& pos)
-    : LightSource(ambiant, diffuse, specular), position(pos)
+PositionalLight::PositionalLight(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, const Vector3& pos, bool castsShadows)
+    : LightSource(ambiant, diffuse, specular), position(pos), castsShadows(castsShadows)
 {
 
 }
@@ -125,6 +125,7 @@ void PositionalLight::update()
 {
     LightSource::update();
     this->shader->setVector((name + ".position").c_str(), position);
+    this->shader->setBool(name + ".castsShadows", castsShadows);
 }
 Material::Material()
 {

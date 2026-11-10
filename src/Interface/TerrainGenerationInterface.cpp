@@ -1100,8 +1100,19 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 }
 
 
+void TerrainGenerationInterface::drawTerrain(Mesh& mesh, Vector3 extent)
+{
+    if (displayShadows) {
+        extent.z() *= heightFactor;
+        terrainShadows.update(mesh, extent, terrainTextureRevision);
+    }
+    mesh.display(GL_POINTS);
+}
+
 void TerrainGenerationInterface::prepareTerrainEffects(const std::shared_ptr<Shader>& shader, bool scaledElevation)
 {
+    shader->setInt("shadowMapTex", 9);
+    shader->setBool("shadowPass", false);
     shader->setBool("displayDepth", displayDepth);
     shader->setBool("displayShadows", displayShadows);
     shader->setFloat("waterElevation", getWaterElevation());
@@ -1175,8 +1186,7 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, heights.sizeX, heights.sizeY, 0, GL_RGBA, GL_FLOAT, pixels.data());
         else
             GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, heights.sizeX, heights.sizeY, GL_RGBA, GL_FLOAT, pixels.data());
-        cache.renderedHeights = maxHeight > 0.f ? heights : GridF(heights.getDimensions(), 0.f);
-        cache.shadowField = GridF();
+        ++terrainTextureRevision;
         cache.source = source;
         cache.biomes = biomes;
         cache.biomeNames = std::move(biomeNames);
@@ -1210,19 +1220,10 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                 heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 heightmapMesh.shader->setFloat("heightFactor", heightFactor);
                 prepareTerrainEffects(heightmapMesh.shader, true);
-                if (displayShadows) {
-                    auto& cache = heightTextureCache;
-                    if (cache.shadowField.empty()) {
-                        const Vector3 extent(heightmap->getSizeX(), heightmap->getSizeY(),
-                                             std::max(2.f, std::ceil(maxHeight) + 2.f));
-                        cache.shadowField = TerrainSampling::heightField(cache.renderedHeights, extent, Vector3(1, 1, 1)) + .5f;
-                    }
-                    heightmapMesh.shader->setTexture3D("shadowFieldTex", 9, cache.shadowField);
-                }
                 if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions()) {
                     heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
                 }
-                this->heightmapMesh.display(GL_POINTS);
+                drawTerrain(heightmapMesh, Vector3(heightmap->getSizeX(), heightmap->getSizeY(), std::max(1.f, maxHeight)));
             }
         }
         else if (mapMode == VOXEL_MODE || mapMode == IMPLICIT_MODE ||
@@ -1256,10 +1257,9 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                     marchingCubeMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                     marchingCubeMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                     prepareTerrainEffects(marchingCubeMesh.shader, false);
-                    marchingCubeMesh.shader->setInt("shadowFieldTex", 0);
                     marchingCubeMesh.shader->setFloat("heightFactor", heightFactor);
                 });
-                realDisplayTime = timeIt([&]() { marchingCubeMesh.display( GL_POINTS ); });
+                realDisplayTime = timeIt([&]() { drawTerrain(marchingCubeMesh, values.getDimensions()); });
                 if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
                     GLcallTime = timeIt([&]() {
                         marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", true);
@@ -1287,8 +1287,6 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                 layersMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 layersMesh.shader->setFloat("heightFactor", heightFactor);
                 prepareTerrainEffects(layersMesh.shader, true);
-                if (displayShadows)
-                    layersMesh.shader->setTexture3D("shadowFieldTex", 9, layerGrid->getVoxelized() + .5f);
 
                 //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
                     this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
@@ -1309,7 +1307,7 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                         layersMesh.update();
                     }
     //            }
-                this->layersMesh.display(GL_POINTS);
+                drawTerrain(layersMesh, Vector3(layerGrid->getSizeX(), layerGrid->getSizeY(), std::max(1.f, layerGrid->getSizeZ())));
             }
         }
     }, verbose);
@@ -1452,6 +1450,21 @@ InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
 
     auto displayShadowsButton = new CheckboxElement("Shadows", this->displayShadows,[=](bool check) { this->changeDisplayShadowsMode(check);});
 
+    auto orbitLightButton = new CheckboxElement("Orbiting light test (light 1)", [=](bool enabled) {
+        if (!viewer) return;
+        if (enabled) displayShadowsButton->setChecked(true);
+        viewer->setShadowTestMode(enabled);
+    });
+    if (viewer) orbitLightButton->setChecked(viewer->shadowTestMode);
+    std::vector<UIElement*> lightShadowControls;
+    for (int i=0; i<6; ++i) {
+        auto toggle=new CheckboxElement("Light "+std::to_string(i+1)+" shadows", [=](bool enabled) {
+            if (viewer) viewer->setTerrainLightShadows(i,enabled);
+        });
+        toggle->setChecked(viewer ? viewer->terrainLights[i].castsShadows : true);
+        lightShadowControls.push_back(toggle);
+    }
+
     auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, this->waterLevel, [=](float newValue) { this->setWaterLevel(newValue); });
     auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, this->ambiantOcclusionFactor, [=](float newValue) { this->setAmbiantOcclusion(newValue); });
     auto depthRangeSlider = new SliderElement("Depth range", 0.1f, std::max(100.f, voxelGrid ? voxelGrid->getSizeZ() : 100.f), 0.1f, this->depthRange,
@@ -1467,6 +1480,8 @@ InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
         depthRangeSlider,
         heightFactorSlider,
         ompFactorSlider,
+        orbitLightButton,
+        createVerticalGroup(lightShadowControls),
         createHorizontalGroup({
             createVerticalGroup({
                 displayAsComparisonTerrainButton,

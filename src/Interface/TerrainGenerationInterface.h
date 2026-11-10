@@ -8,6 +8,7 @@ class TerrainGenerationInterface;
 // #include "Interface/Viewer.h"
 
 #include "TerrainModification/OMP_algo.h"
+#include "Graphics/TerrainShadowMap.h"
 
 class TerrainGenerationInterface : public ActionInterface
 {
@@ -106,6 +107,9 @@ public:
     std::string mapSavingFolder = "saved_maps/";
 
 protected:
+    void drawTerrain(Mesh& mesh, Vector3 extent);
+    TerrainShadowMap terrainShadows;
+    size_t terrainTextureRevision = 0;
     void prepareTerrainEffects(const std::shared_ptr<Shader>& shader, bool scaledElevation);
     Mesh marchingCubeMesh;
     GLuint dataFieldTex;
@@ -135,8 +139,6 @@ protected:
     struct HeightTextureCache {
         bool valid = false;
         GridF source;
-        GridF renderedHeights;
-        GridF shadowField;
         Matrix3<std::vector<int>> biomes;
         std::vector<std::pair<int, std::string>> biomeNames;
         std::map<std::string, int> colorPalette, normalPalette, displacementPalette;
