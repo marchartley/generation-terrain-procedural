@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include <stdexcept>
 
 class Matrix // : public std::vector<std::vector<float>>
 {
@@ -42,8 +43,16 @@ public:
     std::string toString() const;
     std::string displayValuesOneLine() const;
 
-    inline float& operator()(size_t x, size_t y) { return this->unsafe(x, y); }
-    inline const float& operator()(size_t x, size_t y) const { return this->unsafe(x, y); }
+    inline float &operator()(size_t x, size_t y) {
+        if (x >= sizeX || y >= sizeY || y * sizeX + x >= _data.size())
+            throw std::out_of_range("Matrix index");
+        return this->unsafe(x, y);
+    }
+    inline const float &operator()(size_t x, size_t y) const {
+        if (x >= sizeX || y >= sizeY || y * sizeX + x >= _data.size())
+            throw std::out_of_range("Matrix index");
+        return this->unsafe(x, y);
+    }
     inline float& unsafe(size_t x, size_t y) { return _data[y * sizeX + x]; } //return (*this)[x][y]; }
     inline const float& unsafe(size_t x, size_t y) const { return _data[y * sizeX + x]; } // return (*this)[x][y]; }
     inline const std::vector<float>& data() const { return _data; }
