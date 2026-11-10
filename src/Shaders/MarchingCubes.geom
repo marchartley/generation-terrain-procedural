@@ -138,9 +138,9 @@ vec3 getNormal(vec3 p) {
         vec3 z0 = clamp(p + vec3(0, 0, resolution), minDims, maxDims);
         vec3 z1 = clamp(p - vec3(0, 0, resolution), minDims, maxDims);
 
-        float dx = (length(x1 - x0) != 0 ? (__cubeVal(x0) - __cubeVal(x1)) / length(x1 - x0) : 0.0);
-        float dy = (length(y1 - y0) != 0 ? (__cubeVal(y0) - __cubeVal(y1)) / length(y1 - y0) : 0.0);
-        float dz = (length(z1 - z0) != 0 ? (__cubeVal(z0) - __cubeVal(z1)) / length(z1 - z0) : 0.0);
+        float dx = (abs(x1.x - x0.x) != 0 ? (__cubeVal(x0) - __cubeVal(x1)) / abs(x1.x - x0.x) : 0.0);
+        float dy = (abs(y1.y - y0.y) != 0 ? (__cubeVal(y0) - __cubeVal(y1)) / abs(y1.y - y0.y) : 0.0);
+        float dz = (abs(z1.z - z0.z) != 0 ? (__cubeVal(z0) - __cubeVal(z1)) / abs(z1.z - z0.z) : 0.0);
         vec3 gradient = -vec3(dx, dy, dz);
         if (length(gradient) > 1e-8) normal += normalize(gradient);
     }
@@ -176,16 +176,16 @@ vec4 getPosition(vec4 position, vec3 _offset, vec3 center)
 //    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
 }
 
-int getCubeIndex(vec3 voxPos) {
+int getCubeIndex(float samples[8]) {
     int cubeindex = 0;
-    float cubeVal0 = cubeVal(voxPos, 0);
-    float cubeVal1 = cubeVal(voxPos, 1);
-    float cubeVal2 = cubeVal(voxPos, 2);
-    float cubeVal3 = cubeVal(voxPos, 3);
-    float cubeVal4 = cubeVal(voxPos, 4);
-    float cubeVal5 = cubeVal(voxPos, 5);
-    float cubeVal6 = cubeVal(voxPos, 6);
-    float cubeVal7 = cubeVal(voxPos, 7);
+    float cubeVal0 = samples[0];
+    float cubeVal1 = samples[1];
+    float cubeVal2 = samples[2];
+    float cubeVal3 = samples[3];
+    float cubeVal4 = samples[4];
+    float cubeVal5 = samples[5];
+    float cubeVal6 = samples[6];
+    float cubeVal7 = samples[7];
     float refined_isolevel = isolevel + 0.0001;
     //Determine the index into the edge table which
     //tells us which vertices are inside of the surface
@@ -399,18 +399,21 @@ void main(void) {
             EndPrimitive();
         }
     } else {
-        float cubeVal0 = cubeVal(voxPos, 0);
-        float cubeVal1 = cubeVal(voxPos, 1);
-        float cubeVal2 = cubeVal(voxPos, 2);
-        float cubeVal3 = cubeVal(voxPos, 3);
-        float cubeVal4 = cubeVal(voxPos, 4);
-        float cubeVal5 = cubeVal(voxPos, 5);
-        float cubeVal6 = cubeVal(voxPos, 6);
-        float cubeVal7 = cubeVal(voxPos, 7);
+        // Reuse the same eight samples for classification and interpolation.
+        float samples[8];
+        for (int corner = 0; corner < 8; ++corner) samples[corner] = cubeVal(voxPos, corner);
+        float cubeVal0 = samples[0];
+        float cubeVal1 = samples[1];
+        float cubeVal2 = samples[2];
+        float cubeVal3 = samples[3];
+        float cubeVal4 = samples[4];
+        float cubeVal5 = samples[5];
+        float cubeVal6 = samples[6];
+        float cubeVal7 = samples[7];
         float refined_isolevel = isolevel + 0.0001;
 
         vec3 normal;
-        int cubeindex = getCubeIndex(voxPos);
+        int cubeindex = getCubeIndex(samples);
 
         //Cube is entirely in/out of the surface
         if (cubeindex == 0 || cubeindex == 255)

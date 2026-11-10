@@ -97,6 +97,12 @@ public:
     Matrix3<std::vector<std::pair<TerrainTypes, float>>>& getLayers() { return this->layers; }
 protected:
     std::pair<GridI, GridF > _cachedMaterialAndHeights;
+    Matrix3<std::vector<std::pair<TerrainTypes, float>>> _materialLayersSnapshot;
+    mutable Matrix3<std::vector<std::pair<TerrainTypes, float>>> _fieldLayersSnapshot;
+    mutable std::set<TerrainTypes> _sampledInvisibleLayers;
+    mutable GridF _sampledField;
+    mutable Vector3 _sampledScale = Vector3::invalid;
+    GridF sampledField(const Vector3& extent, const Vector3& scale) const;
 
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> previousState;

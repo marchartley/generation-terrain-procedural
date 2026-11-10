@@ -94,11 +94,12 @@ float getAmbiantOcclusion(vec3 pos) {
     int radius = 5;
     float occlusion = 0.0;
     float total = 0.0;
+    float centerHeight = getHeight(pos.xyz);
 
     for (int dx = -radius; dx < radius+1; dx++) {
         for (int dy = -radius; dy < radius+1; dy++) {
             vec2 off = vec2(dx, dy);
-            occlusion += (getHeight(pos.xyz) + length(off) + 1.0 < getHeight(vec3(pos.xy - off, pos.z)) ? 1.0 : 0.0);
+            occlusion += (centerHeight + length(off) + 1.0 < getHeight(vec3(pos.xy - off, pos.z)) ? 1.0 : 0.0);
             total += 1.0;
         }
     }

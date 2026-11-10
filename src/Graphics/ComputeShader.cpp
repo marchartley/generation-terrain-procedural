@@ -38,6 +38,11 @@ void ComputeShader::compileShadersFromSource()
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
+    invalidateProgramCache();
+    GLint linked = GL_FALSE;
+    GlobalsGL::f()->glGetProgramiv(programID, GL_LINK_STATUS, &linked);
+    programLinked = linked == GL_TRUE;
+    GlobalsGL::printProgramErrors(programID);
     if (cShader >= 0) GlobalsGL::f()->glDeleteShader(cShader);
     cShader = -1;
 #endif

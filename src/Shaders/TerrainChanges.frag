@@ -139,6 +139,8 @@ uniform bool displayingIgnoredVoxels = false;
 uniform bool wireframeMode = false;
 
 uniform mat4 mv_matrix;
+// Computed once per frame using the same inverse-transpose as GLSL.
+uniform mat4 shaderInverseTranspose;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
@@ -272,7 +274,7 @@ void main(void)
     vec3 light_position = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
     vec3 varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
     vec3 varyingLightDir = light_position - varyingVertPos;
-    vec3 varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(grealNormal, 1.0)).xyz;
+    vec3 varyingNormal = vec4(shaderInverseTranspose * vec4(grealNormal, 1.0)).xyz;
     vec3 varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
     vec3 vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
     vec3 N = normalize(varyingNormal /*+ fbm3ToVec3(ginitialVertPos)*0.5*/);
@@ -323,7 +325,7 @@ void main(void)
         vec3 yaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 zaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 normalMap = (TBNx * xaxis * blending.x + TBNy * yaxis * blending.y + TBNz * zaxis * blending.z);
-        N = vec4(transpose(inverse(mv_matrix)) * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
+        N = vec4(shaderInverseTranspose * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
     }
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);

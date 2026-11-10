@@ -5,6 +5,8 @@
 #include <QGLViewer/manipulatedCameraFrame.h>
 #include <QGLViewer/manipulatedFrame.h>
 #include <chrono>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 #include "TerrainModification/UnderwaterErosion.h"
 #include "DataStructure/Matrix.h"
 #include "Utils/Utils.h"
@@ -256,7 +258,7 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     return nullptr;
 }
 void Viewer::drawingProcess() {
-    bool displayTiming = false;
+    bool displayTiming = qEnvironmentVariableIsSet("TERRAIN_RENDER_TIMINGS");
     GlobalsGL::ContextScope contextScope;
     this->frame_num ++;
     current_frame ++;
@@ -298,8 +300,15 @@ void Viewer::drawingProcess() {
             Vector4 globalAmbiant = {.10, .10, .10, 1.0};
 
             auto normMatrix = Matrix(4, 4, mvMatrix).transpose().inverse();
+            // Layer bounds scan the material columns. Evaluate them once per
+            // frame, rather than once for every live shader program.
+            auto shaderInverseTranspose = glm::transpose(glm::inverse(glm::make_mat4(mvMatrix)));
+            const Vector3 visibleMin = minVoxelsShown();
+            const Vector3 visibleMax = maxVoxelsShown();
+            const Vector3 terrainMid = getCurrentTerrainModel()->getDimensions() * .5f;
             Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
                 shader->setMatrix("proj_matrix", pMatrix);
+                shader->setMat4("shaderInverseTranspose", shaderInverseTranspose);
                 shader->setMatrix("mv_matrix", mvMatrix);
                 shader->setPositionalLight("light", this->light);
                 shader->setMaterial("ground_material", ground_material);
@@ -312,12 +321,11 @@ void Viewer::drawingProcess() {
                 } else {
                     shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
                 }
-                shader->setVector("min_vertice_positions", minVoxelsShown());
-                shader->setVector("max_vertice_positions", maxVoxelsShown());
+                shader->setVector("min_vertice_positions", visibleMin);
+                shader->setVector("max_vertice_positions", visibleMax);
                 shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
 
 
-                Vector3 terrainMid = this->getCurrentTerrainModel()->getDimensions() * .5f;
                 shader->setPositionalLight("lights[0]", this->light);
                 shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200) * 1000.f);
                 shader->setPositionalLight("lights[1]", this->light);
