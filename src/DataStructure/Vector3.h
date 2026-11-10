@@ -152,10 +152,9 @@ public:
         return Vec3::remap(*this, oldMin, oldMax, newMin, newMax);
     }
 
-
-    template <class U>
-    operator Vec3<U>() const {
-        return Vec3<U>(this->x(), this->y(), this->z());
+    template <class U> operator Vec3<U>() const {
+        return Vec3<U>(vector_detail::cast<U>(x()), vector_detail::cast<U>(y()), vector_detail::cast<U>(z()),
+                       valid);
     }
 
     static Vec3 random();

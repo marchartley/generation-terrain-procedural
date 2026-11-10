@@ -4,9 +4,13 @@
 #include "Utils/Skeletonize.h"
 #include <queue>
 #include <sstream>
+#include <cstring>
+#include <locale>
 
 template <>
 Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
+    if (!std::isfinite(radius) || radius <= 0)
+        throw std::invalid_argument("Curl radius must be positive and finite");
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
 //    float radius = 1;
     iterateParallel([&] (size_t x, size_t y, size_t z) {
@@ -167,7 +171,8 @@ std::vector<Polyline> Matrix3<int>::skeletonizeToBSplines() const
         }
         splines = merged;
     }
-    std::vector<Polyline> allSplines(splines.size());
+    std::vector<Polyline> allSplines;
+    allSplines.reserve(splines.size());
     for (const auto& spline : splines) { allSplines.push_back(spline); }
     return allSplines;
 }
@@ -198,110 +203,34 @@ Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<Polyline> splines)
 template <>
 Matrix3<int> Matrix3<int>::computeConnectedComponents(bool use4Connect) const
 {
-    int currentLabel = 1;
-    GridI labelMap = (getDimensions());  // Initialize labelMap with zeros
-    std::vector<std::vector<int>> equivalences;
-
-//    iterateParallel([&] (size_t i) {
-//        labelMap[i] = (this->at(i) == 0 ? 0 : i + 1);
-//    });
-
-    auto findForegroundNeighbors = [&](int x, int y, int z) {
-        std::vector<int> neighbors;
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    if (use4Connect && !(dx == 0 || dy == 0 || dz == 0)) continue;
-                    int _x = x + dx, _y = y + dy, _z = z + dz;
-                    if (checkCoord(_x, _y, _z) && this->at(_x, _y, _z) != 0 && labelMap.at(_x, _y, _z) != 0)
-                        neighbors.push_back(labelMap(_x, _y, _z));
-                }
-            }
-        }
-        return neighbors;
-    };
-
-    auto recordEquivalence = [&](const std::vector<int>& neighbors, int minNeighborLabel) {
-        std::vector<int> newEquivalenceGroup;
-        newEquivalenceGroup.push_back(minNeighborLabel);
-
-        for (int neighborLabel : neighbors) {
-            if (neighborLabel != minNeighborLabel) {
-                newEquivalenceGroup.push_back(neighborLabel);
-            }
-        }
-
-        // Check if any of the labels in the new group already appear in existing groups.
-        for (auto& existingGroup : equivalences) {
-            bool found = false;
-            for (int label : newEquivalenceGroup) {
-                if (std::find(existingGroup.begin(), existingGroup.end(), label) != existingGroup.end()) {
-                    found = true;
-                    break;
-                }
-            }
-
-            // If a label from the new group appears in an existing group, merge the groups.
-            if (found) {
-                existingGroup.insert(existingGroup.end(), newEquivalenceGroup.begin(), newEquivalenceGroup.end());
-                // Remove duplicates and sort.
-                std::sort(existingGroup.begin(), existingGroup.end());
-                auto last = std::unique(existingGroup.begin(), existingGroup.end());
-                existingGroup.erase(last, existingGroup.end());
-                return;
-            }
-        }
-
-        // If the new group doesn't overlap with any existing groups, add it as a new group.
-        equivalences.push_back(newEquivalenceGroup);
-    };
-
-    auto findRootLabel = [&](int label) {
-        // Iterate through each equivalence group
-        for (const auto& group : equivalences) {
-            // Check if the label is in the current group
-            if (std::find(group.begin(), group.end(), label) != group.end()) {
-                // Return the smallest label in the group
-                return *std::min_element(group.begin(), group.end());
-            }
-        }
-        // If the label does not appear in any equivalence group, it's its own root
-        return label;
-    };
-
-    // First pass
-    iterate([&] (int i, int j, int k) {
-        if (this->at(i, j, k) != 0) {  // Assuming foreground is represented by non-zero values
-            std::vector<int> neighbors = findForegroundNeighbors(i, j, k);
-            if (neighbors.empty()) {
-                labelMap(i, j, k) = currentLabel++;
-            } else {
-                int minNeighborLabel = *std::min_element(neighbors.begin(), neighbors.end());
-                labelMap(i, j, k) = minNeighborLabel;
-                recordEquivalence(neighbors, minNeighborLabel);
-            }
+    Matrix3<int> result(getDimensions());
+    int label = 0;
+    std::vector<Vector3i> stack;
+    iterate([&](int x, int y, int z) {
+        Vector3i p(x, y, z);
+        if (!unsafe(p) || result.unsafe(p))
+            return;
+        ++label;
+        result.unsafe(p) = label;
+        stack.push_back(p);
+        while (!stack.empty()) {
+            auto current = stack.back();
+            stack.pop_back();
+            for (int dz = -1; dz <= 1; ++dz)
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        int distance = std::abs(dx) + std::abs(dy) + std::abs(dz);
+                        if (distance == 0 || (use4Connect && distance != 1))
+                            continue;
+                        Vector3i q(current.x() + dx, current.y() + dy, current.z() + dz);
+                        if (checkCoord(q) && unsafe(q) && !result.unsafe(q)) {
+                            result.unsafe(q) = label;
+                            stack.push_back(q);
+                        }
+                    }
         }
     });
-
-    // Reduce labels values
-    std::map<int, int> rootToNewLabel;
-    int newLabel = 1;
-    for (const auto& group : equivalences) {
-        int rootLabel = *std::min_element(group.begin(), group.end());
-        if (rootToNewLabel.find(rootLabel) == rootToNewLabel.end()) {
-            rootToNewLabel[rootLabel] = newLabel++;
-        }
-    }
-
-    // Second pass
-    labelMap.iterateParallel([&] (size_t i) {
-        if (labelMap[i] != 0) {
-            int rootLabel = findRootLabel(labelMap[i]);
-            labelMap[i] = rootToNewLabel[rootLabel];
-        }
-    });
-
-    return labelMap;
+    return result;
 }
 
 template <>
@@ -357,54 +286,47 @@ std::vector<Contour> Matrix3<int>::findContoursAsCurves() const
             }
         }
 
-        for (auto& p : contour)
+        for (auto &p : contour)
             p *= .5f;
-        curves.push_back(Polyline(contour)/*.resamplePoints().simplifyByRamerDouglasPeucker(5.f).resamplePoints()*/);
+        curves.push_back(
+            Polyline(contour) /*.resamplePoints().simplifyByRamerDouglasPeucker(5.f).resamplePoints()*/);
     }
     return curves;
 }
 
-template <>
-Matrix3<float> Matrix3<Vector3>::divergence() const
-{
+template <> Matrix3<float> Matrix3<Vector3>::divergence() const {
     auto self = *this;
     self.raiseErrorOnBadCoord = false;
     Matrix3<float> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
-    iterateParallel([&] (int x, int y, int z) {
+    iterateParallel([&](int x, int y, int z) {
         returningGrid.at(x, y, z) = ((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x() +
                                      (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y() +
-                                     (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z()) * .5f;
+                                     (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z()) *
+                                    .5f;
     });
     return returningGrid;
 }
 
-template <>
-Vector3 Matrix3<Vector3>::gradient(const Vector3& position) const
-{
+template <> Vector3 Matrix3<Vector3>::gradient(const Vector3 &position) const {
     auto self = *this;
     self.raiseErrorOnBadCoord = false;
     Vector3 flooredPos = position.floor();
     Vector3 offset = position - flooredPos;
     return Vector3(
-                self.at(flooredPos + Vector3(1, 0, 0)).x() * (1 - offset.x()) + self.at(flooredPos).x() * offset.x(),
-                self.at(flooredPos + Vector3(0, 1, 0)).y() * (1 - offset.y()) + self.at(flooredPos).y() * offset.y(),
-                self.at(flooredPos + Vector3(0, 0, 1)).z() * (1 - offset.z()) + self.at(flooredPos).z() * offset.z()
-                );
+        self.at(flooredPos + Vector3(1, 0, 0)).x() * (1 - offset.x()) + self.at(flooredPos).x() * offset.x(),
+        self.at(flooredPos + Vector3(0, 1, 0)).y() * (1 - offset.y()) + self.at(flooredPos).y() * offset.y(),
+        self.at(flooredPos + Vector3(0, 0, 1)).z() * (1 - offset.z()) + self.at(flooredPos).z() * offset.z());
 }
 
-template <>
-inline Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ) const
-{
+template <> inline Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ) const {
     return gradient(Vector3(posX, posY, posZ));
 }
 
-template <>
-Matrix3<Vector3> Matrix3<Vector3>::gradient() const
-{
+template <> Matrix3<Vector3> Matrix3<Vector3>::gradient() const {
     auto self = *this;
     self.raiseErrorOnBadCoord = false;
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
-    iterateParallel([&] (int x, int y, int z) {
+    iterateParallel([&](int x, int y, int z) {
         returningGrid.at(x, y, z) = Vector3((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x() * .5f,
                                             (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y() * .5f,
                                             (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z() * .5f);
@@ -412,15 +334,11 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient() const
     return returningGrid;
 }
 
-
-template <>
-Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t sizeZ)
-{
-    Matrix3<Vector3> mat(sizeX, sizeY, sizeZ);
-    mat.iterateParallel([&] (size_t i) {
-        mat[i] = Vector3::random();
-    });
-    return mat;
+template <> Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t sizeZ) {
+    Matrix3<Vector3> result(sizeX, sizeY, sizeZ);
+    for (auto &value : result.data)
+        value = Vector3::random();
+    return result;
 }
 
 template <>
@@ -486,18 +404,16 @@ Matrix3<float> Matrix3<float>::fromImageBW(const std::string& filename)
 
     return map;
 }
-//template <class T>
-Matrix3<float> operator-(const float a, const Matrix3<float>& b) {
+// template <class T>
+Matrix3<float> operator-(const float a, const Matrix3<float> &b) {
     Matrix3<float> res = b;
-    res.iterateParallel([&] (size_t i) {
-        res[i] = a - res[i];
-    });
+    res.iterateParallel([&](size_t i) { res[i] = a - res[i]; });
     /*for (size_t i = 0; i < res.size(); i++)
         res[i] = a - res[i];*/
     return res;
 }
-//template <class T>
-Matrix3<float> operator+(const float a, const Matrix3<float>& b) {
+// template <class T>
+Matrix3<float> operator+(const float a, const Matrix3<float> &b) {
     return b + a;
     /*Matrix3<float> res = b;
     for (size_t i = 0; i < res.size(); i++)
@@ -505,117 +421,138 @@ Matrix3<float> operator+(const float a, const Matrix3<float>& b) {
     return res;*/
 }
 
-std::string stringifyGridF(const GridF &data, bool binaryMode)
-{
-    std::ostringstream outFile;
-    int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
-    if (binaryMode) {
-        outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
-        outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
-        outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
-
-        size_t dataSize = data.size();
-        outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
-    //    outFile.write(reinterpret_cast<const char*>(((Matrix3<char>)data).data.data()), dataSize * sizeof(float));
-        for (const auto& val : data.data) {
-            outFile.write(reinterpret_cast<const char*>(&val), sizeof(val));
-        }
-    } else {
-        outFile << width << " " << depth << " " << height;
-        for (size_t i = 0; i < data.size(); i++) {
-            outFile << " " << data[i];
-        }
-    }
-    return outFile.str();
+namespace {
+constexpr size_t gridHeaderSize = 3 * sizeof(int) + sizeof(size_t);
+void readHeader(const std::string &bytes, int &x, int &y, int &z, size_t &count) {
+    if (bytes.size() < gridHeaderSize)
+        throw std::invalid_argument("Truncated grid header");
+    std::memcpy(&x, bytes.data(), sizeof(int));
+    std::memcpy(&y, bytes.data() + sizeof(int), sizeof(int));
+    std::memcpy(&z, bytes.data() + 2 * sizeof(int), sizeof(int));
+    std::memcpy(&count, bytes.data() + 3 * sizeof(int), sizeof(size_t));
+    if (x < 0 || y < 0 || z < 0)
+        throw std::invalid_argument("Negative grid dimensions");
+    if (count != grid_detail::count<float>(x, y, z))
+        throw std::invalid_argument("Grid payload count mismatch");
 }
-
-std::string stringifyGridV3(const GridV3 &data, bool binaryMode)
-{
-    std::ostringstream outFile;
-    int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
-    if (binaryMode) {
-        outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
-        outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
-        outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
-
-        size_t dataSize = data.size();
-        outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
-        // Write each Vector3 as raw binary data
-        for (const auto& vec : data.data) {
-            outFile.write(reinterpret_cast<const char*>(&vec), sizeof(vec));
-        }
-    } else {
-        outFile << width << " " << depth << " " << height;
-        for (size_t i = 0; i < data.size(); i++) {
-            outFile << " " << data[i].x() << " " << data[i].y() << " " << data[i].z();
-        }
-    }
-    return outFile.str();
+std::string gridHeader(const Vector3i &dims, size_t count) {
+    std::string bytes(gridHeaderSize, '\0');
+    int x = dims.x(), y = dims.y(), z = dims.z();
+    std::memcpy(bytes.data(), &x, sizeof(x));
+    std::memcpy(bytes.data() + sizeof(x), &y, sizeof(y));
+    std::memcpy(bytes.data() + 2 * sizeof(x), &z, sizeof(z));
+    std::memcpy(bytes.data() + 3 * sizeof(x), &count, sizeof(count));
+    return bytes;
 }
-
-GridF loadGridF(const std::string &str, bool binaryMode)
-{
-    std::istringstream inFile(str);
-    int width, depth, height;
-    GridF data;
-    if (binaryMode) {
-        inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
-        inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
-        inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
-
-        size_t dataSize;
-        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
-        data.data.resize(dataSize);
-        inFile.read(reinterpret_cast<char*>(data.data.data()), dataSize * sizeof(float));
-        data.sizeX = width;
-        data.sizeY = depth;
-        data.sizeZ = height;
-        data._updateStrides();
-    } else {
-        inFile >> width >> depth >> height;
-        data = GridF(width, depth, height);
-        for (size_t i = 0; i < data.size(); i++) {
-            inFile >> data[i];
-        }
-    }
-
-    return data;
+void payloadLength(const std::string &bytes, size_t count, size_t itemSize) {
+    if (count > (std::numeric_limits<size_t>::max() - gridHeaderSize) / itemSize ||
+        bytes.size() != gridHeaderSize + count * itemSize)
+        throw std::invalid_argument("Truncated or oversized grid payload");
 }
-
-GridV3 loadGridV3(const std::string &str, bool binaryMode)
-{
-    std::istringstream inFile(str);
-    int width, depth, height;
-    GridV3 data;
+void textEnd(std::istringstream &in) {
+    in >> std::ws;
+    if (!in.eof())
+        throw std::invalid_argument("Unexpected trailing grid data");
+}
+Vector3i textHeader(std::istringstream &in) {
+    int x, y, z;
+    if (!(in >> x >> y >> z) || x < 0 || y < 0 || z < 0)
+        throw std::invalid_argument("Invalid text grid header");
+    grid_detail::count<float>(x, y, z);
+    return Vector3i(x, y, z);
+}
+} // namespace
+std::string stringifyGridF(const GridF &data, bool binaryMode) {
+    if (data.size() != grid_detail::count<float>(data.sizeX, data.sizeY, data.sizeZ))
+        throw std::invalid_argument("Inconsistent grid storage");
     if (binaryMode) {
-        inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
-        inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
-        inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
-
-        size_t dataSize;
-        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
-        data.data.resize(dataSize);
-        // Read each Vector3 from raw binary data
-        for (size_t i = 0; i < dataSize; ++i) {
-            auto& vec = data.data[i];
-            inFile.read(reinterpret_cast<char*>(&vec), sizeof(vec));/*
-            inFile.read(reinterpret_cast<char*>(&(vec.x)), sizeof(vec.x));
-            inFile.read(reinterpret_cast<char*>(&(vec.y)), sizeof(vec.y));
-            inFile.read(reinterpret_cast<char*>(&(vec.z)), sizeof(vec.z));
-            std::cout << vec << " " << std::flush;*/
-    //            inFile.read(reinterpret_cast<const char*>(&vec.valid), sizeof(vec.valid));
-        }
-        data.sizeX = width;
-        data.sizeY = depth;
-        data.sizeZ = height;
-        data._updateStrides();
-    } else {
-        inFile >> width >> depth >> height;
-        data = GridF(width, depth, height);
-        for (size_t i = 0; i < data.size(); i++) {
-            inFile >> data[i].x() >> data[i].y() >> data[i].z();
-        }
+        auto bytes = gridHeader(data.getDimensions(), data.size());
+        if (!data.empty())
+            bytes.append(reinterpret_cast<const char *>(data.data.data()), data.size() * sizeof(float));
+        return bytes;
     }
-
-    return data;
+    std::ostringstream out;
+    out.imbue(std::locale::classic());
+    out << std::setprecision(std::numeric_limits<float>::max_digits10);
+    out << data.sizeX << ' ' << data.sizeY << ' ' << data.sizeZ;
+    for (float v : data)
+        out << ' ' << v;
+    return out.str();
+}
+std::string stringifyGridV3(const GridV3 &data, bool binaryMode) {
+    if (data.size() != grid_detail::count<Vector3>(data.sizeX, data.sizeY, data.sizeZ))
+        throw std::invalid_argument("Inconsistent grid storage");
+    if (binaryMode) {
+        // Preserve existing native-format files, but never emit object padding.
+        auto bytes = gridHeader(data.getDimensions(), data.size());
+        bytes.resize(gridHeaderSize + data.size() * sizeof(Vector3), 0);
+        for (size_t i = 0; i < data.size(); ++i) {
+            auto dst = bytes.data() + gridHeaderSize + i * sizeof(Vector3);
+            std::memcpy(dst + offsetof(Vector3, v), data[i].data(), 3 * sizeof(float));
+            bool valid = data[i].valid;
+            std::memcpy(dst + offsetof(Vector3, valid), &valid, sizeof(bool));
+        }
+        return bytes;
+    }
+    std::ostringstream out;
+    out.imbue(std::locale::classic());
+    out << std::setprecision(std::numeric_limits<float>::max_digits10);
+    out << data.sizeX << ' ' << data.sizeY << ' ' << data.sizeZ;
+    for (auto v : data)
+        out << ' ' << v.x() << ' ' << v.y() << ' ' << v.z();
+    return out.str();
+}
+GridF loadGridF(const std::string &bytes, bool binaryMode) {
+    if (binaryMode) {
+        int x, y, z;
+        size_t count;
+        readHeader(bytes, x, y, z, count);
+        payloadLength(bytes, count, sizeof(float));
+        GridF result(x, y, z);
+        if (count)
+            std::memcpy(result.data.data(), bytes.data() + gridHeaderSize, count * sizeof(float));
+        return result;
+    }
+    std::istringstream in(bytes);
+    in.imbue(std::locale::classic());
+    auto dims = textHeader(in);
+    // At least one textual character is needed for every value; validate before allocation.
+    if (grid_detail::count<float>(dims.x(), dims.y(), dims.z()) > bytes.size())
+        throw std::invalid_argument("Truncated text grid");
+    GridF result(dims);
+    for (auto &v : result)
+        if (!(in >> v))
+            throw std::invalid_argument("Invalid text sample");
+    textEnd(in);
+    return result;
+}
+GridV3 loadGridV3(const std::string &bytes, bool binaryMode) {
+    if (binaryMode) {
+        int x, y, z;
+        size_t count;
+        readHeader(bytes, x, y, z, count);
+        payloadLength(bytes, count, sizeof(Vector3));
+        GridV3 result(x, y, z);
+        for (size_t i = 0; i < count; ++i) {
+            auto src = bytes.data() + gridHeaderSize + i * sizeof(Vector3);
+            // Deserialize arithmetic components, never copy untrusted bytes into a bool.
+            const unsigned char flag = static_cast<unsigned char>(src[offsetof(Vector3, valid)]);
+            if (flag > 1)
+                throw std::invalid_argument("Invalid vector validity flag");
+            std::memcpy(result[i].data(), src + offsetof(Vector3, v), 3 * sizeof(float));
+            result[i].valid = flag != 0;
+        }
+        return result;
+    }
+    std::istringstream in(bytes);
+    in.imbue(std::locale::classic());
+    auto dims = textHeader(in);
+    if (grid_detail::count<Vector3>(dims.x(), dims.y(), dims.z()) > bytes.size() / 3)
+        throw std::invalid_argument("Truncated text vector grid");
+    GridV3 result(dims);
+    for (auto &v : result)
+        if (!(in >> v.x() >> v.y() >> v.z()))
+            throw std::invalid_argument("Invalid vector sample");
+    textEnd(in);
+    return result;
 }
