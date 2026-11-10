@@ -243,7 +243,7 @@ void ViewerInterface::setupUi()
         auto& iconFilename = std::get<1>(informations);
         auto& description = std::get<2>(informations);
         auto& menu = std::get<3>(informations);
-        QIcon icon(QString::fromStdString(":/icons/src/assets/" + iconFilename));
+        QIcon icon(QString::fromStdString(":/icons/src/assets/" + (iconFilename.empty() ? "default_icon.png" : iconFilename)));
         QAction* action = new QAction(icon, QString::fromStdString(description));
         menu->addAction(action);
         QObject::connect(action, &QAction::triggered, this, [=]() { this->openInterface(interfaceObject); });
@@ -253,7 +253,7 @@ void ViewerInterface::setupUi()
         auto& description = std::get<2>(informations);
         auto& menu = menus[std::get<3>(informations)];
         auto& function = std::get<4>(informations);
-        QIcon icon(QString::fromStdString(":/icons/src/assets/" + iconFilename));
+        QIcon icon(QString::fromStdString(":/icons/src/assets/" + (iconFilename.empty() ? "default_icon.png" : iconFilename)));
         QAction* action = new QAction(icon, QString::fromStdString(description));
         menu->addAction(action);
         QObject::connect(action, &QAction::triggered, this, function);
