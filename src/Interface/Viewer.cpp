@@ -153,6 +153,8 @@ void Viewer::init() {
                 Vector3(0.0, 0.0, 100.0)
                 );
 
+    this->initLights();
+
     this->setAnimationPeriod(0);
 
     time_t now = std::time(0);
@@ -258,6 +260,21 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     }
     return nullptr;
 }
+
+void Viewer::initLights()
+{
+    for (size_t i = 0; i < terrainLights.size(); i++) {
+        auto& source = terrainLights[i];
+        // A dominant key and low-energy fill preserve visible cast shadows even
+        // when the fill lights are configured not to cast shadows themselves.
+        const float gain = (i == 0 ? 2.f : 1.f) / float(terrainLights.size());
+        source.ambiant = (i==0 ? Vector4(light.ambiant, 1.f) : Vector4(0, 0, 0, 0));
+        source.diffuse = Vector4(light.diffuse * gain, 1.f);
+        source.specular = Vector4(light.specular * gain, 1.f);
+        source.castsShadows = (i == 0); // Only first light casts shadows
+    }
+}
+
 void Viewer::setTerrainLightShadows(int index, bool enabled)
 {
     if (index < 0 || index >= int(terrainLights.size())) return;
@@ -308,10 +325,10 @@ void Viewer::updateTerrainLights(double orbitSeconds)
         auto& source = terrainLights[i];
         // A dominant key and low-energy fill preserve visible cast shadows even
         // when the fill lights are configured not to cast shadows themselves.
-        const float gain = 1.f / float(nbShadows); // (i == 0 ? 3.f : .12f);
-        source.ambiant = Vector4(light.ambiant * .16f, 1.f); // (i==0 ? Vector4(light.ambiant * .16f, 1.f) : Vector4(0, 0, 0, 0));
-        source.diffuse = Vector4(light.diffuse * gain, 1.f);
-        source.specular = Vector4(light.specular * gain, 1.f);
+        // const float gain = (i == 0 ? 3.f : .12f);
+        // source.ambiant = Vector4(light.ambiant * .16f, 1.f); // (i==0 ? Vector4(light.ambiant * .16f, 1.f) : Vector4(0, 0, 0, 0));
+        // source.diffuse = Vector4(light.diffuse * gain, 1.f);
+        // source.specular = Vector4(light.specular * gain, 1.f);
         // if (i == 0) {
             // source.position = Vector3(center.x() - radius * .8f, center.y() - radius * .6f, lightHeight);
         // } else {
@@ -397,8 +414,8 @@ void Viewer::drawingProcess() {
                 shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
 
 
-                shader->setBool("shadowTestLighting", shadowTestMode);
-                shader->setInt("terrainLightCount", shadowTestMode ? 1 : int(terrainLights.size()));
+                // shader->setBool("shadowTestLighting", shadowTestMode);
+                shader->setInt("terrainLightCount", int(terrainLights.size())); //shadowTestMode ? 1 : int(terrainLights.size()));
                 for (size_t i=0; i<terrainLights.size(); ++i)
                     shader->setPositionalLight("lights["+std::to_string(i)+"]", terrainLights[i]);
             });

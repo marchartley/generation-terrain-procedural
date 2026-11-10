@@ -59,6 +59,8 @@ public:
     Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent = nullptr);
     ~Viewer();
 
+    void initLights();
+
 Q_SIGNALS:
     void mouseClickOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     void mouseDoubleClickedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
