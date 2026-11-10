@@ -46,5 +46,6 @@
         <file>src/assets/reinforce_borders_button.png</file>
         <file>src/assets/save_erod_depo_button.png</file>
         <file>src/assets/terrain_generation_manager_button.png</file>
+        <file>src/assets/default_icon.png</file>
     </qresource>
 </RCC>
