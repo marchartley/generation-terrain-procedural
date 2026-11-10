@@ -15,6 +15,7 @@ struct PositionalLight {
     vec4 diffuse;
     vec4 specular;
     vec3 position;
+    bool castsShadows;
 };
 
 in vec3 grealNormal;

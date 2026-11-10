@@ -546,9 +546,9 @@ void Mesh::display(GLenum shape, float lineWeight)
     if (this->displayShape == GL_TRIANGLES)
         glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size()/3);
     else if (this->displayShape == GL_LINE_STRIP)
-        glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size() - 1);
+        glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size()/3);
     else
-        glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size());
+        glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size()/3);
 #else
         glEnable(GL_RESCALE_NORMAL);
         glBegin(this->displayShape);
@@ -977,7 +977,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
 
                 std::vector<float> cubeVals(8);
                 for (int i = 0; i < 8; i++)
-                    cubeVals[i] = values.checkCoord(voxPos + vertDecals[i]) && (voxPos + vertDecals[i]).minComp() > 0 ? values.at(voxPos + vertDecals[i]) : -100000.f;
+                    cubeVals[i] = values.checkCoord(voxPos + vertDecals[i]) ? values.at(voxPos + vertDecals[i]) : -1.f;
 
                 int cubeindex = 0;
                 for (int i = 0; i < 8; i++)

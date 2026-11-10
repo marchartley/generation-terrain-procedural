@@ -1,3 +1,4 @@
+#include "TerrainGen/TerrainSampling.h"
 #include "ImplicitPatch.h"
 #include "Curves/Contour.h"
 //#include "Utils/stb_image.h"
@@ -41,7 +42,7 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
             auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
             float totalPositive = 0.f, totalNegative = 0.f;
             for (auto& [mat, val] : materials) {
-                if (isIn(mat, LayerBasedGrid::invisibleLayers)) {
+                if ((LayerBasedGrid::invisibleLayers.count(mat) != 0)) {
                     totalNegative += val;
                 } else {
                     totalPositive += val;
@@ -120,6 +121,46 @@ float ImplicitPatch::getMaximalHeight(const Vector3& minBox, const Vector3& maxB
     return maxHeight;
 }
 
+Vector3 ImplicitPatch::getSamplingDimensions() const
+{
+    if (typeid(*this) == typeid(ImplicitNaryOperator)) {
+        const auto* group = static_cast<const ImplicitNaryOperator*>(this);
+        if (group->composables.size() == 1) return group->composables.front()->getSamplingDimensions();
+        if (group->composables.empty()) return Vector3(1, 1, 2);
+    }
+    if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
+        if (primitive->predefinedShape == ImplicitHeightmap && primitive->sampledVolume)
+            return Vector3::max((primitive->position + primitive->cachedHeightmap.getDimensions()).roundedUp(), Vector3(1, 1, 1));
+    }
+    return Vector3::max(getBBox().max().roundedUp() + Vector3(0, 0, 2), Vector3(1, 1, 2));
+}
+
+float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
+{
+    if (const auto* heightTerrain = dynamic_cast<const Implicit2DNary*>(this))
+        return heightTerrain->computeHeight(pos) - pos.z();
+    // A one-child container must not threshold away the child's exterior field.
+    if (typeid(*this) == typeid(ImplicitNaryOperator)) {
+        const auto* group = static_cast<const ImplicitNaryOperator*>(this);
+        if (group->composables.size() == 1) return group->composables.front()->getSignedEvaluation(pos);
+    }
+    if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
+        if (primitive->predefinedShape == ImplicitHeightmap && !primitive->cachedHeightmap.empty() &&
+            (LayerBasedGrid::invisibleLayers.count(primitive->material) == 0)) {
+            const Vector3 local = pos - primitive->position;
+            if (primitive->sampledVolume || primitive->cachedHeightmap.sizeZ > 1)
+                return primitive->cachedHeightmap.interpolate(local);
+            if (local.x() < 0.f || local.y() < 0.f || local.x() > primitive->dimensions.x() - 1.f || local.y() > primitive->dimensions.y() - 1.f)
+                return -1.f;
+            return TerrainSampling::heightAt(primitive->cachedHeightmap, local.x(), local.y()) - local.z();
+        }
+    }
+    float value = 0.f;
+    for (const auto& [material, amount] : getMaterials(pos))
+        value += (LayerBasedGrid::invisibleLayers.count(material) != 0) ? -amount : amount;
+    return value - isovalue;
+}
+
 std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(const Vector3& pos) const
 {
     return this->getBinaryMaterialsAndTotalEvaluation(pos);
@@ -138,7 +179,7 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMateria
     float totalValue = 0.f;
 
     for (const auto& [mat, val] : materials)
-        totalValue += val * (isIn(mat, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+        totalValue += val * ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? -1.f : 1.f);
 
     if (totalValue < 0) {
         return {-totalValue, {{WATER, -totalValue}}};
@@ -243,8 +284,8 @@ bool ImplicitPatch::checkIsInGround(const Vector3& position)
     float groundValue = 0.f;
     float outsideValue = 0.f;
     for (auto& [mat, val] : eval) {
-        groundValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? 0.f : val);
-        outsideValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? val : 0.f);
+        groundValue += ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? 0.f : val);
+        outsideValue += ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? val : 0.f);
     }
     return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
 }
@@ -395,74 +436,18 @@ Vector3 ImplicitPatch::getLocalPositionOf(const Vector3& globalPosition)
 
 GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
-    bool verbose = false;
-    Vector3 finalDimensions = dimensions;
-    if (!dimensions.isValid())
-        finalDimensions = this->getBBox().max();
-
-    if (_cached) {
-        return this->_cachedVoxelized.subset(Vector3(), finalDimensions);
-    }
-
-
-    this->_cachedVoxelized = GridF(finalDimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
-
-    displayProcessTime("Evaluating " + std::to_string(this->_cachedVoxelized.size()) + " cells (" + this->_cachedVoxelized.getDimensions().toString() + ")... ", [&]() {
-        #pragma omp parallel for collapse(3)
-        for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
-            for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
-                for (int z = 0; z < _cachedVoxelized.sizeZ; z += 1) {
-                    Vector3 pos = Vector3(x, y, z) * scale;
-                    std::vector<Vector3> evaluationPoses = {
-                        pos + Vector3(0, 0, 0)/*,
-                        pos + Vector3(0, 0, 1),
-                        pos + Vector3(0, 1, 0),
-                        pos + Vector3(0, 1, 1),
-                        pos + Vector3(1, 0, 0),
-                        pos + Vector3(1, 0, 1),
-                        pos + Vector3(1, 1, 0),
-                        pos + Vector3(1, 1, 1)*/
-                    };
-                    float allPositiveVals = 0.f;
-                    float allNegativeVals = 0.f;
-                    std::vector<std::pair<float, std::map<TerrainTypes, float> > > evaluations(evaluationPoses.size());
-                    for (size_t i = 0; i < evaluations.size(); i++) {
-                        auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(evaluationPoses[i]);
-                        evaluations[i] = {totalEval, matVals};
-
-
-                        float positiveVal = 0.f;
-                        float negativeVal = 0.f;
-                        for (const auto& [mat, val] : matVals) {
-                            float density = LayerBasedGrid::densityFromMaterial(mat);
-                            positiveVal += (density > 0.f ? val : 0.f);
-                            negativeVal += (density <= 0.f ? val : 0.f);
-                        }
-                        totalEval = positiveVal;
-                        allPositiveVals += positiveVal;
-                        allNegativeVals += negativeVal;
-                    }
-
-                    allPositiveVals = (allPositiveVals - allNegativeVals) / float(evaluations.size());
-                    if (allPositiveVals >= ImplicitPatch::isovalue) {
-                        /*TerrainTypes maxType;
-                        float maxVal = 0.f;
-                        for (const auto& [mat, val] : matVals) {
-                            if (val > maxVal) {
-                                maxType = mat;
-                                maxVal = val;
-                            }
-                        }
-                        _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
-                        */
-                        _cachedVoxelized.at(pos) = allPositiveVals;
-                    }
-                }
-            }
-        }
-    }, verbose);
+    const Vector3 extent = dimensions.isValid() ? dimensions : getSamplingDimensions();
+    const auto counts = TerrainSampling::sampleDimensions(extent, scale);
+    if (_cached && _cachedVoxelized.getDimensions() == counts && _cachedVoxelScale == scale)
+        return _cachedVoxelized;
+    _cachedVoxelized = GridF(counts, -1.f);
+    _cachedVoxelized.iterateParallel([&](int x, int y, int z) {
+        _cachedVoxelized(x, y, z) = getSignedEvaluation(Vector3(x, y, z) / scale);
+    });
+    _cachedVoxelized.defaultValueOnBadCoord = -1.f;
+    _cachedVoxelScale = scale;
     _cached = true;
-    return _cachedVoxelized.subset(Vector3(), finalDimensions);
+    return _cachedVoxelized;
 }
 
 ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, CatmullRomSpline parametricCurve, bool in2D)
@@ -622,20 +607,20 @@ void ImplicitPrimitive::update()
         if (this->cachedHeightmap.size() == 0) {
             this->cachedHeightmap = Heightmap(this->heightmapFilename, this->dimensions.x(), this->dimensions.y()).heights;
         }
-        if (this->cachedHeightmap.height() > 1) {
-            this->evalFunction = [=](const Vector3& pos) -> float {
-                return (this->getBBox().contains(pos) ? clamp(this->cachedHeightmap.interpolate(pos) + ImplicitPatch::isovalue, 0.f, 1.f) : 0.f);
+        if (sampledVolume || this->cachedHeightmap.sizeZ > 1) {
+            float maxMagnitude = 1.f;
+            for (float value : cachedHeightmap) maxMagnitude = std::max(maxMagnitude, std::abs(value));
+            sampledFieldScale = .5f / maxMagnitude;
+            cachedHeightmap.defaultValueOnBadCoord = -maxMagnitude;
+            this->evalFunction = [this](const Vector3& pos) -> float {
+                return isovalue + cachedHeightmap.interpolate(pos) * sampledFieldScale;
             };
         } else {
-            if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
-                this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
-//            this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
-    //        auto cacheCopy = cachedHeightmap;
-            this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](const Vector3& pos) -> float {
-    //            auto heightmap = cachedHeightmap;
-                auto valueAt = this->cachedHeightmap.interpolate(pos.xy());
-                return valueAt;
-            });
+            const float range = std::max(1.f, cachedHeightmap.max() + 2.f);
+            sampledFieldScale = .5f / range;
+            this->evalFunction = [this](const Vector3& pos) -> float {
+                return isovalue + (TerrainSampling::heightAt(cachedHeightmap, pos.x(), pos.y()) - pos.z()) * sampledFieldScale;
+            };
         }
     } else {
         this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
@@ -682,6 +667,10 @@ nlohmann::json ImplicitPrimitive::toJson()
         content["optionalCurve"] = this->optionalCurve;
         content["mirrored"] = this->mirrored;
         content["filename"] = this->heightmapFilename;
+        if (predefinedShape == ImplicitHeightmap && !cachedHeightmap.empty()) {
+            content["sampledVolume"] = sampledVolume;
+            content["samples"] = cachedHeightmap;
+        }
     }
 
     return content;
@@ -706,6 +695,8 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
         patch->mirrored = content["mirrored"];
     if (content.contains("filename"))
         patch->heightmapFilename = content["filename"];
+    patch->sampledVolume = content.value("sampledVolume", false);
+    if (content.contains("samples")) patch->cachedHeightmap = content["samples"].get<GridF>();
     patch->update();
     return patch;
 }
@@ -733,6 +724,7 @@ std::vector<ImplicitPatch *> ImplicitPrimitive::findAll(PredefinedShapes shape)
 ImplicitPatch *ImplicitPrimitive::copy() const
 {
     ImplicitPrimitive* copy = new ImplicitPrimitive(*this);
+    copy->update();
     return copy;
 }
 
@@ -769,14 +761,18 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(const std::string& filename,
         VoxelGrid voxels = VoxelGrid();
         voxels.retrieveMap(filename);
         GridF map = voxels.getVoxelValues();
-        return ImplicitPrimitive::fromHeightmap(map, filename, prim);
+        auto* result = ImplicitPrimitive::fromVoxelField(map, prim);
+        result->heightmapFilename = filename;
+        return result;
     }
 }
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string filename, ImplicitPrimitive *prim)
 {
+    if (heightmap.sizeZ > 1) return fromVoxelField(heightmap, prim);
     if (prim == nullptr)
         prim = new ImplicitPrimitive;
+    prim->sampledVolume = false;
     if (heightmap.height() > 1)
         prim->setDimensions(heightmap.getDimensions());
     else
@@ -795,6 +791,25 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string
     prim->update();
     return prim;
 }
+
+ImplicitPrimitive* ImplicitPrimitive::fromVoxelField(const GridF& values, ImplicitPrimitive* prim)
+{
+    if (values.empty()) throw std::invalid_argument("Cannot create an implicit terrain from an empty field");
+    if (!prim) prim = new ImplicitPrimitive;
+    prim->sampledVolume = true;
+    prim->cachedHeightmap = values;
+    prim->cachedHeightmap.raiseErrorOnBadCoord = false;
+    prim->cachedHeightmap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
+    prim->position = Vector3();
+    prim->setDimensions(values.getDimensions());
+    prim->setSupportDimensions(values.getDimensions());
+    prim->predefinedShape = ImplicitHeightmap;
+    prim->material = ROCK;
+    prim->name = "Sampled terrain";
+    prim->update();
+    return prim;
+}
+
 
 
 
@@ -2439,43 +2454,23 @@ float ImplicitNaryOperator::evaluate(const Vector3& pos) const
 
 std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos) const
 {
-    float maxVal = 0.f;
-    std::map<TerrainTypes, float> bestReturn;
-    for (int i = composables.size() - 1; i >= 0; i--) {
-        auto& compo = composables[i];
-        auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
-        if (total > ImplicitPatch::isovalue) {
-            for (auto& [mat, val] : evaluation) {
-                if (bestReturn.count(mat) == 0)
-                    bestReturn[mat] = 0;
-                bestReturn[mat] += val;
-            }
-            return bestReturn;
+    std::map<TerrainTypes, float> exterior;
+    float strongestExterior = 0.f;
+    for (int i = int(composables.size()) - 1; i >= 0; --i) {
+        auto materials = composables[i]->getMaterials(pos);
+        float value = 0.f;
+        for (const auto& [material, amount] : materials)
+            value += (LayerBasedGrid::invisibleLayers.count(material) != 0) ? -amount : amount;
+        const float strength = std::abs(value);
+        // Keep the existing last-active-child composition, but preserve its
+        // material labels and the continuous field just outside the surface.
+        if (strength > isovalue) return materials;
+        if (strength > strongestExterior) {
+            strongestExterior = strength;
+            exterior = std::move(materials);
         }
     }
-    return bestReturn;
-    /*
-    for (auto& compo : this->composables) {
-        auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
-        for (auto& [mat, val] : evaluation) {
-            if (bestReturn.count(mat) == 0)
-                bestReturn[mat] = 0;
-            bestReturn[mat] += val;
-        }
-    }
-    return bestReturn;*/
-    /*
-    float maxVal = 0.f;
-    std::map<TerrainTypes, float> bestReturn;
-    for (auto& compo : this->composables) {
-        auto evaluation = compo->getMaterialsAndTotalEvaluation(pos);
-        float totalEval = evaluation.first;
-        if (totalEval > maxVal) {
-            maxVal = std::max(maxVal, totalEval);
-            bestReturn = evaluation.second;
-        }
-    }
-    return bestReturn;*/
+    return exterior;
 }
 
 AABBox ImplicitNaryOperator::getSupportBBox() const
@@ -2719,30 +2714,12 @@ float Implicit2DNary::evaluate(const Vector3 &pos) const
     return res;
 }
 
-GridF Implicit2DNary::getVoxelized(const Vector3 &dimensions, const Vector3 &scale)
+GridF Implicit2DNary::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
-//    if (_cached)
-//        return _cachedVoxelized.subset(Vector3(), dimensions);
-
-    if (!_cached || _cachedMaxHeight.empty())
-        reevaluateAll();
-
-    _cachedVoxelized = GridF(dimensions, -1.f);
-    int dimX = dimensions.x();
-    int dimY = dimensions.y();
-#pragma omp parallel for collapse(2)
-    for (int x = 0; x < dimX; x++) {
-        for (int y = 0; y < dimY; y++) {
-            float height = this->_cachedMaxHeight(x, y);
-            int z;
-            for (z = 0; z < height && z < dimensions.z(); z++) {
-                _cachedVoxelized(x, y, z) = 1.f;
-            }
-            if (height <= dimensions.z())
-                _cachedVoxelized(x, y, int(height)) = interpolation::inv_linear((height - int(height)), -1.f, 1.f); // Take the fract part to interpolate
-        }
-    }
-    return _cachedVoxelized;
+    if (!_cached || _cachedMaxHeight.empty()) reevaluateAll();
+    const Vector3 extent = dimensions.isValid() ? dimensions :
+        Vector3(getSizeX(), getSizeY(), std::max(2.f, std::ceil(_cachedMaxHeight.max()) + 2.f));
+    return TerrainSampling::heightField(_cachedMaxHeight, extent, scale);
 }
 
 bool Implicit2DNary::contains(const Vector3 &v)
@@ -2816,7 +2793,7 @@ float Implicit2DNary::computeHeight(const Vector3 &pos) const
     for (const auto& comp : composables) {
         if (auto asPrimitive = dynamic_cast<Implicit2DPrimitive*>(comp)) {
             float elemHeight = std::abs(asPrimitive->evaluate(pos.xy()));
-            if (isIn(asPrimitive->material, LayerBasedGrid::invisibleLayers)) {
+            if ((LayerBasedGrid::invisibleLayers.count(asPrimitive->material) != 0)) {
                 maxInvisible = std::max(maxInvisible, elemHeight);
             } else {
                 maxSolid = std::max(maxSolid, elemHeight);
@@ -2843,7 +2820,7 @@ float Implicit2DPrimitive::evaluate(const Vector3& pos) const
 
     Vector3 evalPos = pos - this->position.xy();
     if (Vector3::isInBox(pos, minPos, maxPos)) {
-        evaluation = this->evalFunction(evalPos) * (isIn(this->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+        evaluation = this->evalFunction(evalPos) * ((LayerBasedGrid::invisibleLayers.count(this->material) != 0) ? -1.f : 1.f);
     }
 
     return evaluation;

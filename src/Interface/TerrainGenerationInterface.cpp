@@ -1,3 +1,4 @@
+#include "Interface/PrimitivePatchesInterface.h"
 #include "TerrainGenerationInterface.h"
 
 #include "Biomes/BiomeInstance.h"
@@ -13,6 +14,7 @@
 #include "DataStructure/Matrix.h"
 #include "DataStructure/Image.h"
 #include "Graphics/MarchingCubes.h"
+#include "TerrainGen/TerrainSampling.h"
 
 #include "Interface/TerrainComparatorInterface.h"
 #include "TerrainModification/UnderwaterErosion.h"
@@ -124,8 +126,15 @@ void TerrainGenerationInterface::heightmapToLayers()
 
 void TerrainGenerationInterface::heightmapToImplicit()
 {
-    implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(heightmap->getHeights())};
-    implicitTerrain->_cached = false;
+    if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches")))
+        editor->clearSelection();
+    if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
+        environment->detachImplicitRoot();
+    implicitTerrain->deleteAllChildren();
+    implicitTerrain->addChild(ImplicitPrimitive::fromHeightmap(heightmap->getHeights()));
+    implicitTerrain->scaling = heightmap->scaling;
+    implicitTerrain->translation = heightmap->translation;
+    implicitTerrain->updateCache();
 }
 
 void TerrainGenerationInterface::heightmapToAll()
@@ -133,6 +142,7 @@ void TerrainGenerationInterface::heightmapToAll()
     displayProcessTime("Heightmap to voxels... ", [&]() { heightmapToVoxels(); });
     displayProcessTime("Heightmap to layers... ", [&]() { heightmapToLayers(); }, false);
     displayProcessTime("Heightmap to implicit.. ", [&]() { heightmapToImplicit(); }, false);
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::voxelsToHeightmap()
@@ -147,8 +157,15 @@ void TerrainGenerationInterface::voxelsToLayers()
 
 void TerrainGenerationInterface::voxelsToImplicit()
 {
-    implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())}; // Yeah, I can pass a 3D grid in this function
-    implicitTerrain->_cached = false;
+    if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches")))
+        editor->clearSelection();
+    if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
+        environment->detachImplicitRoot();
+    implicitTerrain->deleteAllChildren();
+    implicitTerrain->addChild(ImplicitPrimitive::fromVoxelField(voxelGrid->getVoxelValues()));
+    implicitTerrain->scaling = voxelGrid->scaling;
+    implicitTerrain->translation = voxelGrid->translation;
+    implicitTerrain->updateCache();
 }
 
 void TerrainGenerationInterface::voxelsToAll()
@@ -157,6 +174,7 @@ void TerrainGenerationInterface::voxelsToAll()
     displayProcessTime("Voxels to layers... ", [&]() { voxelsToLayers(); });
 //    heightmapToLayers();
     displayProcessTime("Voxels to implicit... ", [&]() { voxelsToImplicit(); });
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::layersToVoxels()
@@ -171,7 +189,15 @@ void TerrainGenerationInterface::layersToHeightmap()
 
 void TerrainGenerationInterface::layersToImplicit()
 {
-    // ..?!
+    if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches")))
+        editor->clearSelection();
+    if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
+        environment->detachImplicitRoot();
+    implicitTerrain->deleteAllChildren();
+    implicitTerrain->addChild(ImplicitPrimitive::fromVoxelField(layerGrid->voxelize()));
+    implicitTerrain->scaling = layerGrid->scaling;
+    implicitTerrain->translation = layerGrid->translation;
+    implicitTerrain->updateCache();
 }
 
 void TerrainGenerationInterface::layersToAll()
@@ -179,6 +205,7 @@ void TerrainGenerationInterface::layersToAll()
     displayProcessTime("Layers to voxels... ", [&]() { layersToVoxels(); });
     displayProcessTime("Layers to heightmap... ", [&]() { layersToHeightmap(); });
     displayProcessTime("Layers to implicit... ", [&]() { layersToImplicit(); });
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::implicitToVoxels()
@@ -188,13 +215,12 @@ void TerrainGenerationInterface::implicitToVoxels()
 
 void TerrainGenerationInterface::implicitToLayers()
 {
-    layerGrid->reset();
-    layerGrid->add(implicitTerrain.get());
+    layerGrid->fromImplicit(implicitTerrain.get());
 }
 
 void TerrainGenerationInterface::implicitToHeightmap()
 {
-    // ..?!
+    heightmap->fromImplicit(implicitTerrain.get());
 }
 
 void TerrainGenerationInterface::implicitToAll()
@@ -202,6 +228,7 @@ void TerrainGenerationInterface::implicitToAll()
     displayProcessTime("Implicit to heightmap... ", [&]() { implicitToHeightmap(); });
     displayProcessTime("Implicit to voxels... ", [&]() { implicitToVoxels(); });
     displayProcessTime("Implicit to layers... ", [&]() { implicitToLayers(); });
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, [[maybe_unused]] bool _displayParticles)
@@ -211,15 +238,21 @@ void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _s
 //    this->displayParticles = _displayParticles;
 }
 
+float TerrainGenerationInterface::getWaterElevation() const
+{
+    // The same absolute reference is used for every terrain and the water mesh.
+    return waterLevel * voxelGrid->getSizeZ();
+}
+
 void TerrainGenerationInterface::displayWaterLevel()
 {
     waterLevelMesh.fromArray({
-                                Vector3(1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor)
+                                Vector3(1.f, 1.f, getWaterElevation() * heightFactor),
+                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, getWaterElevation() * heightFactor),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, getWaterElevation() * heightFactor),
+                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, getWaterElevation() * heightFactor),
+                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, getWaterElevation() * heightFactor),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, getWaterElevation() * heightFactor)
                              });
     waterLevelMesh.display();
 }
@@ -636,6 +669,7 @@ InterfaceUI* TerrainGenerationInterface::createGUI()
 
 void TerrainGenerationInterface::prepareShader([[maybe_unused]] bool reload)
 {
+    heightTextureCache.valid = false;
     GlobalsGL::ContextScope contextScope;
     bool verbose = true;
 
@@ -1066,79 +1100,102 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 }
 
 
+void TerrainGenerationInterface::drawTerrain(Mesh& mesh, Vector3 extent)
+{
+    if (displayShadows) {
+        extent.z() *= heightFactor;
+        terrainShadows.update(mesh, extent, terrainTextureRevision);
+    }
+    mesh.display(GL_POINTS);
+}
+
+void TerrainGenerationInterface::prepareTerrainEffects(const std::shared_ptr<Shader>& shader, bool scaledElevation)
+{
+    shader->setInt("shadowMapTex", 9);
+    shader->setBool("shadowPass", false);
+    shader->setBool("displayDepth", displayDepth);
+    shader->setBool("displayShadows", displayShadows);
+    shader->setFloat("waterElevation", getWaterElevation());
+    shader->setFloat("depthRange", depthRange);
+    // Heightmap and layer geometry already exaggerate ginitialVertPos.z.
+    shader->setFloat("fragmentElevationScale", scaledElevation ? 1.f / heightFactor : 1.f);
+}
+
 void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
 {
     GlobalsGL::ContextScope contextScope;
-    const bool verbose = false;
-    float maxHeight;
+    const bool verbose = qEnvironmentVariableIsSet("TERRAIN_RENDER_TIMINGS");
     float meshCreationTime = 0;
     float GLcallTime = 0;
     float realDisplayTime = 0;
+    float maxHeight = heightTextureCache.maxHeight;
 
-    GridF newHeightmap;
-    displayProcessTime("Computing OMP...", [&]() {
-        if (ompFactor == 0)
-            newHeightmap = heightmap->heights;
-        else
-            newHeightmap = omp.getLargeReconstruction(heightmap->heights.resize(Vector3i(100, 100, 1)), heightmap->heights.getDimensions()) * ompFactor + heightmap->heights * (1.f - ompFactor);
-    }, verbose);
-
-    displayProcessTime("Init frame buffers... ", [&]() {
+    displayProcessTime("Update terrain textures... ", [&]() {
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
         glBindTexture(GL_TEXTURE_2D, allBiomesNormalTextures);
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE7);
         glBindTexture(GL_TEXTURE_2D, allBiomesDisplacementTextures);
-
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
 
-        GridF heights = newHeightmap.resize(Vector3i(heightmap->getSizeX(), heightmap->getSizeY(), 1)); //heightmap->getHeights();
-//        heights += EnvObject::materials["sand"].currentState * 1.f;
+        auto& cache = heightTextureCache;
+        const auto& source = heightmap->heights;
+        const auto& biomes = heightmap->getBiomeIndices();
+        std::vector<std::pair<int, std::string>> biomeNames;
+        for (const auto& [index, instance] : BiomeInstance::instancedBiomes)
+            biomeNames.emplace_back(index, instance ? instance->getTextureName() : std::string());
+        const bool allocate = !cache.valid || cache.source.getDimensions() != source.getDimensions();
+        const bool update = allocate || ompFactor != 0.f || cache.source.data != source.data ||
+            cache.biomes.getDimensions() != biomes.getDimensions() || cache.biomes.data != biomes.data ||
+            cache.ompFactor != ompFactor || cache.biomeNames != biomeNames ||
+            cache.colorPalette != colorTexturesIndex || cache.normalPalette != normalTexturesIndex ||
+            cache.displacementPalette != displacementTexturesIndex;
+        if (!update) return;
+        GridF heights = source;
+        if (ompFactor != 0.f)
+            heights = omp.getLargeReconstruction(source.resize(Vector3i(100, 100, 1)), source.getDimensions()) * ompFactor + source * (1.f - ompFactor);
+        heights = heights.resize(Vector3i(heightmap->getSizeX(), heightmap->getSizeY(), 1));
         maxHeight = heights.max();
-        float *heightmapData = new float[heights.size() * 4];
-        // GridV3 gradients = heights.gradient();
-        int maxColorTextureIndex = 0;
-        for (const auto& biome : colorTexturesIndex) {
-            maxColorTextureIndex = std::max(maxColorTextureIndex, biome.second + 1);
-        }
-        int maxNormalTextureIndex = 0;
-        for (const auto& biome : normalTexturesIndex) {
-            maxNormalTextureIndex = std::max(maxNormalTextureIndex, biome.second + 1);
-        }
-        int maxDisplacementTextureIndex = 0;
-        for (const auto& biome : displacementTexturesIndex) {
-            maxDisplacementTextureIndex = std::max(maxDisplacementTextureIndex, biome.second + 1);
-        }
-        int maxBiomeID = 0; //std::max(1, heightmap->getBiomeIndices().max());
-        for (const auto& biomeValues : heightmap->getBiomeIndices())
-            maxBiomeID = std::max(maxBiomeID, (biomeValues.empty() ? 1 : biomeValues.back()));
-        Matrix3<std::vector<int>> resizedBiomeIndices = heightmap->getBiomeIndices(); //.resize(heightmap->heights.getDimensions(), RESIZE_MODE::MAX_VAL);
-        for (size_t i = 0; i < heights.size(); i++) {
-            float colorTextureOffset = 1.f;
-            float normalTextureOffset = 1.f;
-            float displacementTextureOffset = 1.f;
-            if (resizedBiomeIndices.getDimensions() == heights.getDimensions()) {
-                auto biome = (!resizedBiomeIndices[i].empty() ? BiomeInstance::instancedBiomes[resizedBiomeIndices[i].back()] : nullptr);
-                if (biome != nullptr && !biome->getTextureName().empty()) {
-                    if (colorTexturesIndex.find(biome->getTextureName()) != colorTexturesIndex.end())
-                        colorTextureOffset = colorTexturesIndex[biome->getTextureName()] / (float)(maxColorTextureIndex);
-                    if (normalTexturesIndex.find(biome->getTextureName()) != normalTexturesIndex.end())
-                        normalTextureOffset = normalTexturesIndex[biome->getTextureName()] / (float)(maxNormalTextureIndex);
-                    if (displacementTexturesIndex.find(biome->getTextureName()) != displacementTexturesIndex.end())
-                        displacementTextureOffset = displacementTexturesIndex[biome->getTextureName()] / (float)(maxDisplacementTextureIndex);
+        std::vector<float> pixels(heights.size() * 4);
+        auto paletteSize = [](const auto& palette) {
+            int count = 1;
+            for (const auto& [name, index] : palette) count = std::max(count, index + 1);
+            return float(count);
+        };
+        const float colors = paletteSize(colorTexturesIndex), normals = paletteSize(normalTexturesIndex);
+        const float displacements = paletteSize(displacementTexturesIndex);
+        for (size_t i = 0; i < heights.size(); ++i) {
+            float color = 1.f, normal = 1.f, displacement = 1.f;
+            if (biomes.getDimensions() == heights.getDimensions() && !biomes[i].empty()) {
+                const auto instance = BiomeInstance::instancedBiomes.find(biomes[i].back());
+                if (instance != BiomeInstance::instancedBiomes.end() && instance->second) {
+                    const auto texture = instance->second->getTextureName();
+                    if (!texture.empty() && colorTexturesIndex.count(texture)) color = colorTexturesIndex.at(texture) / colors;
+                    if (!texture.empty() && normalTexturesIndex.count(texture)) normal = normalTexturesIndex.at(texture) / normals;
+                    if (!texture.empty() && displacementTexturesIndex.count(texture)) displacement = displacementTexturesIndex.at(texture) / displacements;
                 }
             }
-            // gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
-            heightmapData[i * 4 + 0] = colorTextureOffset;
-            heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
-            heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
-            heightmapData[i * 4 + 3] = heights[i] / maxHeight; //1.0; //heightmap->heights[i] / maxHeight;
+            pixels[i * 4] = color;
+            pixels[i * 4 + 1] = normal;
+            pixels[i * 4 + 2] = displacement;
+            pixels[i * 4 + 3] = maxHeight > 0.f ? heights[i] / maxHeight : 0.f;
         }
-
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, heightmap->getSizeX(), heightmap->getSizeY(), 0, GL_RGBA, GL_FLOAT, heightmapData);
-        delete[] heightmapData;
+        if (allocate)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, heights.sizeX, heights.sizeY, 0, GL_RGBA, GL_FLOAT, pixels.data());
+        else
+            GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, heights.sizeX, heights.sizeY, GL_RGBA, GL_FLOAT, pixels.data());
+        ++terrainTextureRevision;
+        cache.source = source;
+        cache.biomes = biomes;
+        cache.biomeNames = std::move(biomeNames);
+        cache.colorPalette = colorTexturesIndex;
+        cache.normalPalette = normalTexturesIndex;
+        cache.displacementPalette = displacementTexturesIndex;
+        cache.ompFactor = ompFactor;
+        cache.maxHeight = maxHeight;
+        cache.valid = true;
     }, verbose);
 
     displayProcessTime("Render terrain... ", [&]() {
@@ -1147,38 +1204,43 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                 std::cerr << "No grid to display" << std::endl;
             } else {
                 heightmapMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
-                GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
-                std::vector<Vector3> positions(heightData.size());
-                for (size_t i = 0; i < positions.size(); i++) {
-                    positions[i] = heightData.getCoordAsVector3(i);
+                const Vector3 dimensions(heightmap->getSizeX(), heightmap->getSizeY(), 1);
+                const size_t count = size_t(dimensions.x()) * size_t(dimensions.y());
+                if (heightmapMesh.vertexArray.size() != count ||
+                    (count && heightmapMesh.vertexArray.back() != dimensions - Vector3(1, 1, 1))) {
+                    GridF coordinates(dimensions);
+                    std::vector<Vector3> positions(count);
+                    for (size_t i = 0; i < count; ++i) positions[i] = coordinates.getCoordAsVector3(i);
+                    heightmapMesh.fromArray(positions);
+                    heightmapMesh.update();
                 }
                 heightmapMesh.shader->setFloat("maxHeight", maxHeight);
                 heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
                 heightmapMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                 heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 heightmapMesh.shader->setFloat("heightFactor", heightFactor);
-                heightmapMesh.shader->setBool("displayDepth", displayDepth);
-                // heightmapMesh.shader->setBool("displayShadows", displayShadows);
+                prepareTerrainEffects(heightmapMesh.shader, true);
                 if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions()) {
                     heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
                 }
-                heightmapMesh.fromArray(positions);
-                heightmapMesh.update();
-                this->heightmapMesh.display(GL_POINTS);
+                drawTerrain(heightmapMesh, Vector3(heightmap->getSizeX(), heightmap->getSizeY(), std::max(1.f, maxHeight)));
             }
         }
-        else if (mapMode == VOXEL_MODE) {
+        else if (mapMode == VOXEL_MODE || mapMode == IMPLICIT_MODE ||
+                 (mapMode == LAYER_MODE && smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES)) {
             if (this->voxelGrid == nullptr) {
                 std::cerr << "No voxel grid to display" << std::endl;
             } else {
                 GridF values;
                 meshCreationTime = timeIt([&]() {
-                    values = voxelGrid->getVoxelValues().meanSmooth(3, 3, 3, true);
+                    if (mapMode == IMPLICIT_MODE) values = implicitTerrain->getVoxelized();
+                    else if (mapMode == LAYER_MODE) values = layerGrid->getVoxelized();
+                    else values = voxelGrid->getVoxelValues();
                     // values.iterateParallel([&](size_t i) { values[i] = std::max(std::abs(values[i]), 0.f); });
-                    if (marchingCubeMesh.vertexArray.size() != values.size()) {
+                    if (marchingCubeMesh.vertexArray.size() != values.size() ||
+                        (!marchingCubeMesh.vertexArray.empty() && marchingCubeMesh.vertexArray.back() != values.getDimensions() - Vector3(1, 1, 1))) {
                         std::vector<Vector3> points(values.size());
                         values.iterateParallel([&](size_t i) {
-                            values[i] = (std::max(-3.f, std::min(3.f, values[i])) / 6.f) + 0.5;
                             points[i] = values.getCoordAsVector3(i);
                         });
                         marchingCubeMesh.useIndices = false;
@@ -1194,11 +1256,10 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                     marchingCubeMesh.shader->setFloat("waterRelativeHeight", waterLevel);
                     marchingCubeMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                     marchingCubeMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-                    marchingCubeMesh.shader->setBool("displayDepth", displayDepth);
-                    marchingCubeMesh.shader->setBool("displayShadows", displayShadows);
+                    prepareTerrainEffects(marchingCubeMesh.shader, false);
                     marchingCubeMesh.shader->setFloat("heightFactor", heightFactor);
                 });
-                realDisplayTime = timeIt([&]() { marchingCubeMesh.display( GL_POINTS ); });
+                realDisplayTime = timeIt([&]() { drawTerrain(marchingCubeMesh, values.getDimensions()); });
                 if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
                     GLcallTime = timeIt([&]() {
                         marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", true);
@@ -1225,6 +1286,7 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                 layersMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                 layersMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 layersMesh.shader->setFloat("heightFactor", heightFactor);
+                prepareTerrainEffects(layersMesh.shader, true);
 
                 //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
                     this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
@@ -1239,37 +1301,13 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                     for (size_t i = 0; i < layersPoints.size(); i++) {
                         layersPoints[i] = materials.getCoordAsVector3(i);
                     }
-                    layersMesh.fromArray(layersPoints);
-                    layersMesh.update();
+                    if (layersMesh.vertexArray.size() != layersPoints.size() ||
+                        (!layersPoints.empty() && layersMesh.vertexArray.back() != layersPoints.back())) {
+                        layersMesh.fromArray(layersPoints);
+                        layersMesh.update();
+                    }
     //            }
-                this->layersMesh.display(GL_POINTS);
-            }
-        } else if (mapMode == IMPLICIT_MODE) {
-            if (this->implicitTerrain == nullptr) {
-                std::cerr << "No implicit terrain to display" << std::endl;
-            } else {
-                GridF values;
-                values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
-                implicitMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
-                implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
-                implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
-                implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
-                implicitMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
-                implicitMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-                implicitMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
-                implicitMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-                implicitMesh.shader->setFloat("heightFactor", heightFactor);
-                implicitMesh.display( GL_POINTS );
-                if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
-                    implicitMesh.shader->setBool("displayingIgnoredVoxels", true);
-                    implicitMesh.shader->setFloat("min_isolevel", -1000.f);
-                    implicitMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
-                    implicitMesh.display( GL_POINTS );
-                    implicitMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
-                    implicitMesh.shader->setFloat("max_isolevel",  1000.f);
-                    implicitMesh.display( GL_POINTS );
-                    implicitMesh.shader->setBool("displayingIgnoredVoxels", false);
-                }
+                drawTerrain(layersMesh, Vector3(layerGrid->getSizeX(), layerGrid->getSizeY(), std::max(1.f, layerGrid->getSizeZ())));
             }
         }
     }, verbose);
@@ -1359,7 +1397,15 @@ void TerrainGenerationInterface::changeDisplayToComparativeMode(bool toComparati
 
 void TerrainGenerationInterface::setHeightFactor(float newHeightFactor)
 {
+    if (!std::isfinite(newHeightFactor) || newHeightFactor <= 0.f) return;
     this->heightFactor = newHeightFactor;
+    Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::setDepthRange(float newRange)
+{
+    if (!std::isfinite(newRange) || newRange <= 0.f) return;
+    depthRange = newRange;
     Q_EMIT updated();
 }
 
@@ -1403,9 +1449,27 @@ InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
     auto displayWaterDepthButton = new CheckboxElement("Depth", this->displayDepth, [=](bool check) { this->changeDisplayDepthMode(check);});
 
     auto displayShadowsButton = new CheckboxElement("Shadows", this->displayShadows,[=](bool check) { this->changeDisplayShadowsMode(check);});
+    displayShadowsButton->setChecked(true);
+
+    auto orbitLightButton = new CheckboxElement("Orbiting lights", [=](bool enabled) {
+        if (!viewer) return;
+        if (enabled) displayShadowsButton->setChecked(true);
+        viewer->setShadowTestMode(enabled);
+    });
+    if (viewer) orbitLightButton->setChecked(viewer->shadowTestMode);
+    std::vector<UIElement*> lightShadowControls;
+    for (int i = 0; i < 6; i++) {
+        auto toggle = new CheckboxElement("Light " + std::to_string(i+1) + " shadows", [=](bool enabled) {
+            if (viewer) viewer->setTerrainLightShadows(i, enabled);
+        });
+        toggle->setChecked(viewer ? viewer->terrainLights[i].castsShadows : true);
+        lightShadowControls.push_back(toggle);
+    }
 
     auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, this->waterLevel, [=](float newValue) { this->setWaterLevel(newValue); });
     auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, this->ambiantOcclusionFactor, [=](float newValue) { this->setAmbiantOcclusion(newValue); });
+    auto depthRangeSlider = new SliderElement("Depth range", 0.1f, std::max(100.f, voxelGrid ? voxelGrid->getSizeZ() : 100.f), 0.1f, this->depthRange,
+                                             [=](float value) { this->setDepthRange(value); });
     auto heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, this->heightFactor, [=](float newValue) { this->setHeightFactor(newValue); });
     auto ompFactorSlider = new SliderElement("OMP", 0.f, 1.f, 0.01f, this->ompFactor, [=](float newValue) { this->setOMPFactor(newValue); });
 
@@ -1414,8 +1478,11 @@ InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
     ui->add({
         waterLevelSlider,
         ambiantOcclusionSlider,
+        depthRangeSlider,
         heightFactorSlider,
         ompFactorSlider,
+        orbitLightButton,
+        createVerticalGroup(lightShadowControls),
         createHorizontalGroup({
             createVerticalGroup({
                 displayAsComparisonTerrainButton,

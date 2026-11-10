@@ -65,12 +65,13 @@ void GlobalsGL::Resources::release() {
         if (QOpenGLContext::currentContext() == owner) {
             auto* gl = GlobalsGL::f();
             for (auto program : programs) gl->glDeleteProgram(program);
+            gl->glDeleteFramebuffers(GLsizei(framebuffers.size()), framebuffers.data());
             gl->glDeleteTextures(GLsizei(textures.size()), textures.data());
             gl->glDeleteBuffers(GLsizei(buffers.size()), buffers.data());
             gl->glDeleteVertexArrays(GLsizei(arrays.size()), arrays.data());
         }
     }
-    programs.clear(); textures.clear(); buffers.clear(); arrays.clear();
+    programs.clear(); textures.clear(); buffers.clear(); arrays.clear(); framebuffers.clear();
     released = true;
 }
 

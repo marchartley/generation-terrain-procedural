@@ -331,7 +331,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
             } else if (applyOn == EROSION_APPLIED::HEIGHTMAP) {
                 terrain = heightmap.get();
             } else if (applyOn == EROSION_APPLIED::IMPLICIT_TERRAIN) {
-                implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(implicitTerrain->getVoxelized())};
+                implicitTerrain->composables = {ImplicitPrimitive::fromVoxelField(implicitTerrain->getVoxelized())};
                 // implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())};
                 implicitTerrain->_cached = false;
 //                implicitTerrain->update();

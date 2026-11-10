@@ -82,6 +82,8 @@ Shader& Shader::operator=(const Shader& copy) {
     programID = 0;
     vShader = fShader = gShader = -1;
     textureSlotIndices.clear();
+    volumeTextures.clear();
+    invalidateProgramCache();
     vertexShaderFilename = copy.vertexShaderFilename;
     fragmentShaderFilename = copy.fragmentShaderFilename;
     geometryShaderFilename = copy.geometryShaderFilename;
@@ -96,6 +98,8 @@ void Shader::ensureResources() {
         programID = 0;
         vShader = fShader = gShader = -1;
         textureSlotIndices.clear();
+        volumeTextures.clear();
+        invalidateProgramCache();
     }
 }
 
@@ -169,6 +173,10 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
 
     GlobalsGL::checkOpenGLError();
     GlobalsGL::f()->glLinkProgram(this->programID);
+    invalidateProgramCache();
+    GLint linked = GL_FALSE;
+    GlobalsGL::f()->glGetProgramiv(programID, GL_LINK_STATUS, &linked);
+    programLinked = linked == GL_TRUE;
     if (this->vShader > -1)
         GlobalsGL::f()->glDeleteShader(this->vShader);
     if (this->fShader > -1)
@@ -182,51 +190,73 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
 #endif
 }
 
+void Shader::invalidateProgramCache()
+{
+    programLinked = false;
+    uniformLocations.clear();
+    uniformValues.clear();
+}
+
+bool Shader::ensureLinked()
+{
+    ensureResources();
+    if (programID == 0) initializeGL();
+    return programLinked;
+}
+
+GLint Shader::uniformLocation(const std::string& name)
+{
+    const auto found = uniformLocations.find(name);
+    if (found != uniformLocations.end()) return found->second;
+    const GLint location = GlobalsGL::f()->glGetUniformLocation(programID, name.c_str());
+    uniformLocations.emplace(name, location);
+    return location;
+}
+
+bool Shader::uniformChanged(GLint location, const void* data, size_t bytes)
+{
+    if (location < 0) return false;
+    auto& previous = uniformValues[location];
+    if (previous.size() == bytes && std::memcmp(previous.data(), data, bytes) == 0) return false;
+    const auto* begin = static_cast<const unsigned char*>(data);
+    previous.assign(begin, begin + bytes);
+    return true;
+}
+
 bool Shader::use(bool update_source_file)
 {
     GlobalsGL::ContextScope contextScope;
-    ensureResources();
-    if (update_source_file)
-    {
-        this->initializeGL();
-    }
-    if (programID == 0)
-    {
-        this->initializeGL();
-    }
-
-    GlobalsGL::checkOpenGLError();
-    if (programID > 0) {
-        GLint linked = GL_FALSE;
-        GlobalsGL::f()->glGetProgramiv(programID, GL_LINK_STATUS, &linked);
-        if (!linked) return false;
-        GlobalsGL::f()->glUseProgram(this->programID);
-        GlobalsGL::printProgramErrors(this->programID);
-        // Shader objects are deleted after linking; inspect the program here.
-//        return true;
-    }
-    GlobalsGL::checkOpenGLError();
-    return programID > 0;
+    if (update_source_file) initializeGL();
+    if (!ensureLinked()) return false;
+    GlobalsGL::f()->glUseProgram(programID);
+    return true;
 }
 
 void Shader::setBool(const std::string& pname, bool value)
 {
     GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), (int)value);
+    const int integer = int(value);
+    const GLint location = uniformLocation(pname);
+    if (uniformChanged(location, &integer, sizeof(integer)))
+        GlobalsGL::f()->glProgramUniform1i(programID, location, integer);
 }
 void Shader::setInt(const std::string& pname, int value)
 {
     GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
+    const GLint location = uniformLocation(pname);
+    if (uniformChanged(location, &value, sizeof(value)))
+        GlobalsGL::f()->glProgramUniform1i(programID, location, value);
 }
 
 void Shader::setFloat(const std::string& pname, float value)
 {
     GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
+    const GLint location = uniformLocation(pname);
+    if (uniformChanged(location, &value, sizeof(value)))
+        GlobalsGL::f()->glProgramUniform1f(programID, location, value);
 }
 
 void Shader::setVector(const std::string& pname, const Vector3& value)
@@ -248,38 +278,41 @@ void Shader::setVector(const std::string& pname, glm::vec2 value)
 {
     GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    GlobalsGL::f()->glUniform2fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
+    const GLint location = uniformLocation(pname);
+    if (uniformChanged(location, &value[0], sizeof(float) * 2))
+        GlobalsGL::f()->glProgramUniform2fv(programID, location, 1, &value[0]);
 }
 
 //void Shader::setVector(const std::string& pname, glm::vec3 value)
 //{
 //    if (!this->use()) return;
-//    GlobalsGL::f()->glUniform3fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
+//    GlobalsGL::f()->glUniform3fv(uniformLocation(pname), 1, &value[0]);
 //}
 
 /*void Shader::setVector(const std::string& pname, glm::vec4 value)
 {
     GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    GlobalsGL::f()->glUniform4fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
+    GlobalsGL::f()->glUniform4fv(uniformLocation(pname), 1, &value[0]);
 }*/
 void Shader::setVector(const std::string& pname, const float* value, int n)
 {
     GlobalsGL::ContextScope contextScope;
     if (!this->use()) return;
-    GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());
+    const GLint loc = uniformLocation(pname);
+    if (!uniformChanged(loc, value, sizeof(float) * n)) return;
     switch (n) {
     case 1:
-        GlobalsGL::f()->glUniform1fv(loc, 1, value);
+        GlobalsGL::f()->glProgramUniform1fv(programID, loc, 1, value);
         break;
     case 2:
-        GlobalsGL::f()->glUniform2fv(loc, 1, value);
+        GlobalsGL::f()->glProgramUniform2fv(programID, loc, 1, value);
         break;
     case 3:
-        GlobalsGL::f()->glUniform3fv(loc, 1, value);
+        GlobalsGL::f()->glProgramUniform3fv(programID, loc, 1, value);
         break;
     case 4:
-        GlobalsGL::f()->glUniform4fv(loc, 1, value);
+        GlobalsGL::f()->glProgramUniform4fv(programID, loc, 1, value);
         break;
     }
 }
@@ -307,6 +340,7 @@ void Shader::setPositionalLight(const std::string& pname, PositionalLight &value
 {
     this->setLightSource(pname, value);
     this->setVector((pname + ".position").c_str(), value.position);
+    this->setBool(pname + ".castsShadows", value.castsShadows);
 }
 
 void Shader::setMaterial(const std::string& pname, Material &value)
@@ -338,8 +372,9 @@ void Shader::setTexture2D(const std::string& pname, int index, int width, int he
         justUpdateTexture = false;
     }
     texIndex = textureSlotIndices[textureSlot];
+    GLint previousTextureUnit = GL_TEXTURE0;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &previousTextureUnit);
     GlobalsGL::f()->glActiveTexture(textureSlot);
-    glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texIndex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -354,6 +389,7 @@ void Shader::setTexture2D(const std::string& pname, int index, int width, int he
         GL_ALPHA_INTEGER_EXT, GL_INT, data);
     }
     this->setInt(pname, index);
+    GlobalsGL::f()->glActiveTexture(previousTextureUnit);
 }
 
 void Shader::setTexture2D(const std::string& pname, int index, int width, int height, int **data)
@@ -366,43 +402,45 @@ void Shader::setTexture2D(const std::string& pname, int index, int width, int he
 }
 
 // Todo : change the integer type to a template (or select int or float)
-void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
+void Shader::setTexture3D(const std::string& pname, int index, const GridF& texture)
 {
     GlobalsGL::ContextScope contextScope;
-    if (!this->use()) return;
-    for (auto& val : texture)
-        val = std::max(val, 0.f);
-    glEnable(GL_TEXTURE_3D);
-    int textureSlot = GL_TEXTURE0 + index;
-
+    if (!use() || texture.empty()) return;
+    const int textureSlot = GL_TEXTURE0 + index;
+    auto& cached = volumeTextures[textureSlot];
+    const bool allocate = cached.dimensions != texture.getDimensions();
+    const bool upload = allocate || std::memcmp(cached.samples.data.data(), texture.data.data(), texture.size() * sizeof(float)) != 0;
     GLuint texIndex;
-    bool justUpdateTexture = false; // true;
-    // if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
         gpuResources->textures.push_back(texIndex);
         textureSlotIndices[textureSlot] = texIndex;
-        justUpdateTexture = false;
     }
-    texIndex = textureSlotIndices[textureSlot];
-
+    texIndex = textureSlotIndices.at(textureSlot);
+    GLint previousTextureUnit = GL_TEXTURE0;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &previousTextureUnit);
     GlobalsGL::f()->glActiveTexture(textureSlot);
     glBindTexture(GL_TEXTURE_3D, texIndex);
-//    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    if (justUpdateTexture) {
-        GlobalsGL::f()->glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, texture.sizeX, texture.sizeY, texture.sizeZ,
-        GL_ALPHA, GL_FLOAT, texture.data.data());
-    } else {
-        GlobalsGL::f()->glTexImage3D( GL_TEXTURE_3D, 0, GL_ALPHA32F_ARB, texture.sizeX, texture.sizeY, texture.sizeZ, 0,
-        GL_ALPHA, GL_FLOAT, texture.data.data());
+    if (allocate) {
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        GlobalsGL::f()->glTexImage3D(GL_TEXTURE_3D, 0, GL_ALPHA32F_ARB,
+            texture.sizeX, texture.sizeY, texture.sizeZ, 0, GL_ALPHA, GL_FLOAT, texture.data.data());
+        ++volumeAllocationCount;
+    } else if (upload) {
+        GlobalsGL::f()->glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0,
+            texture.sizeX, texture.sizeY, texture.sizeZ, GL_ALPHA, GL_FLOAT, texture.data.data());
     }
-    this->setInt(pname, index);
+    if (upload) {
+        cached.dimensions = texture.getDimensions();
+        cached.samples = texture;
+        ++volumeUploadCount;
+    }
+    setInt(pname, index);
+    GlobalsGL::f()->glActiveTexture(previousTextureUnit);
 }
 
 //void Shader::setMatrix(const std::string& pname, Matrix value)

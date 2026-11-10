@@ -36,14 +36,15 @@ public:
 
     float getHeight(float x, float y);
 
-    void from2DGrid(Heightmap grid);
+    void from2DGrid(const Heightmap& grid);
     void fromVoxelGrid(VoxelGrid& voxelGrid);
     void fromImplicit(ImplicitPatch* implicitTerrain);
 
     VoxelGrid toVoxelGrid();
-    GridF voxelize(int fixedHeight = -1, float kernelSize = 1.f);
+    GridF voxelize(int fixedHeight = -1, float kernelSize = 0.f) const;
+    float sampleSignedField(const Vector3& pos) const;
     GridF getVoxelized(const Vector3& dimensions = Vector3::invalid, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
-    std::map<TerrainTypes, float> getKernel(const Vector3& pos, float kernelSize);
+    std::map<TerrainTypes, float> getKernel(const Vector3& pos, float kernelSize) const;
     std::pair<TerrainTypes, float> getMaterialAndHeight(const Vector3& pos);
 
     Vector3 getFirstIntersectingStack(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
@@ -92,10 +93,16 @@ public:
     std::string toString() const { return this->toShortString(); }
     std::string toShortString() const { return "Layered terrain : " + std::to_string(this->getDimensions().x()) + "x" + std::to_string(this->getDimensions().y()) + "x" + std::to_string(this->getDimensions().z()); }
 
-    void reset() { this->layers = previousState; }
+    void reset() { this->layers = previousState; ++_historyIndex; }
     Matrix3<std::vector<std::pair<TerrainTypes, float>>>& getLayers() { return this->layers; }
 protected:
     std::pair<GridI, GridF > _cachedMaterialAndHeights;
+    Matrix3<std::vector<std::pair<TerrainTypes, float>>> _materialLayersSnapshot;
+    mutable Matrix3<std::vector<std::pair<TerrainTypes, float>>> _fieldLayersSnapshot;
+    mutable std::set<TerrainTypes> _sampledInvisibleLayers;
+    mutable GridF _sampledField;
+    mutable Vector3 _sampledScale = Vector3::invalid;
+    GridF sampledField(const Vector3& extent, const Vector3& scale) const;
 
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> previousState;

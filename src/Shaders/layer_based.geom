@@ -14,6 +14,12 @@ uniform float max_isolevel =  1000.0;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
+uniform bool shadowPass = false;
+uniform mat4 shadowDepthMatrix;
+vec4 terrainClipPosition(vec4 position) {
+    return shadowPass ? shadowDepthMatrix * position : proj_matrix * mv_matrix * position;
+}
+
 uniform mat4 norm_matrix;
 
 uniform vec3 min_vertice_positions;
@@ -91,14 +97,16 @@ vec4 getPosition(vec4 position, vec3 _offset)
 //    return clamp(position + vec4(.5, .5, .0, .0) + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
 }
 float getAmbiantOcclusion(vec3 pos) {
+    if (shadowPass) return 1.0;
     int radius = 5;
     float occlusion = 0.0;
     float total = 0.0;
+    float centerHeight = getHeight(pos.xyz);
 
     for (int dx = -radius; dx < radius+1; dx++) {
         for (int dy = -radius; dy < radius+1; dy++) {
             vec2 off = vec2(dx, dy);
-            occlusion += (getHeight(pos.xyz) + length(off) + 1.0 < getHeight(vec3(pos.xy - off, pos.z)) ? 1.0 : 0.0);
+            occlusion += (centerHeight + length(off) + 1.0 < getHeight(vec3(pos.xy - off, pos.z)) ? 1.0 : 0.0);
             total += 1.0;
         }
     }
@@ -116,7 +124,10 @@ void main(void) {
 //    gdensity = max(0.0, gdensity + 0.5);
 
 //    if (!useMarchingCubes) {
+    float layerDensity = gdensity;
     if (true) {
+        vec3 faceNormal;
+        float layerOcclusion;
         if (!isMatter(texture_position.xyz)) return;
 
         float height = getHeight(texture_position.xyz);
@@ -142,89 +153,149 @@ void main(void) {
         vec4 pos;
 
         // Front
-        gambiantOcclusion = getAmbiantOcclusion(texture_position.xyz);
+        layerOcclusion = getAmbiantOcclusion(texture_position.xyz);
         if (nFront) {
-            grealNormal = vec3(0, -1, 0);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, maxHeight));
+            faceNormal = vec3(0, -1, 0);
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 0, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 0, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 0, minHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 0, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, maxHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 0, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 0, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 0, minHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 0, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
             EndPrimitive();
         }
         // Right
         if (nRight) {
-            grealNormal = vec3(1, 0, 0);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, maxHeight));
+            faceNormal = vec3(1, 0, 0);
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 0, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 0, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 0, minHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 0, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, maxHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 1, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 1, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 1, minHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 1, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
             EndPrimitive();
         }
         // Right
         if (nBack) {
-            grealNormal = vec3(0, 1, 0);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, maxHeight));
+            faceNormal = vec3(0, 1, 0);
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 1, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 1, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 1, minHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 1, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, maxHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 1, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 1, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 1, minHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 1, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
             EndPrimitive();
         }
         // Back
         if (nLeft) {
-            grealNormal = vec3(-1, 0, 0);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, maxHeight));
+            faceNormal = vec3(-1, 0, 0);
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 1, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 1, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 1, minHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 1, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, maxHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 0, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 0, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 0, minHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 0, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
             EndPrimitive();
         }
 
         // Bottom
         if (nBottom) {
-            grealNormal = vec3(0, 0, -1);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, minHeight));
+            faceNormal = vec3(0, 0, -1);
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 0, minHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 0, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 1, minHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 1, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 0, minHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 0, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, minHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 1, minHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 1, minHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
             EndPrimitive();
         }
@@ -232,18 +303,30 @@ void main(void) {
         // Top
 
         if (nTop) {
-            grealNormal = vec3(0, 0, 1);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, maxHeight));
+            faceNormal = vec3(0, 0, 1);
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 0, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 0, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, maxHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 0, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 0, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, maxHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(0, 1, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(0, 1, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, maxHeight));
+            gl_Position = terrainClipPosition(getPosition(position, vec3(1, 1, maxHeight)));
             ginitialVertPos = getPosition(position, vec3(1, 1, maxHeight)).xyz;
+            grealNormal = faceNormal;
+            gambiantOcclusion = layerOcclusion;
+            gdensity = layerDensity;
             EmitVertex();
             EndPrimitive();
         }
@@ -284,19 +367,19 @@ void main(void) {
         while(true){
             if(triTableValue(cubeindex, i) != -1){
                 position= vec4(vertlist[triTableValue(cubeindex, i)], 1);
-                gl_Position = proj_matrix * mv_matrix * position;
+                gl_Position = terrainClipPosition(position);
                 ginitialVertPos = position.xyz;
                 grealNormal = normal;
                 EmitVertex();
 
                 position= vec4(vertlist[triTableValue(cubeindex, i+1)], 1);
-                gl_Position = proj_matrix * mv_matrix * position;
+                gl_Position = terrainClipPosition(position);
                 ginitialVertPos = position.xyz;
                 grealNormal = normal;
                 EmitVertex();
 
                 position= vec4(vertlist[triTableValue(cubeindex, i+2)], 1);
-                gl_Position = proj_matrix * mv_matrix * position;
+                gl_Position = terrainClipPosition(position);
                 ginitialVertPos = position.xyz;
                 grealNormal = normal;
                 EmitVertex();
