@@ -8,16 +8,16 @@ public:
     Vector3 position;
     Vector3 velocity;
     Vector3 force;
-    float density;
-    float pressure;
-    float mass;
-    float smoothingRadius;
-    float gasConstant;
-    float restDensity;
-    float viscosity;
-    int isGhost;
+    float density = 0;
+    float pressure = 0;
+    float mass = 0;
+    float smoothingRadius = 0;
+    float gasConstant = 0;
+    float restDensity = 0;
+    float viscosity = 0;
+    int isGhost = 0;
 
-    int index;
+    int index = -1;
 };
 
 #endif // PARTICLE_H
