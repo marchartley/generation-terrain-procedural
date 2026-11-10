@@ -14,6 +14,7 @@
 #include "DataStructure/Matrix.h"
 #include "DataStructure/Image.h"
 #include "Graphics/MarchingCubes.h"
+#include "TerrainGen/TerrainSampling.h"
 
 #include "Interface/TerrainComparatorInterface.h"
 #include "TerrainModification/UnderwaterErosion.h"
@@ -237,15 +238,21 @@ void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _s
 //    this->displayParticles = _displayParticles;
 }
 
+float TerrainGenerationInterface::getWaterElevation() const
+{
+    // The same absolute reference is used for every terrain and the water mesh.
+    return waterLevel * voxelGrid->getSizeZ();
+}
+
 void TerrainGenerationInterface::displayWaterLevel()
 {
     waterLevelMesh.fromArray({
-                                Vector3(1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor)
+                                Vector3(1.f, 1.f, getWaterElevation() * heightFactor),
+                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, getWaterElevation() * heightFactor),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, getWaterElevation() * heightFactor),
+                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, getWaterElevation() * heightFactor),
+                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, getWaterElevation() * heightFactor),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, getWaterElevation() * heightFactor)
                              });
     waterLevelMesh.display();
 }
@@ -1093,6 +1100,16 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 }
 
 
+void TerrainGenerationInterface::prepareTerrainEffects(const std::shared_ptr<Shader>& shader, bool scaledElevation)
+{
+    shader->setBool("displayDepth", displayDepth);
+    shader->setBool("displayShadows", displayShadows);
+    shader->setFloat("waterElevation", getWaterElevation());
+    shader->setFloat("depthRange", depthRange);
+    // Heightmap and layer geometry already exaggerate ginitialVertPos.z.
+    shader->setFloat("fragmentElevationScale", scaledElevation ? 1.f / heightFactor : 1.f);
+}
+
 void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
 {
     GlobalsGL::ContextScope contextScope;
@@ -1158,6 +1175,8 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, heights.sizeX, heights.sizeY, 0, GL_RGBA, GL_FLOAT, pixels.data());
         else
             GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, heights.sizeX, heights.sizeY, GL_RGBA, GL_FLOAT, pixels.data());
+        cache.renderedHeights = maxHeight > 0.f ? heights : GridF(heights.getDimensions(), 0.f);
+        cache.shadowField = GridF();
         cache.source = source;
         cache.biomes = biomes;
         cache.biomeNames = std::move(biomeNames);
@@ -1190,8 +1209,16 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                 heightmapMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                 heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 heightmapMesh.shader->setFloat("heightFactor", heightFactor);
-                heightmapMesh.shader->setBool("displayDepth", displayDepth);
-                // heightmapMesh.shader->setBool("displayShadows", displayShadows);
+                prepareTerrainEffects(heightmapMesh.shader, true);
+                if (displayShadows) {
+                    auto& cache = heightTextureCache;
+                    if (cache.shadowField.empty()) {
+                        const Vector3 extent(heightmap->getSizeX(), heightmap->getSizeY(),
+                                             std::max(2.f, std::ceil(maxHeight) + 2.f));
+                        cache.shadowField = TerrainSampling::heightField(cache.renderedHeights, extent, Vector3(1, 1, 1)) + .5f;
+                    }
+                    heightmapMesh.shader->setTexture3D("shadowFieldTex", 9, cache.shadowField);
+                }
                 if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions()) {
                     heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
                 }
@@ -1228,8 +1255,8 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                     marchingCubeMesh.shader->setFloat("waterRelativeHeight", waterLevel);
                     marchingCubeMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                     marchingCubeMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-                    marchingCubeMesh.shader->setBool("displayDepth", displayDepth);
-                    marchingCubeMesh.shader->setBool("displayShadows", displayShadows);
+                    prepareTerrainEffects(marchingCubeMesh.shader, false);
+                    marchingCubeMesh.shader->setInt("shadowFieldTex", 0);
                     marchingCubeMesh.shader->setFloat("heightFactor", heightFactor);
                 });
                 realDisplayTime = timeIt([&]() { marchingCubeMesh.display( GL_POINTS ); });
@@ -1259,6 +1286,9 @@ void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
                 layersMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                 layersMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 layersMesh.shader->setFloat("heightFactor", heightFactor);
+                prepareTerrainEffects(layersMesh.shader, true);
+                if (displayShadows)
+                    layersMesh.shader->setTexture3D("shadowFieldTex", 9, layerGrid->getVoxelized() + .5f);
 
                 //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
                     this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
@@ -1369,7 +1399,15 @@ void TerrainGenerationInterface::changeDisplayToComparativeMode(bool toComparati
 
 void TerrainGenerationInterface::setHeightFactor(float newHeightFactor)
 {
+    if (!std::isfinite(newHeightFactor) || newHeightFactor <= 0.f) return;
     this->heightFactor = newHeightFactor;
+    Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::setDepthRange(float newRange)
+{
+    if (!std::isfinite(newRange) || newRange <= 0.f) return;
+    depthRange = newRange;
     Q_EMIT updated();
 }
 
@@ -1416,6 +1454,8 @@ InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
 
     auto waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, this->waterLevel, [=](float newValue) { this->setWaterLevel(newValue); });
     auto ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, this->ambiantOcclusionFactor, [=](float newValue) { this->setAmbiantOcclusion(newValue); });
+    auto depthRangeSlider = new SliderElement("Depth range", 0.1f, std::max(100.f, voxelGrid ? voxelGrid->getSizeZ() : 100.f), 0.1f, this->depthRange,
+                                             [=](float value) { this->setDepthRange(value); });
     auto heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, this->heightFactor, [=](float newValue) { this->setHeightFactor(newValue); });
     auto ompFactorSlider = new SliderElement("OMP", 0.f, 1.f, 0.01f, this->ompFactor, [=](float newValue) { this->setOMPFactor(newValue); });
 
@@ -1424,6 +1464,7 @@ InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
     ui->add({
         waterLevelSlider,
         ambiantOcclusionSlider,
+        depthRangeSlider,
         heightFactorSlider,
         ompFactorSlider,
         createHorizontalGroup({

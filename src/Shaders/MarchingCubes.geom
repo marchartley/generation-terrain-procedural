@@ -255,6 +255,11 @@ float getAmbiantOcclusion(vec3 pos, vec3 normal) {
     return  1.0 - occlusion / total;
 }
 
+vec4 projectTerrainPosition(vec4 position) {
+    position.z *= heightFactor;
+    return proj_matrix * mv_matrix * position;
+}
+
 //Geometry Shader entry point
 void main(void) {
     vec4 position = vec4(initialVertPos[0], 1.0);
@@ -291,17 +296,17 @@ void main(void) {
         grealNormal = vec3(0, -1, 0);
         if (nFront) {
             gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 0, 1), center));
             ginitialVertPos = getPosition(position, vec3(0, 0, 1), center).xyz;
 //            gdensity =
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 0, 0), center));
             ginitialVertPos = getPosition(position, vec3(0, 0, 0), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 0, 1), center));
             ginitialVertPos = getPosition(position, vec3(1, 0, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 0, 0), center));
             ginitialVertPos = getPosition(position, vec3(1, 0, 0), center).xyz;
             EmitVertex();
             EndPrimitive();
@@ -310,16 +315,16 @@ void main(void) {
         grealNormal = vec3(1, 0, 0);
         if (nRight) {
             gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 0, 1), center));
             ginitialVertPos = getPosition(position, vec3(1, 0, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 0, 0), center));
             ginitialVertPos = getPosition(position, vec3(1, 0, 0), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 1, 1), center));
             ginitialVertPos = getPosition(position, vec3(1, 1, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 1, 0), center));
             ginitialVertPos = getPosition(position, vec3(1, 1, 0), center).xyz;
             EmitVertex();
             EndPrimitive();
@@ -328,16 +333,16 @@ void main(void) {
         grealNormal = vec3(0, 1, 0);
         if (nBack) {
             gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 1, 1), center));
             ginitialVertPos = getPosition(position, vec3(1, 1, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 1, 0), center));
             ginitialVertPos = getPosition(position, vec3(1, 1, 0), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 1, 1), center));
             ginitialVertPos = getPosition(position, vec3(0, 1, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 1, 0), center));
             ginitialVertPos = getPosition(position, vec3(0, 1, 0), center).xyz;
             EmitVertex();
             EndPrimitive();
@@ -346,16 +351,16 @@ void main(void) {
         if (nLeft) {
             grealNormal = vec3(-1, 0, 0);
             gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 1, 1), center));
             ginitialVertPos = getPosition(position, vec3(0, 1, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 1, 0), center));
             ginitialVertPos = getPosition(position, vec3(0, 1, 0), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 0, 1), center));
             ginitialVertPos = getPosition(position, vec3(0, 0, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 0, 0), center));
             ginitialVertPos = getPosition(position, vec3(0, 0, 0), center).xyz;
             EmitVertex();
             EndPrimitive();
@@ -365,16 +370,16 @@ void main(void) {
         if (nBottom) {
             grealNormal = vec3(0, 0, -1);
             gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 0, 0), center));
             ginitialVertPos = getPosition(position, vec3(0, 0, 0), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 1, 0), center));
             ginitialVertPos = getPosition(position, vec3(0, 1, 0), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 0, 0), center));
             ginitialVertPos = getPosition(position, vec3(1, 0, 0), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 0), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 1, 0), center));
             ginitialVertPos = getPosition(position, vec3(1, 1, 0), center).xyz;
             EmitVertex();
             EndPrimitive();
@@ -384,16 +389,16 @@ void main(void) {
         grealNormal = vec3(0, 0, -1);
         if (nTop) {
             gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 0, 1), center));
             ginitialVertPos = getPosition(position, vec3(0, 0, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 0, 1), center));
             ginitialVertPos = getPosition(position, vec3(1, 0, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(0, 1, 1), center));
             ginitialVertPos = getPosition(position, vec3(0, 1, 1), center).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1), center);
+            gl_Position = projectTerrainPosition(getPosition(position, vec3(1, 1, 1), center));
             ginitialVertPos = getPosition(position, vec3(1, 1, 1), center).xyz;
             EmitVertex();
             EndPrimitive();
