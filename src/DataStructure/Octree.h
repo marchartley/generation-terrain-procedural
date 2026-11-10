@@ -31,6 +31,8 @@ public:
     OctreeNode(const Vector3& origin, const Vector3& halfDimension);
 
     ~OctreeNode();
+    OctreeNode(const OctreeNode &) = delete;
+    OctreeNode &operator=(const OctreeNode &) = delete;
 
     bool intersects(const Vector3& start, const Vector3& end) const;
     bool intersects(const Vector3& v1, const Vector3& v2, const Vector3& v3) const;
@@ -47,13 +49,19 @@ public:
     Octree(const Vector3& origin, const Vector3& halfDimension, int capacity = 20);
 
     ~Octree();
+    Octree(const Octree &other);
+    Octree &operator=(const Octree &other);
+    Octree(Octree &&other) noexcept;
+    Octree &operator=(Octree &&other) noexcept;
 
     bool insert(std::vector<Triangle> triangles);
 
 
     virtual SpacePartitioning& build(const std::vector<Triangle>& triangles);
     virtual std::set<size_t> getAllStoredTrianglesIndices() const;
-    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd, const std::set<size_t> &ignoredTriangles = {}) const;
+    virtual std::pair<Vector3, size_t>
+    getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd,
+                                    const std::set<size_t> &ignoredTriangles = {}) const;
     std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd, size_t ignoredTriangle) const;
     virtual std::vector<std::pair<Vector3, size_t>> getAllIntersectionsAndTrianglesIndices(const Vector3& rayStart, const Vector3& rayEnd) const;
 

@@ -351,4 +351,3 @@ BVHNode::~BVHNode() {
 //    if (right != nullptr)
 //        delete right;
 }
-
