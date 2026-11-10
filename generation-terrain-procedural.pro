@@ -166,6 +166,7 @@ SOURCES += \
     src/Graph/TopoMap.cpp \
     src/Graph/WaveFunctionCollapse.cpp \
     src/GUIElements/AbstractPlotter.cpp \
+    src/Graphics/TerrainShadowMap.cpp \
     src/Graphics/ComputeShader.cpp \
     src/Graphics/CubeMesh.cpp \
     src/Graphics/DebugShader.cpp \
@@ -363,6 +364,8 @@ HEADERS += \
     src/Graph/TopoMap.h \
     src/Graph/WaveFunctionCollapse.h \
     src/GUIElements/AbstractPlotter.h \
+    src/Graphics/RenderMatrices.h \
+    src/Graphics/TerrainShadowMap.h \
     src/Graphics/ComputeShader.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \

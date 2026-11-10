@@ -340,6 +340,7 @@ void Shader::setPositionalLight(const std::string& pname, PositionalLight &value
 {
     this->setLightSource(pname, value);
     this->setVector((pname + ".position").c_str(), value.position);
+    this->setBool(pname + ".castsShadows", value.castsShadows);
 }
 
 void Shader::setMaterial(const std::string& pname, Material &value)

@@ -95,7 +95,9 @@ uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
 
 uniform sampler3D dataFieldTex;
-uniform sampler3D shadowFieldTex;
+layout(binding = 9) uniform sampler2DArray shadowMapTex;
+uniform mat4 shadowMatrices[6];
+uniform bool shadowPass = false;
 uniform sampler3D dataChangesFieldTex;
 uniform sampler3D scalarFieldToDisplay;
 
@@ -127,6 +129,7 @@ struct PositionalLight {
     vec4 diffuse;
     vec4 specular;
     vec3 position;
+    bool castsShadows;
 };
 
 struct Material {
@@ -138,6 +141,8 @@ struct Material {
 
 uniform vec4 globalAmbiant;
 const int nbLights = 6;
+uniform int terrainLightCount = 6;
+uniform bool shadowTestLighting = false;
 uniform PositionalLight lights[nbLights];
 uniform bool isSpotlight;
 uniform Material ground_material;
@@ -279,63 +284,97 @@ float wyvill(float x) {
     return pow((1 - pow(x, 2)), 3);
 }
 
-float computeShadowOcclusion(vec3 pos) {
-    vec3 texSize = vec3(textureSize(shadowFieldTex, 0));
+// Project the receiver's tangent plane into shadow UV/depth coordinates.
+// This avoids screen derivatives and remains valid while the camera moves.
+vec2 shadowReceiverGradient(mat4 lightMatrix, vec4 clip, vec3 normal) {
+    vec3 axis = abs(normal.z) < .9 ? vec3(0,0,1) : vec3(0,1,0);
+    vec3 tangent = normalize(cross(normal, axis));
+    vec3 bitangent = cross(normal, tangent);
+    vec4 u = lightMatrix * vec4(tangent, 0.0);
+    vec4 v = lightMatrix * vec4(bitangent, 0.0);
+    vec3 ndc = clip.xyz / clip.w;
+    vec3 a = (u.xyz - ndc*u.w) * (.5/clip.w);
+    vec3 b = (v.xyz - ndc*v.w) * (.5/clip.w);
+    float determinant = a.x*b.y - a.y*b.x;
+    if (abs(determinant) < 1e-12) return vec2(0);
+    return vec2(a.z*b.y - b.z*a.y, a.x*b.z - b.x*a.z) / determinant;
+}
 
-    float occlusions = 0;
-    int evaluatingLights = 1;
-    int nbSamples = 20;
-    for (int iLight = 0; iLight < evaluatingLights; iLight++) {
-        vec3 toLight = lights[iLight].position - pos;
-        vec3 shadowDirection = normalize(toLight * vec3(1, 1, 1.0/heightFactor));
-        float lightWeight = length(lights[iLight].diffuse);
-        for (int iSample = 0; iSample < nbSamples; iSample++) {
-            vec3 seed = lights[iLight].position + pos + iSample + iLight;
-            vec3 dir = normalize(shadowDirection + (fbm3ToVec3(seed) - vec3(.5f)) * 0.10);
-            vec3 currentPosition = pos + (ceil(abs(dir)) * sign(dir) * ((2.f * iSample / float(nbSamples)) + 1.f));
-            // int try = 0;
-            vec3 offset = grealNormal * (fbm3ToVec3(grealNormal + seed) * 0.1f);
-            if (dot(offset, grealNormal) <= 0) {
-                offset *= -1;
+// Visibility is evaluated per light against the exact terrain geometry.
+float terrainLightVisibility(vec3 position, vec3 normal, vec3 smoothNormal, int lightIndex) {
+    if (!lights[lightIndex].castsShadows) return 1.0;
+    vec4 clip = shadowMatrices[lightIndex] * vec4(position, 1.0);
+    if (clip.w <= 0.0) return 1.0;
+    vec3 coord = clip.xyz / clip.w * .5 + .5;
+    if (any(lessThan(coord, vec3(0.0))) || any(greaterThan(coord, vec3(1.0)))) return 1.0;
+    if (length(lights[lightIndex].position - position) <= 0.000001) return 1.0;
+    float normalLength = dot(normal, normal);
+    normal = normalLength > 1e-12 ? normal * inversesqrt(normalLength) : vec3(0,0,1);
+    vec2 gradient = shadowReceiverGradient(shadowMatrices[lightIndex], clip, normal);
+    // A filter footprint can cross a neighbouring triangle on a curved mesh.
+    // Use the interpolated surface normal to estimate that local plane change,
+    // while keeping the actual face plane for the sample reference depth.
+    float smoothLength = dot(smoothNormal, smoothNormal);
+    smoothNormal = smoothLength > 1e-12 ? smoothNormal * inversesqrt(smoothLength) : normal;
+    vec3 toLight = normalize(lights[lightIndex].position-position);
+    vec2 curvatureGradient = vec2(0);
+    if (dot(normal,smoothNormal) > .5 && abs(dot(smoothNormal,toLight)) > .05) {
+        vec2 smoothGradient = shadowReceiverGradient(shadowMatrices[lightIndex],clip,smoothNormal);
+        // Perspective can amplify the difference on the neighbouring face.
+        curvatureGradient = 3.0 * abs(gradient-smoothGradient);
+    }
+    // Depth32F rasterization and projection round independently. The tolerance
+    // covers numerical error; receiver-plane correction handles the actual slope.
+    // UV projection roundoff is amplified by a grazing receiver plane.
+    // Account for that precision loss (about .002 texel at 1024 resolution),
+    // rather than offsetting the receiver by a whole texel or terrain cell.
+    float tolerance = 0.000005 + 0.000002 * dot(abs(gradient), vec2(1.0));
+    ivec2 size = textureSize(shadowMapTex, 0).xy;
+    vec2 pixel = coord.xy * vec2(size) - .5;
+    ivec2 base = ivec2(floor(pixel));
+    vec2 fraction = fract(pixel);
+    float visibility = 0.0;
+    // Equivalent to the old 3x3 bilinear PCF kernel, combined into 4x4 texels.
+    // Each depth comparison uses the plane depth at that texel's centre. A
+    // hardware bilinear comparison cannot assign a separate depth to each texel.
+    for (int y = -1; y <= 2; ++y) {
+        float wy = y == -1 ? 1.0-fraction.y : (y == 2 ? fraction.y : 1.0);
+        for (int x = -1; x <= 2; ++x) {
+            float wx = x == -1 ? 1.0-fraction.x : (x == 2 ? fraction.x : 1.0);
+            ivec2 samplePixel = base + ivec2(x,y);
+            float lit = 1.0;
+            if (all(greaterThanEqual(samplePixel,ivec2(0))) && all(lessThan(samplePixel,size))) {
+                vec2 uv = (vec2(samplePixel)+.5) / vec2(size);
+                float receiverDepth = coord.z + dot(gradient,uv-coord.xy);
+                float storedDepth = texelFetch(shadowMapTex,ivec3(samplePixel,lightIndex),0).r;
+                float localTolerance = tolerance + dot(curvatureGradient,abs(uv-coord.xy));
+                lit = receiverDepth-localTolerance <= storedDepth ? 1.0 : 0.0;
             }
-            currentPosition += offset;
-            vec3 stepSizes = vec3(1) / dir;
-            float tMaxX = (dir.x > 0) ? (ceil(currentPosition.x) - currentPosition.x) / dir.x :
-                              (currentPosition.x - floor(currentPosition.x)) / (-dir.x);
-            float tMaxY = (dir.y > 0) ? (ceil(currentPosition.y) - currentPosition.y) / dir.y :
-                          (currentPosition.y - floor(currentPosition.y)) / (-dir.y);
-            float tMaxZ = (dir.z > 0) ? (ceil(currentPosition.z) - currentPosition.z) / dir.z :
-                          (currentPosition.z - floor(currentPosition.z)) / (-dir.z);
-
-            // Calculate steps in each axis based on stepSizes
-            float tDeltaX = abs(stepSizes.x * dir.x);
-            float tDeltaY = abs(stepSizes.y * dir.y);
-            float tDeltaZ = abs(stepSizes.z * dir.z);
-
-            while (0 <= currentPosition.x && currentPosition.x < texSize.x && 0 <= currentPosition.y && currentPosition.y < texSize.y && 0 <= currentPosition.z && currentPosition.z < texSize.z) {
-                if (texture(shadowFieldTex, round(currentPosition) / texSize).a > 0.6) {
-                    occlusions += 1.0 * lightWeight;
-                    break;
-                }
-
-                if (tMaxX < tMaxY && tMaxX < tMaxZ) {
-                    currentPosition.x += dir.x;
-                    tMaxX += tDeltaX;
-                } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
-                    currentPosition.y += dir.y;
-                    tMaxY += tDeltaY;
-                } else {
-                    currentPosition.z += dir.z;
-                    tMaxZ += tDeltaZ;
-                }
-            }
+            visibility += wx*wy*lit;
         }
     }
-    float total = 0;
-    for (int i = 0; i < evaluatingLights; i++) {
-        total += nbSamples * length(lights[i].diffuse);
-    }
-    return occlusions / total;
+    return clamp(visibility / 9.0, 0.0, 1.0);
+}
+
+vec3 applyLightVisibility(vec3 ambient, vec3 diffuse, vec3 specular, float visibility) {
+    return ambient + (diffuse + specular) * visibility;
+}
+
+// Vertex normals interpolate across triangles. Undo vertical exaggeration on
+// the normal, then normalize per fragment; use a face normal only as fallback.
+vec3 terrainSurfaceNormal(vec3 interpolatedNormal, vec3 geometricNormal) {
+    vec3 normal = interpolatedNormal / vec3(1,1,heightFactor);
+    float squaredLength = dot(normal,normal);
+    if (squaredLength > 1e-12) return normal * inversesqrt(squaredLength);
+    float faceLength = dot(geometricNormal,geometricNormal);
+    return faceLength > 1e-12 ? geometricNormal * inversesqrt(faceLength) : vec3(0,0,1);
+}
+
+// Lighting directions and normals must both be in eye space. Normal-map
+// detail is bounded, and a neutral texture leaves the geometric normal intact.
+vec3 terrainLightingNormal(vec3 surfaceNormal, vec3 tangentDetail) {
+    vec3 normal = normalize(surfaceNormal + tangentDetail * .35);
+    return normalize(mat3(shaderInverseTranspose) * normal);
 }
 
 // Both inputs are in terrain units, before vertical exaggeration.
@@ -367,6 +406,12 @@ void main(void)
         }
     }
 
+    if (shadowPass) {
+        fragColor = vec4(0.0);
+        return;
+    }
+    fragColor = vec4(0.0);
+
     if (wireframeMode && !gl_FrontFacing)
         discard;
 
@@ -382,11 +427,12 @@ void main(void)
     }
 
     Material material = ground_material;
-    vec3 position = ginitialVertPos.xyz;
+    vec3 position = vec3(ginitialVertPos.xy, ginitialVertPos.z * fragmentElevationScale * heightFactor);
+    vec3 geometricSurfaceNormal = cross(dFdx(position), dFdy(position));
     vec3 varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    vec3 varyingNormal = normalize(grealNormal);
+    vec3 varyingNormal = terrainSurfaceNormal(grealNormal, geometricSurfaceNormal);
     vec3 vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    vec3 N = normalize(varyingNormal);
+    vec3 N = terrainLightingNormal(varyingNormal, vec3(0));
     vec3 V = normalize(-varyingVertPos);
     vec3 cam_pos = vec4(mv_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
@@ -408,32 +454,38 @@ void main(void)
     biomeNormalValue = biomeColorValue;
 //    fragColor = vec4((ginitialVertPos.xy/texSize).x, 0.0, (ginitialVertPos.xy/texSize).y, 1.0);
 
-    if (!displayAsComparisonTerrain && biomeNormalValue < 1.0) {
+    if (!shadowTestLighting && !displayAsComparisonTerrain && maxBiomesNormalTextures > 0 && biomeNormalValue >= 0.0 && biomeNormalValue < 1.0) {
         float scale = 10.0;
         vec3 blending = getTriPlanarBlend(varyingNormal);
 
-        vec3 Nx = vec3(1, 0, 0);
-        vec3 Ny = vec3(0, 1, 0);
-        vec3 Nz = vec3(0, 0, 1);
+        vec3 signs = mix(vec3(-1), vec3(1), greaterThanEqual(varyingNormal, vec3(0)));
+        vec3 Nx = vec3(signs.x, 0, 0);
+        vec3 Ny = vec3(0, signs.y, 0);
+        vec3 Nz = vec3(0, 0, signs.z);
 
-        vec3 Tx = vec3(0, 0, 1);
+        vec3 Tx = vec3(0, 1, 0);
         vec3 Ty = vec3(1, 0, 0);
-        vec3 Tz = vec3(0, 1, 0);
+        vec3 Tz = vec3(1, 0, 0);
 
-        vec3 Bx = cross(Nx, Tx); // vec3(0, 1, 0)
-        vec3 By = cross(Ny, Ty); // vec3(0, 0, 1)
-        vec3 Bz = cross(Nz, Tz); // vec3(1, 0, 0)
+        vec3 Bx = cross(Nx, Tx);
+        vec3 By = cross(Ny, Ty);
+        vec3 Bz = cross(Nz, Tz);
 
-        mat3 TBNx = transpose(mat3(Tx, Bx, Nx));
-        mat3 TBNy = transpose(mat3(Ty, By, Ny));
-        mat3 TBNz = transpose(mat3(Tz, Bz, Nz));
+        mat3 TBNx = mat3(Tx, Bx, Nx);
+        mat3 TBNy = mat3(Ty, By, Ny);
+        mat3 TBNz = mat3(Tz, Bz, Nz);
 
         vec2 normalTextureOffset = vec2(biomeNormalValue, 0);
         vec3 xaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 yaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 zaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
-        vec3 normalMap = (TBNx * xaxis * blending.x + TBNy * yaxis * blending.y + TBNz * zaxis * blending.z);
-        N = vec4(shaderInverseTranspose * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
+        // Decode signed tangent detail. Discard the normal-axis baseline so
+        // flat normal maps cannot add a second light-facing normal.
+        xaxis = vec3(xaxis.xy * 2.0 - 1.0, 0);
+        yaxis = vec3(yaxis.xy * 2.0 - 1.0, 0);
+        zaxis = vec3(zaxis.xy * 2.0 - 1.0, 0);
+        vec3 detail = TBNx*xaxis*blending.x + TBNy*yaxis*blending.y + TBNz*zaxis*blending.z;
+        N = terrainLightingNormal(varyingNormal, detail);
     }
 
     float upValue = 1.0; // clamp(dot(normalize(varyingNormal), normalize(vec3(0.0, 0.0, 1.0) /*+ fbm3ToVec3(ginitialVertPos) * 0.5*/)), 0.0, 1.0);
@@ -464,7 +516,13 @@ void main(void)
 //    vec4 col = mix(colorErod, colorDepo, (changeVal + 1.0) / 2.0);
 //    col = mix(col, colorNull, clamp(1.0 - abs(changeVal), 0.0, 1.0));
 
-    for (int iLight = 0; iLight < nbLights; iLight++) {
+    // Geometric normal in rendered coordinates; independent of normal maps and camera.
+    vec3 shadowSurfaceNormal = geometricSurfaceNormal;
+    // Global ambient is scene illumination: accumulate it once. Light energies
+    // are assigned by the key/fill rig, rather than averaged by light count.
+    fragColor.rgb = col.rgb * 3.0 * globalAmbiant.rgb * material_ambiant.rgb;
+    int activeLights = clamp(terrainLightCount, 1, nbLights);
+    for (int iLight = 0; iLight < activeLights; iLight++) {
 
         vec3 light_position = vec4(mv_matrix * vec4(lights[iLight].position, 1.0)).xyz;
         vec3 varyingLightDir = light_position - varyingVertPos;
@@ -489,7 +547,7 @@ void main(void)
         if (!gl_FrontFacing)
             lumin *= 0.6;
 
-        vec4 ambiant = ((globalAmbiant * material_ambiant) + (lights[iLight].ambiant * material_ambiant));
+        vec4 ambiant = lights[iLight].ambiant * material_ambiant;
         vec4 diffuse = lights[iLight].diffuse * material_diffuse * max(cosTheta, 0.0);
         vec4 specular = lights[iLight].specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 32.0);
         vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
@@ -504,9 +562,14 @@ void main(void)
         vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
         vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
         */
-        fragColor += vec4((col * 3.0 * (ambiant + diffuse + specular)).xyz, 1.0);
+        float visibility = 1.0;
+        if (displayShadows && (any(greaterThan(diffuse.rgb, vec3(0.0))) || any(greaterThan(specular.rgb, vec3(0.0))))) {
+            visibility = terrainLightVisibility(position, shadowSurfaceNormal, varyingNormal, iLight);
+        }
+        vec3 lit = applyLightVisibility(ambiant.rgb, diffuse.rgb, specular.rgb, visibility);
+        fragColor += vec4(col.rgb * 3.0 * lit, 1.0);
     }
-    fragColor /= float(nbLights);
+    fragColor.a = 1.0;
     fragColor = vec4(fragColor.xyz * waterDepthTint(depth), 1.0);
 //    fragColor = vec4(vec3(abs(varyingNormal)), 1);
 
@@ -531,11 +594,6 @@ void main(void)
         fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
     }
     */
-    float shadow = 0.0;
-    if (displayShadows) {
-        shadow = 1.0 - computeShadowOcclusion(vec3(ginitialVertPos.xy, ginitialVertPos.z * fragmentElevationScale));
-        fragColor = vec4((fragColor.xyz * mix(1.0, shadow, 0.50)), 1.0);
-    }
     fragColor = vec4((fragColor.xyz * mix(1.0, gambiantOcclusion, ambiantOcclusionFactor)), 1.0);
 
     if (displayAsComparisonTerrain) {

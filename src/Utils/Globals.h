@@ -34,7 +34,7 @@ public:
         QPointer<QOpenGLContext> owner;
         bool released = false;
         QMetaObject::Connection destructionConnection;
-        std::vector<GLuint> programs, textures, buffers, arrays;
+        std::vector<GLuint> programs, textures, buffers, arrays, framebuffers;
         ~Resources();
         void release();
         static std::shared_ptr<Resources> create();
