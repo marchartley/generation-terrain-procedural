@@ -341,68 +341,33 @@ template <> Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY
     return result;
 }
 
-template <>
-Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(const std::string& filename)
-{
-    if (!checkPathExists(filename)) {
-        throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");
-    }
-    int imgW, imgH, nbChannels;
-    unsigned char *c_data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_rgb); // Load image, force 3 channel
-    if (c_data == NULL)
-    {
-
-        throw std::runtime_error("Error : Impossible to load RGB image at " + filename + "\n" +
-                                "Either file is not found, or type is incorrect. Available file types are : \n" +
-                                "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
-    }
-    float *data = new float[imgW * imgH * 3];
-    for (size_t i = 0; i < static_cast<std::size_t>(imgW * imgH) * 3; i++)
-        data[i] = c_data[i];
-    stbi_image_free(c_data);
-
-    Matrix3<Vector3> map(imgW, imgH);
-    map.iterateParallel([&] (int x, int y, int) {
-        int index = x + y * imgW;
-        map(x, y) = Vector3(data[3 * index + 0],
-                data[3 * index + 1],
-                data[3 * index + 1]) / 255.f;
-    });
-    if (data != nullptr)
-        delete[] data;//stbi_image_free(data);
-
-    return map;
+template <> Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(const std::string &filename) {
+    auto image = Image::readFromFile(filename);
+    if (image.isColor())
+        return std::move(image.colorImage);
+    return image.getColorImage();
 }
 
-template <>
-Matrix3<float> Matrix3<float>::fromImageBW(const std::string& filename)
-{
-    if (!checkPathExists(filename)) {
-        throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");
+template <> Matrix3<float> Matrix3<float>::fromImageBW(const std::string &filename) {
+    int width = 0, height = 0, channels = 0;
+    if (stbi_is_hdr(filename.c_str()))
+        return Image::readFromFile(filename).getBwImage();
+    if (stbi_is_16_bit(filename.c_str())) {
+        std::unique_ptr<stbi_us, decltype(&stbi_image_free)> pixels(
+            stbi_load_16(filename.c_str(), &width, &height, &channels, 1), stbi_image_free);
+        if (!pixels)
+            throw std::runtime_error("Cannot decode grayscale image: " + filename);
+        GridF result(width, height);
+        result.iterateParallel([&](size_t i) { result.data[i] = pixels.get()[i] / 65535.f; });
+        return result;
     }
-    int imgW, imgH, nbChannels;
-    unsigned char *c_data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
-    if (c_data == NULL)
-    {
-
-        throw std::runtime_error("Error : Impossible to load BW image at " + filename + "\n" +
-                                "Either file is not found, or type is incorrect. Available file types are : \n" +
-                                "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
-    }
-    float *data = new float[imgW * imgH];
-    for (size_t i = 0; i < static_cast<std::size_t>(imgW * imgH); i++)
-        data[i] = c_data[i];
-    stbi_image_free(c_data);
-
-    Matrix3<float> map(imgW, imgH);
-    map.iterateParallel([&] (int x, int y, int) {
-        int index = x + y * imgW;
-        map(x, y) = data[index] / 255.f;
-    });
-    if (data != nullptr)
-        delete[] data;//stbi_image_free(data);
-
-    return map;
+    std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> pixels(
+        stbi_load(filename.c_str(), &width, &height, &channels, 1), stbi_image_free);
+    if (!pixels)
+        throw std::runtime_error("Cannot decode grayscale image: " + filename);
+    GridF result(width, height);
+    result.iterateParallel([&](size_t i) { result.data[i] = pixels.get()[i] / 255.f; });
+    return result;
 }
 // template <class T>
 Matrix3<float> operator-(const float a, const Matrix3<float> &b) {
