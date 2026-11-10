@@ -1449,17 +1449,18 @@ InterfaceUI *TerrainGenerationInterface::terrainViewerUI()
     auto displayWaterDepthButton = new CheckboxElement("Depth", this->displayDepth, [=](bool check) { this->changeDisplayDepthMode(check);});
 
     auto displayShadowsButton = new CheckboxElement("Shadows", this->displayShadows,[=](bool check) { this->changeDisplayShadowsMode(check);});
+    displayShadowsButton->setChecked(true);
 
-    auto orbitLightButton = new CheckboxElement("Orbiting light test (light 1)", [=](bool enabled) {
+    auto orbitLightButton = new CheckboxElement("Orbiting lights", [=](bool enabled) {
         if (!viewer) return;
         if (enabled) displayShadowsButton->setChecked(true);
         viewer->setShadowTestMode(enabled);
     });
     if (viewer) orbitLightButton->setChecked(viewer->shadowTestMode);
     std::vector<UIElement*> lightShadowControls;
-    for (int i=0; i<6; ++i) {
-        auto toggle=new CheckboxElement("Light "+std::to_string(i+1)+" shadows", [=](bool enabled) {
-            if (viewer) viewer->setTerrainLightShadows(i,enabled);
+    for (int i = 0; i < 6; i++) {
+        auto toggle = new CheckboxElement("Light " + std::to_string(i+1) + " shadows", [=](bool enabled) {
+            if (viewer) viewer->setTerrainLightShadows(i, enabled);
         });
         toggle->setChecked(viewer ? viewer->terrainLights[i].castsShadows : true);
         lightShadowControls.push_back(toggle);

@@ -7,13 +7,13 @@
   <Display FPSIsDisplayed="false" axisIsDrawn="false" cameraIsEdited="false" gridIsDrawn="false"/>
   <Geometry fullScreen="false" height="770" posX="237" posY="-285" width="1655"/>
   <Camera>
-    <Parameters Type="PERSPECTIVE" fieldOfView="0.785398" orthoCoef="8.05786e-124" sceneRadius="500" zClippingCoefficient="1.73205" zNearCoefficient="0.005">
+    <Parameters Type="PERSPECTIVE" fieldOfView="0.785398" orthoCoef="1.26331e-131" sceneRadius="500" zClippingCoefficient="1.73205" zNearCoefficient="0.005">
       <SceneCenter x="50" y="50" z="16"/>
     </Parameters>
     <Stereo IODist="0.062" focusDistance="1207.11" physScreenWidth="0.5"/>
     <ManipulatedCameraFrame>
-      <position x="76.3325" y="142.104" z="79.2942"/>
-      <orientation q0="0.116355" q1="0.436373" q2="0.889203" q3="0.0731912"/>
+      <position x="58.2833" y="118.559" z="26.76"/>
+      <orientation q0="0.0105695" q1="-0.544698" q2="-0.834958" q3="-0.0776999"/>
       <ManipulatedParameters rotSens="1" spinSens="0.3" transSens="1" wheelSens="1" zoomSens="1"/>
       <ManipulatedCameraParameters flySpeed="5" rotatesAroundUpVector="false" zoomsOnPivotPoint="false">
         <sceneUpVector x="0" y="1" z="0"/>

@@ -95,6 +95,10 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
 
     auto toolsConnected = std::make_shared<bool>(false);
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
+
+        viewer->installEventFilter(this);
+        setupUi();
+
         GlobalsGL::ContextScope contextScope;
         for (auto& actionInterface : actionInterfaces) {
             actionInterface.second->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
@@ -164,11 +168,8 @@ ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode
 
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
-
         this->openInterface(envObjectsInterface);
     }, Qt::DirectConnection);
-    viewer->installEventFilter(this);
-    setupUi();
 }
 
 ViewerInterface::~ViewerInterface()
