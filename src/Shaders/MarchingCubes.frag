@@ -146,6 +146,8 @@ uniform bool displayingIgnoredVoxels = false;
 uniform bool wireframeMode = false;
 
 uniform mat4 mv_matrix;
+// Computed once per frame using the same inverse-transpose as GLSL.
+uniform mat4 shaderInverseTranspose;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
@@ -280,10 +282,12 @@ float computeShadowOcclusion(vec3 pos) {
     int evaluatingLights = 1;
     int nbSamples = 20;
     for (int iLight = 0; iLight < evaluatingLights; iLight++) {
+        vec3 toLight = lights[iLight].position - pos;
+        vec3 shadowDirection = normalize(toLight * vec3(1, 1, 1.0/heightFactor));
+        float lightWeight = length(lights[iLight].diffuse);
         for (int iSample = 0; iSample < nbSamples; iSample++) {
             vec3 seed = lights[iLight].position + pos + iSample + iLight;
-            vec3 toLight = lights[iLight].position - pos;
-            vec3 dir = normalize(normalize(toLight * vec3(1, 1, 1.0/heightFactor)) + (fbm3ToVec3(seed) - vec3(.5f)) * 0.10);
+            vec3 dir = normalize(shadowDirection + (fbm3ToVec3(seed) - vec3(.5f)) * 0.10);
             vec3 currentPosition = pos + (ceil(abs(dir)) * sign(dir) * ((2.f * iSample / float(nbSamples)) + 1.f));
             // int try = 0;
             vec3 offset = grealNormal * (fbm3ToVec3(grealNormal + seed) * 0.1f);
@@ -306,7 +310,7 @@ float computeShadowOcclusion(vec3 pos) {
 
             while (0 <= currentPosition.x && currentPosition.x < texSize.x && 0 <= currentPosition.y && currentPosition.y < texSize.y && 0 <= currentPosition.z && currentPosition.z < texSize.z) {
                 if (texture(dataFieldTex, round(currentPosition) / texSize).a > 0.6) {
-                    occlusions += 1.0 * length(lights[iLight].diffuse);
+                    occlusions += 1.0 * lightWeight;
                     break;
                 }
 
@@ -408,7 +412,7 @@ void main(void)
         vec3 yaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 zaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 normalMap = (TBNx * xaxis * blending.x + TBNy * yaxis * blending.y + TBNz * zaxis * blending.z);
-        N = vec4(transpose(inverse(mv_matrix)) * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
+        N = vec4(shaderInverseTranspose * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
     }
 
     float upValue = 1.0; // clamp(dot(normalize(varyingNormal), normalize(vec3(0.0, 0.0, 1.0) /*+ fbm3ToVec3(ginitialVertPos) * 0.5*/)), 0.0, 1.0);

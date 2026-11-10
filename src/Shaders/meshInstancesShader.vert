@@ -73,6 +73,8 @@ uniform Material ground_material;
 uniform Material grass_material;
 
 uniform mat4 mv_matrix;
+// Computed once per frame using the same inverse-transpose as GLSL.
+uniform mat4 shaderInverseTranspose;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
@@ -103,7 +105,7 @@ void main(void)
     initialVertPos = vec3(_position);
     varyingVertPos = vec4(mv_matrix * vec4(_position, 1.0)).xyz;
     varyingLightDir = light_position - varyingVertPos;
-    varyingNormal = vec4(transpose(inverse(mv_matrix)) * instanceRotation * vec4(normal, 1.0)).xyz;
+    varyingNormal = vec4(shaderInverseTranspose * instanceRotation * vec4(normal, 1.0)).xyz;
     varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
 
     realNormal = normal; //vec3(mv_matrix * vec4(normal, 1.0)).xyz;

@@ -42,7 +42,7 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
             auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
             float totalPositive = 0.f, totalNegative = 0.f;
             for (auto& [mat, val] : materials) {
-                if (isIn(mat, LayerBasedGrid::invisibleLayers)) {
+                if ((LayerBasedGrid::invisibleLayers.count(mat) != 0)) {
                     totalNegative += val;
                 } else {
                     totalPositive += val;
@@ -146,7 +146,7 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
     }
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
         if (primitive->predefinedShape == ImplicitHeightmap && !primitive->cachedHeightmap.empty() &&
-            !isIn(primitive->material, LayerBasedGrid::invisibleLayers)) {
+            (LayerBasedGrid::invisibleLayers.count(primitive->material) == 0)) {
             const Vector3 local = pos - primitive->position;
             if (primitive->sampledVolume || primitive->cachedHeightmap.sizeZ > 1)
                 return primitive->cachedHeightmap.interpolate(local);
@@ -157,7 +157,7 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
     }
     float value = 0.f;
     for (const auto& [material, amount] : getMaterials(pos))
-        value += isIn(material, LayerBasedGrid::invisibleLayers) ? -amount : amount;
+        value += (LayerBasedGrid::invisibleLayers.count(material) != 0) ? -amount : amount;
     return value - isovalue;
 }
 
@@ -179,7 +179,7 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMateria
     float totalValue = 0.f;
 
     for (const auto& [mat, val] : materials)
-        totalValue += val * (isIn(mat, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+        totalValue += val * ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? -1.f : 1.f);
 
     if (totalValue < 0) {
         return {-totalValue, {{WATER, -totalValue}}};
@@ -284,8 +284,8 @@ bool ImplicitPatch::checkIsInGround(const Vector3& position)
     float groundValue = 0.f;
     float outsideValue = 0.f;
     for (auto& [mat, val] : eval) {
-        groundValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? 0.f : val);
-        outsideValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? val : 0.f);
+        groundValue += ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? 0.f : val);
+        outsideValue += ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? val : 0.f);
     }
     return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
 }
@@ -2460,7 +2460,7 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
         auto materials = composables[i]->getMaterials(pos);
         float value = 0.f;
         for (const auto& [material, amount] : materials)
-            value += isIn(material, LayerBasedGrid::invisibleLayers) ? -amount : amount;
+            value += (LayerBasedGrid::invisibleLayers.count(material) != 0) ? -amount : amount;
         const float strength = std::abs(value);
         // Keep the existing last-active-child composition, but preserve its
         // material labels and the continuous field just outside the surface.
@@ -2793,7 +2793,7 @@ float Implicit2DNary::computeHeight(const Vector3 &pos) const
     for (const auto& comp : composables) {
         if (auto asPrimitive = dynamic_cast<Implicit2DPrimitive*>(comp)) {
             float elemHeight = std::abs(asPrimitive->evaluate(pos.xy()));
-            if (isIn(asPrimitive->material, LayerBasedGrid::invisibleLayers)) {
+            if ((LayerBasedGrid::invisibleLayers.count(asPrimitive->material) != 0)) {
                 maxInvisible = std::max(maxInvisible, elemHeight);
             } else {
                 maxSolid = std::max(maxSolid, elemHeight);
@@ -2820,7 +2820,7 @@ float Implicit2DPrimitive::evaluate(const Vector3& pos) const
 
     Vector3 evalPos = pos - this->position.xy();
     if (Vector3::isInBox(pos, minPos, maxPos)) {
-        evaluation = this->evalFunction(evalPos) * (isIn(this->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+        evaluation = this->evalFunction(evalPos) * ((LayerBasedGrid::invisibleLayers.count(this->material) != 0) ? -1.f : 1.f);
     }
 
     return evaluation;
