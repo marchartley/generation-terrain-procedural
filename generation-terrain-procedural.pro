@@ -312,6 +312,7 @@ HEADERS += \
     src/DataStructure/Particle.h \
     src/DataStructure/Quaternion.h \
     src/DataStructure/SpacePartitioning.h \
+    src/DataStructure/SpatialQueries.h \
     src/DataStructure/Tree.h \
     src/DataStructure/Triangle.h \
     src/DataStructure/Vector3.h \
