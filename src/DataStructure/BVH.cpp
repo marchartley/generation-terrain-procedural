@@ -58,12 +58,12 @@ std::set<size_t> BVHTree::getAllStoredTrianglesIndices() const
     return convertVectorToSet(indices);
 }
 
-bool BVHTree::checkIntersection(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
+bool BVHTree::checkIntersection(const Vector3 &rayStart, const Vector3 &rayEnd, const std::set<size_t> &ignoredTriangles) const
 {
     return this->_checkIntersection(root, rayStart, rayEnd, ignoredTriangles);
 }
 
-bool BVHTree::_checkIntersection(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
+bool BVHTree::_checkIntersection(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, const std::set<size_t> &ignoredTriangles) const
 {
     if (!node->box.intersects(rayStart, rayEnd).isValid()) {
         return false;
@@ -320,12 +320,12 @@ BVHNode *BVHTree::buildBVH(int start, int end)
     return node;
 }
 
-std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
+std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, const std::set<size_t> &ignoredTriangles) const
 {
     return this->_getIntersectionAndTriangleIndex(root, rayStart, rayEnd, ignoredTriangles);
 }
 
-std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
+std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, const std::set<size_t> &ignoredTriangles) const
 {
     std::pair<Vector3, size_t> result = {Vector3::invalid, -1};
     float closestDistance = std::numeric_limits<float>::max();

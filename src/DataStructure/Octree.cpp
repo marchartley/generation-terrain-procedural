@@ -162,7 +162,7 @@ std::set<size_t> Octree::getAllStoredTrianglesIndices() const
     return allElements;
 }
 
-std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
+std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, const std::set<size_t> &ignoredTriangles) const
 {
     std::vector<OctreeNodeData> allData = this->queryRange(rayStart, rayEnd);
     std::set<size_t> possibleTriangles;
