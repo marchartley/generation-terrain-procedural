@@ -13,6 +13,12 @@ uniform float maxHeight;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
+uniform bool shadowPass = false;
+uniform mat4 shadowDepthMatrix;
+vec4 terrainClipPosition(vec4 position) {
+    return shadowPass ? shadowDepthMatrix * position : proj_matrix * mv_matrix * position;
+}
+
 uniform mat4 norm_matrix;
 
 uniform vec3 min_vertice_positions;
@@ -25,6 +31,7 @@ in vec3 realNormal[];
 
 out vec3 ginitialVertPos;
 out vec3 grealNormal;
+out float gdensity;
 out vec4 gcolor;
 out float gambiantOcclusion;
 
@@ -85,12 +92,12 @@ float bicubicInterpolate(sampler2D tex, vec2 uv, vec2 texSize, float maxHeight) 
 float getHeight(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     // return linearInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
-    return bicubicInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
+    return texture(heightmapFieldTex, (pos + vec2(.5)) / texSize).a * maxHeight;
 }
 float getHeightLinear(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     // return linearInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
-    return texture(heightmapFieldTex, pos / texSize).a * maxHeight;
+    return texture(heightmapFieldTex, (pos + vec2(.5)) / texSize).a * maxHeight;
 }
 /*float getHeight(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
@@ -102,6 +109,7 @@ float getDisplacementLength(vec2 pos) {
 }
 
 vec3 getNormal(vec2 pos) {
+    if (shadowPass) return vec3(0, 0, 1);
     vec3 normal = vec3(0, 0, 1);
 
     vec3 n0 = vec3(pos + vec2( 0,  0), getHeight(pos + vec2( 0,  0)));
@@ -128,6 +136,7 @@ vec3 getNormal(vec2 pos) {
     return normalize(normal);
 }
 float getAmbiantOcclusion(vec3 pos, vec3 normal) {
+    if (shadowPass) return 1.0;
     if (ambiantOcclusionFactor == 0.0) return 1.0;
     int nX = 5;
     int nY = 5;
@@ -164,11 +173,12 @@ void sendInfoVertex(vec4 vecPos) {
     grealNormal = getNormal(vecPos.xy);
     gcolor = vec4(texture(heightmapFieldTex, vecPos.xy/texSize).rgb, 1.0);
     vecPos.z = getHeight(vecPos.xy);
-    vecPos += vec4(grealNormal * getDisplacementLength(vecPos.xy) * displacementStrength, 0.0);
+    // Texture selection must not displace the terrain surface.
     vecPos.z *= heightFactor;
     ginitialVertPos = vecPos.xyz;
     gambiantOcclusion = getAmbiantOcclusion(vecPos.xyz, grealNormal.xyz);
-    gl_Position = proj_matrix * mv_matrix * vecPos;
+    gdensity = .65;
+    gl_Position = terrainClipPosition(vecPos);
     EmitVertex();
 }
 

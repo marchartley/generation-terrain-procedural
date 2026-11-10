@@ -8,7 +8,7 @@
 #include "TerrainModification/UnderwaterErosion.h"
 
 TerrainComparatorInterface::TerrainComparatorInterface(QWidget *parent)
-    : ActionInterface("terraincomparator", "Terrain Comparator", "digging", "Compare different terrains", "need_to_find_logo.png", parent)
+    : ActionInterface("terraincomparator", "Terrain Comparator", "digging", "Compare different terrains", "", parent)
 {
 
 }

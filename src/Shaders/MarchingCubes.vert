@@ -53,6 +53,7 @@ struct PositionalLight {
     vec4 diffuse;
     vec4 specular;
     vec3 position;
+    bool castsShadows;
 };
 
 struct Material {

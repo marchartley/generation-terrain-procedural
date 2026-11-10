@@ -3,6 +3,8 @@
 
 class Shader;
 
+#include <cstring>
+#include <unordered_map>
 #include <string>
 #include <vector>
 #include "Utils/Globals.h"
@@ -26,6 +28,17 @@ public:
     virtual ~Shader() = default;
     Shader& operator=(const Shader& copy);
     void ensureResources();
+    bool ensureLinked();
+    void invalidateProgramCache();
+    GLint uniformLocation(const std::string& name);
+    bool uniformChanged(GLint location, const void* data, size_t bytes);
+    bool programLinked = false;
+    std::unordered_map<std::string, GLint> uniformLocations;
+    std::unordered_map<GLint, std::vector<unsigned char>> uniformValues;
+    struct VolumeTexture { GridF samples; Vector3 dimensions = Vector3::invalid; };
+    std::map<int, VolumeTexture> volumeTextures;
+    size_t volumeUploadCount = 0;
+    size_t volumeAllocationCount = 0;
     std::shared_ptr<GlobalsGL::Resources> gpuResources;
     virtual void initializeGL() { compileShadersFromSource(definitions); }
     Shader(const std::string& vertexShaderFilename);
@@ -57,7 +70,7 @@ public:
     void setTexture2D(const std::string& pname, int index, GridI texture);
     void setTexture2D(const std::string& pname, int index, int width, int height, int* data);
     void setTexture2D(const std::string& pname, int index, int width, int height, int** data);
-    void setTexture3D(const std::string& pname, int index, GridF texture);
+    void setTexture3D(const std::string& pname, int index, const GridF& texture);
 //    void setMatrix(const std::string& pname, Matrix value);
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
@@ -85,8 +98,9 @@ public:
     {
         GlobalsGL::ContextScope contextScope;
         if (!use()) return;
-        GlobalsGL::f()->glUniformMatrix4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
-                                           1, GL_FALSE, &values[0][0]);
+        const GLint location = uniformLocation(pname);
+        if (uniformChanged(location, &values[0][0], sizeof(float) * 16))
+            GlobalsGL::f()->glProgramUniformMatrix4fv(programID, location, 1, GL_FALSE, &values[0][0]);
     }
 
     /*void setMatrix(const std::string& pname, const Matrix& mat) {
@@ -145,33 +159,37 @@ public:
 //        }
         GlobalsGL::ContextScope contextScope;
         if (!this->use()) return;
+        if (n < 2 || n > 4 || m < 2 || m > 4)
+            throw std::invalid_argument("Unsupported uniform matrix dimensions");
+        const GLint location = uniformLocation(pname);
+        if (!uniformChanged(location, values, sizeof(T) * n * m)) return;
         std::string numberOfElements = std::to_string(n) + "x" + std::to_string(m);
         if (numberOfElements == "2x2")
-            GlobalsGL::f()->glUniformMatrix2fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix2fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "2x3")
-            GlobalsGL::f()->glUniformMatrix2x3fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix2x3fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "3x2")
-            GlobalsGL::f()->glUniformMatrix3x2fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix3x2fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "2x4")
-            GlobalsGL::f()->glUniformMatrix2x4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix2x4fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "4x2")
-            GlobalsGL::f()->glUniformMatrix4x2fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix4x2fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "3x3")
-            GlobalsGL::f()->glUniformMatrix3fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix3fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "3x4")
-            GlobalsGL::f()->glUniformMatrix3x4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix3x4fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "4x3")
-            GlobalsGL::f()->glUniformMatrix4x3fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix4x3fv(programID, location,
                                                1, GL_FALSE, values);
         else if (numberOfElements == "4x4")
-            GlobalsGL::f()->glUniformMatrix4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+            GlobalsGL::f()->glProgramUniformMatrix4fv(programID, location,
                                                1, GL_FALSE, values);
         else
             throw std::invalid_argument("The size of the matrix to send to the shader is unusual");

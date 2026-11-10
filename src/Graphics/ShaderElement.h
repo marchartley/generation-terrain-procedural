@@ -82,10 +82,11 @@ class PositionalLight : public LightSource
 {
 public:
     PositionalLight();
-    PositionalLight(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, const Vector3& pos);
+    PositionalLight(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, const Vector3& pos, bool castsShadows = true);
     virtual void update();
 
     Vector3 position;
+    bool castsShadows = true;
 };
 
 class Material : public ColoredElement

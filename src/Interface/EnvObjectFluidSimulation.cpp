@@ -5,7 +5,7 @@
 #include "Interface/EnvObjsInterface.h"
 
 EnvObjectFluidSimulation::EnvObjectFluidSimulation(QWidget *parent)
-    : ActionInterface("envobjfluids", "Environmental Obj. fluids", "physics", "Display fluid simulation based on Environmental Obj.", "envobjsfluids_button.png", parent)
+    : ActionInterface("envobjfluids", "Environmental Obj. fluids", "physics", "Display fluid simulation based on Environmental Obj.", "", parent)
 {
     this->computeAtEachFrame = true;
 }
