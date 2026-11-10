@@ -95,6 +95,7 @@ uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
 
 uniform sampler3D dataFieldTex;
+uniform sampler3D shadowFieldTex;
 uniform sampler3D dataChangesFieldTex;
 uniform sampler3D scalarFieldToDisplay;
 
@@ -164,6 +165,9 @@ uniform bool displayAsComparisonTerrain = false;
 
 uniform bool displayShadows = false;
 uniform bool displayDepth = false;
+uniform float waterElevation = 0.0;
+uniform float fragmentElevationScale = 1.0;
+uniform float depthRange = 20.0;
 
 //vec4 sandColor = vec4(.761, .698, .502, 1.0);
 //vec4 mudColor = vec4(.430, .320, .250, 1.0);
@@ -276,7 +280,7 @@ float wyvill(float x) {
 }
 
 float computeShadowOcclusion(vec3 pos) {
-    vec3 texSize = vec3(textureSize(dataFieldTex, 0));
+    vec3 texSize = vec3(textureSize(shadowFieldTex, 0));
 
     float occlusions = 0;
     int evaluatingLights = 1;
@@ -309,7 +313,7 @@ float computeShadowOcclusion(vec3 pos) {
             float tDeltaZ = abs(stepSizes.z * dir.z);
 
             while (0 <= currentPosition.x && currentPosition.x < texSize.x && 0 <= currentPosition.y && currentPosition.y < texSize.y && 0 <= currentPosition.z && currentPosition.z < texSize.z) {
-                if (texture(dataFieldTex, round(currentPosition) / texSize).a > 0.6) {
+                if (texture(shadowFieldTex, round(currentPosition) / texSize).a > 0.6) {
                     occlusions += 1.0 * lightWeight;
                     break;
                 }
@@ -332,6 +336,23 @@ float computeShadowOcclusion(vec3 pos) {
         total += nbSamples * length(lights[i].diffuse);
     }
     return occlusions / total;
+}
+
+// Both inputs are in terrain units, before vertical exaggeration.
+float computeWaterDepth(vec3 fragmentPosition) {
+    float elevation = fragmentPosition.z * fragmentElevationScale + subterrainOffset.z;
+    float depth = waterElevation - elevation;
+    // Undoing exaggeration can round a point on the plane just above it.
+    float epsilon = 0.000001 * max(1.0, max(abs(waterElevation), abs(elevation)));
+    return abs(depth) <= epsilon ? 0.0 : depth;
+}
+
+vec3 waterDepthTint(float depth) {
+    if (depth < 0.0) return vec3(1.0);
+    vec3 shallow = vec3(0.8, 1.1, 1.5);
+    vec3 deep = vec3(0.5, 0.8, 0.5);
+    float amount = displayDepth ? clamp(depth / max(depthRange, 0.0001), 0.0, 1.0) : 0.0;
+    return mix(shallow, deep, amount);
 }
 
 void main(void)
@@ -378,7 +399,7 @@ void main(void)
     float realBiomeColorValue = texture(heightmapFieldTex, (realFragmentPosition.xy)/texSize).r;
     float biomeNormalValue = texture(heightmapFieldTex, (realFragmentPosition.xy + fbmWrap)/texSize).r;
 
-    float depth = (waterRelativeHeight * textureSize(dataFieldTex, 0).z - realFragmentPosition.z); // Depth from surface
+    float depth = computeWaterDepth(ginitialVertPos);
 
 //    fragColor = vec4(maxBiomesColorTextures / 7.0, 0.0, 0.0, 1.0);
 //    return;
@@ -486,17 +507,7 @@ void main(void)
         fragColor += vec4((col * 3.0 * (ambiant + diffuse + specular)).xyz, 1.0);
     }
     fragColor /= float(nbLights);
-    float waterHeight = waterRelativeHeight * dataTexSize.z;
-//    float depth = waterHeight - realFragmentPosition.z;
-    vec3 blue = vec3(0.8, 1.1, 1.5);
-    vec3 green = vec3(0.5, 0.8, 0.5);
-    float relDepth = clamp(depth / 20.0, 0.0, 1.0);
-
-    if (displayDepth) {
-        fragColor = vec4(fragColor.xyz * (depth < 0 ? vec3(1.0) : mix(blue, green, clamp(pow(relDepth, (ambiantOcclusionFactor != 0.5 ? 1.0/(1 + ambiantOcclusionFactor-0.5) : 10.0)), 0.0, 1000.0))), 1.0);
-    } else {
-        fragColor = vec4(fragColor.xyz * (depth < 0 ? vec3(1.0) : blue), 1.0);
-    }
+    fragColor = vec4(fragColor.xyz * waterDepthTint(depth), 1.0);
 //    fragColor = vec4(vec3(abs(varyingNormal)), 1);
 
     /*
@@ -522,7 +533,7 @@ void main(void)
     */
     float shadow = 0.0;
     if (displayShadows) {
-        shadow = 1.0 - computeShadowOcclusion(realFragmentPosition);
+        shadow = 1.0 - computeShadowOcclusion(vec3(ginitialVertPos.xy, ginitialVertPos.z * fragmentElevationScale));
         fragColor = vec4((fragColor.xyz * mix(1.0, shadow, 0.50)), 1.0);
     }
     fragColor = vec4((fragColor.xyz * mix(1.0, gambiantOcclusion, ambiantOcclusionFactor)), 1.0);

@@ -17,6 +17,7 @@ public:
 
     void display(const Vector3& camPos = Vector3::invalid);
     void displayWaterLevel();
+    float getWaterElevation() const;
 
     void createTerrainFromNoise(int nx, int ny, int nz, bool noise2D = false, float noiseStrength = 1.f, float frequency = 1.f, float lacunarity = 2.f, float noise_shifting = 0.0);
     void createTerrainFromFile(const std::string& filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
@@ -38,6 +39,7 @@ public Q_SLOTS:
 
     void setWaterLevel(float newLevel);
     void setAmbiantOcclusion(float newValue);
+    void setDepthRange(float newRange);
 
     void updateDisplayedView(const Vector3& newVoxelGridOffset, float newVoxelGridScaling);
     void reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
@@ -104,6 +106,7 @@ public:
     std::string mapSavingFolder = "saved_maps/";
 
 protected:
+    void prepareTerrainEffects(const std::shared_ptr<Shader>& shader, bool scaledElevation);
     Mesh marchingCubeMesh;
     GLuint dataFieldTex;
     Mesh heightmapMesh;
@@ -132,6 +135,8 @@ protected:
     struct HeightTextureCache {
         bool valid = false;
         GridF source;
+        GridF renderedHeights;
+        GridF shadowField;
         Matrix3<std::vector<int>> biomes;
         std::vector<std::pair<int, std::string>> biomeNames;
         std::map<std::string, int> colorPalette, normalPalette, displacementPalette;
@@ -146,6 +151,7 @@ public:
     bool displayAsComparativeMode = false;
     float heightFactor = 1.f;
     bool displayDepth = false;
+    float depthRange = 20.f; // Terrain units, independent of AO and vertical exaggeration.
     bool displayShadows = false;
     float ompFactor = 0.f;
 
