@@ -30,52 +30,46 @@ ImplicitPatch::ImplicitPatch()
     this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
 }
 
+namespace {
+float implicitColumnBoundary(const ImplicitPatch& patch, const Vector3& position, bool top)
+{
+    const auto bounds = patch.getSupportBBox();
+    if (!bounds.contains(Vector3(position.x(), position.y(), bounds.center().z()))) return 0.f;
+    const float start = top ? bounds.max().z() : bounds.min().z();
+    const float finish = top ? bounds.min().z() : bounds.max().z();
+    if (!std::isfinite(start) || !std::isfinite(finish) || finish == start) return 0.f;
+    auto inside = [&](float z) { return patch.getSignedEvaluation(Vector3(position.x(), position.y(), z)) > 0.f; };
+    if (inside(start)) return start;
+    float previous = start;
+    const double count = std::ceil(std::abs(double(finish) - start) / ImplicitPatch::zResolution);
+    for (double i = 1; i <= count; ++i) {
+        const float z = top ? std::max(finish, float(start - i * ImplicitPatch::zResolution))
+                            : std::min(finish, float(start + i * ImplicitPatch::zResolution));
+        if (inside(z)) {
+            float outsideZ = previous, insideZ = z;
+            for (int refinement = 0; refinement < 18; ++refinement) {
+                const float middle = outsideZ + (insideZ - outsideZ) * .5f;
+                if (inside(middle)) insideZ = middle;
+                else outsideZ = middle;
+            }
+            return outsideZ + (insideZ - outsideZ) * .5f;
+        }
+        previous = z;
+    }
+    return 0.f; // Existing empty-column convention; never a cache-validity sentinel.
+}
+}
+
 float ImplicitPatch::getMaxHeight(const Vector3& pos)
 {
-    auto AABBox = this->getBBox();
-    if (this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) == -1.f) {
-        float minHeight = AABBox.min().z();
-        float maxHeight = AABBox.max().z();
-
-        this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = 0;
-        for (float z = maxHeight; z > minHeight; z -= ImplicitPatch::zResolution) {
-//            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
-            auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
-            float totalPositive = 0.f, totalNegative = 0.f;
-            for (auto& [mat, val] : materials) {
-                if ((LayerBasedGrid::invisibleLayers.count(mat) != 0)) {
-                    totalNegative += val;
-                } else {
-                    totalPositive += val;
-                }
-            }
-            if (totalEval >= ImplicitPatch::isovalue && totalPositive > totalNegative) {
-//            if (totalEval <= ImplicitPatch::isovalue || totalPositive < totalNegative) {
-                this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = z;
-                break;
-            }
-        }
-    }
-    return this->_cachedMaxHeight.at((pos - AABBox.min()).xy());
+    // Positioning is invoked by parallel Z samples. Do not lazily write a
+    // shared integer-XY cache from these continuous-coordinate queries.
+    return implicitColumnBoundary(*this, pos, true);
 }
 
 float ImplicitPatch::getMinHeight(const Vector3& pos)
 {
-    auto AABBox = this->getBBox();
-    if (this->_cachedMinHeight.at((pos - AABBox.min()).xy()) == -1.f) {
-        float minHeight = AABBox.min().z();
-        float maxHeight = AABBox.max().z();
-
-        this->_cachedMinHeight.at((pos - AABBox.min()).xy()) = 0;
-        for (float z = minHeight; z < maxHeight; z += ImplicitPatch::zResolution) {
-            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
-            if (eval >= ImplicitPatch::isovalue) {
-                this->_cachedMinHeight.at((pos - AABBox.min()).xy()) = z;
-                break;
-            }
-        }
-    }
-    return this->_cachedMinHeight.at((pos - AABBox.min()).xy());
+    return implicitColumnBoundary(*this, pos, false);
 }
 
 float ImplicitPatch::getMinimalHeight(AABBox BBox)
@@ -91,35 +85,35 @@ float ImplicitPatch::getMaximalHeight(AABBox BBox)
 float ImplicitPatch::getMinimalHeight(const Vector3& minBox, const Vector3& maxBox)
 {
     auto BBox = this->getBBox();
-    if (minBox.isValid()) BBox.mini = minBox;
-    if (maxBox.isValid()) BBox.maxi = maxBox;
+    if (minBox.isValid()) BBox.mini = Vector3::max(BBox.min(), minBox);
+    if (maxBox.isValid()) BBox.maxi = Vector3::min(BBox.max(), maxBox);
 //    if (!minBox.isValid()) minBox = BBox.min();
 //    if (!maxBox.isValid()) maxBox = BBox.max();
 
-    float minHeight = 10000.f;
-    for (int x = BBox.min().x(); x < BBox.max().x(); x++) {
-        for (int y = BBox.min().y(); y < BBox.max().y(); y++) {
+    float minHeight = std::numeric_limits<float>::infinity();
+    for (double x = std::ceil(BBox.min().x()); x < BBox.max().x(); x += 1.) {
+        for (double y = std::ceil(BBox.min().y()); y < BBox.max().y(); y += 1.) {
             minHeight = std::min(minHeight, this->getMinHeight(Vector3(x, y)));
         }
     }
-    return minHeight;
+    return std::isfinite(minHeight) ? minHeight : 0.f;
 }
 
 float ImplicitPatch::getMaximalHeight(const Vector3& minBox, const Vector3& maxBox)
 {
     auto BBox = this->getBBox();
-    if (minBox.isValid()) BBox.mini = minBox;
-    if (maxBox.isValid()) BBox.maxi = maxBox;
+    if (minBox.isValid()) BBox.mini = Vector3::max(BBox.min(), minBox);
+    if (maxBox.isValid()) BBox.maxi = Vector3::min(BBox.max(), maxBox);
 //    if (!minBox.isValid()) minBox = BBox.min();
 //    if (!maxBox.isValid()) maxBox = BBox.max();
 
-    float maxHeight = -10000.f;
-    for (int x = BBox.min().x(); x < BBox.max().x(); x++) {
-        for (int y = BBox.min().y(); y < BBox.max().y(); y++) {
+    float maxHeight = -std::numeric_limits<float>::infinity();
+    for (double x = std::ceil(BBox.min().x()); x < BBox.max().x(); x += 1.) {
+        for (double y = std::ceil(BBox.min().y()); y < BBox.max().y(); y += 1.) {
             maxHeight = std::max(maxHeight, this->getMaxHeight(Vector3(x, y)));
         }
     }
-    return maxHeight;
+    return std::isfinite(maxHeight) ? maxHeight : 0.f;
 }
 
 Vector3 ImplicitPatch::getSamplingDimensions() const
@@ -1180,7 +1174,8 @@ Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector
         offsetB = 0.f;
     } else if (this->positionalB == SMOOTH_ABOVE) {
         float heightB = this->composableB()->getDimensions().z();
-        float heightA = heightA = std::min(heightB, this->composableA()->getMaxHeight(positionB));
+        if (heightB <= 0.f) return positionB;
+        float heightA = std::min(heightB, this->composableA()->getMaxHeight(positionB));
         float minHeightA = this->composableA()->getMinimalHeight(this->composableB()->getBBox());
         float heightInterp = interpolation::wyvill(heightA, minHeightA, (minHeightA + heightB));
 //        offsetB = (1.f - heightInterp / heightB) * heightB;
