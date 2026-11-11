@@ -315,6 +315,8 @@ public:
 
     void addTransformation(TransformFunction transform, TransformFunction inverse) {
         transformations.emplace_back(std::move(transform), std::move(inverse));
+        boundTransformations.emplace_back();
+        for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
     }
 
     float evaluate(const Vector3& point) const;
@@ -371,7 +373,9 @@ public:
     float _spreadingFactor = 0.f;
 
 private:
+    AABBox transformBounds(AABBox bounds) const;
     std::vector<std::pair<TransformFunction, TransformFunction>> transformations;
+    std::vector<std::function<AABBox(const AABBox&)>> boundTransformations;
 };
 
 class ImplicitTranslation : public ImplicitUnaryOperator {

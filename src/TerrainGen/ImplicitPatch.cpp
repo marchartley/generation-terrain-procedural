@@ -10,6 +10,7 @@
 
 
 #include "serialization/Serializer.h"
+#include <memory>
 
 float ImplicitPatch::isovalue = .5f;
 const float ImplicitPatch::zResolution = .1f;
@@ -1261,18 +1262,23 @@ void ImplicitUnaryOperator::addTranslation(const Vector3 &translation) {
 void ImplicitUnaryOperator::addRotation(const Vector3& rotationAngles) {
     this->_rotation += rotationAngles;
     Matrix rotationMatrix = rotationAngles.toRotationMatrix();
+    Matrix inverseRotationMatrix = rotationMatrix.inverse();
     auto rotationTransform = [=](const Vector3& point) {
         Vector3 center = this->composableA()->getBBox().center();
         return center + Vector3::fromMatrix(rotationMatrix.product((point - center).toMatrix()));
     };
     auto inverseRotationTransform = [=](const Vector3& point) {
         Vector3 center = this->composableA()->getBBox().center();
-        return center + Vector3::fromMatrix(rotationMatrix.inverse().product((point - center).toMatrix()));
+        return center + Vector3::fromMatrix(inverseRotationMatrix.product((point - center).toMatrix()));
     };
     addTransformation(rotationTransform, inverseRotationTransform);
 }
 
 void ImplicitUnaryOperator::addScaling(const Vector3 &scaleFactors) {
+    if (!scaleFactors.isValid() || !std::isfinite(scaleFactors.x()) ||
+        !std::isfinite(scaleFactors.y()) || !std::isfinite(scaleFactors.z()) ||
+        scaleFactors.x() == 0.f || scaleFactors.y() == 0.f || scaleFactors.z() == 0.f)
+        throw std::invalid_argument("Implicit scaling requires finite nonzero factors");
     this->_scale *= scaleFactors;
     auto scalingTransform = [=](const Vector3& point) {
         Vector3 center = this->composableA()->getBBox().center();
@@ -1286,26 +1292,30 @@ void ImplicitUnaryOperator::addScaling(const Vector3 &scaleFactors) {
 }
 
 void ImplicitUnaryOperator::addDisplacementField(const GridV3 &displacementField) {
-    auto displacementTransform = [&displacementField](const Vector3& point) {
-        // Use the displacement field to transform the point
-        return point + displacementField.interpolate(point);
+    if (displacementField.empty()) throw std::invalid_argument("Empty implicit displacement field");
+    auto field = std::make_shared<GridV3>(displacementField);
+    for (const auto& v : *field)
+        if (!v.isValid() || !std::isfinite(v.x()) || !std::isfinite(v.y()) || !std::isfinite(v.z()))
+            throw std::invalid_argument("Nonfinite implicit displacement");
+    field->raiseErrorOnBadCoord = false;
+    field->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    auto displacementTransform = [field](const Vector3& point) {
+        return point + field->interpolate(point);
     };
-    auto inverseDisplacementTransform = [&displacementField](const Vector3& point) {
-        // Iteratively "walk" back to the original point
-        Vector3 oldPoint;
-        Vector3 newPoint = point;
-        const int maxIterations = 100;  // Define an appropriate limit for your use case
-        int iterations = 0;
-        do {
-            if (++iterations > maxIterations) {
-                throw std::runtime_error("Inverse transformation could not be found");
-            }
-            oldPoint = newPoint;
-            newPoint = oldPoint - displacementField.interpolate(oldPoint);
-        } while ((newPoint - oldPoint).length() > 1e-6); // Use a small threshold to stop the iteration
-        return newPoint;
+    auto inverseDisplacementTransform = [field](const Vector3& target) {
+        Vector3 point = target;
+        for (int iteration = 0; iteration < 100; ++iteration) {
+            Vector3 next = target - field->interpolate(point);
+            if ((next - point).length() <= 1e-5f) return next;
+            point = next;
+        }
+        throw std::runtime_error("Implicit displacement inverse did not converge");
     };
     addTransformation(displacementTransform, inverseDisplacementTransform);
+    Vector3 minimum = Vector3::min(field->data), maximum = Vector3::max(field->data);
+    boundTransformations.back() = [minimum, maximum](const AABBox& box) {
+        return AABBox(box.min() + minimum, box.max() + maximum);
+    };
 }
 
 Vector3 ImplicitUnaryOperator::applyTransform(const Vector3& pos) const
@@ -1336,52 +1346,28 @@ std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3&
     }
     return materials;
 }
-AABBox ImplicitUnaryOperator::getSupportBBox() const {
-    auto AABBox = this->composableA()->getSupportBBox();
-    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
-
-    for (auto& vert : vertices) { // call transform function
-        vert = inverseTransform(vert);
+AABBox ImplicitUnaryOperator::transformBounds(AABBox bounds) const
+{
+    for (size_t i = 0; i < transformations.size(); ++i) {
+        if (boundTransformations[i]) bounds = boundTransformations[i](bounds);
+        else {
+            auto vertices = Vector3::getAABBoxVertices(bounds.min(), bounds.max());
+            for (auto& vertex : vertices) vertex = transformations[i].first(vertex);
+            bounds = AABBox(Vector3::min(vertices), Vector3::max(vertices));
+        }
     }
+    return bounds;
+}
 
-    return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
+AABBox ImplicitUnaryOperator::getSupportBBox() const
+{
+    return transformBounds(composableA()->getSupportBBox());
 }
 
 AABBox ImplicitUnaryOperator::getBBox() const
 {
-    auto AABBox = this->composableA()->getBBox();
-    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
-
-//    std::cout << "Transformations : " << this->transformations.size() << std::endl;
-
-    for (auto& vert : vertices) { // call transform function
-        vert = applyTransform(vert);
-    }
-
-    return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
+    return transformBounds(composableA()->getBBox());
 }
-/*
-AABBox ImplicitUnaryOperator::getSupportBBox()
-{
-    auto AABBox = this->composableA()->getSupportBBox();
-    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
-
-    for (auto& vert : vertices) // call transform function
-        vert = this->wrapFunction(vert);
-
-    return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
-}
-
-AABBox ImplicitUnaryOperator::getBBox()
-{
-    auto AABBox = this->composableA()->getBBox();
-    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
-
-    for (auto& vert : vertices) // call transform function
-        vert = this->wrapFunction(vert);
-
-    return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
-}*/
 
 std::string ImplicitUnaryOperator::toString() const
 {
