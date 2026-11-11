@@ -12,6 +12,7 @@
 #include "serialization/Serializer.h"
 #include <memory>
 #include <filesystem>
+#include <random>
 #include <QSaveFile>
 
 float ImplicitPatch::isovalue = .5f;
@@ -504,17 +505,17 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
 
 ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, CatmullRomSpline parametricCurve, bool in2D)
 {
-    ImplicitPrimitive* primitive;
+    std::unique_ptr<ImplicitPrimitive> primitive;
     if (in2D)
-        primitive = new Implicit2DPrimitive();
+        primitive.reset(new Implicit2DPrimitive());
     else
-        primitive = new ImplicitPrimitive();
+        primitive.reset(new ImplicitPrimitive());
     primitive->predefinedShape = shape;
     primitive->evalFunction = ImplicitPatch::createPredefinedShapeFunction(shape, dimensions, additionalParam, parametricCurve, in2D);
     primitive->optionalCurve = parametricCurve;
     primitive->parametersProvided = {additionalParam};
     primitive->dimensions = dimensions;
-    return primitive;
+    return primitive.release();
 }
 ImplicitPatch *ImplicitPatch::createIdentity()
 {
@@ -529,6 +530,21 @@ ImplicitPatch *ImplicitPatch::createIdentity()
 
 std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, CatmullRomSpline parametricCurve, bool in2D)
 {
+    if (shape == None) return [](const Vector3&) { return 0.f; };
+    if (shape == ImplicitHeightmap) throw std::invalid_argument("Use fromHeightmap or fromVoxelField for sampled primitives");
+    if (!dimensions.isValid() || !std::isfinite(dimensions.x()) || !std::isfinite(dimensions.y()) ||
+        !std::isfinite(dimensions.z()) || dimensions.minComp() < 0.f || !std::isfinite(additionalParam))
+        throw std::invalid_argument("Implicit shapes require finite nonnegative dimensions and finite parameters");
+    if (dimensions.minComp() == 0.f) return [](const Vector3&) { return 0.f; };
+    if ((shape == Gaussian || shape == ParametricTunnel || shape == MountainChain) && additionalParam <= 0.f)
+        return [](const Vector3&) { return 0.f; };
+    if (shape == ParametricTunnel || shape == MountainChain || shape == Polygon || shape == DistanceMap) {
+        const size_t required = (shape == Polygon || shape == DistanceMap) ? 3 : 2;
+        if (parametricCurve.size() < required) throw std::invalid_argument("Implicit curve has too few control points");
+        for (const auto& point : parametricCurve)
+            if (!point.isValid() || !std::isfinite(point.x()) || !std::isfinite(point.y()) || !std::isfinite(point.z()))
+                throw std::invalid_argument("Implicit curve has a nonfinite control point");
+    }
     std::function<float(const Vector3&)> func;
     switch(shape) {
     case Sphere:
@@ -574,8 +590,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFuncti
         func = ImplicitPatch::createDistanceMapFunction(additionalParam, dimensions.x(), dimensions.y(), dimensions.z(), parametricCurve, in2D);
         break;
     case ImplicitHeightmap:
-        // Do it yourself!
-        break;
+        throw std::invalid_argument("Sampled primitive requires sample data");
     case ParametricTunnel:
         func = ImplicitPatch::createParametricTunnelFunction(additionalParam, dimensions.x(), dimensions.y(), dimensions.z(), parametricCurve, in2D);
         break;
@@ -586,6 +601,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFuncti
         func = ImplicitPatch::createRippleFunction(additionalParam, dimensions.x(), dimensions.y(), dimensions.z(), in2D);
         break;
     }
+    if (!func) throw std::invalid_argument("Unknown implicit shape enumeration");
     return func;
 }
 
@@ -595,7 +611,9 @@ std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFuncti
 ImplicitPrimitive::ImplicitPrimitive()
 {
     this->evalFunction = [](const Vector3&) -> float { return 0.f; };
-    this->parametersProvided = {-1.f}; // Just to have an element at first
+    this->parametersProvided = {-1.f}; // Legacy identity parameter.
+    position = Vector3();
+    dimensions = Vector3(1, 1, 1);
 }
 
 float ImplicitPrimitive::evaluate(const Vector3& pos) const
@@ -629,8 +647,8 @@ float ImplicitPrimitive::evaluate(const Vector3& pos) const
         }
     }
 
+    if (!std::isfinite(evaluation)) return 0.f;
     evaluation = std::clamp(evaluation, 0.f, 1.f);
-
     return evaluation;
 }
 
@@ -654,6 +672,8 @@ AABBox ImplicitPrimitive::getBBox() const
 
 void ImplicitPrimitive::update()
 {
+    for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
+
 
     if (this->predefinedShape == ImplicitHeightmap) {
         if (this->cachedHeightmap.size() == 0) {
@@ -759,13 +779,15 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
 void ImplicitPrimitive::setDimensions(const Vector3& newDimensions)
 {
     this->dimensions = newDimensions;
-
+    if (predefinedShape != None && predefinedShape != ImplicitHeightmap) update();
+    for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
     this->updateCache();
 }
 
 void ImplicitPrimitive::setSupportDimensions(const Vector3& newSupportDimensions)
 {
     this->supportDimensions = newSupportDimensions;
+    for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
 }
 
 std::vector<ImplicitPatch *> ImplicitPrimitive::findAll(PredefinedShapes shape)
@@ -828,6 +850,9 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(const std::string& filename,
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string filename, ImplicitPrimitive *prim)
 {
+    if (heightmap.empty()) throw std::invalid_argument("Cannot create an implicit terrain from an empty heightmap");
+    for (float value : heightmap) if (!std::isfinite(value)) throw std::invalid_argument("Nonfinite implicit height sample");
+
     if (heightmap.sizeZ > 1) return fromVoxelField(heightmap, prim);
     if (prim == nullptr)
         prim = new ImplicitPrimitive;
@@ -842,6 +867,7 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string
 //    });
 
     prim->name = "Heightmap";
+    prim->heightmapFilename = filename;
     prim->predefinedShape = ImplicitHeightmap;
     prim->cachedHeightmap = heightmap;
     prim->cachedHeightmap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
@@ -854,6 +880,7 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string
 ImplicitPrimitive* ImplicitPrimitive::fromVoxelField(const GridF& values, ImplicitPrimitive* prim)
 {
     if (values.empty()) throw std::invalid_argument("Cannot create an implicit terrain from an empty field");
+    for (float value : values) if (!std::isfinite(value)) throw std::invalid_argument("Nonfinite implicit volume sample");
     if (!prim) prim = new ImplicitPrimitive;
     prim->sampledVolume = true;
     prim->cachedHeightmap = values;
@@ -1654,24 +1681,15 @@ void ImplicitUnaryOperator::addWavelets()
 
 std::function<float (const Vector3&)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    Vector3 center = Vector3(width, width, width) * .5f;
-    std::function<float (const Vector3&)> sphere;
-    if (in2D) {
-        sphere = [=, width, sigma](const Vector3& pos) {
-            float D = (pos.xy() - center.xy()).norm2();
-            float R = center.xy().norm2();
-            if (D > R) return 0.f;
-            return center.z() + std::sqrt(R - D);
-        };
-    } else {
-        sphere = [=, width, sigma](const Vector3& pos) {
-//            Vector3 center = Vector3(width, width, width) * .5f;
-            float sqrDist = (pos - center).norm2();
-            float value = std::max(0.f, (sqrDist > (width * width * .25f) ? 0.f : 1 - std::abs(std::sqrt(sqrDist)) / (width*.5f)) * sigma);
-            return value;
-        };
-    }
-    return sphere;
+    const Vector3 radius = Vector3(width, depth, height) * .5f;
+    if (in2D) return [radius](const Vector3& pos) {
+        const Vector3 q = (pos.xy() - radius.xy()) / Vector3(radius.x(), radius.y(), 1.f);
+        const float squared = q.norm2();
+        return squared > 1.f ? 0.f : radius.z() * (1.f + std::sqrt(1.f - squared));
+    };
+    return [radius, sigma](const Vector3& pos) {
+        return std::max(0.f, (1.f - ((pos - radius) / radius).norm()) * sigma);
+    };
 }
 
 std::function<float (const Vector3&)> ImplicitPatch::createBlockFunction(float sigma, float width, float depth, float height, bool in2D)
@@ -1707,28 +1725,15 @@ std::function<float (const Vector3&)> ImplicitPatch::createGaussianFunction(floa
 
 std::function<float (const Vector3&)> ImplicitPatch::createCylinderFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    Vector3 start = Vector3(width * .5f, depth * .5f, height * 0.f);
-    Vector3 end = Vector3(width * .5f, depth * .5f, height * 1.f);
-    if (in2D) {
-//        float angle = Vector3(1, 0, 0).getAngleWith(end - start);
-        return [=](const Vector3& pos) {
-            float d = (start.xy() - pos.xy()).norm2();
-            return (d < (width * .5f) * (width * .5f) ? height : 0.f);
-        };
-    } else {
-    //    float radius = sigma;
-        return [=] (const Vector3& pos) {
-            // Line on Z axis
-            if (pos.z() < start.z() || end.z() < pos.z())
-                return 0.2f;
-            CatmullRomSpline spline({start, end});
-            Vector3 closestPoint = spline.estimateClosestPos(pos);
-            Vector3 normalizedClosestPoint = ((pos - closestPoint) / (Vector3(width, depth, height)));
-            float distance = normalizedClosestPoint.norm();
-            float evaluation = std::clamp(1.f - distance, 0.f, 1.f);
-            return evaluation;
-        };
-    }
+    const Vector3 radius(width * .5f, depth * .5f, 1.f);
+    if (in2D) return [radius, height](const Vector3& pos) {
+        return ((pos.xy() - radius.xy()) / radius).norm2() <= 1.f ? height : 0.f;
+    };
+    return [radius, height](const Vector3& pos) {
+        const float radial = 1.f - .5f * ((pos.xy() - radius.xy()) / radius).norm();
+        const float cap = .5f + std::min(pos.z(), height - pos.z()) / height;
+        return std::clamp(std::min(radial, cap), 0.f, 1.f);
+    };
 }
 
 std::function<float (const Vector3&)> ImplicitPatch::createRockFunction(float sigma, float width, float depth, float height, bool in2D)
@@ -1772,12 +1777,24 @@ std::function<float (const Vector3&)> ImplicitPatch::createMountainFunction(floa
 
 std::function<float (const Vector3&)> ImplicitPatch::createDuneFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    return ImplicitPatch::createMountainFunction(sigma, width, depth, height, in2D);
+    const float crest = sigma > 0.f ? std::clamp(sigma / (1.f + sigma), .1f, .9f) : .65f;
+    auto profile = [=](const Vector3& pos) {
+        const float x = pos.x() / width, y = 2.f * pos.y() / depth - 1.f;
+        if (x < 0.f || x > 1.f || std::abs(y) > 1.f) return 0.f;
+        const float ridge = x < crest ? x / crest : (1.f - x) / (1.f - crest);
+        return height * ridge * (1.f - y * y);
+    };
+    return in2D ? std::function<float(const Vector3&)>(profile) : convert2DfunctionTo3Dfunction(profile);
 }
 
 std::function<float (const Vector3&)> ImplicitPatch::createBasinFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    return ImplicitPatch::createBlockFunction(sigma, width, depth, height, in2D);
+    auto profile = [=](const Vector3& pos) {
+        const Vector3 q = (pos.xy() - Vector3(width, depth) * .5f) / Vector3(width * .5f, depth * .5f, 1.f);
+        const float radius = q.norm();
+        return radius > 1.f ? 0.f : height * std::pow(radius, sigma > 0.f ? sigma : 2.f);
+    };
+    return in2D ? std::function<float(const Vector3&)>(profile) : convert2DfunctionTo3Dfunction(profile);
 }
 
 std::function<float (const Vector3&)> ImplicitPatch::createCaveFunction(float sigma, float width, float depth, float height, bool in2D)
@@ -1850,8 +1867,9 @@ std::function<float (const Vector3&)> ImplicitPatch::createNoise2DFunction(float
 
 std::function<float (const Vector3&)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D)
 {
+    for (auto& point : path) point.z() = 0.f;
     std::function<float (const Vector3&)> chainFunc = [=] (const Vector3& pos) -> float {
-        float closestTime = path.estimateClosestTime(pos);
+        float closestTime = path.estimateClosestTime(pos.xy());
         Vector3 closestPoint = path.getPoint(closestTime);
 //        Vector3 vertical(0, 0, 1);
 //        Vector3 islandDirection = vertical.cross(path.getDirection(closestTime)).normalize();
@@ -1885,7 +1903,8 @@ std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float
 
 std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, CatmullRomSpline path, bool in2D)
 {
-    random_gen::random_generator.seed((path.getPoint(0) + path.getPoint(0.1)).divergence());
+    std::mt19937 generator(static_cast<unsigned>(std::hash<float>{}((path.getPoint(0) + path.getPoint(.1f)).divergence())));
+    std::uniform_real_distribution<float> uniform(0.f, 1.f);
     int nbPoints = 50;
     int nbPaths = 50;
     Contour polygon(path);
@@ -1898,7 +1917,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
     int maxTries = 1000 * nbPoints;
     std::vector<Vector3> points;
     while(points.size() < nbPoints && maxTries > 0) {
-        Vector3 newPoint = Vector3::random(Vector3(size.xy()));
+        Vector3 newPoint = Vector3(uniform(generator) * size.x(), uniform(generator) * size.y());
         if (polygon.containsXY(newPoint)) points.push_back(newPoint);
         else maxTries--;
     }
@@ -1909,14 +1928,14 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
     std::vector<CatmullRomSpline> randomPaths(nbPaths);
     for (int i = 0; i < randomPaths.size(); i++) {
         auto& path = randomPaths[i];
-        int i0 = int(random_gen::generate(0, points.size()));
-        int i1 = int(random_gen::generate(0, points.size()));
+        int i0 = std::uniform_int_distribution<int>(0, int(points.size()) - 1)(generator);
+        int i1 = std::uniform_int_distribution<int>(0, int(points.size()) - 1)(generator);
         // while (i0 == i1)
-        // i1 = int(random_gen::generate(0, points.size()));
+        // i1 = std::uniform_int_distribution<int>(0, int(points.size()) - 1)(generator);
         path = CatmullRomSpline({points[i0], points[i1]}).resamplePoints(4);
         float length = (path[-1] - path[0]).norm();
         for (auto& p : path) {
-            p += Vector3::random().xy() * (length / 10.f);
+            p += Vector3(2.f * uniform(generator) - 1.f, 2.f * uniform(generator) - 1.f) * (length / 10.f);
         }
     }
     heights.iterateParallel([&] (const Vector3& pos) {
@@ -1950,7 +1969,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
         return finalHeight;
     };
 
-    if (!in2D) {
+    if (in2D) {
         return distFunc;
     } else {
         return ImplicitPatch::convert2DfunctionTo3Dfunction(distFunc);
