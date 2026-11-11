@@ -120,7 +120,7 @@ public:
     Vector3 getGlobalPositionOf(const Vector3& posInsidePatch);
     Vector3 getLocalPositionOf(const Vector3& globalPosition);
 
-//    virtual size_t getCurrentHistoryIndex() const;
+    size_t getCurrentHistoryIndex() const override;
 
     virtual float getSizeX() const { return this->getBBox().max().x(); }
     virtual float getSizeY() const { return this->getBBox().max().y(); }
@@ -182,6 +182,7 @@ public:
     GridF _cachedVoxelized;
     Vector3 _cachedVoxelScale = Vector3(1, 1, 1);
     bool _cached = false;
+    size_t _cachedFieldSignature = 0;
 };
 
 class ImplicitPrimitive : public ImplicitPatch {
@@ -209,8 +210,9 @@ public:
     Vector3 position = Vector3::invalid;
     Vector3 dimensions = Vector3::invalid;
     Vector3 supportDimensions = Vector3::invalid;
-    std::function<float(const Vector3&)> evalFunction;
-    std::function<float(const Vector3&)> evalFunction2D;
+    void setEvaluationFunction(std::function<float(const Vector3&)> function);
+    size_t evaluationFunctionType() const { return evalFunction.target_type().hash_code(); }
+    bool hasGeneratedField() const { return _generatedFunctionType != 0 && evaluationFunctionType() == _generatedFunctionType; }
     TerrainTypes material = WATER;
 
     PredefinedShapes predefinedShape = None;
@@ -218,12 +220,17 @@ public:
 
     std::string heightmapFilename = "";
     GridF cachedHeightmap;
+    size_t _generatedFunctionType = 0;
+    size_t _generatedShapeSignature = 0;
     bool sampledVolume = false;
     float sampledFieldScale = 1.f;
     static ImplicitPrimitive* fromVoxelField(const GridF& values, ImplicitPrimitive* prim = nullptr);
 
     static ImplicitPrimitive* fromHeightmap(const std::string& filename, const Vector3& dimensions = Vector3::invalid, ImplicitPrimitive *prim = nullptr);
     static ImplicitPrimitive* fromHeightmap(GridF heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);
+protected:
+    friend class ImplicitPatch;
+    std::function<float(const Vector3&)> evalFunction;
 };
 
 class ImplicitNaryOperator : public ImplicitPatch {
@@ -353,7 +360,19 @@ public:
 
 //    std::function<Vector3(const Vector3&)> wrapFunction;
 //    std::function<Vector3(const Vector3&)> unwrapFunction;
-    std::function<float(const Vector3&)> noiseFunction;
+    void setNoiseFunction(std::function<float(const Vector3&)> function) {
+        if (!function) throw std::invalid_argument("Empty implicit noise callback");
+        noiseFunction = std::move(function);
+        _generatedNoiseType = 0;
+        for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
+    }
+    float noiseAt(const Vector3& point) const { return noiseFunction(point); }
+    size_t noiseFunctionType() const { return noiseFunction.target_type().hash_code(); }
+    size_t _generatedNoiseType = 0;
+    size_t getTransformCount() const { return transformations.size(); }
+    bool hasOnlySerializableTransforms() const {
+        return std::none_of(operationDescriptions.begin(), operationDescriptions.end(), [](const auto& op) { return op.is_null(); });
+    }
     std::vector<UnaryOp> transforms;
 
     virtual ImplicitPatch* copy() const;
@@ -380,6 +399,7 @@ public:
     float _spreadingFactor = 0.f;
 
 private:
+    std::function<float(const Vector3&)> noiseFunction;
     void addDisplacementFunction(TransformFunction displacement, const Vector3& minimum, const Vector3& maximum);
     AABBox transformBounds(AABBox bounds) const;
     std::vector<nlohmann::json> operationDescriptions;

@@ -13,6 +13,8 @@
 #include <memory>
 #include <filesystem>
 #include <random>
+#include <atomic>
+#include <exception>
 #include <QSaveFile>
 
 float ImplicitPatch::isovalue = .5f;
@@ -40,6 +42,72 @@ struct SnapshotScope {
     SnapshotScope() { snapshotSerialization = true; }
     ~SnapshotScope() { snapshotSerialization = previous; }
 };
+struct FieldHash {
+    size_t value = 0;
+    template<class T> void add(const T& input) {
+        const size_t h = std::hash<T>{}(input);
+        value ^= h + size_t(0x9e3779b9) + (value << 6) + (value >> 2);
+    }
+    void vector(const Vector3& v) { add(v.isValid()); add(v.x()); add(v.y()); add(v.z()); }
+};
+size_t primitiveShapeSignature(const ImplicitPrimitive& primitive)
+{
+    FieldHash hash;
+    hash.add(int(primitive.predefinedShape));
+    hash.add(dynamic_cast<const Implicit2DPrimitive*>(&primitive) != nullptr);
+    hash.vector(primitive.dimensions);
+    for (float parameter : primitive.parametersProvided) hash.add(parameter);
+    for (const auto& point : primitive.optionalCurve) hash.vector(point);
+    hash.add(primitive.sampledVolume);
+    hash.add(primitive.heightmapFilename);
+    hash.vector(primitive.cachedHeightmap.getDimensions());
+    for (float sample : primitive.cachedHeightmap) hash.add(sample);
+    return hash.value;
+}
+void prepareImplicitField(ImplicitPatch* node)
+{
+    if (auto* primitive = dynamic_cast<ImplicitPrimitive*>(node)) {
+        const bool generated = primitive->evaluationFunctionType() == primitive->_generatedFunctionType;
+        if (generated && primitive->predefinedShape != ImplicitPatch::None &&
+            primitiveShapeSignature(*primitive) != primitive->_generatedShapeSignature) primitive->update();
+    }
+    if (auto* group = dynamic_cast<ImplicitNaryOperator*>(node))
+        for (auto* child : group->composables) if (child) prepareImplicitField(child);
+}
+size_t implicitFieldSignature(const ImplicitPatch& node, bool& cacheable)
+{
+    FieldHash hash;
+    hash.add(typeid(node).hash_code());
+    hash.add(ImplicitPatch::isovalue);
+    hash.add(node.mirrored);
+    hash.vector(node.scaling); hash.vector(node.translation);
+    if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(&node)) {
+        hash.add(primitiveShapeSignature(*primitive));
+        hash.vector(primitive->position); hash.vector(primitive->supportDimensions);
+        hash.add(int(primitive->material));
+        hash.add(primitive->evaluationFunctionType());
+        if (primitive->evaluationFunctionType() != primitive->_generatedFunctionType) cacheable = false;
+    }
+    if (const auto* binary = dynamic_cast<const ImplicitBinaryOperator*>(&node)) {
+        hash.add(int(binary->composeFunction)); hash.add(int(binary->positionalB));
+        hash.add(binary->blendingFactor); hash.add(binary->withIntersectionOnB);
+    }
+    if (const auto* unary = dynamic_cast<const ImplicitUnaryOperator*>(&node)) {
+        hash.add(unary->getTransformCount()); hash.vector(unary->_noise);
+        hash.vector(unary->_translation); hash.vector(unary->_rotation); hash.vector(unary->_scale);
+        hash.add(unary->noiseFunctionType());
+        if (!unary->hasOnlySerializableTransforms() || unary->noiseFunctionType() != unary->_generatedNoiseType)
+            cacheable = false;
+    }
+    if (const auto* group = dynamic_cast<const ImplicitNaryOperator*>(&node)) {
+        hash.add(group->composables.size());
+        for (const auto* child : group->composables) {
+            hash.add(reinterpret_cast<size_t>(child));
+            if (child) hash.add(implicitFieldSignature(*child, cacheable));
+        }
+    }
+    return hash.value;
+}
 float implicitColumnBoundary(const ImplicitPatch& patch, const Vector3& position, bool top)
 {
     const auto bounds = patch.getSupportBBox();
@@ -144,7 +212,7 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
     if (const auto* heightTerrain = dynamic_cast<const Implicit2DNary*>(this))
         return heightTerrain->computeHeight(pos) - pos.z();
     if (const auto* unary = dynamic_cast<const ImplicitUnaryOperator*>(this)) {
-        if (unary->composableA() && unary->_noise.x() == 0.f && unary->noiseFunction(pos) == 0.f)
+        if (unary->composableA() && unary->_noise.x() == 0.f && unary->noiseAt(pos) == 0.f)
             return unary->composableA()->getSignedEvaluation(unary->inverseTransform(pos));
     }
     // A one-child container must not threshold away the child's exterior field.
@@ -153,7 +221,7 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
         if (group->composables.size() == 1 && group->composables.front()) return group->composables.front()->getSignedEvaluation(pos);
     }
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
-        if (primitive->predefinedShape == ImplicitHeightmap && !primitive->cachedHeightmap.empty() &&
+        if (primitive->hasGeneratedField() && primitive->predefinedShape == ImplicitHeightmap && !primitive->cachedHeightmap.empty() &&
             (LayerBasedGrid::invisibleLayers.count(primitive->material) == 0)) {
             const Vector3 local = pos - primitive->position;
             if (primitive->sampledVolume || primitive->cachedHeightmap.sizeZ > 1)
@@ -487,19 +555,43 @@ Vector3 ImplicitPatch::getLocalPositionOf(const Vector3& globalPosition)
     return position - this->getBBox().min();
 }
 
+size_t ImplicitPatch::getCurrentHistoryIndex() const
+{
+    bool cacheable = true;
+    const size_t signature = implicitFieldSignature(*this, cacheable);
+    static std::atomic<size_t> customRevision{0};
+    return cacheable ? signature : ++customRevision;
+}
+
 GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
+    prepareImplicitField(this);
+    if (!std::isfinite(isovalue)) throw std::invalid_argument("Implicit isovalue must be finite");
     const Vector3 extent = dimensions.isValid() ? dimensions : getSamplingDimensions();
     const auto counts = TerrainSampling::sampleDimensions(extent, scale);
-    if (_cached && _cachedVoxelized.getDimensions() == counts && _cachedVoxelScale == scale)
-        return _cachedVoxelized;
+    bool cacheable = true;
+    const size_t signature = implicitFieldSignature(*this, cacheable);
+    if (_cached && cacheable && _cachedFieldSignature == signature &&
+        _cachedVoxelized.getDimensions() == counts && _cachedVoxelScale == scale) return _cachedVoxelized;
+    _cached = false;
     _cachedVoxelized = GridF(counts, -1.f);
+    std::atomic<bool> failed{false};
+    std::exception_ptr error;
     _cachedVoxelized.iterateParallel([&](int x, int y, int z) {
-        _cachedVoxelized(x, y, z) = getSignedEvaluation(Vector3(x, y, z) / scale);
+        if (failed.load(std::memory_order_relaxed)) return;
+        try {
+            const float value = getSignedEvaluation(Vector3(x, y, z) / scale);
+            if (!std::isfinite(value)) throw std::domain_error("Implicit field returned a nonfinite sample");
+            _cachedVoxelized(x, y, z) = value;
+        } catch (...) {
+            if (!failed.exchange(true)) error = std::current_exception();
+        }
     });
+    if (error) std::rethrow_exception(error);
     _cachedVoxelized.defaultValueOnBadCoord = -1.f;
     _cachedVoxelScale = scale;
-    _cached = true;
+    _cachedFieldSignature = signature;
+    _cached = cacheable;
     return _cachedVoxelized;
 }
 
@@ -515,6 +607,8 @@ ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, 
     primitive->optionalCurve = parametricCurve;
     primitive->parametersProvided = {additionalParam};
     primitive->dimensions = dimensions;
+    primitive->_generatedFunctionType = primitive->evaluationFunctionType();
+    primitive->_generatedShapeSignature = primitiveShapeSignature(*primitive);
     return primitive.release();
 }
 ImplicitPatch *ImplicitPatch::createIdentity()
@@ -524,7 +618,8 @@ ImplicitPatch *ImplicitPatch::createIdentity()
     primitive->evalFunction = [](const Vector3&) { return 0.f; };
     primitive->optionalCurve = {};
     primitive->parametersProvided = {0.f};
-
+    primitive->_generatedFunctionType = primitive->evaluationFunctionType();
+    primitive->_generatedShapeSignature = primitiveShapeSignature(*primitive);
     return primitive;
 }
 
@@ -608,12 +703,22 @@ std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFuncti
 
 
 
+void ImplicitPrimitive::setEvaluationFunction(std::function<float(const Vector3&)> function)
+{
+    if (!function) throw std::invalid_argument("Empty implicit evaluation callback");
+    evalFunction = std::move(function);
+    _generatedFunctionType = 0;
+    for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
+}
+
 ImplicitPrimitive::ImplicitPrimitive()
 {
     this->evalFunction = [](const Vector3&) -> float { return 0.f; };
     this->parametersProvided = {-1.f}; // Legacy identity parameter.
     position = Vector3();
     dimensions = Vector3(1, 1, 1);
+    _generatedFunctionType = evalFunction.target_type().hash_code();
+    _generatedShapeSignature = primitiveShapeSignature(*this);
 }
 
 float ImplicitPrimitive::evaluate(const Vector3& pos) const
@@ -697,6 +802,8 @@ void ImplicitPrimitive::update()
     } else {
         this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided.at(0), this->optionalCurve, dynamic_cast<Implicit2DPrimitive*>(this) != nullptr);
     }
+    _generatedFunctionType = evalFunction.target_type().hash_code();
+    _generatedShapeSignature = primitiveShapeSignature(*this);
 }
 
 std::string ImplicitPrimitive::toString() const
@@ -1253,6 +1360,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
 {
     this->composables = std::vector<ImplicitPatch*>(1);
     this->noiseFunction = [](const Vector3&) { return 0.f; };
+    _generatedNoiseType = noiseFunction.target_type().hash_code();
 }
 /*
     this->wrapFunction = [=](const Vector3& pos) {
@@ -1266,6 +1374,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
         return pos;
     };
     this->noiseFunction = [](const Vector3&) { return 0.f; };
+    _generatedNoiseType = noiseFunction.target_type().hash_code();
 }
 */
 float ImplicitUnaryOperator::evaluate(const Vector3& pos) const
@@ -1594,6 +1703,10 @@ void ImplicitUnaryOperator::scale(const Vector3& scaleFactor)
 
 void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float offset)
 {
+    if (!std::isfinite(amplitude) || !std::isfinite(period) || !std::isfinite(offset))
+        throw std::invalid_argument("Implicit noise requires finite parameters");
+    for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
+
     this->_noise = Vector3(amplitude, period, offset);
     this->noiseFunction = [=](const Vector3& pos) -> float {
         FastNoiseLite noise;
@@ -1601,6 +1714,7 @@ void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float 
         float noiseVal = noise.GetNoise(pos.x() * period + offset, pos.y() * period + offset, pos.z() * period + offset) * 1.f;
         return noiseVal * amplitude;
     };
+    _generatedNoiseType = noiseFunction.target_type().hash_code();
 }
 
 void ImplicitUnaryOperator::addRandomWrap(float amplitude, float period, float offset)
