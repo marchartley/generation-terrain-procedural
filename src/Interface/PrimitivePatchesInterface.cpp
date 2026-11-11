@@ -344,24 +344,11 @@ void PrimitivePatchesInterface::createPatchWithOperation(const Vector3& pos)
         this->implicitTerrain->deleteAllChildren();
         this->implicitTerrain->addChild(operation);
     } else {
-        ImplicitBinaryOperator* parentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(_parent);
-        if (parentAsBinary) {
-            if (previousMain == parentAsBinary->composableA())
-                parentAsBinary->addChild(operation, 0);
-            else
-                parentAsBinary->addChild(operation, 1);
-        }
-        ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(_parent);
-        if (parentAsNaryOperator) {
-            int iComposable = 0;
-            for (iComposable = 0; iComposable < parentAsNaryOperator->composables.size(); iComposable++) {
-                if (previousMain == parentAsNaryOperator->composables[iComposable])
-                    break;
-            }
-            parentAsNaryOperator->addChild(operation, iComposable);
-
-        }
-
+        auto* parent = dynamic_cast<ImplicitNaryOperator*>(_parent);
+        auto slot = std::find(parent->composables.begin(), parent->composables.end(), previousMain);
+        if (slot == parent->composables.end())
+            throw std::logic_error("Selected implicit patch is missing from its parent");
+        parent->addChild(operation, int(slot - parent->composables.begin()));
     }
 //        ImplicitPatch* newOperation = this->createOperationPatchFromParameters(previousMain, patch);
 //        this->implicitTerrain = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
@@ -1641,6 +1628,7 @@ ImplicitPatch* PrimitivePatchesInterface::findPrimitiveById(int ID)
 
 ImplicitPatch* PrimitivePatchesInterface::naiveApproachToGetParent(ImplicitPatch* child)
 {
+    if (!child) return nullptr;
     if (child->parent != nullptr)
         return child->parent;
 

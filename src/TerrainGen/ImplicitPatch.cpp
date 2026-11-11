@@ -819,6 +819,8 @@ ImplicitPrimitive* ImplicitPrimitive::fromVoxelField(const GridF& values, Implic
 ImplicitBinaryOperator::ImplicitBinaryOperator()
 {
     this->composables = std::vector<ImplicitPatch*>(2);
+    composeFunction = STACK;
+    positionalB = FIXED_POS;
 }
 
 float ImplicitBinaryOperator::evaluate(const Vector3& pos) const
@@ -1188,7 +1190,7 @@ void ImplicitBinaryOperator::deleteAllChildren()
     for (auto& child : composables) {
         delete child;
     }
-    this->composables.resize(2, nullptr);
+    this->composables.assign(2, nullptr);
 }
 
 Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(const Vector3& pos) const
@@ -1475,11 +1477,13 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
         distortion = content["distortion"];
     } else if (content.contains("spreadFactor") && content["spreadFactor"] != 0) {
         patch = new ImplicitSpread();
-        patch->spread(content["spreadFactor"]);
+        // Apply spreading only after the child has been attached.
     } else {
         patch = new ImplicitUnaryOperator();
     }
     patch->addChild(ImplicitPatch::fromJson(content["composableA"]));
+    if (content.contains("spreadFactor") && content["spreadFactor"] != 0)
+        patch->spread(content["spreadFactor"]);
     patch->name = content["name"];
     patch->index = content["index"];
 
@@ -1529,7 +1533,7 @@ void ImplicitUnaryOperator::deleteAllChildren()
     for (auto& child : composables) {
         delete child;
     }
-    this->composables.resize(1, nullptr);
+    this->composables.assign(1, nullptr);
 }
 
 ImplicitPatch* ImplicitUnaryOperator::composableA() const
@@ -2597,10 +2601,15 @@ ImplicitPatch *ImplicitNaryOperator::copy() const
 
 void ImplicitNaryOperator::addChild(ImplicitPatch *newChild, int index)
 {
+    if (!newChild) throw std::invalid_argument("Cannot attach a null implicit child");
+    if (index < -1 || (index >= 0 && size_t(index) >= composables.size()))
+        throw std::out_of_range("Implicit child index outside the existing slots");
+    for (ImplicitPatch* ancestor = this; ancestor; ancestor = ancestor->parent)
+        if (ancestor == newChild) throw std::invalid_argument("Implicit child would create a cycle");
     if (index == -1) {
         this->composables.push_back(newChild);
     } else {
-        if (composables[index])
+        if (composables[index] && composables[index]->parent == this)
             this->composables[index]->parent = nullptr;
         this->composables[index] = newChild;
     }
