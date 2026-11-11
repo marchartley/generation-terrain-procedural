@@ -81,7 +81,7 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
 void EnvironmentalScene::updateEnvObjectsFileContent(const std::string &filename)
 {
     std::vector<EnvObject*> allObjects;
-    for (const auto [name, obj] : this->availableObjects)
+    for (const auto& [name, obj] : this->availableObjects)
         allObjects.push_back(obj);
 
     nlohmann::ordered_json envObjectsJSON = allObjects;
@@ -196,7 +196,7 @@ nlohmann::ordered_json EnvironmentalScene::readScenarioFileContent(const std::st
 
     auto objects = json.at("objects");
     // auto objects = objects_json.get<std::map<std::string, nlohmann::json>>();
-    for (auto [name, obj] : objects.items()) {
+    for (const auto& [name, obj] : objects.items()) {
         float proba = obj["proba"];
         int amount = (obj.contains("amount") ? obj["amount"].get<int>() : -1);
 
@@ -360,10 +360,10 @@ void EnvironmentalScene::applyMaterialsTransformations()
             std::set<std::string> neededMaterials;
             for (size_t iRule = 0; iRule < transformationRules.size(); iRule++) {
                 auto [input, output] = transformationRules[iRule];
-                for (auto [inMaterial, inDose] : input) {
+                for (const auto& [inMaterial, inDose] : input) {
                     neededMaterials.insert(inMaterial);
                 }
-                for (auto [outMaterial, outDose] : output) {
+                for (const auto& [outMaterial, outDose] : output) {
                     neededMaterials.insert(outMaterial);
                 }
             }
@@ -411,7 +411,7 @@ const GridV3 &EnvironmentalScene::updateFlowfield(const GridV3 &userFlow, const 
         this->flowfield += userFlow;
     if (!simulationFlow.empty())
         this->flowfield += simulationFlow;
-    for (int i = 0; i < this->instantiatedObjects.size(); i++) {
+    for (int i = 0; i < (int)this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
         // auto flow = object->computeFlowModification(this->flowfield);
         // this->flowfield = flow;
@@ -466,8 +466,8 @@ void EnvironmentalScene::precomputeTerrainProperties(const GridF& heightmap, flo
 
 
         // Evaluate at each point
-        for (auto& [name, obj] : this->availableObjects) {
-            displayProcessTime("Computing properties for " + name + "... ", [&]() {
+        for (const auto& [name, obj] : this->availableObjects) {
+            displayProcessTime("Computing properties for " + name + "... ", [=]() {
                     this->recomputeTerrainPropertiesForObject(name);
                 }, false);
         }
@@ -622,7 +622,7 @@ void EnvironmentalScene::reset()
         delete obj;
     }
     this->instantiatedObjects.clear();
-    for (auto name : destroyedObjects) {
+    for (const auto& name : destroyedObjects) {
         this->recomputeTerrainPropertiesForObject(name);
     }
     initFlow(true);
