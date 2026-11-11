@@ -1,5 +1,12 @@
 #include "Image.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <QSaveFile>
+#include <memory>
+#include <stdexcept>
+
 Image::Image() : _isColor(true), bitDepth(8) {}
 
 Image::Image(const GridF &image)
@@ -15,420 +22,237 @@ Image::Image(const GridV3 &image)
 }
 
 
-void Image::readColor(png_structp png, png_infop info, png_bytep* row_pointers) {
-    int width = png_get_image_width(png, info);
-    int height = png_get_image_height(png, info);
-    colorImage = GridV3(width, height);
-
-    for (int y = 0; y < height; y++) {
-        png_bytep row = row_pointers[y];
-        for (int x = 0; x < width; x++) {
-            png_bytep px = &(row[x * 4]); // 4 because of RGBA
-            colorImage(x, y) = Vector3(px[0], px[1], px[2]);
-        }
-    }
-}
-
-void Image::readBlackWhite(png_structp png, png_infop info, png_bytep* row_pointers) {
-    int width = png_get_image_width(png, info);
-    int height = png_get_image_height(png, info);
-    bwImage = GridF(width, height);
-
-    for (int y = 0; y < height; y++) {
-        png_bytep row = row_pointers[y];
-        for (int x = 0; x < width; x++) {
-            png_bytep px = &(row[x * 4]); // 4 because of RGBA
-            bwImage(x, y) = (px[0] + px[1] + px[2]) / 3.0; // A simple average to get grayscale value
-        }
-    }
-}
-
-void Image::writeColor(/*png_structp png, png_infop info, */ png_bytep* row_pointers) {
-    int width = colorImage.sizeX;
-    int height = colorImage.sizeY;
-
-    for (int y = 0; y < height; y++) {
-        png_bytep row = row_pointers[y];
-        for (int x = 0; x < width; x++) {
-            Vector3 px = colorImage(x, y);
-
-            if (bitDepth == 1) {
-                uint8_t byteValue = 0;
-                if (px.x() >= 0.5f) byteValue |= 0b10000000; // R
-                if (px.y() >= 0.5f) byteValue |= 0b01000000; // G
-                if (px.z() >= 0.5f) byteValue |= 0b00100000; // B
-                row[x / 8] = byteValue; // Here, 8 pixels are packed into a single byte
-
-            } else if (bitDepth == 2) {
-                uint8_t r = static_cast<uint8_t>(px.x() * 3); // scale 0-1 to 0-3
-                uint8_t g = static_cast<uint8_t>(px.y() * 3);
-                uint8_t b = static_cast<uint8_t>(px.z() * 3);
-                row[x] = (r << 6) | (g << 4) | (b << 2);
-
-            } else if (bitDepth == 4) {
-                uint8_t r = static_cast<uint8_t>(px.x() * 15); // scale 0-1 to 0-15
-                uint8_t g = static_cast<uint8_t>(px.y() * 15);
-                uint8_t b = static_cast<uint8_t>(px.z() * 15);
-                row[x * 2] = (r << 4) | g;
-                row[x * 2 + 1] = (b << 4);
-
-            } else if (bitDepth == 8) {
-                row[x * 4 + 0] = static_cast<png_byte>(px.x() * 255);
-                row[x * 4 + 1] = static_cast<png_byte>(px.y() * 255);
-                row[x * 4 + 2] = static_cast<png_byte>(px.z() * 255);
-                row[x * 4 + 3] = 255; // Alpha
-
-            } else if (bitDepth == 16) {
-                uint16_t r = static_cast<uint16_t>(px.x() * 65535);
-                uint16_t g = static_cast<uint16_t>(px.y() * 65535);
-                uint16_t b = static_cast<uint16_t>(px.z() * 65535);
-
-                // R channel
-                row[x * 8 + 0] = (r >> 8) & 0xFF;
-                row[x * 8 + 1] = r & 0xFF;
-
-                // G channel
-                row[x * 8 + 2] = (g >> 8) & 0xFF;
-                row[x * 8 + 3] = g & 0xFF;
-
-                // B channel
-                row[x * 8 + 4] = (b >> 8) & 0xFF;
-                row[x * 8 + 5] = b & 0xFF;
-
-                // Alpha channel
-                row[x * 8 + 6] = 255;
-                row[x * 8 + 7] = 255;
-            }
-        }
-    }
-}
 
 
 
-void Image::writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_pointers) {
-    int width = bwImage.sizeX;
-    int height = bwImage.sizeY;
-
-    for (int y = 0; y < height; y++) {
-        png_bytep row = row_pointers[y];
 
 
-        if (bitDepth == 1) {
-            for (int x = 0; x < width; x += 8) {
-                uint8_t byteValue = 0;
-                for (int bit = 0; bit < 8 && x + bit < width; ++bit) {
-                    float value = bwImage(x + bit, y);
-                    if (value >= 0.5f) { // Assuming 0.5 threshold for binary images
-                        byteValue |= (1 << (7 - bit));
-                    }
-                }
-                row[x / 8] = byteValue;
-            }
-        }
-        else if (bitDepth == 2) {
-            for (int x = 0; x < width; x += 4) {
-                uint8_t byteValue = 0;
-                for (int bit = 0; bit < 4 && x + bit < width; ++bit) {
-                    float value = clamp(bwImage(x + bit, y), 0.f, 1.f);
-                    uint8_t pixelValue = static_cast<uint8_t>(value * 3); // scale 0-1 to 0-3
-                    byteValue |= (pixelValue << ((3 - bit) * 2));
-                }
-                row[x / 4] = byteValue;
-            }
-        }
-        else if (bitDepth == 4) {
-            for (int x = 0; x < width; x += 2) {
-                float value1 = clamp(bwImage(x, y), 0.f, 1.f);
-                uint8_t pixelValue1 = static_cast<uint8_t>(value1 * 15); // scale 0-1 to 0-15
-                uint8_t byteValue = (pixelValue1 << 4);
 
-                if (x + 1 < width) {
-                    float value2 = clamp(bwImage(x + 1, y), 0.f, 1.f);
-                    uint8_t pixelValue2 = static_cast<uint8_t>(value2 * 15); // scale 0-1 to 0-15
-                    byteValue |= pixelValue2;
-                }
-
-                row[x / 2] = byteValue;
-            }
-        } else {
-            for (int x = 0; x < width; x++) {
-                float value = clamp(bwImage(x, y), 0.f, 1.f);
-                if (bitDepth == 8) {
-                    uint8_t scaledValue = static_cast<uint8_t>(std::round(value * 255)); // Assuming value is in range 0-1
-                    row[x] = scaledValue;
-                } else if (bitDepth == 16) {
-                    uint16_t value16 = static_cast<uint16_t>(std::round(value * 65535)); // Assuming value is in range 0-1
-                    row[x * 2] = (value16 >> 8) & 0xFF; // High byte
-                    row[x * 2 + 1] = value16 & 0xFF; // Low byte
-                }
-            }
-        }
-    }
-}
-
-void Image::writeOtherThanPNG(const std::string& filename, std::string ext)
-{
-    GridV3 img;
-    if (this->_isColor) {
-        img = this->colorImage;
-    } else {
-        img = GridV3(this->bwImage.getDimensions());
-        for (size_t i = 0; i < img.size(); i++)
-            img[i] = Vector3(bwImage[i], bwImage[i], bwImage[i]);
-    }
+void Image::writeOtherThanPNG(const std::string &filename, std::string ext) {
     if (ext.empty())
-        ext = getExtension(filename);
-    ext = toUpper(ext);
-
-    int nbComp = 4;
-    int width = img.sizeX;
-    int height = img.sizeY;
-
-    if (ext == "PNG") {
-        std::cerr << "Oh oh, I shouldn't be here..." << std::endl;
-    } else if (ext == "HDR") {
-        std::vector<float> toFloatData(width*height*nbComp);
-        for (size_t i = 0; i < img.size(); i++) {
-            toFloatData[nbComp * i + 0] = std::min(std::max(img[i].x(), 0.f), 1.f);
-            toFloatData[nbComp * i + 1] = std::min(std::max(img[i].y(), 0.f), 1.f);
-            toFloatData[nbComp * i + 2] = std::min(std::max(img[i].z(), 0.f), 1.f);
-            toFloatData[nbComp * i + 3] = 1.f;
+        ext = toUpper(getExtension(filename));
+    const auto dims = _isColor ? colorImage.getDimensions() : bwImage.getDimensions();
+    if (dims.x() <= 0 || dims.y() <= 0 || dims.z() != 1)
+        throw std::invalid_argument("Image output requires a nonempty 2D grid");
+    const int width = dims.x(), height = dims.y();
+    const size_t size = size_t(width) * height;
+    if (size > size_t(INT_MAX - 128) / 4)
+        throw std::length_error("Image exceeds codec byte limits");
+    if ((ext == "JPG" || ext == "JPEG" || ext == "TGA") && (width > 65535 || height > 65535))
+        throw std::length_error("Image exceeds format dimensions");
+    auto sample = [&](size_t i) {
+        return _isColor ? colorImage[i] : Vector3(bwImage[i], bwImage[i], bwImage[i]);
+    };
+    QSaveFile output(QString::fromStdString(filename));
+    if (!output.open(QIODevice::WriteOnly))
+        throw std::runtime_error("Cannot open image output");
+    struct Sink {
+        QSaveFile *file;
+        bool failed = false;
+    } sink{&output};
+    auto write = [](void *context, void *bytes, int count) {
+        auto *sink = static_cast<Sink *>(context);
+        if (sink->file->write(static_cast<const char *>(bytes), count) != count)
+            sink->failed = true;
+    };
+    int ok = 0;
+    if (ext == "HDR") {
+        std::vector<float> pixels(size * 3);
+        for (size_t i = 0; i < size; ++i) {
+            auto v = sample(i);
+            if (!v.isValid())
+                throw std::invalid_argument("Nonfinite HDR sample");
+            for (int c = 0; c < 3; ++c)
+                pixels[i * 3 + c] = std::max(0.f, v[c]);
         }
-        stbi_write_hdr(filename.c_str(), width, height, nbComp, toFloatData.data());
+        ok = stbi_write_hdr_to_func(write, &sink, width, height, 3, pixels.data());
     } else {
-
-        std::vector<uint8_t> toIntData(width*height*nbComp);
-
-        for (size_t i = 0; i < img.size(); i++) {
-            img[i] = Vector3::min(Vector3::max(img[i] * 255.f, Vector3(0, 0, 0)), Vector3(255, 255, 255));
-            toIntData[nbComp * i + 0] = int(img[i].x());
-            toIntData[nbComp * i + 1] = int(img[i].y());
-            toIntData[nbComp * i + 2] = int(img[i].z());
-            toIntData[nbComp * i + 3] = 255;
+        std::vector<unsigned char> pixels(size * 3);
+        for (size_t i = 0; i < size; ++i) {
+            auto v = sample(i);
+            if (!v.isValid())
+                throw std::invalid_argument("Nonfinite image sample");
+            for (int c = 0; c < 3; ++c)
+                pixels[i * 3 + c] = std::lround(std::clamp(v[c], 0.f, 1.f) * 255);
         }
-
-        if (ext == "JPG")
-            stbi_write_jpg(filename.c_str(), width, height, nbComp, toIntData.data(), 95);
+        if (ext == "JPG" || ext == "JPEG")
+            ok = stbi_write_jpg_to_func(write, &sink, width, height, 3, pixels.data(), 95);
         else if (ext == "BMP")
-            stbi_write_bmp(filename.c_str(), width, height, nbComp, toIntData.data());
+            ok = stbi_write_bmp_to_func(write, &sink, width, height, 3, pixels.data());
         else if (ext == "TGA")
-            stbi_write_tga(filename.c_str(), width, height, nbComp, toIntData.data());
-        else {
-            throw std::runtime_error("Trying to save image (" + filename + ") without valid extension. Possible extensions :\n\t- png\n\t- jpg\n\t- tga\n\t- bmp\n\t- hdr");
-        }
+            ok = stbi_write_tga_to_func(write, &sink, width, height, 3, pixels.data());
+        else
+            throw std::invalid_argument("Unsupported image extension: " + ext);
     }
+    if (!ok || sink.failed || !output.commit())
+        throw std::runtime_error("Atomic image encoding failed: " + filename);
 }
 
 
-Image Image::readFromFile(const std::string& filename) {
-    Image img;
-
-    FILE *fp = fopen(filename.c_str(), "rb");
-    if (!fp) {
-        throw std::runtime_error("Failed to open the file for reading");
-    }
-
-    png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png) {
-        throw std::runtime_error("Failed to create PNG read struct");
-    }
-
-    png_infop info = png_create_info_struct(png);
-    if (!info) {
-        png_destroy_read_struct(&png, NULL, NULL);
-        throw std::runtime_error("Failed to create PNG info struct");
-    }
-
-    if (setjmp(png_jmpbuf(png))) {
-        png_destroy_read_struct(&png, &info, NULL);
-        throw std::runtime_error("Error during PNG read initialization");
-    }
-
-    png_init_io(png, fp);
-    png_read_info(png, info);
-
-    // int width = png_get_image_width(png, info);
-    int height = png_get_image_height(png, info);
-    png_byte color_type = png_get_color_type(png, info);
-    img.bitDepth = png_get_bit_depth(png, info); // Store bitDepth for future use
-
-    if(img.bitDepth == 16)
-        png_set_strip_16(png);
-
-    if(color_type == PNG_COLOR_TYPE_PALETTE)
-        png_set_palette_to_rgb(png);
-
-    // PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
-    if(color_type == PNG_COLOR_TYPE_GRAY && img.bitDepth < 8)
-        png_set_expand_gray_1_2_4_to_8(png);
-
-    if(png_get_valid(png, info, PNG_INFO_tRNS))
-        png_set_tRNS_to_alpha(png);
-
-    // These color_type don't have an alpha channel then fill it with 0xff.
-    if(color_type == PNG_COLOR_TYPE_RGB ||
-        color_type == PNG_COLOR_TYPE_GRAY ||
-        color_type == PNG_COLOR_TYPE_PALETTE)
-            png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
-
-    if(color_type == PNG_COLOR_TYPE_GRAY ||
-        color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-            png_set_gray_to_rgb(png);
-
-    png_read_update_info(png, info);
-
-    png_bytep* row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * height);
-    for (int y = 0; y < height; y++) {
-        row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png, info));
-    }
-
-    png_read_image(png, row_pointers);
-
-    if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_RGBA) {
-        img.readColor(png, info, row_pointers);
-    } else if (color_type == PNG_COLOR_TYPE_GRAY) {
-        img.readBlackWhite(png, info, row_pointers);
+Image Image::readFromFile(const std::string &filename) {
+    int width = 0, height = 0, channels = 0;
+    if (!stbi_info(filename.c_str(), &width, &height, &channels))
+        throw std::runtime_error("Cannot decode image: " + filename);
+    Image result;
+    result._isColor = channels > 2;
+    const int expectedWidth = width, expectedHeight = height;
+    auto prepare = [&] {
+        if (width != expectedWidth || height != expectedHeight)
+            throw std::runtime_error("Image dimensions changed during decoding");
+        // A header alone must not force allocation of the much larger float grid.
+        if (result._isColor)
+            result.colorImage = GridV3(width, height);
+        else
+            result.bwImage = GridF(width, height);
+    };
+    auto put = [&](size_t i, float r, float g, float b) {
+        if (result._isColor)
+            result.colorImage[i] = Vector3(r, g, b);
+        else
+            result.bwImage[i] = r;
+    };
+    if (stbi_is_hdr(filename.c_str())) {
+        std::unique_ptr<float, decltype(&stbi_image_free)> pixels(
+            stbi_loadf(filename.c_str(), &width, &height, &channels, 3), stbi_image_free);
+        if (!pixels)
+            throw std::runtime_error("Cannot decode HDR image");
+        prepare();
+        for (size_t i = 0; i < size_t(width) * height; ++i)
+            put(i, pixels.get()[3 * i], pixels.get()[3 * i + 1], pixels.get()[3 * i + 2]);
+        result.bitDepth = 32;
+    } else if (stbi_is_16_bit(filename.c_str())) {
+        std::unique_ptr<stbi_us, decltype(&stbi_image_free)> pixels(
+            stbi_load_16(filename.c_str(), &width, &height, &channels, 3), stbi_image_free);
+        if (!pixels)
+            throw std::runtime_error("Cannot decode 16-bit image");
+        prepare();
+        for (size_t i = 0; i < size_t(width) * height; ++i)
+            put(i, pixels.get()[3 * i] / 65535.f, pixels.get()[3 * i + 1] / 65535.f,
+                pixels.get()[3 * i + 2] / 65535.f);
+        result.bitDepth = 16;
     } else {
-        throw std::runtime_error("Unsupported PNG color type");
+        std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> pixels(
+            stbi_load(filename.c_str(), &width, &height, &channels, 3), stbi_image_free);
+        if (!pixels)
+            throw std::runtime_error("Cannot decode image: " + filename);
+        prepare();
+        for (size_t i = 0; i < size_t(width) * height; ++i)
+            put(i, pixels.get()[3 * i] / 255.f, pixels.get()[3 * i + 1] / 255.f,
+                pixels.get()[3 * i + 2] / 255.f);
     }
-
-    for (int y = 0; y < height; y++) {
-        free(row_pointers[y]);
-    }
-    free(row_pointers);
-
-    png_destroy_read_struct(&png, &info, NULL);
-
-    fclose(fp);
-    return img;
+    return result;
 }
 
-void Image::writeToFile(const std::string& filename, int desiredBitDepth) {
-    std::string extension = toUpper(getExtension(filename));
-    if (extension != "PNG")
-        return this->writeOtherThanPNG(filename, extension);
-
-    this->bitDepth = desiredBitDepth;
-    FILE *fp = fopen(filename.c_str(), "wb");
-    if (!fp) {
-        throw std::runtime_error("Failed to open the file for writing");
+void Image::writeToFile(const std::string &filename, int depth) {
+    const auto dims = _isColor ? colorImage.getDimensions() : bwImage.getDimensions();
+    if (dims.x() <= 0 || dims.y() <= 0 || dims.z() != 1)
+        throw std::invalid_argument("Image output requires a nonempty 2D grid");
+    const int width = dims.x(), height = dims.y(), components = _isColor ? 4 : 1;
+    auto value = [&](size_t i, int c) {
+        if (_isColor && !colorImage[i].valid)
+            throw std::invalid_argument("Invalid RGB pixel");
+        float v = _isColor ? (c == 3 ? 1.f : colorImage[i][c]) : bwImage[i];
+        if (!std::isfinite(v))
+            throw std::invalid_argument("Nonfinite image sample");
+        return std::clamp(v, 0.f, 1.f);
+    };
+    const auto ext = toUpper(getExtension(filename));
+    if (ext != "PNG") {
+        writeOtherThanPNG(filename, ext);
+        return;
     }
-
-    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png) {
-        fclose(fp);
-        throw std::runtime_error("Failed to create PNG write struct");
-    }
-
-    png_infop info = png_create_info_struct(png);
-    if (!info) {
-        png_destroy_write_struct(&png, NULL);
-        fclose(fp);
-        throw std::runtime_error("Failed to create PNG info struct");
-    }
-
-    if (setjmp(png_jmpbuf(png))) {
-        png_destroy_write_struct(&png, &info);
-        fclose(fp);
-        throw std::runtime_error("Error during PNG write initialization");
-    }
-
-    png_init_io(png, fp);
-
-    int width, height;
-    if (!colorImage.empty()) {
-        width = colorImage.sizeX;
-        height = colorImage.sizeY;
-        png_set_IHDR(png, info, width, height, desiredBitDepth, PNG_COLOR_TYPE_RGBA,
-                     PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-    } else if (!bwImage.empty()) {
-        width = bwImage.sizeX;
-        height = bwImage.sizeY;
-        png_set_IHDR(png, info, width, height, desiredBitDepth, PNG_COLOR_TYPE_GRAY,
-                     PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-    } else {
-        // Error: Neither colorImage nor bwImage has data
-        png_destroy_write_struct(&png, &info);
-        fclose(fp);
-        throw std::runtime_error("Neither colorImage nor bwImage has data");
-    }
-
-    // Write the header information to the file
-    png_write_info(png, info);
-
-    png_bytep* row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * height);
-    if (!row_pointers) {
-        png_destroy_write_struct(&png, &info);
-        fclose(fp);
-        throw std::runtime_error("Failed to allocate memory for row pointers");
-    }
-
-    for (int y = 0; y < height; y++) {
-        row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png, info));
-        if (!row_pointers[y]) {
-            for (int j = 0; j < y; j++) {
-                free(row_pointers[j]);
+    if (depth != 1 && depth != 2 && depth != 4 && depth != 8 && depth != 16)
+        throw std::invalid_argument("Unsupported PNG depth");
+    if (_isColor && depth < 8)
+        throw std::invalid_argument("Color PNG requires 8 or 16 bits");
+    const size_t pixelsCount = size_t(width) * height;
+    if (pixelsCount > size_t(INT_MAX) / (components * std::max(1, depth / 8)))
+        throw std::length_error("PNG staging exceeds supported size");
+    const size_t stride = (size_t(width) * components * depth + 7) / 8;
+    std::vector<png_byte> pixels(stride * height, 0);
+    std::vector<png_bytep> rows(height);
+    for (int y = 0; y < height; ++y) {
+        rows[y] = pixels.data() + stride * y;
+        for (int x = 0; x < width; ++x)
+            for (int c = 0; c < components; ++c) {
+                auto v = value(size_t(y) * width + x, c);
+                size_t sample = size_t(x) * components + c;
+                if (depth == 16) {
+                    unsigned n = std::lround(v * 65535);
+                    rows[y][sample * 2] = n >> 8;
+                    rows[y][sample * 2 + 1] = n & 255;
+                } else if (depth == 8)
+                    rows[y][sample] = std::lround(v * 255);
+                else {
+                    unsigned n = std::lround(v * ((1 << depth) - 1));
+                    rows[y][sample * depth / 8] |= n << (8 - depth - int(sample * depth % 8));
+                }
             }
-            free(row_pointers);
-            png_destroy_write_struct(&png, &info);
-            fclose(fp);
-            throw std::runtime_error("Failed to allocate memory for a row");
-        }
     }
-
-    if (!colorImage.empty()) {
-        writeColor(/*png, info,*/ row_pointers);
-    } else if (!bwImage.empty()) {
-        writeBlackWhite(/*png, info,*/ row_pointers);
+    QSaveFile fp(QString::fromStdString(filename));
+    if (!fp.open(QIODevice::WriteOnly))
+        throw std::runtime_error("Cannot open image output");
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+    png_infop info = png ? png_create_info_struct(png) : nullptr;
+    if (!info) {
+        if (png)
+            png_destroy_write_struct(&png, nullptr);
+        throw std::runtime_error("Cannot create PNG encoder");
     }
-
-    png_write_image(png, row_pointers);
-    png_write_end(png, NULL);
-
-    for (int y = 0; y < height; y++) {
-        free(row_pointers[y]);
+    // C resources are released explicitly on libpng's longjmp path. All C++
+    // buffers already exist before setjmp; no destructor is skipped by longjmp.
+    if (setjmp(png_jmpbuf(png))) {
+        png_destroy_write_struct(&png, &info);
+        throw std::runtime_error("PNG encoding failed");
     }
-    free(row_pointers);
-
+    png_set_write_fn(
+        png, &fp,
+        [](png_structp p, png_bytep bytes, png_size_t count) {
+            auto *file = static_cast<QSaveFile *>(png_get_io_ptr(p));
+            if (file->write(reinterpret_cast<const char *>(bytes), qint64(count)) != qint64(count))
+                png_error(p, "PNG output write failed");
+        },
+        nullptr);
+    png_set_IHDR(png, info, width, height, depth, _isColor ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_GRAY,
+                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png, info);
+    png_write_image(png, rows.data());
+    png_write_end(png, nullptr);
     png_destroy_write_struct(&png, &info);
-
-    fclose(fp);
+    if (!fp.commit())
+        throw std::runtime_error("Image output close failed");
+    bitDepth = depth;
 }
 
-const Image& Image::setImage(const GridF &img)
-{
-    this->colorImage.clear();
-    this->bwImage = img;
-    this->_isColor = false;
+const Image &Image::setImage(const GridF &image) {
+    colorImage.clear();
+    bwImage = image;
+    _isColor = false;
     return *this;
 }
 
-const Image& Image::setImage(const GridV3& img)
-{
-    this->bwImage.clear();
-    this->colorImage = img;
-    this->_isColor = true;
+const Image &Image::setImage(const GridV3 &image) {
+    bwImage.clear();
+    colorImage = image;
+    _isColor = true;
     return *this;
 }
 
-GridF Image::getBwImage() const
-{
-    if (!_isColor) return this->bwImage;
-    GridF img(colorImage.getDimensions());
-    img.iterateParallel([&](size_t i) {
-        img[i] = (colorImage[i].x() + colorImage[i].y() + colorImage[i].z()) / 3.f;
-    });
-    return img;
+GridF Image::getBwImage() const {
+    if (!_isColor)
+        return bwImage;
+    GridF result(colorImage.getDimensions());
+    result.iterateParallel(
+        [&](size_t i) { result[i] = (colorImage[i].x() + colorImage[i].y() + colorImage[i].z()) / 3.f; });
+    return result;
 }
 
-GridV3 Image::getColorImage() const
-{
-    if (_isColor) return this->colorImage;
-    GridV3 img(bwImage.getDimensions());
-    img.iterateParallel([&](size_t i) {
-        img[i] = Vector3(1, 1, 1) * bwImage[i];
-    });
-    return img;
+GridV3 Image::getColorImage() const {
+    if (_isColor)
+        return colorImage;
+    GridV3 result(bwImage.getDimensions());
+    result.iterateParallel([&](size_t i) { result[i] = Vector3(1, 1, 1) * bwImage[i]; });
+    return result;
 }
 
 

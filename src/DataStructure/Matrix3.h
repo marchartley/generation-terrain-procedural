@@ -9,6 +9,44 @@
 #include <math.h>
 #include <iomanip>
 #include <complex>
+#include <limits>
+#include <stdexcept>
+#include <climits>
+namespace grid_detail {
+template <class T> size_t count(size_t x, size_t y, size_t z) {
+    const auto limit = std::min(size_t(INT_MAX), std::vector<T>().max_size());
+    if (x > INT_MAX || y > INT_MAX || z > INT_MAX || (y && x > limit / y))
+        throw std::length_error("Grid dimensions overflow");
+    size_t xy = x * y;
+    if (z && xy > limit / z)
+        throw std::length_error("Grid dimensions overflow");
+    return xy * z;
+}
+inline size_t power2(size_t n) {
+    if (n == 0 || n > (size_t(1) << 30))
+        throw std::length_error("Unsupported FFT extent");
+    size_t result = 1;
+    while (result < n)
+        result *= 2;
+    return result;
+}
+inline int mirror(int i, size_t n) noexcept {
+    if (n <= 1)
+        return 0;
+    const int64_t period = 2 * int64_t(n);
+    int64_t j = int64_t(i) % period;
+    if (j < 0)
+        j += period;
+    return int(j < int64_t(n) ? j : period - j - 1);
+}
+inline int wrap(int i, size_t n) noexcept {
+    if (!n)
+        return 0;
+    int64_t j = int64_t(i) % int64_t(n);
+    return int(j < 0 ? j + n : j);
+}
+} // namespace grid_detail
+
 #include "DataStructure/Vector3.h"
 #include "Curves/Curves.h"
 #include "Curves/Contour.h"
@@ -53,7 +91,9 @@ enum NORMALIZE_METHOD {
 template <class T>
 class Matrix3
 {
-public:
+    static_assert(!std::is_same_v<T, bool>, "Matrix3<bool> is unsupported; use a byte mask");
+
+  public:
     Matrix3();
     Matrix3(size_t sizeX, size_t sizeY, size_t sizeZ = 1, T initValue = T());
     // Matrix3(const Vector3& size, T initValue = T());
@@ -105,7 +145,7 @@ public:
 
     inline size_t getIndex(size_t x, size_t y, size_t z) const noexcept;
     inline size_t getIndex(const Vector3i& coord) const noexcept;
-    inline std::tuple<size_t, size_t, size_t> getCoord(size_t index) const noexcept;
+    inline std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
     inline Vector3 getCoordAsVector3(size_t index) const;
     inline Vector3i getCoordAsVector3i(size_t index) const;
     inline bool checkCoord(int x, int y, int z = 0) const;
@@ -198,7 +238,7 @@ public:
     Matrix3<float> divergence() const;
     inline Matrix3<float> div() const;
     Matrix3<T> curl(float radius = 1.f) const;
-    inline Matrix3<T> rot() const;
+    inline Matrix3<T> rot() const { return curl(); }
     Matrix3<T> laplacian() const;
     Vector3 gradient(const Vector3& position) const;
     inline Vector3 gradient(float posX, float posY, float posZ = 0) const;
@@ -335,6 +375,8 @@ public:
 template <class T> template <class Func>
 void Matrix3<T>::iterate(Func function) const
 {
+    if (empty())
+        return;
     for (size_t z = 0; z < this->sizeZ; z++) {
         for (size_t y = 0; y < this->sizeY; y++) {
                 for (size_t x = 0; x < this->sizeX; x++) {
@@ -370,6 +412,8 @@ void Matrix3<T>::iterate(Func function) const
 template <class T> template <class Func>
 void Matrix3<T>::iterateReverse(Func function) const
 {
+    if (empty())
+        return;
     for (int z = this->sizeZ - 1; z >= 0; z--) {
         for (int y = this->sizeY - 1; y >= 0; y--) {
                 for (int x = this->sizeX - 1; x >= 0; x--) {
@@ -406,6 +450,8 @@ void Matrix3<T>::iterateReverse(Func function) const
 template <class T> template <class Func>
 void Matrix3<T>::iterateParallel(Func function) const
 {
+    if (empty())
+        return;
     if constexpr (std::is_invocable_v<Func, int>) {
         #pragma omp parallel for
         for (size_t i = 0; i < this->size(); i++) {
@@ -546,7 +592,7 @@ Matrix3<T>::Matrix3(const Vector3i& size, T initValue) : Matrix3<T>(size.x(), si
 template <class T>
 Matrix3<T>::Matrix3(size_t sizeX, size_t sizeY, size_t sizeZ, T initValue)
 {
-    this->data = std::vector<T>(sizeX * sizeY * sizeZ, initValue);
+    this->data = std::vector<T>(grid_detail::count<T>(sizeX, sizeY, sizeZ), initValue);
     this->sizeX = sizeX;
     this->sizeY = sizeY;
     this->sizeZ = sizeZ;
@@ -556,31 +602,46 @@ template <class T>
 Matrix3<T>::Matrix3(const std::vector<T>& data, size_t sizeX, size_t sizeY, int sizeZ)
 {
     if (sizeZ == -1) {
-        sizeZ = int(data.size()) / (sizeX * sizeY);
+        if (!sizeX || !sizeY)
+            throw std::invalid_argument("Cannot infer depth from zero extent");
+        size_t plane = grid_detail::count<T>(sizeX, sizeY, 1);
+        if (data.size() % plane || data.size() / plane > INT_MAX)
+            throw std::invalid_argument("Invalid inferred depth");
+        sizeZ = int(data.size() / plane);
     }
+    if (sizeZ < 0)
+        throw std::invalid_argument("Negative grid depth");
     init(data, sizeX, sizeY, sizeZ);
 }
 template <class T>
 Matrix3<T>::Matrix3(const std::vector<std::vector<T>>& data)
 {
-    std::vector<T> oneMatrix;
-    for (const std::vector<T>& row : data)
-        oneMatrix.insert(oneMatrix.end(), row.begin(), row.end());
-    int sizeX = data[0].size();
-    int sizeY = data.size();
-    init(oneMatrix, sizeX, sizeY, 1);
+    const size_t y = data.size(), x = y ? data[0].size() : 0;
+    std::vector<T> flat;
+    flat.reserve(grid_detail::count<T>(x, y, 1));
+    for (const auto &row : data) {
+        if (row.size() != x)
+            throw std::invalid_argument("Ragged grid");
+        flat.insert(flat.end(), row.begin(), row.end());
+    }
+    init(flat, x, y, 1);
 }
 template <class T>
 Matrix3<T>::Matrix3(const std::vector<std::vector<std::vector<T> > > &data)
 {
-    std::vector<T> oneMatrix;
-    for (std::vector<std::vector<T>>& grid : data)
-        for (std::vector<T>& row : grid)
-            oneMatrix.insert(oneMatrix.end(), row.begin(), row.end());
-    int sizeX = data[0].size();
-    int sizeY = data.size();
-    int sizeZ = (sizeY > 0 ? data[0][0].size() : 0);
-    init(oneMatrix, sizeX, sizeY, sizeZ);
+    const size_t z = data.size(), y = z ? data[0].size() : 0, x = y ? data[0][0].size() : 0;
+    std::vector<T> flat;
+    flat.reserve(grid_detail::count<T>(x, y, z));
+    for (const auto &plane : data) {
+        if (plane.size() != y)
+            throw std::invalid_argument("Ragged grid planes");
+        for (const auto &row : plane) {
+            if (row.size() != x)
+                throw std::invalid_argument("Ragged grid rows");
+            flat.insert(flat.end(), row.begin(), row.end());
+        }
+    }
+    init(flat, x, y, z);
 }
 
 template <class T>
@@ -632,50 +693,41 @@ Matrix3<T> Matrix3<T>::row(int rowIndex, int depthIndex)
 template <class T>
 T Matrix3<T>::interpolate(const Vector3& coord, RETURN_VALUE_ON_OUTSIDE padding) const
 {
-    Vector3i round = coord.floor();
-    Vector3 cellOffset = coord - round;
-
-    using PosFn = size_t (Matrix3::*)(const Vector3i&) const;
-    PosFn pos_fn = nullptr;
-    switch (padding) {
-    case RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE:
-        pos_fn = &Matrix3::getMirrorIndex; break;
-    case RETURN_VALUE_ON_OUTSIDE::WRAPPED_VALUE:
-        pos_fn = &Matrix3::getWrappedIndex; break;
-    case RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE:
-        pos_fn = &Matrix3::getRepeatIndex; break;
-    default:
-        break;
-    }
-
-    auto mapPos = [&](const Vector3i& p) -> size_t {
-        return pos_fn ? (this->*pos_fn)(p) : getIndex(p);
+    if (empty())
+        throw std::out_of_range("Cannot interpolate empty grid");
+    if (!coord.isValid() || coord.minComp() < float(INT_MIN + 1024) ||
+        coord.maxComp() > float(INT_MAX - 1024))
+        throw std::invalid_argument("Invalid interpolation coordinate");
+    Vector3i p = coord.floor();
+    const Vector3 offset = coord - p;
+    const auto sample = [&](int dx, int dy, int dz) -> T {
+        Vector3i q(p.x() + dx, p.y() + dy, p.z() + dz);
+        if (checkCoord(q))
+            return data[getIndex(q)];
+        switch (padding) {
+        case DEFAULT_VALUE:
+            return defaultValueOnBadCoord;
+        case MIRROR_VALUE:
+            q = getMirrorPosition(q);
+            break;
+        case WRAPPED_VALUE:
+            q = getWrappedPosition(q);
+            break;
+        case REPEAT_VALUE:
+            q = getRepeatPosition(q);
+            break;
+        default:
+            throw std::invalid_argument("Unknown interpolation border policy");
+        }
+        return data[getIndex(q)];
     };
-
-    const auto src = data.data();
-
-    // bool previousErrorConfig = this->raiseErrorOnBadCoord;
-    // RETURN_VALUE_ON_OUTSIDE previousOutsideConfig = this->returned_value_on_outside;
-//    this->raiseErrorOnBadCoord = false;
-//    this->returned_value_on_outside = padding;
-    T f000 = src[mapPos(round + Vector3i(0, 0, 0))];
-    T f100 = src[mapPos(round + Vector3i(1, 0, 0))];
-    T f010 = src[mapPos(round + Vector3i(0, 1, 0))];
-    T f110 = src[mapPos(round + Vector3i(1, 1, 0))];
-    T f001 = src[mapPos(round + Vector3i(0, 0, 1))];
-    T f101 = src[mapPos(round + Vector3i(1, 0, 1))];
-    T f011 = src[mapPos(round + Vector3i(0, 1, 1))];
-    T f111 = src[mapPos(round + Vector3i(1, 1, 1))];
-    // Interpolation
-    T interpol = ((
-                              f000 * (1-cellOffset.x()) + f100 * cellOffset.x()) * (1-cellOffset.y()) + (
-                              f010 * (1-cellOffset.x()) + f110 * cellOffset.x()) * cellOffset.y()) * (1 - cellOffset.z()) +
-                        ((
-                             f001 * (1-cellOffset.x()) + f101 * cellOffset.x()) * (1-cellOffset.y()) + (
-                             f011 * (1-cellOffset.x()) + f111 * cellOffset.x()) * cellOffset.y()) * cellOffset.z();
-//    this->raiseErrorOnBadCoord = previousErrorConfig;
-//    this->returned_value_on_outside = previousOutsideConfig;
-    return interpol;
+    const auto x = offset.x(), y = offset.y(), z = offset.z();
+    return ((sample(0, 0, 0) * (1 - x) + sample(1, 0, 0) * x) * (1 - y) +
+            (sample(0, 1, 0) * (1 - x) + sample(1, 1, 0) * x) * y) *
+               (1 - z) +
+           ((sample(0, 0, 1) * (1 - x) + sample(1, 0, 1) * x) * (1 - y) +
+            (sample(0, 1, 1) * (1 - x) + sample(1, 1, 1) * x) * y) *
+               z;
 }
 
 template <class T>
@@ -697,73 +749,42 @@ const T &Matrix3<T>::at(const Vector3i& pos) const
 template <class T>
 const T &Matrix3<T>::at(int i, int j, int k) const
 {
-    if (checkCoord(i, j, k)) {
-        int index = getIndex(i, j, k);
-        return this->data[index];
-    }
-    bool raiseError = raiseErrorOnBadCoord;
-    Vector3i newPos(i, j, k);
-    if (!raiseErrorOnBadCoord) {
-        if (returned_value_on_outside == DEFAULT_VALUE)
-            return defaultValueOnBadCoord;
-
-        if (stillRaiseErrorForX && (i < 0 || sizeX <= static_cast<std::size_t>(i)))
-            return defaultValueOnBadCoord;
-        if (stillRaiseErrorForY && (j < 0 || sizeY <= static_cast<std::size_t>(j)))
-            return defaultValueOnBadCoord;
-        if (stillRaiseErrorForZ && (k < 0 || sizeZ <= static_cast<std::size_t>(k)))
-            return defaultValueOnBadCoord;
-
-        if (returned_value_on_outside == MIRROR_VALUE)
-            newPos = getMirrorPosition(newPos);
-        else if (returned_value_on_outside == WRAPPED_VALUE)
-            newPos = getWrappedPosition(newPos);
-        else if (returned_value_on_outside == REPEAT_VALUE)
-            newPos = getRepeatPosition(newPos);
-
-    }
-    if (!raiseError) {
-        return this->unsafe(newPos.x(), newPos.y(), newPos.z());
-    }
+    if (empty())
+        throw std::out_of_range("Grid is empty");
+    if (checkCoord(i, j, k))
+        return data[getIndex(i, j, k)];
+    if (raiseErrorOnBadCoord)
+        throw std::out_of_range("Grid coordinate outside shape");
+    if (returned_value_on_outside == DEFAULT_VALUE ||
+        (stillRaiseErrorForX && (i < 0 || size_t(i) >= sizeX)) ||
+        (stillRaiseErrorForY && (j < 0 || size_t(j) >= sizeY)) ||
+        (stillRaiseErrorForZ && (k < 0 || size_t(k) >= sizeZ)))
+        return defaultValueOnBadCoord;
+    Vector3i p(i, j, k);
+    if (returned_value_on_outside == MIRROR_VALUE)
+        p = getMirrorPosition(p);
+    else if (returned_value_on_outside == WRAPPED_VALUE)
+        p = getWrappedPosition(p);
+    else if (returned_value_on_outside == REPEAT_VALUE)
+        p = getRepeatPosition(p);
     else
-        throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
-            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+        throw std::invalid_argument("Unknown grid border policy");
+    return data[getIndex(p)];
 }
 
 template <class T>
 const T &Matrix3<T>::at(size_t i) const
 {
-    if (i < data.size()) {
-        return this->data[i];
-    }
-    int x, y, z;
-    std::tie(x, y, z) = this->getCoord(i);
-
-    bool raiseError = raiseErrorOnBadCoord;
-    Vector3i newPos(x, y, z);
-    if (!raiseErrorOnBadCoord) {
-        if (returned_value_on_outside == DEFAULT_VALUE)
-            return defaultValueOnBadCoord;
-
-        if (stillRaiseErrorForX && (x < 0 || sizeX <= static_cast<std::size_t>(x)))
-            return defaultValueOnBadCoord;
-        if (stillRaiseErrorForY && (y < 0 || sizeY <= static_cast<std::size_t>(y)))
-            return defaultValueOnBadCoord;
-        if (stillRaiseErrorForZ && (z < 0 || sizeZ <= static_cast<std::size_t>(z)))
-            return defaultValueOnBadCoord;
-
-        if (returned_value_on_outside == MIRROR_VALUE)
-            newPos = getMirrorPosition(newPos);
-        else if (returned_value_on_outside == WRAPPED_VALUE)
-            newPos = getWrappedPosition(newPos);
-        else if (returned_value_on_outside == REPEAT_VALUE)
-            newPos = getRepeatPosition(newPos);
-    }
-    if (!raiseError)
-        return this->unsafe(newPos.x(), newPos.y(), newPos.z());
-    else
-        throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
-            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+    if (i < data.size())
+        return data[i];
+    if (empty() || raiseErrorOnBadCoord)
+        throw std::out_of_range("Grid index outside shape");
+    if (returned_value_on_outside == DEFAULT_VALUE)
+        return defaultValueOnBadCoord;
+    auto [x, y, z] = getCoord(i);
+    if (z > INT_MAX)
+        throw std::out_of_range("Grid index cannot be represented");
+    return at(int(x), int(y), int(z));
 }
 template <class T>
 const T& Matrix3<T>::operator()(size_t x, size_t y, size_t z) const {
@@ -807,76 +828,47 @@ T &Matrix3<T>::at(const Vector3i& pos)
 template <class T>
 T &Matrix3<T>::at(int i, int j, int k)
 {
-    if (this->empty()) {
-        throw std::out_of_range("Grid is empty : " + this->toString());
-    }
-    if (checkCoord(i, j, k)) {
-        int index = getIndex(i, j, k);
-        return this->data[index];
-    }
-    bool raiseError = raiseErrorOnBadCoord;
-    dummyValue = defaultValueOnBadCoord;
-    Vector3i newPos(i, j, k);
-    if (!raiseErrorOnBadCoord) {
-        if (returned_value_on_outside == DEFAULT_VALUE)
-            return dummyValue; // defaultValueOnBadCoord;
-
-        if (stillRaiseErrorForX && (i < 0 || sizeX <= static_cast<std::size_t>(i)))
-            return dummyValue; // defaultValueOnBadCoord;
-        if (stillRaiseErrorForY && (j < 0 || sizeY <= static_cast<std::size_t>(j)))
-            return dummyValue; // defaultValueOnBadCoord;
-        if (stillRaiseErrorForZ && (k < 0 || sizeZ <= static_cast<std::size_t>(k)))
-            return dummyValue; // defaultValueOnBadCoord;
-
-        if (returned_value_on_outside == MIRROR_VALUE)
-            newPos = getMirrorPosition(newPos);
-        else if (returned_value_on_outside == WRAPPED_VALUE)
-            newPos = getWrappedPosition(newPos);
-        else if (returned_value_on_outside == REPEAT_VALUE)
-            newPos = getRepeatPosition(newPos);
-
-    }
-    if (!raiseError)
-        return this->unsafe(newPos.x(), newPos.y(), newPos.z());
+    if (empty())
+        throw std::out_of_range("Grid is empty");
+    if (checkCoord(i, j, k))
+        return data[getIndex(i, j, k)];
+    if (raiseErrorOnBadCoord)
+        throw std::out_of_range("Grid coordinate outside shape");
+    thread_local T fallback;
+    fallback = defaultValueOnBadCoord;
+    if (returned_value_on_outside == DEFAULT_VALUE ||
+        (stillRaiseErrorForX && (i < 0 || size_t(i) >= sizeX)) ||
+        (stillRaiseErrorForY && (j < 0 || size_t(j) >= sizeY)) ||
+        (stillRaiseErrorForZ && (k < 0 || size_t(k) >= sizeZ)))
+        return fallback;
+    Vector3i p(i, j, k);
+    if (returned_value_on_outside == MIRROR_VALUE)
+        p = getMirrorPosition(p);
+    else if (returned_value_on_outside == WRAPPED_VALUE)
+        p = getWrappedPosition(p);
+    else if (returned_value_on_outside == REPEAT_VALUE)
+        p = getRepeatPosition(p);
     else
-        throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
-            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+        throw std::invalid_argument("Unknown grid border policy");
+    return data[getIndex(p)];
 }
 
 template <class T>
 T &Matrix3<T>::at(size_t i)
 {
-    if (i >= 0 && i < sizeX * sizeY * sizeZ) {
-        return this->data[i];
+    if (i < data.size())
+        return data[i];
+    if (empty() || raiseErrorOnBadCoord)
+        throw std::out_of_range("Grid index outside shape");
+    if (returned_value_on_outside == DEFAULT_VALUE) {
+        thread_local T fallback;
+        fallback = defaultValueOnBadCoord;
+        return fallback;
     }
-    int x, y, z;
-    std::tie(x, y, z) = this->getCoord(i);
-
-    bool raiseError = raiseErrorOnBadCoord;
-    Vector3i newPos(x, y, z);
-    if (!raiseErrorOnBadCoord) {
-        if (returned_value_on_outside == DEFAULT_VALUE)
-            return dummyValue; // defaultValueOnBadCoord;
-
-        if (stillRaiseErrorForX && (x < 0 || sizeX <= static_cast<std::size_t>(x)))
-            return dummyValue; // defaultValueOnBadCoord;
-        if (stillRaiseErrorForY && (y < 0 || sizeY <= static_cast<std::size_t>(y)))
-            return dummyValue; // defaultValueOnBadCoord;
-        if (stillRaiseErrorForZ && (z < 0 || sizeZ <= static_cast<std::size_t>(z)))
-            return dummyValue; // defaultValueOnBadCoord;
-
-        if (returned_value_on_outside == MIRROR_VALUE)
-            newPos = getMirrorPosition(newPos);
-        else if (returned_value_on_outside == WRAPPED_VALUE)
-            newPos = getWrappedPosition(newPos);
-        else if (returned_value_on_outside == REPEAT_VALUE)
-            newPos = getRepeatPosition(newPos);
-    }
-    if (!raiseError)
-        return this->unsafe(newPos.x(), newPos.y(), newPos.z());
-    else
-        throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
-            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+    auto [x, y, z] = getCoord(i);
+    if (z > INT_MAX)
+        throw std::out_of_range("Grid index cannot be represented");
+    return at(int(x), int(y), int(z));
 }
 //template <class T>
 //T& Matrix3<T>::operator[](size_t x, size_t y) {
@@ -922,9 +914,9 @@ inline size_t Matrix3<T>::getIndex(const Vector3i& coord) const noexcept
     return this->getIndex(coord.x(), coord.y(), coord.z());
 }
 
-template <class T>
-inline std::tuple<size_t, size_t, size_t> Matrix3<T>::getCoord(size_t index) const noexcept
-{
+template <class T> inline std::tuple<size_t, size_t, size_t> Matrix3<T>::getCoord(size_t index) const {
+    if (!_strideY || !_strideZ)
+        throw std::out_of_range("Cannot decode an empty grid");
     const size_t z = index / _strideZ;
     index -= z * _strideZ;
     const size_t y = index / _strideY;
@@ -934,6 +926,8 @@ inline std::tuple<size_t, size_t, size_t> Matrix3<T>::getCoord(size_t index) con
 template <class T>
 inline Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
 {
+    if (!_strideY || !_strideZ)
+        throw std::out_of_range("Cannot decode an empty grid");
     const size_t z = index / _strideZ;
     index -= z * _strideZ;
     const size_t y = index / _strideY;
@@ -943,6 +937,8 @@ inline Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
 template <class T>
 inline Vector3i Matrix3<T>::getCoordAsVector3i(size_t index) const
 {
+    if (!_strideY || !_strideZ)
+        throw std::out_of_range("Cannot decode an empty grid");
     const size_t z = index / _strideZ;
     index -= z * _strideZ;
     const size_t y = index / _strideY;
@@ -950,34 +946,36 @@ inline Vector3i Matrix3<T>::getCoordAsVector3i(size_t index) const
     return Vector3i(x, y, z);
 }
 
-template <class T>
-Matrix3<T>& Matrix3<T>::addValueAt(T value, const Vector3& coord) {
-    bool previousError = this->raiseErrorOnBadCoord;
-
-    this->raiseErrorOnBadCoord = false;
-
-    Vector3i floorPos = coord.floor();
-    Vector3 offset = coord - floorPos;
-
-    const Vector3i v0 = floorPos + Vector3i(0, 0, 0);
-    const Vector3i v1 = floorPos + Vector3i(0, 0, 1);
-    const Vector3i v2 = floorPos + Vector3i(0, 1, 0);
-    const Vector3i v3 = floorPos + Vector3i(0, 1, 1);
-    const Vector3i v4 = floorPos + Vector3i(1, 0, 0);
-    const Vector3i v5 = floorPos + Vector3i(1, 0, 1);
-    const Vector3i v6 = floorPos + Vector3i(1, 1, 0);
-    const Vector3i v7 = floorPos + Vector3i(1, 1, 1);
-
-    this->at(v0) += value * (1 - offset.x()) * (1 - offset.y()) * (1 - offset.z());
-    this->at(v1) += value * (1 - offset.x()) * (1 - offset.y()) * (    offset.z());
-    this->at(v2) += value * (1 - offset.x()) * (    offset.y()) * (1 - offset.z());
-    this->at(v3) += value * (1 - offset.x()) * (    offset.y()) * (    offset.z());
-    this->at(v4) += value * (    offset.x()) * (1 - offset.y()) * (1 - offset.z());
-    this->at(v5) += value * (    offset.x()) * (1 - offset.y()) * (    offset.z());
-    this->at(v6) += value * (    offset.x()) * (    offset.y()) * (1 - offset.z());
-    this->at(v7) += value * (    offset.x()) * (    offset.y()) * (    offset.z());
-
-    this->raiseErrorOnBadCoord = previousError;
+template <class T> Matrix3<T> &Matrix3<T>::addValueAt(T value, const Vector3 &coord) {
+    if (empty())
+        throw std::out_of_range("Cannot splat into empty grid");
+    if (!coord.isValid() || coord.minComp() < float(INT_MIN + 1024) ||
+        coord.maxComp() > float(INT_MAX - 1024))
+        throw std::invalid_argument("Invalid splat coordinate");
+    const Vector3i floor = coord.floor();
+    const auto offset = coord - floor;
+    for (int dz = 0; dz < 2; ++dz)
+        for (int dy = 0; dy < 2; ++dy)
+            for (int dx = 0; dx < 2; ++dx) {
+                Vector3i p(floor.x() + dx, floor.y() + dy, floor.z() + dz);
+                const float weight = (dx ? offset.x() : 1 - offset.x()) * (dy ? offset.y() : 1 - offset.y()) *
+                                     (dz ? offset.z() : 1 - offset.z());
+                if (weight == 0)
+                    continue;
+                if (!checkCoord(p)) {
+                    if (returned_value_on_outside == DEFAULT_VALUE)
+                        continue;
+                    if (returned_value_on_outside == MIRROR_VALUE)
+                        p = getMirrorPosition(p);
+                    else if (returned_value_on_outside == WRAPPED_VALUE)
+                        p = getWrappedPosition(p);
+                    else if (returned_value_on_outside == REPEAT_VALUE)
+                        p = getRepeatPosition(p);
+                    else
+                        throw std::invalid_argument("Unknown splat border policy");
+                }
+                unsafe(p) += value * weight;
+            }
     return *this;
 }
 template <class T>
@@ -1185,7 +1183,7 @@ Matrix3<int> Matrix3<T>::fillHoles(bool ignoreZlayer) const
         components.iterateParallel([&] (size_t i) {
             components[i] = (components[i] == outsideValue ? 0 : 1);
         });
-        return components.subset(1, components.sizeX - 1, 1, components.sizeY - 1, 1, 2);
+        return components.subset(1, components.sizeX - 1, 1, components.sizeY - 1, 1, components.sizeZ - 1);
     }
 }
 
@@ -1206,6 +1204,8 @@ T Matrix3<T>::trace() const
 template <class T>
 Matrix3<T>& Matrix3<T>::init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ)
 {
+    if (data.size() != grid_detail::count<T>(sizeX, sizeY, sizeZ))
+        throw std::invalid_argument("Grid payload does not match shape");
     this->data = data;
     this->sizeX = sizeX;
     this->sizeY = sizeY;
@@ -1238,7 +1238,7 @@ T Matrix3<T>::min() const
 template <class T>
 T Matrix3<T>::max() const
 {
-    T max = std::numeric_limits<T>::min();
+    T max = std::numeric_limits<T>::lowest();
     for(const T& val : this->data)
         max = std::max(max, val);
     return max;
@@ -1283,9 +1283,13 @@ T Matrix3<T>::sum() const
 template <class T>
 Matrix3<T> Matrix3<T>::rounded(int precision) const
 {
-    for(T& val : this->data)
-        val = (val * std::pow(10, precision)) / (int)std::pow(10, precision);
-    return *this;
+    Matrix3<T> result = *this;
+    double scale = std::pow(10., precision);
+    if (!std::isfinite(scale) || scale == 0)
+        throw std::invalid_argument("Invalid rounding precision");
+    for (auto &value : result.data)
+        value = T(std::round(value * scale) / scale);
+    return result;
 }
 
 template <class T>
@@ -1328,8 +1332,9 @@ Matrix3<T>& Matrix3<T>::normalizeUsing(NORMALIZE_METHOD normalizeMethod) {
         *this = (*this - mu) / sigma;
     } else if (normalizeMethod == NORMALIZE_SOFTMAX) {
         Matrix3<T> exponentialSelf = *this;
+        const T maximum = this->max();
         for (auto& val : exponentialSelf)
-            val = std::exp(val);
+            val = std::exp(val - maximum);
         T exponentialSum = exponentialSelf.sum();
         if (exponentialSum == T()) return *this;
         *this = exponentialSelf / exponentialSum;
@@ -1354,6 +1359,8 @@ Matrix3<T> Matrix3<T>::transposeXY()
 
 template <class T>
 Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3& offset) {
+    if (!std::isfinite(sigma) || sigma <= 0)
+        throw std::invalid_argument("Gaussian sigma must be positive and finite");
     Matrix3<float> gaussian(sizeOnX, sizeOnY, sizeOnZ);
     Vector3 center = Vector3(sizeOnX/2.f, sizeOnY/2.f, sizeOnZ/2.f) + offset;
     center -= Vector3((sizeOnX > 1 ? .5 : 0), (sizeOnY > 1 ? .5 : 0), (sizeOnZ > 1 ? .5 : 0));
@@ -1385,6 +1392,10 @@ Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ
 }
 template <class T>
 Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, [[maybe_unused]] bool ignoreBorders) const {
+    if (empty())
+        return *this;
+    if (sizeOnX <= 0 || sizeOnY <= 0 || sizeOnZ <= 0)
+        throw std::invalid_argument("Mean windows must be positive");
     auto mirror_idx = [&](int i, size_t n) {
         if (n <= 1) return 0;
         // small-radius typical, so loop is tiny near borders
@@ -1421,7 +1432,7 @@ Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, [[maybe
 
             // initial window sum at x=0
             T sum = T();
-            for (int dx = -int(rx); dx <= int(rx); ++dx) {
+            for (int dx = -int(rx); dx < int(sizeOnX) - int(rx); ++dx) {
                 int xi = mirror_idx(dx, X);
                 sum += src[base + xi];
             }
@@ -1429,7 +1440,7 @@ Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, [[maybe
 
             // slide
             for (size_t x = 1; x < X; ++x) {
-                int x_add = mirror_idx(x + rx, X);
+                int x_add = mirror_idx(x + (sizeOnX - 1 - rx), X);
                 int x_sub = mirror_idx(x - rx - 1, X);
                 sum += src[base + x_add] - src[base + x_sub];
                 tmp[base + x] = sum;
@@ -1445,14 +1456,14 @@ Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, [[maybe
 
             // initial sum at y=0
             T sum = T();
-            for (int dy = -int(ry); dy <= int(ry); ++dy) {
+            for (int dy = -int(ry); dy < int(sizeOnY) - int(ry); ++dy) {
                 int yi = mirror_idx(dy, Y);
                 sum += tmp[baseZ + yi*X + x];
             }
             tmp2[baseZ + 0*X + x] = sum;
 
             for (size_t y = 1; y < Y; ++y) {
-                int y_add = mirror_idx(y + ry, Y);
+                int y_add = mirror_idx(y + (sizeOnY - 1 - ry), Y);
                 int y_sub = mirror_idx(y - ry - 1, Y);
                 sum += tmp[baseZ + y_add*X + x] - tmp[baseZ + y_sub*X + x];
                 tmp2[baseZ + y*X + x] = sum;
@@ -1471,14 +1482,14 @@ Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, [[maybe
 
             // initial sum at z=0
             T sum = T();
-            for (int dz = -int(rz); dz <= int(rz); ++dz) {
+            for (int dz = -int(rz); dz < int(sizeOnZ) - int(rz); ++dz) {
                 int zi = mirror_idx(dz, Z);
                 sum += tmp2[zi*XY + y*X + x];
             }
             dst[0*XY + y*X + x] = sum;
 
             for (size_t z = 1; z < Z; ++z) {
-                int z_add = mirror_idx(z + rz, Z);
+                int z_add = mirror_idx(z + (sizeOnZ - 1 - rz), Z);
                 int z_sub = mirror_idx(z - rz - 1, Z);
                 sum += tmp2[z_add*XY + y*X + x] - tmp2[z_sub*XY + y*X + x];
                 dst[z*XY + y*X + x] = sum;
@@ -1510,7 +1521,12 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
         return i;
     };
 
-    if (sigma <= 0.0f) return *this;
+    if (!std::isfinite(sigma) || !std::isfinite(limitFactor))
+        throw std::invalid_argument("Nonfinite Gaussian parameters");
+    if (empty() || sigma <= 0)
+        return *this;
+    if (double(sigma) * std::abs(double(limitFactor)) > 100000)
+        throw std::length_error("Gaussian radius too large");
 
     if (limitFactor < 0.0f) {
         limitFactor = std::max({X, Y, Z}) / sigma;
@@ -1549,7 +1565,7 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
             const size_t base = z*XY + y*X;
 
             // Interior (no borders)
-            for (size_t x = r; x < X - r; ++x) {
+            for (size_t x = r; x + r < X; ++x) {
                 T acc = T();
                 const T* p = src + base + (x - r);
                 for (size_t k = 0; k < K; ++k) {
@@ -1570,7 +1586,7 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
             }
 
             // Right border
-            for (size_t x = std::max(int(X - r), 0); x < X; ++x) {
+            for (size_t x = (X > r ? X - r : 0); x < X; ++x) {
                 T acc = T();
                 for (int k = -int(r); k <= int(r); ++k) {
                     int xi = ignoreBorders ? (x + k) : mirror_idx(x + k, X);
@@ -1589,7 +1605,7 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
             const size_t baseZ = z*XY;
 
             // Interior
-            for (size_t y = r; y < Y - r; ++y) {
+            for (size_t y = r; y + r < Y; ++y) {
                 T acc = T();
                 int idx = baseZ + (y - r)*X + x;
                 for (size_t k = 0; k < K; ++k) {
@@ -1608,7 +1624,7 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
                 }
                 tmp2[baseZ + y*X + x] = (T)acc;
             }
-            for (size_t y = std::max(int(Y - r), 0); y < Y; ++y) {
+            for (size_t y = (Y > r ? Y - r : 0); y < Y; ++y) {
                 T acc = T();
                 for (int k = -int(r); k <= int(r); ++k) {
                     int yi = ignoreBorders ? (y + k) : mirror_idx(y + k, Y);
@@ -1633,7 +1649,7 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
         for (size_t x = 0; x < X; ++x) {
 
             // Interior
-            for (size_t z = r; z < Z - r; ++z) {
+            for (size_t z = r; z + r < Z; ++z) {
                 T acc = T();
                 int idx = (z - r)*XY + y*X + x;
                 for (size_t k = 0; k < K; ++k) {
@@ -1652,7 +1668,7 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
                 }
                 dst[z*XY + y*X + x] = (T)acc;
             }
-            for (size_t z = std::max(int(Z - r), 0); z < Z; ++z) {
+            for (size_t z = (Z > r ? Z - r : 0); z < Z; ++z) {
                 T acc = T();
                 for (int k = -int(r); k <= int(r); ++k) {
                     int zi = ignoreBorders ? (z + k) : mirror_idx(z + k, Z);
@@ -1782,6 +1798,8 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
 template <class T>
 Matrix3<T> Matrix3<T>::medianBlur(int sizeOnX, int sizeOnY, int sizeOnZ, bool ignoreBorders) const
 {
+    if (sizeOnX <= 0 || sizeOnY <= 0 || sizeOnZ <= 0)
+        throw std::invalid_argument("Median window must be positive");
     Matrix3<T> result(this->getDimensions());
 
     int halfX = sizeOnX / 2;
@@ -1925,7 +1943,8 @@ Matrix3<int> Matrix3<T>::binarizeBetween(T minValue, T maxValue, bool insideValu
                 bin[i] = 0;
             }
         } else {
-            if ((useAlsoTheEqualSign && this->data[i] <= minValue && this->data[i] <= maxValue) || (!useAlsoTheEqualSign && this->data[i] < minValue && this->data[i] < maxValue)) {
+            if ((useAlsoTheEqualSign && (this->data[i] <= minValue || this->data[i] >= maxValue)) ||
+                (!useAlsoTheEqualSign && (this->data[i] < minValue || this->data[i] > maxValue))) {
                 bin[i] = 1;
             } else {
                 bin[i] = 0;
@@ -1935,15 +1954,13 @@ Matrix3<int> Matrix3<T>::binarizeBetween(T minValue, T maxValue, bool insideValu
 
     /*for (size_t i = 0; i < this->size(); i++) {
         if (insideValuesAreSetToOne) {
-            if ((useAlsoTheEqualSign && this->data[i] >= minValue && this->data[i] <= maxValue) || (!useAlsoTheEqualSign && this->data[i] > minValue && this->data[i] < maxValue)) {
-                bin[i] = 1;
-            } else {
+            if ((useAlsoTheEqualSign && this->data[i] >= minValue && this->data[i] <= maxValue) ||
+    (!useAlsoTheEqualSign && this->data[i] > minValue && this->data[i] < maxValue)) { bin[i] = 1; } else {
                 bin[i] = 0;
             }
         } else {
-            if ((useAlsoTheEqualSign && this->data[i] <= minValue && this->data[i] <= maxValue) || (!useAlsoTheEqualSign && this->data[i] < minValue && this->data[i] < maxValue)) {
-                bin[i] = 1;
-            } else {
+            if ((useAlsoTheEqualSign && (this->data[i] <= minValue || this->data[i] >= maxValue)) ||
+    (!useAlsoTheEqualSign && (this->data[i] < minValue || this->data[i] > maxValue))) { bin[i] = 1; } else {
                 bin[i] = 0;
             }
         }
@@ -1961,8 +1978,11 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
     bool useZ = (this->sizeZ > 1);
 
     iterateParallel([&](int x, int y, int z) {
-        if (this->unsafe(x, y, z) <= 0) return;
-        if (ignoreBorders && (x == 0 || x == int(sizeX) - 1 || y == 0 || y == int(sizeY) - 1 || z == 0 || (ignoreZtopBorder && z == int(sizeZ) - 1))) return;
+        if (this->unsafe(x, y, z) <= isovalue)
+            return;
+        if (ignoreBorders && (x == 0 || x == int(sizeX) - 1 || y == 0 || y == int(sizeY) - 1 ||
+                              (useZ && z == 0) || (ignoreZtopBorder && z == int(sizeZ) - 1)))
+            return;
         bool isSurface = false;
         for (int dx = -1; dx <= 1 && !isSurface; dx++) {
             for (int dy = -1; dy <= 1 && !isSurface; dy++) {
@@ -1980,6 +2000,8 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
 template <class T>
 Matrix3<T> Matrix3<T>::slice(int index, int axis) const
 {
+    if (axis < 0 || axis > 2 || index < 0 || size_t(index) >= (axis == 0 ? sizeX : axis == 1 ? sizeY : sizeZ))
+        throw std::out_of_range("Grid slice index/axis");
     Matrix3<T> result;
     if (axis == 0) { // YZ
         result = Matrix3<T>(1, sizeY, sizeZ);
@@ -2038,51 +2060,35 @@ Matrix3<T> Matrix3<T>::random(const Vector3i& dimensions)
 template <class T>
 Matrix3<T> Matrix3<T>::random(size_t sizeX, size_t sizeY, size_t sizeZ)
 {
-    Matrix3<T> res(sizeX, sizeY, sizeZ);
-    res.iterateParallel([&](size_t i) {
-        res[i] = random_gen::generate();
-    });
-    /*for (auto& v : res)
-        v = random_gen::generate();*/
-    return res;
+    Matrix3<T> result(sizeX, sizeY, sizeZ);
+    // The legacy generator is shared state. Keep draws in deterministic source
+    // order instead of racing one engine across OpenMP workers.
+    for (auto &value : result.data)
+        value = random_gen::generate();
+    return result;
 }
 
 template <class T>
 Matrix3<T>& Matrix3<T>::insertRow(size_t indexToInsert, int affectedDimension, T newData)
 {
-    auto it = this->data.begin();
-    int jumps = 0;
-    switch(affectedDimension) {
-    case 0:
-        jumps = sizeX;
-        if (indexToInsert < 0) indexToInsert = sizeX; // If default value, it's last X-index
-        it += indexToInsert;
-        for (; it <= this->data.end() - (indexToInsert == 0 ? 1 : 0); it += jumps) {
-            it = this->data.insert(it, newData) + 1; // Set "it" to the value next to the inserted value
-        }
-        this->sizeX++;
-        break;
-    case 1:
-        jumps = sizeX * sizeY;
-        if (indexToInsert < 0) indexToInsert = sizeY; // If default value, it's last Y-index
-        it += (indexToInsert * sizeX);
-        for (; it <= this->data.end() - (indexToInsert == 0 ? 1 : 0); it += jumps) {
-            for (size_t i = 0; i < sizeX; i++) {
-                it = this->data.insert(it, newData) + 1;
-            }
-        }
-        this->sizeY++;
-        break;
-    case 2:
-        if (indexToInsert < 0) indexToInsert = sizeZ; // If default value, it's last Z-index
-        it += (sizeX * sizeY) * indexToInsert;
-        for (size_t i = 0; i < sizeX * sizeY; i++)
-            it = this->data.insert(it, newData) + 1;
-        this->sizeZ++;
-        break;
-    default:
-        throw std::out_of_range("insertRow can only be processed on dim 0, 1 or 2 (resp. X, Y, Z)");
-    }
+    if (affectedDimension < 0 || affectedDimension > 2)
+        throw std::out_of_range("Grid insertion axis");
+    auto dims = getDimensions();
+    if (indexToInsert > size_t(dims[affectedDimension]))
+        throw std::out_of_range("Grid insertion index");
+    ++dims[affectedDimension];
+    Matrix3<T> result(dims, newData);
+    iterate([&](int x, int y, int z) {
+        Vector3i p(x, y, z), q = p;
+        if (size_t(p[affectedDimension]) >= indexToInsert)
+            ++q[affectedDimension];
+        result.unsafe(q) = unsafe(p);
+    });
+    data.swap(result.data);
+    sizeX = result.sizeX;
+    sizeY = result.sizeY;
+    sizeZ = result.sizeZ;
+    _updateStrides();
     return *this;
 }
 
@@ -2331,6 +2337,8 @@ Matrix3<T> Matrix3<T>::resize(const Vector3i& newSize, RESIZE_MODE mode) const
 template <class T>
 Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode) const
 {
+    if (empty())
+        throw std::invalid_argument("Cannot resize empty grid");
     Matrix3<T> newMat(newX, newY, newZ);
     newMat.raiseErrorOnBadCoord = false;
     float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
@@ -2376,33 +2384,25 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
         newMat = this->resizeNearest(newX, newY, newZ);
 
     } else if (mode == MAX_VAL || mode == MIN_VAL) {
-//        for (auto& val : newMat)
-//            val = (mode == MAX_VAL ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max());
-        Matrix3<short int> modifiedMatrix(newX, newY, newZ, 0);
-        iterateParallel([&](int x, int y, int z) {
-            size_t startX = x / rx;
-            size_t endX = (x + 1) / rx;
-            size_t startY = y / ry;
-            size_t endY = (y + 1) / ry;
-            size_t startZ = z / rz;
-            size_t endZ = (z + 1) / rz;
-
-            // Not sure that this is the most efficient strategy, but meh...
-            for (size_t dx = startX; dx <= endX; dx++) {
-                for (size_t dy = startY; dy <= endY; dy++) {
-                    for (size_t dz = startZ; dz <= endZ; dz++) {
-                        if (modifiedMatrix.checkCoord(dx, dy, dz)) {
-                            // If this cell hasn't been modified yet, we cannot apply the min/max operator
-                            if (modifiedMatrix.at(dx, dy, dz) == 0) {
-                                newMat.at(dx, dy, dz) = this->unsafe(x, y, z);
-                                modifiedMatrix.at(dx, dy, dz) = 1;
-                            } else {
-                                newMat.at(dx, dy, dz) = (mode == MAX_VAL ? std::max(newMat.at(dx, dy, dz), this->unsafe(x, y, z)) : std::min(newMat.at(dx, dy, dz), this->unsafe(x, y, z)));
-                            }
-                        }
-                    }
-                }
-            }
+        //        for (auto& val : newMat)
+        //            val = (mode == MAX_VAL ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max());
+        // Gather into disjoint output cells; singleton axes are never divisors.
+        newMat.iterateParallel([&](int x, int y, int z) {
+            auto range = [](int p, size_t source, size_t target) {
+                size_t first = std::min(source - 1, size_t(p) * source / target);
+                size_t last = std::max(first + 1, (size_t(p + 1) * source + target - 1) / target);
+                return std::pair<size_t, size_t>(first, std::min(source, last));
+            };
+            auto [x0, x1] = range(x, sizeX, newX);
+            auto [y0, y1] = range(y, sizeY, newY);
+            auto [z0, z1] = range(z, sizeZ, newZ);
+            T value = unsafe(x0, y0, z0);
+            for (size_t zz = z0; zz < z1; ++zz)
+                for (size_t yy = y0; yy < y1; ++yy)
+                    for (size_t xx = x0; xx < x1; ++xx)
+                        value = mode == MAX_VAL ? std::max(value, unsafe(xx, yy, zz))
+                                                : std::min(value, unsafe(xx, yy, zz));
+            newMat.unsafe(x, y, z) = value;
         });
     } else if (mode == FILL_WITH_DEFAULT) {
         if (rz == 0) rz = 1;
@@ -2428,14 +2428,17 @@ Matrix3<T> Matrix3<T>::resizeNearest(float factor) const
 template <class T>
 Matrix3<T> Matrix3<T>::resizeNearest(size_t newX, size_t newY, size_t newZ) const
 {
+    if (empty())
+        throw std::invalid_argument("Cannot resize empty grid");
     Matrix3<T> newMat(newX, newY, newZ);
     newMat.raiseErrorOnBadCoord = false;
     float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
 
     // Apply interpolations
     Vector3 ratio(rx, ry, rz);
-    newMat.iterateParallel([&](const Vector3i& pos) {
-        newMat(pos) = this->unsafe((pos * ratio).roundedDown());
+    newMat.iterateParallel([&](const Vector3i &pos) {
+        newMat(pos) = this->unsafe(
+            Vector3i(std::lround(pos.x() * rx), std::lround(pos.y() * ry), std::lround(pos.z() * rz)));
     });
     return newMat;
 }
@@ -2480,6 +2483,10 @@ inline Matrix3<T>& Matrix3<T>::paste(const Matrix3<T> &matrixToPaste, const Vect
 template <class T>
 Matrix3<T>& Matrix3<T>::paste(const Matrix3<T>& matrixToPaste, int left, int up, int front)
 {
+    if (this == &matrixToPaste) {
+        Matrix3<T> snapshot(matrixToPaste);
+        return paste(snapshot, left, up, front);
+    }
     auto dst = data.data();
     const auto src = matrixToPaste.data.data();
 
@@ -2496,6 +2503,10 @@ Matrix3<T>& Matrix3<T>::paste(const Matrix3<T>& matrixToPaste, int left, int up,
 template <class T>
 Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperLeftFrontCorner, [[maybe_unused]] bool useInterpolation)
 {
+    if (this == &matrixToAdd) {
+        const Matrix3<T> snapshot(matrixToAdd);
+        return add(snapshot, upperLeftFrontCorner, useInterpolation);
+    }
     if (useInterpolation) {
         matrixToAdd.iterate([&](const Vector3i& pos) {
             this->addValueAt(matrixToAdd(pos), upperLeftFrontCorner + pos);
@@ -2508,6 +2519,10 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperL
 template <class T>
 Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int front, [[maybe_unused]] bool useInterpolation)
 {
+    if (this == &matrixToAdd) {
+        const Matrix3<T> snapshot(matrixToAdd);
+        return add(snapshot, left, up, front, useInterpolation);
+    }
     auto dst = data.data();
     const auto src = matrixToAdd.data.data();
 
@@ -2521,9 +2536,15 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int
     return *this;
 }
 
+template <class T> Matrix3<T> &Matrix3<T>::add(const Matrix3<T> &other, const Vector3i &offset) {
+    return add(other, offset.x(), offset.y(), offset.z());
+}
+
 template <class T>
 Matrix3<T> Matrix3<T>::concat(const Matrix3<T>& matrixToConcat)
 {
+    if (sizeY != matrixToConcat.sizeY || sizeZ != matrixToConcat.sizeZ)
+        throw std::invalid_argument("Concat shape mismatch");
     Matrix3<T> newMatrix(this->getDimensions() + matrixToConcat.getDimensions() * Vector3(1, 0, 0));
     newMatrix.paste(*this, Vector3());
     newMatrix.paste(matrixToConcat, (newMatrix.getDimensions() - matrixToConcat.getDimensions()) * Vector3(1, 0, 0));
@@ -2538,6 +2559,12 @@ inline Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, const Vector3i
 template <class T>
 Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, int left, int up, int front)
 {
+    if (this == &otherMatrix && left == 0 && up == 0 && front == 0)
+        return *this;
+    if (this == &otherMatrix) {
+        const Matrix3<T> snapshot(otherMatrix);
+        return max(snapshot, left, up, front);
+    }
     auto dst = data.data();
     const auto src = otherMatrix.data.data();
 
@@ -2560,6 +2587,12 @@ inline Matrix3<T>& Matrix3<T>::min(const Matrix3<T>& otherMatrix, const Vector3i
 template <class T>
 Matrix3<T>& Matrix3<T>::min(const Matrix3<T> &otherMatrix, int left, int up, int front)
 {
+    if (this == &otherMatrix && left == 0 && up == 0 && front == 0)
+        return *this;
+    if (this == &otherMatrix) {
+        const Matrix3<T> snapshot(otherMatrix);
+        return min(snapshot, left, up, front);
+    }
     auto dst = data.data();
     const auto src = otherMatrix.data.data();
 
@@ -2658,9 +2691,11 @@ Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer, bool considerBorders
 
 template <class T>
 Matrix3<std::complex<float>> Matrix3<T>::FFT() const {
-    int dimX = (isPowerOf2(sizeX) ? sizeX : findNextPowerOfTwo(sizeX));
-    int dimY = (isPowerOf2(sizeY) ? sizeY : findNextPowerOfTwo(sizeY));
-    int dimZ = (isPowerOf2(sizeZ) ? sizeZ : findNextPowerOfTwo(sizeZ));
+    if (empty())
+        throw std::invalid_argument("Cannot transform an empty grid");
+    int dimX = (isPowerOf2(sizeX) ? sizeX : grid_detail::power2(sizeX));
+    int dimY = (isPowerOf2(sizeY) ? sizeY : grid_detail::power2(sizeY));
+    int dimZ = (isPowerOf2(sizeZ) ? sizeZ : grid_detail::power2(sizeZ));
     Matrix3<std::complex<float>> result0(dimX, dimY, dimZ); // Result for X-axis FFT
     Matrix3<std::complex<float>> result1(dimX, dimY, dimZ); // Result for Y-axis FFT
 
@@ -2730,9 +2765,12 @@ Matrix3<std::complex<float> > Matrix3<T>::iFFT(const Vector3i& finalDimensions) 
 template <class T>
 Matrix3<std::complex<float> > Matrix3<T>::iFFT(size_t cropX, size_t cropY, size_t cropZ) const
 {
-    auto initial = Matrix3<std::complex<float>>(findNextPowerOfTwo(sizeX), findNextPowerOfTwo(sizeY), findNextPowerOfTwo(sizeZ));
+    if (empty())
+        throw std::invalid_argument("Cannot transform an empty grid");
+    auto initial = Matrix3<std::complex<float>>(grid_detail::power2(sizeX), grid_detail::power2(sizeY),
+                                                grid_detail::power2(sizeZ));
     initial.paste(*this, 0, 0, 0);
-    Matrix3<std::complex<float>> result(this->getDimensions()); // Result after inverse FFT
+    Matrix3<std::complex<float>> result(initial.getDimensions()); // Padded inverse transform storage
 
     auto R = result.data.data();
 
@@ -2804,6 +2842,10 @@ template <class T> template <class U>
 Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS borders) const
 {
     //return convolutionIgnoredBorders(*this, convMatrix);
+    if (borders < ZERO_PAD || borders > COPY)
+        throw std::invalid_argument("Unknown convolution border policy");
+    if (convMatrix.empty())
+        throw std::invalid_argument("Empty convolution kernel");
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
 //    this->raiseErrorOnBadCoord = false;
 
@@ -2830,6 +2872,13 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
     };
 
     this->iterateParallel([&](int x, int y, int z) {
+        if (borders == COPY &&
+            (x < int(convMatrix.sizeX / 2) || y < int(convMatrix.sizeY / 2) ||
+             z < int(convMatrix.sizeZ / 2) || size_t(x) + convMatrix.sizeX / 2 >= sizeX ||
+             size_t(y) + convMatrix.sizeY / 2 >= sizeY || size_t(z) + convMatrix.sizeZ / 2 >= sizeZ)) {
+            result.unsafe(x, y, z) = unsafe(x, y, z);
+            return;
+        }
         U divisor = normalisationValue;
         T neighboringSum = T();
         convMatrix.iterate([&](int dx, int dy, int dz) {
@@ -2854,25 +2903,22 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
 template <class T>
 inline Vector3 Matrix3<T>::getMirrorPosition(const Vector3& pos)  const noexcept
 {
-    float x = pos.x();
-    float y = pos.y();
-    float z = pos.z();
-    x = int(x < 0 ? std::abs(x) : (x >= sizeX ? (sizeX - 1) - (x - sizeX) : x));
-    y = int(y < 0 ? std::abs(y) : (y >= sizeY ? (sizeY - 1) - (y - sizeY) : y));
-    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? (sizeZ - 1) - (z - sizeZ) : z));
-    return Vector3(x, y, z);
+    if (!pos.isValid() || pos.minComp() < float(INT_MIN + 1024) || pos.maxComp() > float(INT_MAX - 1024))
+        return Vector3::invalid;
+    return Vector3(grid_detail::mirror(int(pos.x()), sizeX), grid_detail::mirror(int(pos.y()), sizeY),
+                   grid_detail::mirror(int(pos.z()), sizeZ));
 }
 
 template <class T>
 inline Vector3 Matrix3<T>::getWrappedPosition(const Vector3& pos) const noexcept
 {
-    Vector3 rounded = pos.roundedDown();
-    Vector3 decimals = pos - rounded;
-    Vector3  wrap = Vector3(int(rounded.x() + sizeX) % sizeX,
-                           int(rounded.y() + sizeY) % sizeY,
-                           int(rounded.z() + sizeZ) % sizeZ
-                           ) + decimals;
-    return wrap;
+    if (!pos.isValid() || !sizeX || !sizeY || !sizeZ)
+        return Vector3::invalid;
+    auto wrap = [](double value, size_t n) {
+        double r = std::fmod(value, double(n));
+        return r < 0 ? r + n : r;
+    };
+    return Vector3(wrap(pos.x(), sizeX), wrap(pos.y(), sizeY), wrap(pos.z(), sizeZ));
 }
 
 template <class T>
@@ -2888,33 +2934,28 @@ inline Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const noexcept
 template <class T>
 inline Vector3i Matrix3<T>::getMirrorPosition(const Vector3i& pos)  const noexcept
 {
-    int x = pos.x();
-    int y = pos.y();
-    int z = pos.z();
-    x = (x < 0 ? std::abs(x) : (x >= int(sizeX) ? (int(sizeX) - 1) - (x - sizeX) : x));
-    y = (y < 0 ? std::abs(y) : (y >= int(sizeY) ? (int(sizeY) - 1) - (y - sizeY) : y));
-    z = (z < 0 ? std::abs(z) : (z >= int(sizeZ) ? (int(sizeZ) - 1) - (z - sizeZ) : z));
-    return Vector3i(x, y, z);
+    return Vector3i(grid_detail::mirror(int(pos.x()), sizeX), grid_detail::mirror(int(pos.y()), sizeY),
+                    grid_detail::mirror(int(pos.z()), sizeZ));
 }
 
 template<class T>
 inline size_t Matrix3<T>::getMirrorIndex(int x, int y, int z) const noexcept
 {
-    return getIndex(x < 0 ? std::abs(x) : (x >= int(sizeX) ? (int(sizeX) - 1) - (x - sizeX) : x),
-                    y < 0 ? std::abs(y) : (y >= int(sizeY) ? (int(sizeY) - 1) - (y - sizeY) : y),
-                    z < 0 ? std::abs(z) : (z >= int(sizeZ) ? (int(sizeZ) - 1) - (z - sizeZ) : z));
+    return getIndex(grid_detail::mirror(x, sizeX), grid_detail::mirror(y, sizeY),
+                    grid_detail::mirror(z, sizeZ));
 }
 
 template <class T>
 inline Vector3i Matrix3<T>::getWrappedPosition(const Vector3i& pos) const noexcept
 {
-    return Vector3i((pos.x() + sizeX) % sizeX, (pos.y() + sizeY) % sizeY, (pos.z() + sizeZ) % sizeZ);
+    return Vector3i(grid_detail::wrap(int(pos.x()), sizeX), grid_detail::wrap(int(pos.y()), sizeY),
+                    grid_detail::wrap(int(pos.z()), sizeZ));
 }
 
 template<class T>
 inline size_t Matrix3<T>::getWrappedIndex(int x, int y, int z) const noexcept
 {
-    return getIndex((x + sizeX) % sizeX, (y + sizeY) % sizeY, (z + sizeZ) % sizeZ);
+    return getIndex(grid_detail::wrap(x, sizeX), grid_detail::wrap(y, sizeY), grid_detail::wrap(z, sizeZ));
 }
 
 template <class T>
@@ -2936,6 +2977,10 @@ inline size_t Matrix3<T>::getRepeatIndex(int x, int y, int z) const noexcept
 template <class T>
 Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) const
 {
+    if (warper.getDimensions() != getDimensions())
+        throw std::invalid_argument("Warp shape mismatch");
+    if (precision < 1)
+        throw std::invalid_argument("Warp precision must be positive");
     // Warp definition : f(warp(p)) = f(p + warp vec)
     // But f(p) != f(p - warp vec), in the definition. I think it should create
     // better results because we can fetch outside values (with mirror for ex)
@@ -2986,24 +3031,23 @@ Matrix3<T> Matrix3<T>::warpWith(const Curve& original, const Curve& warperCurve)
     return warpWith(warper, 2);
 }
 
-template <class T>
-Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Matrix3<Vector3>& warper) const
-{
-    Matrix3<T> result = *this; //(getDimensions());
-    result.raiseErrorOnBadCoord = false;
-    // auto self = *this;
-    // self.raiseErrorOnBadCoord = false;
-    // self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-
-    auto repeat = [&](const Vector3& q) -> Vector3 {
-        return this->checkCoord(q) ? q : this->getRepeatPosition(q);
-    };
-    iterateParallel([&](const Vector3& pos) {
-        result.at(pos + warper(pos)) = this->unsafe(repeat(pos));
+template <class T> Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Matrix3<Vector3> &warper) const {
+    if (warper.getDimensions() != getDimensions())
+        throw std::invalid_argument("Warp shape mismatch");
+    for (const auto &v : warper)
+        if (!v.isValid())
+            throw std::invalid_argument("Nonfinite warp displacement");
+    Matrix3<T> result = *this;
+    // Forward scatter has collisions. Preserve deterministic source order and
+    // last-source-wins semantics instead of racing parallel destination writes.
+    iterate([&](const Vector3i &p) {
+        const auto q = Vector3(p) + warper.unsafe(p);
+        if (q.isValid() && q.x() >= 0 && q.y() >= 0 && q.z() >= 0 && q.x() < sizeX && q.y() < sizeY &&
+            q.z() < sizeZ)
+            result.unsafe(Vector3i(q)) = unsafe(p);
     });
     return result;
 }
-
 template <class T>
 Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Curve &original, const Curve &warperCurve) const
 {
@@ -3104,6 +3148,7 @@ typedef Matrix3<float> GridF;
 typedef Matrix3<int> GridI;
 typedef Matrix3<Vector3> GridV3;
 
+template <> Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t sizeZ);
 
 std::string stringifyGridF(const GridF& data, bool binaryMode = true);
 std::string stringifyGridV3(const GridV3& data, bool binaryMode = true);

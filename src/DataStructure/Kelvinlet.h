@@ -25,7 +25,11 @@ public:
     virtual ~Kelvinlet() = default;
 
     virtual Vector3 evaluate(const Vector3& p) const = 0;
-    virtual bool valid() const { return std::abs(forceMag) > 1e-5; }
+    virtual bool valid() const {
+        return std::isfinite(forceMag) && std::abs(forceMag) > 1e-5 && std::isfinite(radialScale) &&
+               radialScale > 0 && std::isfinite(mu) && mu > 0 && std::isfinite(v) && v > -1 && v < 1 &&
+               std::isfinite(epsLimit) && epsLimit > 0;
+    }
 
     virtual Kelvinlet* clone() const = 0;
     virtual Kelvinlet& reset() { forceDir.setValid(false); forceMag = 0.f; return *this; }
@@ -81,7 +85,12 @@ public:
     // virtual GrabKelvinlet& reset() { KelvinletPoint::reset(); forceDir = Vector3::invalid; return *this; }
 
     Vector3 force() const { return forceDir * forceMag; }
-    void setForce(const Vector3& newForce) { forceMag = newForce.norm(); forceDir = newForce / forceMag; }
+    void setForce(const Vector3 &newForce) {
+        if (!newForce.isValid())
+            throw std::invalid_argument("Nonfinite Kelvinlet force");
+        forceMag = newForce.norm();
+        forceDir = forceMag > 0 ? newForce / forceMag : Vector3::origin;
+    }
 };
 
 class TwistKelvinlet : public KelvinletPoint
@@ -100,7 +109,12 @@ public:
     // virtual TwistKelvinlet& reset() { KelvinletPoint::reset(); force = Vector3::invalid; return *this; }
 
     Vector3 force() const { return forceDir * forceMag; }
-    void setForce(const Vector3& newForce) { forceMag = newForce.norm(); forceDir = newForce / forceMag; }
+    void setForce(const Vector3 &newForce) {
+        if (!newForce.isValid())
+            throw std::invalid_argument("Nonfinite Kelvinlet force");
+        forceMag = newForce.norm();
+        forceDir = forceMag > 0 ? newForce / forceMag : Vector3::origin;
+    }
 };
 
 class ScaleKelvinlet : public KelvinletPoint
@@ -138,7 +152,12 @@ public:
     // virtual PinchKelvinlet& reset() { KelvinletPoint::reset(); force = Vector3::invalid; return *this; }
 
     Vector3 force() const { return forceDir * forceMag; }
-    void setForce(const Vector3& newForce) { forceMag = newForce.norm(); forceDir = newForce / forceMag; }
+    void setForce(const Vector3 &newForce) {
+        if (!newForce.isValid())
+            throw std::invalid_argument("Nonfinite Kelvinlet force");
+        forceMag = newForce.norm();
+        forceDir = forceMag > 0 ? newForce / forceMag : Vector3::origin;
+    }
 };
 
 class KelvinletCurve : public Kelvinlet {
@@ -169,7 +188,12 @@ public:
 
     // virtual GrabKelvinletCurve& scale(float scaling) { KelvinletCurve::scale(scaling); this->force *= scaling; return *this; }
 
-    virtual GrabKelvinletCurve* clone() const { return new GrabKelvinletCurve(*this); }
+    virtual GrabKelvinletCurve *clone() const {
+        auto copy = std::make_unique<GrabKelvinletCurve>(*this);
+        if (curve)
+            copy->curve = std::shared_ptr<Curve>(curve->clone());
+        return copy.release();
+    }
     virtual std::string getShortName() const { return "Grab Curve"; }
     // virtual GrabKelvinletCurve& reset() { KelvinletCurve::reset(); force = 0; return *this; }
     // virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }
@@ -189,7 +213,12 @@ public:
 
     // virtual TwistKelvinletCurve& scale(float scaling) { KelvinletCurve::scale(scaling); this->force *= scaling; return *this; }
 
-    virtual TwistKelvinletCurve* clone() const { return new TwistKelvinletCurve(*this); }
+    virtual TwistKelvinletCurve *clone() const {
+        auto copy = std::make_unique<TwistKelvinletCurve>(*this);
+        if (curve)
+            copy->curve = std::shared_ptr<Curve>(curve->clone());
+        return copy.release();
+    }
     virtual std::string getShortName() const { return "Twist Curve"; }
     // virtual TwistKelvinletCurve& reset() { KelvinletCurve::reset(); force = 0; return *this; }
     // virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }
@@ -209,7 +238,12 @@ public:
 
     // virtual ScaleKelvinletCurve& scale(float scaling) { KelvinletCurve::scale(scaling); this->force *= scaling; return *this; }
 
-    virtual ScaleKelvinletCurve* clone() const { return new ScaleKelvinletCurve(*this); }
+    virtual ScaleKelvinletCurve *clone() const {
+        auto copy = std::make_unique<ScaleKelvinletCurve>(*this);
+        if (curve)
+            copy->curve = std::shared_ptr<Curve>(curve->clone());
+        return copy.release();
+    }
     virtual std::string getShortName() const { return "Scale Curve"; }
     // virtual ScaleKelvinletCurve& reset() { KelvinletCurve::reset(); force = 0; return *this; }
     // virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }
@@ -229,7 +263,12 @@ public:
 
     // virtual PinchKelvinletCurve& scale(float scaling) { KelvinletCurve::scale(scaling); this->force *= scaling; return *this; }
 
-    virtual PinchKelvinletCurve* clone() const { return new PinchKelvinletCurve(*this); }
+    virtual PinchKelvinletCurve *clone() const {
+        auto copy = std::make_unique<PinchKelvinletCurve>(*this);
+        if (curve)
+            copy->curve = std::shared_ptr<Curve>(curve->clone());
+        return copy.release();
+    }
     virtual std::string getShortName() const { return "Pinch Curve"; }
     // virtual PinchKelvinletCurve& reset() { KelvinletCurve::reset(); force = 0; return *this; }
     // virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }

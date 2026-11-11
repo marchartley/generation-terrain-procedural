@@ -9,6 +9,22 @@
 #include "DataStructure/Matrix.h"
 //#include <glm/glm.hpp>
 #include <cmath>
+#include <limits>
+#include <type_traits>
+#include <stdexcept>
+
+namespace vector_detail {
+template <class T, class U> T cast(U value) {
+    if constexpr (std::is_integral_v<T>) {
+        const long double v = value;
+        const long double upper = std::ldexp(1.L, std::numeric_limits<T>::digits);
+        const long double lower = std::is_signed_v<T> ? -upper : 0;
+        if (!std::isfinite(v) || v < lower || v >= upper)
+            throw std::overflow_error("Integral vector arithmetic overflow");
+    }
+    return static_cast<T>(value);
+}
+} // namespace vector_detail
 
 class AABBox;
 template <class T>
@@ -82,8 +98,8 @@ public:
     Vec3& translate(const Vec3& move);
     Vec3 translated(T move_x, T move_y, T move_z);
     Vec3 translated(const Vec3& move);
-    Vec3& applyTransform(Matrix transformMatrix);
-//    Vec3& setDirection(const Vec3& dir, const Vec3& upVector = Vec3(0, 0, 1));
+    Vec3 &applyTransform(const Matrix &transformMatrix);
+    //    Vec3& setDirection(const Vec3& dir, const Vec3& upVector = Vec3(0, 0, 1));
     Vec3 rotated90XY() const;
 
     Vec3& changeBasis(const Vec3& newX, const Vec3& newY, const Vec3& newZ);
@@ -136,10 +152,9 @@ public:
         return Vec3::remap(*this, oldMin, oldMax, newMin, newMax);
     }
 
-
-    template <class U>
-    operator Vec3<U>() const {
-        return Vec3<U>(this->x(), this->y(), this->z());
+    template <class U> operator Vec3<U>() const {
+        return Vec3<U>(vector_detail::cast<U>(x()), vector_detail::cast<U>(y()), vector_detail::cast<U>(z()),
+                       valid);
     }
 
     static Vec3 random();
@@ -376,22 +391,35 @@ Vec3<T>::Vec3(const T *coords, bool valid)
 */
 template <class T>
 float Vec3<T>::norm() const {
-    // if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
-    return sqrt(this->x() * this->x() + this->y() * this->y() + this->z() * this->z());
+    if constexpr (std::is_floating_point_v<T>) {
+        const T n2 = x() * x() + y() * y() + z() * z();
+        if (std::isfinite(n2) && n2 >= std::numeric_limits<T>::min())
+            return std::sqrt(n2);
+    }
+    return float(std::hypot(double(x()), double(y()), double(z())));
 }
 template <class T>
 float Vec3<T>::norm2() const {
-    // if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
-    return this->x() * this->x() + this->y() * this->y() + this->z() * this->z();
+    if constexpr (std::is_integral_v<T>)
+        return float(double(x()) * x() + double(y()) * y() + double(z()) * z());
+    else
+        return x() * x() + y() * y() + z() * z();
 }
 
 
 template <class T>
 Vec3<T>& Vec3<T>::normalize() {
-    float n2 = x()*x() + y()*y() + z()*z();
-    if (n2 < 1e-10f) return *this;   // (1e-5)^2
-    float inv = 1.0f / std::sqrt(n2);
-    x() *= inv; y() *= inv; z() *= inv;
+    const double n2 = double(x()) * x() + double(y()) * y() + double(z()) * z();
+    if (n2 == 0)
+        return *this;
+    if (!std::isfinite(n2)) {
+        valid = false;
+        return *this;
+    }
+    const double inv = 1. / std::sqrt(n2);
+    x() = T(x() * inv);
+    y() = T(y() * inv);
+    z() = T(z() * inv);
     return *this;
 }
 template <class T>
@@ -404,9 +432,18 @@ template <class T>
 Vec3<T> Vec3<T>::abs() const
 {
     Vec3 a = *this;
-    a.x() = std::abs(x());
-    a.y() = std::abs(y());
-    a.z() = std::abs(z());
+    if constexpr (std::is_integral_v<T>)
+        a.x() = vector_detail::cast<T>(std::abs(static_cast<long double>(x())));
+    else
+        a.x() = std::abs(x());
+    if constexpr (std::is_integral_v<T>)
+        a.y() = vector_detail::cast<T>(std::abs(static_cast<long double>(y())));
+    else
+        a.y() = std::abs(y());
+    if constexpr (std::is_integral_v<T>)
+        a.z() = vector_detail::cast<T>(std::abs(static_cast<long double>(z())));
+    else
+        a.z() = std::abs(z());
     return a;
 }
 
@@ -477,7 +514,7 @@ bool Vec3<T>::isAlmostVertical()
 template <class T>
 Matrix Vec3<T>::toMatrix() const
 {
-    return Matrix(1, 3, this->data());
+    return Matrix(1, 3, std::vector<float>{float(x()), float(y()), float(z())});
 }
 
 template <class T>
@@ -562,19 +599,13 @@ float Vec3<T>::getSignedAngleWith(const Vec3 &otherVector) const
 template <class T>
 float Vec3<T>::getSignedAngleAroundAxisWith(const Vec3 &otherVector, const Vec3 &axis) const
 {
-    Vec3 normalizedAxis = axis.normalized();
-    Vec3 vA = *this - normalizedAxis * this->dot(normalizedAxis); //this->normalized();
-    Vec3 vB = otherVector - normalizedAxis * otherVector.dot(normalizedAxis); //.normalized();
-    if (vA == vB)
-        return 0.f;
-    //    float dot = vA.dot(vB);
-    Vec3 cross = vA.cross(vB);
-    if (cross.norm2() < 1e-5)
-        return 0.f;
-    float angle = vA.getAngleWith(vB);
-    if (cross.dot(axis) < 0)
-        angle = -angle;
-    return angle;
+    if (!axis.isValid() || axis.norm2() == 0)
+        throw std::invalid_argument("Angle axis must be finite and nonzero");
+    const auto n = axis.normalized();
+    const auto a = *this - n * dot(n), b = otherVector - n * otherVector.dot(n);
+    if (a.norm2() == 0 || b.norm2() == 0)
+        return 0;
+    return std::atan2(n.dot(a.cross(b)), a.dot(b));
 }
 
 template <class T>
@@ -608,30 +639,54 @@ Vec3<T> Vec3<T>::quaternionToEuler(float x, float y, float z, float w)
 
 template <class T>
 Vec3<T> Vec3<T>::slerp(float t, const Vec3 &A, const Vec3 &B) {
-    float lengthA = A.norm();
-    float lengthB = B.norm();
-    auto start = (lengthA > 0 ? A / lengthA : A);
-    auto end = (lengthB > 0 ? B / lengthB : B);
-    float dot = start.dot(end);
-    dot = std::clamp(dot, -1.0f, 1.0f);
-
-    float theta = std::acos(dot) * t;
-    Vec3 relativeVec = end - start * dot;
-    relativeVec.normalize(); // Ensure it's a unit vector
-
-    return ((start * std::cos(theta)) + (relativeVec * std::sin(theta))) * interpolation::inv_linear(t, lengthA, lengthB);
+    if (!std::isfinite(t) || !A.isValid() || !B.isValid())
+        return Vec3::invalid;
+    const float la = A.norm(), lb = B.norm();
+    if (la == 0 || lb == 0)
+        return lerp(t, A, B);
+    auto a = A / la, b = B / lb;
+    float d = std::clamp(a.dot(b), T(-1), T(1));
+    Vec3 direction;
+    if (d > 1 - 1e-6f)
+        direction = lerp(t, a, b).normalized();
+    else {
+        auto tangent = b - a * d;
+        if (tangent.norm2() < 1e-12f) {
+            const Vec3 helper = std::abs(a.x()) < std::abs(a.y()) ? Vec3(1, 0, 0) : Vec3(0, 1, 0);
+            tangent = a.cross(helper);
+        }
+        tangent.normalize();
+        const float angle = std::acos(d) * t;
+        direction = a * std::cos(angle) + tangent * std::sin(angle);
+    }
+    return direction * ((1 - t) * la + t * lb);
 }
 
 template <class T>
 T Vec3<T>::dot(const Vec3& o) const {
-    return (this->x() * o.x()) + (this->y() * o.y()) + (this->z() * o.z());
+    if constexpr (std::is_integral_v<T>)
+        return vector_detail::cast<T>(static_cast<long double>(x()) * o.x() +
+                                      static_cast<long double>(y()) * o.y() +
+                                      static_cast<long double>(z()) * o.z());
+    else
+        return x() * o.x() + y() * o.y() + z() * o.z();
 }
 template <class T>
 Vec3<T> Vec3<T>::cross(const Vec3& o) const {
-    Vec3 v(this->y() * o.z() - this->z() * o.y(),
-           this->z() * o.x() - this->x() * o.z(),
-           this->x() * o.y() - this->y() * o.x());
-    return v;
+    if constexpr (std::is_integral_v<T>) {
+        return Vec3(vector_detail::cast<T>(static_cast<long double>(y()) * o.z() -
+                                           static_cast<long double>(z()) * o.y()),
+                    vector_detail::cast<T>(static_cast<long double>(z()) * o.x() -
+                                           static_cast<long double>(x()) * o.z()),
+                    vector_detail::cast<T>(static_cast<long double>(x()) * o.y() -
+                                           static_cast<long double>(y()) * o.x()),
+                    valid && o.valid);
+    } else {
+        Vec3 v(this->y() * o.z() - this->z() * o.y(), this->z() * o.x() - this->x() * o.z(),
+               this->x() * o.y() - this->y() * o.x());
+        v.valid = valid && o.valid;
+        return v;
+    }
 }
 template <class T>
 Vec3<T> Vec3<T>::rounded(int precision) const
@@ -679,19 +734,19 @@ Vec3<T> Vec3<T>::ceil() const
 template <class T>
 Vec3<T> Vec3<T>::wrap(const Vec3& p, const Vec3& mini, const Vec3& maxi)
 {
-    Vec3 newMaxi = maxi - mini;
-    Vec3 newP = p - mini;
-    /*
-//    p -= mini;
-//    maxi -= mini;
-    Vec3 rounded = newP.roundedDown();
-    Vec3 decimals = newP - rounded;
-    Vec3 wrap = Vec3(int(rounded.x() + newMaxi.x) % int(newMaxi.x),
-                           int(rounded.y() + newMaxi.y) % int(newMaxi.y),
-                           int(rounded.z() + newMaxi.z) % int(newMaxi.z)
-                           ) + decimals + mini;
-    return wrap;*/
-    return Vec3(fmod(newP.x(), newMaxi.x()) + mini.x(), fmod(newP.y(), newMaxi.y()) + mini.y(), fmod(newP.z(), newMaxi.z()) + mini.z());
+    if (!p.isValid() || !mini.isValid() || !maxi.isValid())
+        throw std::invalid_argument("Invalid wrapping bounds");
+    Vec3 result;
+    for (size_t i = 0; i < 3; ++i) {
+        double width = double(maxi[i]) - mini[i];
+        if (width <= 0)
+            throw std::invalid_argument("Wrapping bounds must have positive extent");
+        double v = std::fmod(double(p[i]) - mini[i], width);
+        if (v < 0)
+            v += width;
+        result[i] = T(v + mini[i]);
+    }
+    return result;
 }
 
 template <class T>
@@ -907,28 +962,17 @@ Vec3<T> Vec3<T>::translated(const Vec3& move) {
     return v.translate(move);
 }
 
-template <class T>
-Vec3<T>& Vec3<T>::applyTransform(Matrix transformMatrix)
-{
-    // Matrix newCoords = transformMatrix.product(this->toMatrix());
-    // this->x() = newCoords[0][0];
-    // this->y() = newCoords[1][0];
-    // this->z() = newCoords[2][0];
-    // return *this;
-    const Vec3 newP(
-        x() * transformMatrix(0, 0) + y() * transformMatrix(0, 1) + z() * transformMatrix(0, 2),
-        x() * transformMatrix(1, 0) + y() * transformMatrix(1, 1) + z() * transformMatrix(1, 2),
-        x() * transformMatrix(2, 0) + y() * transformMatrix(2, 1) + z() * transformMatrix(2, 2)
-        );
-    this->x() = newP.x(); this->y() = newP.y(); this->z() = newP.z();
-    return *this;
+template <class T> Vec3<T> &Vec3<T>::applyTransform(const Matrix &transformMatrix) {
+    if (transformMatrix.cols() != 3 || transformMatrix.rows() != 3 || transformMatrix.size() != 9)
+        throw std::invalid_argument("Vector transform requires 3x3 matrix");
+    const Vec3 p(x() * transformMatrix(0, 0) + y() * transformMatrix(1, 0) + z() * transformMatrix(2, 0),
+                 x() * transformMatrix(0, 1) + y() * transformMatrix(1, 1) + z() * transformMatrix(2, 1),
+                 x() * transformMatrix(0, 2) + y() * transformMatrix(1, 2) + z() * transformMatrix(2, 2),
+                 valid);
+    return *this = p;
 }
 
-template <class T>
-Vec3<T> Vec3<T>::rotated90XY() const
-{
-    return Vec3(y(), -x());
-}
+template <class T> Vec3<T> Vec3<T>::rotated90XY() const { return Vec3(y(), -x(), z(), valid); }
 
 template <class T>
 Vec3<T>& Vec3<T>::changeBasis(const Vec3& newX, const Vec3& newY, const Vec3& newZ)
@@ -1017,7 +1061,9 @@ Vec3<std::common_type_t<T, U>> operator*(U a, const Vec3<T>& b) {
 template <class T, class U>
 Vec3<std::common_type_t<T, U>> operator/(U a, const Vec3<T>& b) {
     using R = std::common_type_t<T, U>;
-    return Vec3<R>(static_cast<R>(a) / static_cast<R>(b.x()), static_cast<R>(a) / static_cast<R>(b.y()), static_cast<R>(a) / static_cast<R>(b.z()));
+    Vec3<R> result(a, a, a);
+    result /= b;
+    return result;
 }
 
 template <class T, class U>
@@ -1039,87 +1085,180 @@ Vec3<std::common_type_t<T, U>> operator/(const Vec3<T>& b, U a) {
 
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator+=(const Vec3<U>& o) {
-    this->x() += static_cast<T>(o.x());
-    this->y() += static_cast<T>(o.y());
-    this->z() += static_cast<T>(o.z());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) + o.x());
+    } else
+        this->x() += static_cast<T>(o.x());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) + o.y());
+    } else
+        this->y() += static_cast<T>(o.y());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) + o.z());
+    } else
+        this->z() += static_cast<T>(o.z());
     this->valid &= o.valid;
     return *this;
 }
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator-=(const Vec3<U>& o) {
-    this->x() -= static_cast<T>(o.x());
-    this->y() -= static_cast<T>(o.y());
-    this->z() -= static_cast<T>(o.z());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) - o.x());
+    } else
+        this->x() -= static_cast<T>(o.x());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) - o.y());
+    } else
+        this->y() -= static_cast<T>(o.y());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) - o.z());
+    } else
+        this->z() -= static_cast<T>(o.z());
     this->valid &= o.valid;
     return *this;
 }
 
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
-    this->x() *= static_cast<T>(o.x());
-    this->y() *= static_cast<T>(o.y());
-    this->z() *= static_cast<T>(o.z());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) * o.x());
+    } else
+        this->x() *= static_cast<T>(o.x());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) * o.y());
+    } else
+        this->y() *= static_cast<T>(o.y());
+    if constexpr (std::is_integral_v<T>) {
+
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) * o.z());
+    } else
+        this->z() *= static_cast<T>(o.z());
     this->valid &= o.valid;
     return *this;
 }
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
-    this->x() /= static_cast<T>(o.x());
-    this->y() /= static_cast<T>(o.y());
-    this->z() /= static_cast<T>(o.z());
+    if constexpr (std::is_integral_v<T>) {
+        if (o.x() == 0)
+            throw std::domain_error("Integral vector division by zero");
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) / o.x());
+    } else
+        this->x() /= static_cast<T>(o.x());
+    if constexpr (std::is_integral_v<T>) {
+        if (o.y() == 0)
+            throw std::domain_error("Integral vector division by zero");
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) / o.y());
+    } else
+        this->y() /= static_cast<T>(o.y());
+    if constexpr (std::is_integral_v<T>) {
+        if (o.z() == 0)
+            throw std::domain_error("Integral vector division by zero");
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) / o.z());
+    } else
+        this->z() /= static_cast<T>(o.z());
     this->valid &= o.valid;
     return *this;
 }
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator*=(U o) {
-    this->x() *= static_cast<T>(o);
-    this->y() *= static_cast<T>(o);
-    this->z() *= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) * o);
+    } else
+        this->x() *= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) * o);
+    } else
+        this->y() *= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) * o);
+    } else
+        this->z() *= static_cast<T>(o);
     return *this;
 }
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator/=(U o) {
-    this->x() /= static_cast<T>(o);
-    this->y() /= static_cast<T>(o);
-    this->z() /= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+        if (o == 0)
+            throw std::domain_error("Integral vector division by zero");
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) / o);
+    } else
+        this->x() /= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+        if (o == 0)
+            throw std::domain_error("Integral vector division by zero");
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) / o);
+    } else
+        this->y() /= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+        if (o == 0)
+            throw std::domain_error("Integral vector division by zero");
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) / o);
+    } else
+        this->z() /= static_cast<T>(o);
     return *this;
 }
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator+=(U o) {
-    this->x() += static_cast<T>(o);
-    this->y() += static_cast<T>(o);
-    this->z() += static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) + o);
+    } else
+        this->x() += static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) + o);
+    } else
+        this->y() += static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) + o);
+    } else
+        this->z() += static_cast<T>(o);
     return *this;
 }
 template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator-=(U o) {
-    this->x() -= static_cast<T>(o);
-    this->y() -= static_cast<T>(o);
-    this->z() -= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->x() = vector_detail::cast<T>(static_cast<long double>(this->x()) - o);
+    } else
+        this->x() -= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->y() = vector_detail::cast<T>(static_cast<long double>(this->y()) - o);
+    } else
+        this->y() -= static_cast<T>(o);
+    if constexpr (std::is_integral_v<T>) {
+
+        this->z() = vector_detail::cast<T>(static_cast<long double>(this->z()) - o);
+    } else
+        this->z() -= static_cast<T>(o);
     return *this;
 }
 
-
-template <class T>
-T &Vec3<T>::operator[](size_t i)
-{
-    return ((T*)(this))[i];
-}
-template <class T>
-const T &Vec3<T>::operator[](size_t i) const
-{
-    return ((T*)(this))[i];
-}
-
-
-
-
+template <class T> T &Vec3<T>::operator[](size_t i) { return v[i]; }
+template <class T> const T &Vec3<T>::operator[](size_t i) const { return v[i]; }
 
 template <class T, class U>
 bool operator==(const Vec3<T>& a, const Vec3<U>& b)
 {
     float epsilon = 1e-8;
-    return std::abs(a.x() - b.x()) < epsilon && std::abs(a.y() - b.y()) < epsilon && std::abs(a.z() - b.z()) < epsilon; //int(a.x() * 1e8) == int(b.x() * 1e8) && int(a.y() * 1e8) == int(b.y() * 1e8) && int(a.z() * 1e8) == int(b.z() * 1e8);
+    return std::abs(static_cast<long double>(a.x()) - b.x()) < epsilon &&
+           std::abs(static_cast<long double>(a.y()) - b.y()) < epsilon &&
+           std::abs(static_cast<long double>(a.z()) - b.z()) <
+               epsilon; // int(a.x() * 1e8) == int(b.x() * 1e8) && int(a.y() * 1e8) == int(b.y() * 1e8) &&
+                        // int(a.z() * 1e8) == int(b.z() * 1e8);
 }
 
 template <class T>

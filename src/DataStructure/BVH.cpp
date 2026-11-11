@@ -1,436 +1,345 @@
 #include "BVH.h"
+#include "SpatialQueries.h"
+#include <numeric>
+#include <memory>
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 
 
-BVHTree::BVHTree() : SpacePartitioning(), root(nullptr)
-{
-    memoryPool = new BVHMemoryPool();
+BVHTree::BVHTree() : memoryPool(new BVHMemoryPool) {}
+
+BVHTree::~BVHTree() { delete memoryPool; }
+
+BVHTree::BVHTree(const BVHTree &other) : BVHTree() {
+    maxTrianglesPerLeaves = other.maxTrianglesPerLeaves;
+    useParallel = other.useParallel;
+    useSAH = other.useSAH;
+    useQuickSelect = other.useQuickSelect;
+    try {
+        build(other.triangles);
+    } catch (...) {
+        delete memoryPool;
+        memoryPool = nullptr;
+        throw;
+    }
 }
 
-BVHTree::~BVHTree()
-{
-    delete memoryPool;
-//    if (root != nullptr)
-//        delete root;
-}
-
-BVHTree::BVHTree(const BVHTree &other) : SpacePartitioning(other), root(nullptr) {
-    memoryPool = new BVHMemoryPool(*other.memoryPool); // Deep copy
-}
-
-const BVHTree& BVHTree::operator=(const BVHTree &other) {
-    if (this != &other) { // Protect against self-assignment
-        /*SpacePartitioning::operator=(other);*/ // call the base class's assignment operator
-
-        // Clean up current resources
-        /*delete memoryPool;*/
-
-        // Deep copy
-        /*root = other.root;*/
-        // ... copy other members ...
-        memoryPool = new BVHMemoryPool(/**other.memoryPool*/);
+const BVHTree &BVHTree::operator=(const BVHTree &other) {
+    if (this != &other) {
+        BVHTree copy(other);
+        swap(copy);
     }
     return *this;
 }
 
-const SpacePartitioning& BVHTree::build(const std::vector<Triangle> &triangles)
-{
-    this->triangles = triangles;
-    this->root = this->buildBVH(0, triangles.size());
+void BVHTree::swap(BVHTree &other) noexcept {
+    using std::swap;
+    triangles.swap(other.triangles);
+    order.swap(other.order);
+    swap(root, other.root);
+    swap(memoryPool, other.memoryPool);
+    swap(maxTrianglesPerLeaves, other.maxTrianglesPerLeaves);
+    swap(useParallel, other.useParallel);
+    swap(useSAH, other.useSAH);
+    swap(useQuickSelect, other.useQuickSelect);
+}
+BVHTree::BVHTree(BVHTree &&other) noexcept : memoryPool(nullptr) { swap(other); }
+BVHTree &BVHTree::operator=(BVHTree &&other) noexcept {
+    if (this != &other)
+        swap(other);
+    return *this;
+}
+void BVHTree::recordBuildFailure() noexcept {
+#pragma omp critical(terrain_bvh_build_error)
+    {
+        if (!buildFailure)
+            buildFailure = std::current_exception();
+    }
+}
+const SpacePartitioning &BVHTree::build(const std::vector<Triangle> &input) {
+    if (maxTrianglesPerLeaves < 1)
+        throw std::invalid_argument("BVH leaf capacity must be positive");
+    spatial_detail::validate(input);
+    BVHTree replacement;
+    replacement.maxTrianglesPerLeaves = maxTrianglesPerLeaves;
+    replacement.useParallel = useParallel;
+    replacement.useSAH = useSAH;
+    replacement.useQuickSelect = useQuickSelect;
+    replacement.triangles = input;
+    replacement.order.resize(input.size());
+    std::iota(replacement.order.begin(), replacement.order.end(), 0);
+    if (!input.empty()) {
+        if (useParallel && input.size() >= 1024) {
+#pragma omp parallel
+            {
+#pragma omp single
+                {
+                    try {
+                        replacement.root = replacement.buildBVH(0, int(input.size()));
+                    } catch (...) {
+                        replacement.recordBuildFailure();
+                    }
+                }
+            }
+        } else
+            replacement.root = replacement.buildBVH(0, int(input.size()));
+    }
+    if (replacement.buildFailure)
+        std::rethrow_exception(replacement.buildFailure);
+    swap(replacement);
     return *this;
 }
 
-std::set<size_t> BVHTree::getAllStoredTrianglesIndices() const
-{
-    std::vector<BVHNode*> queue = {root};
-    std::vector<size_t> indices;
-
-    while (!queue.empty()) {
-        auto current = queue.back();
-        queue.pop_back();
-        indices.insert(indices.end(), current->trianglesIndices.begin(), current->trianglesIndices.end());
-        if (current->left)
-            queue.push_back(current->left);
-        if (current->right)
-            queue.push_back(current->right);
-    }
-    return convertVectorToSet(indices);
+std::set<size_t> BVHTree::getAllStoredTrianglesIndices() const {
+    return std::set<size_t>(order.begin(), order.end());
 }
 
-bool BVHTree::checkIntersection(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
-{
-    return this->_checkIntersection(root, rayStart, rayEnd, ignoredTriangles);
+bool BVHTree::checkIntersection(const Vector3 &a, const Vector3 &b, const std::set<size_t> &ignored) const {
+    spatial_detail::validate(a, b);
+    return _checkIntersection(root, a, b, ignored);
 }
 
-bool BVHTree::_checkIntersection(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
-{
-    if (!node->box.intersects(rayStart, rayEnd).isValid()) {
+bool BVHTree::_checkIntersection(BVHNode *node, const Vector3 &a, const Vector3 &b,
+                                 const std::set<size_t> &ignored) const {
+    double t;
+    if (!node || !spatial_detail::box(node->box, a, b, 1, t))
         return false;
-    }
+    for (auto i : node->trianglesIndices)
+        if (!ignored.count(i) && spatial_detail::triangle(triangles[i], a, b, t))
+            return true;
+    return _checkIntersection(node->left, a, b, ignored) || _checkIntersection(node->right, a, b, ignored);
+}
 
-    if (!node->trianglesIndices.empty()) { // leaf node
-        for (const auto& triangleIndex : node->trianglesIndices) {
-            if (isIn(triangleIndex, ignoredTriangles)) continue;
-            auto& triangle = this->triangles[triangleIndex];
-            Vector3 intersectionPoint = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2], true);
-            if (intersectionPoint.isValid()) {
-                return true;
-            }
+namespace {
+AABBox rangeBox(const std::vector<Triangle> &ts, const std::vector<size_t> &order, int start, int end) {
+    Vector3 lo = Vector3::max(), hi = Vector3::min();
+    for (int i = start; i < end; ++i)
+        for (const auto &v : ts[order[i]].vertices) {
+            lo = Vector3::min(lo, v);
+            hi = Vector3::max(hi, v);
         }
-    } else { // non-leaf node
-        if (_checkIntersection(node->left, rayStart, rayEnd, ignoredTriangles))
-            return true;
-        if (_checkIntersection(node->right, rayStart, rayEnd, ignoredTriangles))
-            return true;
-    }
-
-    return false;
+    return AABBox(lo, hi);
 }
-
-float computeSurfaceArea(const AABBox& box) {
-    Vector3 dims = box.dimensions();
-    return 2.0f * (dims.x() * dims.y() + dims.x() * dims.z() + dims.y() * dims.z());
+int largest(const AABBox &b) {
+    auto d = b.dimensions();
+    return d.x() > d.y() ? (d.x() > d.z() ? 0 : 2) : (d.y() > d.z() ? 1 : 2);
 }
+float centroid(const Triangle &t, int axis) {
+    return float((double(t[0][axis]) + t[1][axis] + t[2][axis]) / 3);
+}
+double area(const AABBox &b) {
+    auto d = b.dimensions();
+    return 2 * (double(d.x()) * d.y() + double(d.x()) * d.z() + double(d.y()) * d.z());
+}
+} // namespace
 int BVHTree::findBestSplitSAH(int start, int end) {
-    const int MAX_SPLITS = 100; // maximum number of splits to consider
-    int triangleCount = end - start;
-    int step = std::max(1, triangleCount / MAX_SPLITS);
-
-    std::vector<AABBox> leftCumulativeBoxes(end - start);
-    std::vector<AABBox> rightCumulativeBoxes(end - start);
-
-    // Compute left cumulative bounding boxes
-    leftCumulativeBoxes[0].expand(triangles[start].vertices);
-    for (int i = start + 1; i < end; ++i) {
-        leftCumulativeBoxes[i - start] = leftCumulativeBoxes[i - start - 1];
-        leftCumulativeBoxes[i - start].expand(triangles[i].vertices);
+    if (start < 0 || end <= start || end - start < 2 || size_t(end) > order.size())
+        throw std::out_of_range("BVH SAH range");
+    int axis = largest(rangeBox(triangles, order, start, end)), n = end - start;
+    std::sort(order.begin() + start, order.begin() + end, [&](size_t a, size_t b) {
+        return centroid(triangles[a], axis) < centroid(triangles[b], axis);
+    });
+    std::vector<AABBox> right(n);
+    right.back() = rangeBox(triangles, order, end - 1, end);
+    for (int i = n - 2; i >= 0; --i) {
+        right[i] = right[i + 1];
+        for (auto &v : triangles[order[start + i]].vertices)
+            right[i].expand(v);
     }
-
-    // Compute right cumulative bounding boxes
-    rightCumulativeBoxes[end - start - 1].expand(triangles[end - 1].vertices);
-    for (int i = end - 2; i >= start; --i) {
-        rightCumulativeBoxes[i - start] = rightCumulativeBoxes[i - start + 1];
-        rightCumulativeBoxes[i - start].expand(triangles[i].vertices);
-    }
-
-    float bestCost = std::numeric_limits<float>::max();
-    int bestSplit = start;
-
-    // Declare shared variables to hold the best cost and best split across threads
-    float globalBestCost = bestCost;
-    int globalBestSplit = bestSplit;
-
-    #pragma omp parallel for shared(globalBestCost, globalBestSplit)
-    for (int i = start; i < end; i += step) {
-        AABBox leftBox = leftCumulativeBoxes[i - start];
-        AABBox rightBox = (i + 1 < end) ? rightCumulativeBoxes[i - start + 1] : AABBox();  // If i+1 is out of bounds, use an empty box
-
-        float leftSA = computeSurfaceArea(leftBox);
-        float rightSA = computeSurfaceArea(rightBox);
-        float cost = leftSA * (i - start + 1) + rightSA * (end - i - 1);
-
-        // Critical section to update the global best cost and best split if the current thread has a better value
-        #pragma omp critical
-        {
-            if (cost < globalBestCost) {
-                globalBestCost = cost;
-                globalBestSplit = i;
-            }
+    AABBox left = rangeBox(triangles, order, start, start + 1);
+    int split = start + 1;
+    double cost = std::numeric_limits<double>::infinity();
+    for (int i = 1; i < n; ++i) {
+        double c = area(left) * i + area(right[i]) * (n - i);
+        if (c < cost || (c == cost && std::abs(i - n / 2) < std::abs(split - start - n / 2))) {
+            cost = c;
+            split = start + i;
         }
+        for (auto &v : triangles[order[start + i]].vertices)
+            left.expand(v);
     }
-
-    return globalBestSplit;
+    return split;
 }
 
-int BVHTree::partition(int start, int end, int pivotIdx, int axis) {
-    Triangle& pivot = triangles[pivotIdx];
-    Vector3 pivotMidPoint = (pivot[0] + pivot[1] + pivot[2]) / 3.f;
-
-    // Move the pivot value to the end
-    std::swap(triangles[pivotIdx], triangles[end-1]);
-
-    int storeIndex = start;
-
-    for (int i = start; i < end-1; ++i) {
-        Vector3 triangleMidPoint = (triangles[i][0] + triangles[i][1] + triangles[i][2]) / 3.f;
-        if (triangleMidPoint[axis] < pivotMidPoint[axis]) {
-            std::swap(triangles[i], triangles[storeIndex]);
-            storeIndex++;
-        }
-    }
-
-    // Move pivot to its final place
-    std::swap(triangles[storeIndex], triangles[end-1]);
-
-    return storeIndex;
+int BVHTree::partition(int start, int end, int pivot, int axis) {
+    if (start < 0 || end <= start || size_t(end) > order.size() || pivot < start || pivot >= end ||
+        axis < 0 || axis > 2)
+        throw std::out_of_range("BVH partition range");
+    auto value = centroid(triangles[order[pivot]], axis);
+    return int(std::partition(order.begin() + start, order.begin() + end,
+                              [&](size_t i) { return centroid(triangles[i], axis) < value; }) -
+               order.begin());
 }
 
 // QuickSelect to find the median triangle along a given axis.
 int BVHTree::quickSelect(int start, int end, int axis) {
-    if (start == end) {
-        return start;
-    }
-
-    // Choose pivot randomly
-    int pivotIdx = start + rand() % (end - start + 1);
-    pivotIdx = partition(start, end, pivotIdx, axis);
-
-    int median = start + (end - start) / 2;
-
-    if (median == pivotIdx) {
-        return median;
-    } else if (median < pivotIdx) {
-        return quickSelect(start, pivotIdx - 1, axis);
-    } else {
-        return quickSelect(pivotIdx + 1, end, axis);
-    }
+    if (start < 0 || end < start || size_t(end) >= order.size() || axis < 0 || axis > 2)
+        throw std::out_of_range("BVH partition range");
+    int mid = start + (end - start + 1) / 2;
+    std::nth_element(
+        order.begin() + start, order.begin() + mid, order.begin() + end + 1,
+        [&](size_t a, size_t b) { return centroid(triangles[a], axis) < centroid(triangles[b], axis); });
+    return mid;
 }
 
 BVHNode *BVHTree::allocateNode() {
-    if (useParallel) {
-        return this->memoryPool->parallelAllocate();
-    } else {
-        return this->memoryPool->allocate();
-    }
+    if (!memoryPool)
+        memoryPool = new BVHMemoryPool;
+    return useParallel ? memoryPool->parallelAllocate() : memoryPool->allocate();
 }
 
-void BVHTree::traverseBVH(BVHNode *node, const Vector3 &pos, float &minDistance, size_t &closestTriangleIndex, const std::vector<Triangle> &triangles) {
-    // If the current node is a leaf node
-    if (!node->left && !node->right) {
-        // Check distance to each triangle in the leaf node
-        for (size_t triangleIndex : node->trianglesIndices) {
-//            float dist = distanceToTriangle(pos, triangles[triangleIndex]);
-            const Triangle tri = triangles[triangleIndex];
-            float dist = std::sqrt(Collision::pointToTriangleDistanceSquared(tri[0], tri[1], tri[2], pos));
-            if (dist < minDistance) {
-                minDistance = dist;
-                closestTriangleIndex = triangleIndex;
+void BVHTree::traverseBVH(BVHNode *node, const Vector3 &p, float &distance, size_t &index,
+                          const std::vector<Triangle> &ts) {
+    if (!p.isValid() || std::isnan(distance) || distance < 0)
+        throw std::invalid_argument("Invalid nearest query");
+    double best = double(distance) * distance;
+    auto visit = [&](auto &&self, BVHNode *current) -> void {
+        if (!current || spatial_detail::distance2(current->box, p) > best)
+            return;
+        for (auto i : current->trianglesIndices) {
+            double d = spatial_detail::triangleDistance2(ts.at(i), p);
+            if (d < best || (d == best && i < index)) {
+                best = d;
+                index = i;
             }
         }
-    } else {
-        // Check if the point is closer to the left or right child node
-        float leftDist = node->left->box.distanceTo(pos);
-        float rightDist = node->right->box.distanceTo(pos);
-        BVHNode* closerChild = (leftDist < rightDist) ? node->left : node->right;
-        BVHNode* fartherChild = (leftDist < rightDist) ? node->right : node->left;
-
-        // Recursively traverse the closer child node first
-        traverseBVH(closerChild, pos, minDistance, closestTriangleIndex, triangles);
-
-        // Check if the farther child node needs to be visited
-        if (rightDist < minDistance) {
-            traverseBVH(fartherChild, pos, minDistance, closestTriangleIndex, triangles);
-        }
-    }
+        auto a = current->left, b = current->right;
+        if (a && b && spatial_detail::distance2(a->box, p) > spatial_detail::distance2(b->box, p))
+            std::swap(a, b);
+        self(self, a);
+        self(self, b);
+    };
+    visit(visit, node);
+    distance = float(std::sqrt(best));
 }
 
-size_t BVHTree::getClosestTriangle(const Vector3 &pos/*, const std::vector<Triangle> &triangles*/) {
-    // Initialize minimum distance and closest triangle index
-    float minDistance = std::numeric_limits<float>::max();
-    size_t closestTriangleIndex = 0;
-
-    // Start traversal from the root node
-    traverseBVH(root, pos, minDistance, closestTriangleIndex, triangles);
-
-    return closestTriangleIndex;
+size_t BVHTree::getClosestTriangle(const Vector3 &p) {
+    if (!p.isValid())
+        throw std::invalid_argument("Invalid nearest point");
+    if (!root)
+        throw std::out_of_range("Empty BVH");
+    float distance = std::numeric_limits<float>::infinity();
+    size_t index = size_t(-1);
+    traverseBVH(root, p, distance, index, triangles);
+    return index;
 }
 
 
-BVHNode *BVHTree::buildBVH(int start, int end)
-{
-    BVHNode* node = allocateNode();
-
-    // Compute bounding box of all triangles from start to end
-    Vector3 minPoint = Vector3::max();
-    Vector3 maxPoint = Vector3::min();
-    for (int i = start; i < end; ++i) {
-        for (int ii = 0; ii < 3; ii++) {
-            minPoint = Vector3::min(minPoint, triangles[i][ii]);
-            maxPoint = Vector3::max(maxPoint, triangles[i][ii]);
-        }
-    }
-    node->box = AABBox(minPoint, maxPoint);
-
-    // Base case: if number of triangles is less than or equal to maxTrianglesPerLeaves, make a leaf node
+BVHNode *BVHTree::buildBVH(int start, int end) {
+    if (start < 0 || end < start || size_t(end) > order.size() || maxTrianglesPerLeaves < 1)
+        throw std::out_of_range("Invalid BVH build range/capacity");
+    if (start == end)
+        return nullptr;
+    auto node = allocateNode();
+    node->box = rangeBox(triangles, order, start, end);
     if (end - start <= maxTrianglesPerLeaves) {
-        node->trianglesIndices = std::vector<size_t>(end - start);
-        for (int i = 0; i < (end - start); i++)
-            node->trianglesIndices[i] = start + i;
-    } else {
-        // Choose an axis and midpoint along that axis to partition the triangles
-        Vector3 boxSize = maxPoint - minPoint;
-        int axis = boxSize.x() > boxSize.y() ? (boxSize.x() > boxSize.z() ? 0 : 2) : (boxSize.y() > boxSize.z() ? 1 : 2);
-
-        int mid;
-        if (useSAH) {
-            // Sort the triangles based on their midpoint along the chosen axis
-            std::sort(triangles.begin() + start, triangles.begin() + end,
-                [axis](const Triangle& triangle1, const Triangle& triangle2) {
-                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3.f;
-                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3.f;
-                    return midPoint1[axis] < midPoint2[axis];
-                });
-            mid = this->findBestSplitSAH(start, end);
-            if (mid == start || mid == end) {
-                // Create a leaf node if we can't split further
-                node->trianglesIndices = std::vector<size_t>(end - start);
-                for (int i = 0; i < (end - start); i++)
-                    node->trianglesIndices[i] = start + i;
-            } else {
-                node->left = buildBVH(start, mid);
-                node->right = buildBVH(mid, end);
-            }
-            return node;
-        } else if (useQuickSelect) {
-            mid = this->quickSelect(start, end-1, axis);
-            if (mid == start || mid == end - 1) {
-                mid = start + (end - start) / 2;
-            }
-        } else {
-            // Sort the triangles based on their midpoint along the chosen axis
-            std::sort(triangles.begin() + start, triangles.begin() + end,
-                [axis](const Triangle& triangle1, const Triangle& triangle2) {
-                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3.f;
-                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3.f;
-                    return midPoint1[axis] < midPoint2[axis];
-                });
-            mid = start + (end - start) / 2;
-        }
-
-        if (useParallel) {
-            // Parallelize the BVH node construction for the left and right children using OpenMP
-            #pragma omp parallel sections
-            {
-                #pragma omp section
-                {
-                    node->left = buildBVH(start, mid);
-                }
-                #pragma omp section
-                {
-                    node->right = buildBVH(mid, end);
-                }
-            }
-        } else {
-            node->left = buildBVH(start, mid);
-            node->right = buildBVH(mid, end);
-        }
+        node->trianglesIndices.assign(order.begin() + start, order.begin() + end);
+        return node;
     }
-
+    int mid = useSAH ? findBestSplitSAH(start, end) : quickSelect(start, end - 1, largest(node->box));
+    // Bound SAH recursion even for pathological distributions; median builds
+    // already satisfy this balance bound.
+    const int margin = std::max(1, (end - start) / 8);
+    mid = std::clamp(mid, start + margin, end - margin);
+    if (useParallel && end - start >= 1024) {
+#pragma omp task shared(node) firstprivate(start, mid)
+        {
+            try {
+                node->left = buildBVH(start, mid);
+            } catch (...) {
+                recordBuildFailure();
+            }
+        }
+#pragma omp task shared(node) firstprivate(mid, end)
+        {
+            try {
+                node->right = buildBVH(mid, end);
+            } catch (...) {
+                recordBuildFailure();
+            }
+        }
+#pragma omp taskwait
+    } else {
+        node->left = buildBVH(start, mid);
+        node->right = buildBVH(mid, end);
+    }
     return node;
 }
 
-std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
-{
-    return this->_getIntersectionAndTriangleIndex(root, rayStart, rayEnd, ignoredTriangles);
+void BVHTree::closest(BVHNode *node, const Vector3 &a, const Vector3 &b, const std::set<size_t> &ignored,
+                      double &best, std::pair<Vector3, size_t> &result) const {
+    double entry;
+    if (!node || !spatial_detail::box(node->box, a, b, best, entry))
+        return;
+    for (auto i : node->trianglesIndices) {
+        if (ignored.count(i))
+            continue;
+        double t;
+        if (spatial_detail::triangle(triangles[i], a, b, t) &&
+            (t < best || (t == best && i < result.second))) {
+            best = t;
+            result = {spatial_detail::point(a, b, t), i};
+        }
+    }
+    auto left = node->left, right = node->right;
+    double l = 0, r = 0;
+    bool hasLeft = left && spatial_detail::box(left->box, a, b, best, l),
+         hasRight = right && spatial_detail::box(right->box, a, b, best, r);
+    if (hasLeft && hasRight && r < l) {
+        std::swap(left, right);
+        std::swap(hasLeft, hasRight);
+    }
+    if (hasLeft)
+        closest(left, a, b, ignored, best, result);
+    if (hasRight)
+        closest(right, a, b, ignored, best, result);
+}
+std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector3 &a, const Vector3 &b,
+                                                                    const std::set<size_t> &ignored) const {
+    return _getIntersectionAndTriangleIndex(root, a, b, ignored);
 }
 
-std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
-{
-    std::pair<Vector3, size_t> result = {Vector3::invalid, -1};
-    float closestDistance = std::numeric_limits<float>::max();
-
-    if (!node->box.intersects(rayStart, rayEnd).isValid()) {
-        return result; // return empty list if ray doesn't intersect bounding box
-    }
-
-    if (!node->trianglesIndices.empty()) { // leaf node
-        for (const auto& triangleIndex : node->trianglesIndices) {
-            if (isIn(triangleIndex, ignoredTriangles)) continue;
-            auto& triangle = this->triangles[triangleIndex];
-            Vector3 intersectionPoint = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2], false);
-            if (intersectionPoint.isValid() && (intersectionPoint - rayStart).norm2() < closestDistance) {
-                result = {intersectionPoint, triangleIndex};
-                closestDistance = (intersectionPoint - rayStart).norm2();
-            }
-        }
-    } else { // non-leaf node
-        auto leftIntersection = _getIntersectionAndTriangleIndex(node->left, rayStart, rayEnd, ignoredTriangles);
-        auto rightIntersection = _getIntersectionAndTriangleIndex(node->right, rayStart, rayEnd, ignoredTriangles);
-        if (!leftIntersection.first.isValid()) {
-            result = rightIntersection;
-        } else if (!rightIntersection.first.isValid()) {
-            result = leftIntersection;
-        } else if ((leftIntersection.first - rayStart) < (rightIntersection.first - rayStart)) {
-            result = leftIntersection;
-        } else {
-            result = rightIntersection;
-        }
-    }
-
+std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &a,
+                                                                     const Vector3 &b,
+                                                                     const std::set<size_t> &ignored) const {
+    spatial_detail::validate(a, b);
+    double best = 1;
+    std::pair<Vector3, size_t> result{Vector3::invalid, size_t(-1)};
+    closest(node, a, b, ignored, best, result);
     return result;
 }
 
-std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, size_t ignoredTriangle) const
-{
-    return this->_getIntersectionAndTriangleIndex(this->root, rayStart, rayEnd, ignoredTriangle);
+std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector3 &a, const Vector3 &b,
+                                                                    size_t ignored) const {
+    return _getIntersectionAndTriangleIndex(root, a, b, ignored);
 }
 
-std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, size_t ignoredTriangle) const
-{
-    std::pair<Vector3, size_t> result = {Vector3::invalid, -1};
-    float closestDistance = std::numeric_limits<float>::max();
-
-    if (!node->box.intersects(rayStart, rayEnd).isValid()) {
-        return result; // return empty list if ray doesn't intersect bounding box
-    }
-
-    if (!node->trianglesIndices.empty()) { // leaf node
-        for (const auto& triangleIndex : node->trianglesIndices) {
-            if (triangleIndex == ignoredTriangle) continue;
-            auto& triangle = this->triangles[triangleIndex];
-            Vector3 intersectionPoint = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2], true);
-            if (intersectionPoint.isValid() && (intersectionPoint - rayStart).norm2() < closestDistance) {
-                result = {intersectionPoint, triangleIndex};
-                closestDistance = (intersectionPoint - rayStart).norm2();
-            }
-        }
-    } else { // non-leaf node
-        auto leftIntersection = _getIntersectionAndTriangleIndex(node->left, rayStart, rayEnd, ignoredTriangle);
-        auto rightIntersection = _getIntersectionAndTriangleIndex(node->right, rayStart, rayEnd, ignoredTriangle);
-        if (!leftIntersection.first.isValid()) {
-            result = rightIntersection;
-        } else if (!rightIntersection.first.isValid()) {
-            result = leftIntersection;
-        } else if ((leftIntersection.first - rayStart) < (rightIntersection.first - rayStart)) {
-            result = leftIntersection;
-        } else {
-            result = rightIntersection;
-        }
-    }
-
-    return result;
+std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &a,
+                                                                     const Vector3 &b, size_t ignored) const {
+    return _getIntersectionAndTriangleIndex(node, a, b, std::set<size_t>{ignored});
 }
 
-std::vector<std::pair<Vector3, size_t> > BVHTree::getAllIntersectionsAndTrianglesIndices(const Vector3 &rayStart, const Vector3 &rayEnd) const
-{
-    return this->_getAllIntersectionsAndTrianglesIndices(root, rayStart, rayEnd);
+void BVHTree::all(BVHNode *node, const Vector3 &a, const Vector3 &b,
+                  std::vector<std::pair<Vector3, size_t>> &result) const {
+    double t;
+    if (!node || !spatial_detail::box(node->box, a, b, 1, t))
+        return;
+    for (auto i : node->trianglesIndices)
+        if (spatial_detail::triangle(triangles[i], a, b, t))
+            result.emplace_back(spatial_detail::point(a, b, t), i);
+    all(node->left, a, b, result);
+    all(node->right, a, b, result);
+}
+std::vector<std::pair<Vector3, size_t>>
+BVHTree::getAllIntersectionsAndTrianglesIndices(const Vector3 &a, const Vector3 &b) const {
+    return _getAllIntersectionsAndTrianglesIndices(root, a, b);
 }
 
-std::vector<std::pair<Vector3, size_t> > BVHTree::_getAllIntersectionsAndTrianglesIndices(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd) const
-{
+std::vector<std::pair<Vector3, size_t>>
+BVHTree::_getAllIntersectionsAndTrianglesIndices(BVHNode *node, const Vector3 &a, const Vector3 &b) const {
+    spatial_detail::validate(a, b);
     std::vector<std::pair<Vector3, size_t>> result;
-    if (!node->box.intersects(rayStart, rayEnd).isValid()) {
-        return result; // return empty list if ray doesn't intersect bounding box
-    }
-
-    if (!node->trianglesIndices.empty()) { // leaf node
-        for (const auto& triangleIndex : node->trianglesIndices) {
-            auto& triangle = this->triangles[triangleIndex];
-            Vector3 intersectionPoint = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2], true);
-            if (intersectionPoint.isValid()) {
-                result.push_back({intersectionPoint, triangleIndex});
-//                closestDistance = (intersectionPoint - rayStart).norm2();
-            }
-        }
-    } else { // non-leaf node
-        auto leftIntersection = _getAllIntersectionsAndTrianglesIndices(node->left, rayStart, rayEnd);
-        auto rightIntersection = _getAllIntersectionsAndTrianglesIndices(node->right, rayStart, rayEnd);
-
-        result.insert(result.end(), leftIntersection.begin(), leftIntersection.end());
-        result.insert(result.end(), rightIntersection.begin(), rightIntersection.end());
-    }
-
+    all(node, a, b, result);
     return result;
 }
 
@@ -442,58 +351,3 @@ BVHNode::~BVHNode() {
 //    if (right != nullptr)
 //        delete right;
 }
-/*
-BVHMemoryPool::BVHMemoryPool() {
-    allocateBlock();
-}
-
-BVHMemoryPool::~BVHMemoryPool() {
-    for (NodeBlock* block : blocks) {
-        delete block;  // Delete each allocated block
-    }
-}
-
-BVHNode* BVHMemoryPool::allocateNode() {
-    if (currentBlock->usedNodes == NodeBlock::BLOCK_SIZE) {
-        allocateBlock();
-    }
-    return &(currentBlock->nodes[currentBlock->usedNodes++]);
-}
-
-BVHNode *BVHMemoryPool::parallelAllocateNode()
-{
-    BVHNode* res;
-    #pragma omp critical
-    {
-        if (currentBlock->usedNodes == NodeBlock::BLOCK_SIZE) {
-            allocateBlock();
-        }
-        res = &(currentBlock->nodes[currentBlock->usedNodes++]);
-    }
-    return res;
-}
-
-void BVHMemoryPool::allocateBlock() {
-    currentBlock = new NodeBlock();  // Use new to allocate
-    blocks.emplace_back(currentBlock);
-}
-
-void BVHMemoryPool::parallelAllocateBlock()
-{
-    #pragma omp critical
-    {
-        currentBlock = new NodeBlock();  // Use new to allocate
-        blocks.emplace_back(currentBlock);
-    }
-}
-
-NodeBlock::NodeBlock()
-{
-    this->nodes = new BVHNode[NodeBlock::BLOCK_SIZE];
-}
-
-NodeBlock::~NodeBlock()
-{
-    delete[] nodes;
-}
-*/

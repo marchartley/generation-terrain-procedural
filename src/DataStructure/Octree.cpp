@@ -1,411 +1,258 @@
 #include "Octree.h"
+#include "SpatialQueries.h"
+#include <memory>
+#include <numeric>
+#include <utility>
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 #include <set>
 
-OctreeNode::OctreeNode(const Vector3 &origin, const Vector3 &halfDimension)
-    : origin(origin), halfDimension(halfDimension), sphereSqrRadius((halfDimension).norm2()) {
-    for (int i = 0; i < 8; ++i) children[i] = nullptr;
+OctreeNode::OctreeNode(const Vector3 &center, const Vector3 &half)
+    : origin(center), halfDimension(half), sphereSqrRadius(half.norm2()) {
+    std::fill(std::begin(children), std::end(children), nullptr);
 }
 
 OctreeNode::~OctreeNode() {
-    for (int i = 0; i < 8; ++i) delete children[i];
+    for (auto child : children)
+        delete child;
 }
 
 bool OctreeNode::intersects(const Vector3 &start, const Vector3 &end) const {
-    // Check if the two AABBs are disjoint along any axis
-    if (start.x() > origin.x() + halfDimension.x() || end.x() < origin.x() - halfDimension.x()) return false;
-    if (start.y() > origin.y() + halfDimension.y() || end.y() < origin.y() - halfDimension.y()) return false;
-    if (start.z() > origin.z() + halfDimension.z() || end.z() < origin.z() - halfDimension.z()) return false;
-
-    // If the AABBs are not disjoint along any axis, they must intersect
+    auto lo = origin - halfDimension, hi = origin + halfDimension;
+    for (int i = 0; i < 3; ++i)
+        if (start[i] > hi[i] || end[i] < lo[i])
+            return false;
     return true;
 }
 
-bool OctreeNode::intersects(const Vector3 &v1, const Vector3 &v2, const Vector3 &v3) const
-{
-    return this->sphereIntersectsTriangle({v1, v2, v3}) && Collision::intersectionTriangleAABBox(v1, v2, v3, origin - halfDimension, origin + halfDimension);
-//    bool sphereIntersection = this->sphereIntersectsTriangle({v1, v2, v3});
-//    bool triangleIntersection = Collision::intersectionTriangleAABBox(v1, v2, v3, origin - halfDimension, origin + halfDimension);
-//    return sphereIntersection && triangleIntersection;
+bool OctreeNode::intersects(const Vector3 &a, const Vector3 &b, const Vector3 &c) const {
+    return intersects(Vector3::min({a, b, c}), Vector3::max({a, b, c}));
 }
 
-bool OctreeNode::intersects(const Triangle &tri) const
-{
-    return this->intersects(tri[0], tri[1], tri[2]);
+bool OctreeNode::intersects(const Triangle &t) const {
+    return intersects(t[0], t[1], t[2]);
 }
 
-bool OctreeNode::sphereIntersectsTriangle(const Triangle &triangle) const
-{
-    Vector3 v1 = triangle[0] - origin;
-    Vector3 v2 = triangle[1] - origin;
-    Vector3 v3 = triangle[2] - origin;
-
-    // Compute the squared distance from the sphere center to the triangle
-    float sqDist = Collision::pointToTriangleDistanceSquared(v1, v2, v3, Vector3());
-
-    // Check if the squared distance is less than the squared sphere radius
-    return sqDist <= sphereSqrRadius;
+bool OctreeNode::sphereIntersectsTriangle(const Triangle &t) const {
+    return spatial_detail::triangleDistance2(t, origin) <= sphereSqrRadius;
 }
 
+namespace {
+std::unique_ptr<OctreeNode> clone(const OctreeNode *node) {
+    if (!node)
+        return {};
+    auto result = std::make_unique<OctreeNode>(node->origin, node->halfDimension);
+    result->data = node->data;
+    for (int i = 0; i < 8; ++i)
+        result->children[i] = clone(node->children[i]).release();
+    return result;
+}
+Vector3 childCenter(const OctreeNode &n, int i) {
+    return n.origin +
+           n.halfDimension * Vector3((i & 1) ? .5f : -.5f, (i & 2) ? .5f : -.5f, (i & 4) ? .5f : -.5f);
+}
+std::unique_ptr<OctreeNode> construct(const Vector3 &center, const Vector3 &half,
+                                      const std::vector<Triangle> &ts, const std::vector<size_t> &ids,
+                                      int capacity, int depth) {
+    auto node = std::make_unique<OctreeNode>(center, half);
+    if (ids.size() <= size_t(capacity) || depth >= 24 ||
+        half.maxComp() <= std::numeric_limits<float>::epsilon() * std::max(1.f, center.abs().maxComp())) {
+        for (auto i : ids)
+            node->data.emplace_back(ts[i], int(i));
+        return node;
+    }
+    std::vector<size_t> bins[8];
+    for (auto i : ids) {
+        const auto &t = ts[i];
+        int selected = -1;
+        for (int c = 0; c < 8; ++c) {
+            Vector3 mid = childCenter(*node, c), h = half * .5f;
+            AABBox bounds(mid - h, mid + h);
+            if (bounds.contains(t[0]) && bounds.contains(t[1]) && bounds.contains(t[2])) {
+                selected = c;
+                break;
+            }
+        }
+        // Straddlers stay in their parent: no duplication or explosive subdivision.
+        if (selected < 0)
+            node->data.emplace_back(t, int(i));
+        else
+            bins[selected].push_back(i);
+    }
+    for (int c = 0; c < 8; ++c)
+        if (!bins[c].empty())
+            node->children[c] =
+                construct(childCenter(*node, c), half * .5f, ts, bins[c], capacity, depth + 1).release();
+    return node;
+}
+void candidates(const OctreeNode *node, const Vector3 &a, const Vector3 &b, std::vector<size_t> &result) {
+    if (!node)
+        return;
+    double entry;
+    if (!spatial_detail::box(AABBox(node->origin - node->halfDimension, node->origin + node->halfDimension),
+                             a, b, 1, entry))
+        return;
+    for (const auto &d : node->data)
+        result.push_back(size_t(d.index));
+    for (auto child : node->children)
+        candidates(child, a, b, result);
+}
+} // namespace
 Octree::Octree() : SpacePartitioning(), root(nullptr)
 {
 }
 
-Octree::Octree(const Vector3 &origin, const Vector3 &halfDimension, int capacity)
-    : SpacePartitioning(), root(new OctreeNode(origin, halfDimension)), maxDataCapacity(capacity)
-{
+Octree::Octree(const Vector3 &origin, const Vector3 &half, int capacity) : maxDataCapacity(capacity) {
+    if (!origin.isValid() || !half.isValid() || half.minComp() < 0 || capacity < 1)
+        throw std::invalid_argument("Invalid octree bounds/capacity");
+    root = new OctreeNode(origin, half);
 }
-/*
-Octree::Octree(const std::vector<Triangle> &triangles, int capacity)
-    : SpacePartitioning(), maxDataCapacity(capacity)
-{
-    this->insert(triangles);
-}*/
-/*
-Octree::Octree(const std::vector<std::vector<Vector3> > &triangles, int capacity)
-    : maxDataCapacity(capacity)
-{
-    this->insert(triangles);
 
-    int maxDepth = 0;
-    int nbNodes = 0;
-    std::map<int, int> depths = {{0, 0}};
-    std::map<int, int> dataStoredPerLevel = {{0, 0}};
-    std::vector<int> allElementsWithDuplicates;
-    std::vector<std::pair<OctreeNode*, int>> queue = {{root, 1}};
-    while (!queue.empty()) {
-        nbNodes ++;
-        auto [current, depth] = queue.back();
-        queue.pop_back();
-        maxDepth = std::max(maxDepth, depth);
-        depths[depth] = depths[depth] + 1;
-        dataStoredPerLevel[depth] = dataStoredPerLevel[depth] + current->data.size();
-        for (const auto& data : current->data) {
-            allElementsWithDuplicates.push_back(data.index);
-        }
-        for (auto child : current->children) {
-            if (child != nullptr)
-                queue.push_back({child, depth + 1});
-        }
-    }
-    std::cout << "Octree : Max depth = " << maxDepth << ", nb nodes = " << nbNodes << ", nb items = " << allElementsWithDuplicates.size() << " without duplicates : " << convertVectorToSet(allElementsWithDuplicates).size() << " for initially " << triangles.size() << " triangles." << std::endl;
-    std::cout << "Distribution: \n";
-    for (int d = 0; d < depths.size(); d++){
-        std::cout << "- level " << d << " : " << depths[d] << " nodes\n";
-    }
+
+Octree::Octree(const Octree &other) : SpacePartitioning(other), maxDataCapacity(other.maxDataCapacity) {
+    root = clone(other.root).release();
 }
-*/
+Octree &Octree::operator=(const Octree &other) {
+    if (this != &other) {
+        Octree copy(other);
+        triangles.swap(copy.triangles);
+        std::swap(root, copy.root);
+        std::swap(maxDataCapacity, copy.maxDataCapacity);
+    }
+    return *this;
+}
+Octree::Octree(Octree &&other) noexcept
+    : root(std::exchange(other.root, nullptr)), maxDataCapacity(other.maxDataCapacity) {
+    triangles = std::move(other.triangles);
+}
+Octree &Octree::operator=(Octree &&other) noexcept {
+    if (this != &other) {
+        delete root;
+        root = std::exchange(other.root, nullptr);
+        triangles = std::move(other.triangles);
+        maxDataCapacity = other.maxDataCapacity;
+    }
+    return *this;
+}
 Octree::~Octree() {
     delete root;
 }
-/*
-bool Octree::insert(const Vector3 &p1, const Vector3 &p2, const Vector3 &p3, const int& pointIndex) {
-    if (!this->root->intersects(p1, p2, p3))
-        return false; // Don't add this point if it's not inside of the octree space
-    return insert(root, p1, p2, p3, pointIndex);
+
+bool Octree::insert(std::vector<Triangle> added) {
+    if (added.empty())
+        return false;
+    auto all = triangles;
+    all.insert(all.end(), added.begin(), added.end());
+    build(all);
+    return true;
 }
-*/
-bool Octree::insert(std::vector<Triangle> triangles)
-{
-    if (!this->root) {
-        Vector3 mini = Vector3::max(), maxi = Vector3::min();
-        for (const auto& t : triangles) {
-            mini = Vector3::min({mini, t[0], t[1], t[2]});
-            maxi = Vector3::max({maxi, t[0], t[1], t[2]});
-        }
-        AABBox box(mini, maxi);
-        this->root = new OctreeNode(box.center(), box.dimensions() * .5f);
+
+SpacePartitioning &Octree::build(const std::vector<Triangle> &input) {
+    if (maxDataCapacity < 1)
+        throw std::invalid_argument("Octree capacity must be positive");
+    spatial_detail::validate(input);
+    std::vector<Triangle> copy(input);
+    std::unique_ptr<OctreeNode> replacement;
+    if (!input.empty()) {
+        Vector3 lo = Vector3::max(), hi = Vector3::min();
+        for (auto &t : input)
+            for (auto &v : t.vertices) {
+                lo = Vector3::min(lo, v);
+                hi = Vector3::max(hi, v);
+            }
+        std::vector<size_t> ids(input.size());
+        std::iota(ids.begin(), ids.end(), 0);
+        Vector3 center((double(lo.x()) + hi.x()) * .5, (double(lo.y()) + hi.y()) * .5,
+                       (double(lo.z()) + hi.z()) * .5);
+        Vector3 half = Vector3::max(center - lo, hi - center);
+        replacement = construct(center, half, input, ids, maxDataCapacity, 0);
     }
-    bool atLeastOneGood = false;
-    for (size_t i = 0; i < triangles.size(); i++) {
-        auto& triangle = triangles[i];
-        bool inserted = insert(root, triangle[0], triangle[1], triangle[2], i); //(insert(triangles[i][0], i) || insert(triangles[i][1], i) || insert(triangles[i][2], i));
-        atLeastOneGood |= inserted;
-        if (!inserted) {
-            std::cout << "Triangle " << i << "(" << triangle[0] << " " << triangle[1] << " " << triangle[2] << ") ignored" << std::endl;
-        }
-    }
-    return atLeastOneGood;
-}
-/*
-bool Octree::insert(std::vector<std::vector<Vector3> > triangles)
-{
-    std::vector<Triangle> tris(triangles.size());
-    for (size_t i = 0; i < triangles.size(); i++)
-        tris[i] = Triangle(triangles[i]);
-    return insert(tris);
-}
-*/
-SpacePartitioning &Octree::build(const std::vector<Triangle> &triangles)
-{
-    this->triangles = triangles;
-    this->insert(triangles);
+    delete root;
+    root = replacement.release();
+    triangles.swap(copy);
     return *this;
 }
 
-std::set<size_t> Octree::getAllStoredTrianglesIndices() const
-{
-    std::set<size_t> allElements;
-    std::vector<OctreeNode*> queue = {root};
-    while (!queue.empty()) {
-        auto current = queue.back();
-        queue.pop_back();
-        for (const auto& data : current->data) {
-            allElements.insert(data.index);
-        }
-        for (auto child : current->children) {
-            if (child != nullptr)
-                queue.push_back(child);
-        }
+std::set<size_t> Octree::getAllStoredTrianglesIndices() const {
+    std::set<size_t> result;
+    std::vector<OctreeNode *> stack;
+    if (root)
+        stack.push_back(root);
+    while (!stack.empty()) {
+        auto node = stack.back();
+        stack.pop_back();
+        for (auto &d : node->data)
+            result.insert(d.index);
+        for (auto child : node->children)
+            if (child)
+                stack.push_back(child);
     }
-    return allElements;
-}
-
-std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
-{
-    std::vector<OctreeNodeData> allData = this->queryRange(rayStart, rayEnd);
-    std::set<size_t> possibleTriangles;
-    for (auto& data : allData)
-        possibleTriangles.insert(data.index);
-
-//    std::cout << "Possibly " << possibleTriangles.size() << " triangles colliding ray" << std::endl;
-    Vector3 intersectionPoint(false);
-    int closestIntersectionIndex = -1;
-    for (size_t triIndex : possibleTriangles) {
-        if (isIn(triIndex, ignoredTriangles)) continue;
-        auto& triangle = triangles[triIndex];
-        Vector3 collide = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2]);
-        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - rayStart) < (intersectionPoint - rayStart))) {
-            intersectionPoint = collide;
-            closestIntersectionIndex = triIndex;
-        }
-    }
-    return {intersectionPoint, closestIntersectionIndex};
-}
-
-std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, size_t ignoredTriangle) const
-{
-    std::vector<OctreeNodeData> allData = this->queryRange(rayStart, rayEnd);
-    std::set<size_t> possibleTriangles;
-    for (auto& data : allData)
-        possibleTriangles.insert(data.index);
-
-    Vector3 intersectionPoint(false);
-    int closestIntersectionIndex = -1;
-    for (size_t triIndex : possibleTriangles) {
-        if (triIndex == ignoredTriangle) continue;
-        auto& triangle = triangles[triIndex];
-        Vector3 collide = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2]);
-        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - rayStart) < (intersectionPoint - rayStart))) {
-            intersectionPoint = collide;
-            closestIntersectionIndex = triIndex;
-        }
-    }
-    return {intersectionPoint, closestIntersectionIndex};
-}
-
-std::vector<std::pair<Vector3, size_t> > Octree::getAllIntersectionsAndTrianglesIndices(const Vector3 &rayStart, const Vector3 &rayEnd) const
-{
-    std::vector<std::pair<Vector3, size_t>> results;
-
-    std::vector<OctreeNodeData> allData = this->queryRange(rayStart, rayEnd);
-    std::set<int> possibleTriangles;
-    for (auto& data : allData)
-        possibleTriangles.insert(data.index);
-
-//    Vector3 intersectionPoint(false);
-//    int closestIntersectionIndex = -1;
-    for (int triIndex : possibleTriangles) {
-        auto& triangle = triangles[triIndex];
-        Vector3 collide = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2]);
-        if (collide.isValid())
-            results.push_back({collide, triIndex});
-    }
-    return results;
-}
-
-std::vector<OctreeNodeData> Octree::queryRange(const Vector3 &start, const Vector3 &end) const {
-    Vector3 _start = Vector3::min(start, end);
-    Vector3 _end = Vector3::max(start, end);
-    std::vector<OctreeNodeData> result;
-    if (this->root)
-        queryRange(root, _start, _end, result);
     return result;
 }
 
-/*
-std::pair<Vector3, int> Octree::_intersectingTriangleIndex(const Vector3 &start, const Vector3 &end, const std::vector<Triangle> &triangles) const
-{
-    std::vector<OctreeNodeData> allData = this->queryRange(start, end);
-    std::set<int> possibleTriangles;
-    for (auto& data : allData)
-        possibleTriangles.insert(data.index);
-
-    std::cout << "Possibly " << possibleTriangles.size() << " triangles colliding ray" << std::endl;
-    Vector3 intersectionPoint(false);
-    int closestIntersectionIndex = -1;
-    for (int triIndex : possibleTriangles) {
-        auto& triangle = triangles[triIndex];
-        Vector3 collide = Collision::segmentToTriangleCollision(start, end, triangle[0], triangle[1], triangle[2]);
-        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - start) < (intersectionPoint - start))) {
-            intersectionPoint = collide;
-            closestIntersectionIndex = triIndex;
+std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &a, const Vector3 &b,
+                                                                   const std::set<size_t> &ignored) const {
+    spatial_detail::validate(a, b);
+    std::vector<size_t> ids;
+    candidates(root, a, b, ids);
+    double best = std::numeric_limits<double>::infinity();
+    std::pair<Vector3, size_t> result{Vector3::invalid, size_t(-1)};
+    for (auto i : ids) {
+        if (ignored.count(i))
+            continue;
+        double t;
+        if (spatial_detail::triangle(triangles.at(i), a, b, t) &&
+            (t < best || (t == best && i < result.second))) {
+            best = t;
+            result = {spatial_detail::point(a, b, t), i};
         }
     }
-    return {intersectionPoint, closestIntersectionIndex};
+    return result;
 }
 
-Vector3 Octree::getIntersection(const Vector3 &start, const Vector3 &end, const std::vector<Triangle>& triangles) const
-{
-    std::vector<OctreeNodeData> allData = this->queryRange(start, end);
-    std::set<int> possibleTriangles;
-    for (auto& data : allData)
-        possibleTriangles.insert(data.index);
+std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &a, const Vector3 &b,
+                                                                   size_t ignored) const {
+    return getIntersectionAndTriangleIndex(a, b, std::set<size_t>{ignored});
+}
 
-    Vector3 intersectionPoint(false);
-    for (int triIndex : possibleTriangles) {
-        auto& triangle = triangles[triIndex];
-        Vector3 collide = Collision::segmentToTriangleCollision(start, end, triangle[0], triangle[1], triangle[2]);
-        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - start) < (intersectionPoint - start))) {
-            intersectionPoint = collide;
-        }
+std::vector<std::pair<Vector3, size_t>>
+Octree::getAllIntersectionsAndTrianglesIndices(const Vector3 &a, const Vector3 &b) const {
+    spatial_detail::validate(a, b);
+    std::vector<size_t> ids;
+    candidates(root, a, b, ids);
+    std::vector<std::pair<Vector3, size_t>> result;
+    for (auto i : ids) {
+        double t;
+        if (spatial_detail::triangle(triangles.at(i), a, b, t))
+            result.emplace_back(spatial_detail::point(a, b, t), i);
     }
-    return intersectionPoint;
+    return result;
 }
 
-std::pair<Vector3, Vector3> Octree::getIntersectionAndNormal(const Vector3 &start, const Vector3 &end, const std::vector<Triangle > &triangles) const
-{
-    std::vector<OctreeNodeData> allData = this->queryRange(start, end);
-    std::set<int> possibleTriangles;
-    for (auto& data : allData)
-        possibleTriangles.insert(data.index);
-
-    Vector3 intersectionPoint(false);
-    Vector3 normal;
-    for (int triIndex : possibleTriangles) {
-        auto& triangle = triangles[triIndex];
-        Vector3 collide = Collision::segmentToTriangleCollision(start, end, triangle[0], triangle[1], triangle[2]);
-        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - start) < (intersectionPoint - start))) {
-            intersectionPoint = collide;
-            normal = (triangle[0] - triangle[1]).cross(triangle[0] - triangle[2]);
-        }
-    }
-    return { intersectionPoint, normal.normalize() };
+std::vector<OctreeNodeData> Octree::queryRange(const Vector3 &start, const Vector3 &end) const {
+    spatial_detail::validate(start, end);
+    std::vector<OctreeNodeData> result;
+    queryRange(root, Vector3::min(start, end), Vector3::max(start, end), result);
+    return result;
 }
 
-Vector3 Octree::getIntersection(const Vector3 &start, const Vector3 &end, const std::vector<std::vector<Vector3> > &triangles) const
-{
-    return this->getIntersection(start, end, Triangle::vectorsToTriangles(triangles));
-}
 
-std::pair<Vector3, Vector3> Octree::getIntersectionAndNormal(const Vector3 &start, const Vector3 &end, const std::vector<std::vector<Vector3> > &triangles) const
-{
-    return this->getIntersectionAndNormal(start, end, Triangle::vectorsToTriangles(triangles));
-}
-*/
-/*
-std::vector<int> Octree::getAllStoredTrianglesIndices() const
-{
-    std::set<int> allElements;
-    std::vector<OctreeNode*> queue = {root};
-    while (!queue.empty()) {
-        auto current = queue.back();
-        queue.pop_back();
-        for (const auto& data : current->data) {
-            allElements.insert(data.index);
-        }
-        for (auto child : current->children) {
-            if (child != nullptr)
-                queue.push_back(child);
-        }
-    }
-    return convertSetToVector(allElements);
-}
 
-std::vector<Triangle> Octree::getAllStoredTriangles(const std::vector<Triangle> &triangles) const
-{
-    std::vector<Triangle> res;
-    res.reserve(triangles.size()); // Suppose most triangles are stored
-    for (int idx : getAllStoredTrianglesIndices()) {
-        res.push_back(triangles[idx]);
-    }
-    return res;
-}
-
-std::vector<std::vector<Vector3> > Octree::getAllStoredTriangles(const std::vector<std::vector<Vector3> > &triangles) const
-{
-    std::vector<std::vector<Vector3>> res;
-    res.reserve(triangles.size()); // Suppose most triangles are stored
-    for (int idx : getAllStoredTrianglesIndices()) {
-        res.push_back(triangles[idx]);
-    }
-    return res;
-}
-*/
-bool Octree::insert(OctreeNode *node, const Vector3 &p1, const Vector3 &p2, const Vector3 &p3, const int& pointIndex) {
-    bool insertValidated = false;
-    if (!node->intersects(p1, p2, p3)) {
-//        if (node == this->root)
-//            std::cout << "Triangle " << pointIndex << "(" << p1 << " " << p2 << " " << p3 << ") rejected by root." << std::endl;
+bool Octree::insert(OctreeNode *node, const Vector3 &a, const Vector3 &b, const Vector3 &c,
+                    const int &index) {
+    if (!node || !node->intersects(a, b, c))
         return false;
-    }
-    if ((int)node->data.size() < maxDataCapacity && node->children[0] == nullptr) {
-        // If the node has no children and is not full, add the point here
-        node->data.push_back(OctreeNodeData(p1, p2, p3, pointIndex));
-        insertValidated = true;
-    } else {
-        // Otherwise, split the node and add the point to the appropriate child
-        if (node->children[0] == nullptr) {
-            #pragma omp parallel for
-            for (int i = 0; i < 8; ++i) {
-                Vector3 newOrigin = node->origin;
-                newOrigin.x() += node->halfDimension.x() * ((i & 1) ? 0.5f : -0.5f);
-                newOrigin.y() += node->halfDimension.y() * ((i & 2) ? 0.5f : -0.5f);
-                newOrigin.z() += node->halfDimension.z() * ((i & 4) ? 0.5f : -0.5f);
-                node->children[i] = new OctreeNode(newOrigin, node->halfDimension * 0.5f);
-                node->children[i]->data.reserve(maxDataCapacity);
-            }
-            auto dataCopy = node->data;
-            node->data.clear();
-            for (auto& data : dataCopy) {
-                #pragma omp parallel for
-                for (size_t child = 0; child < 8; child++)
-                    insert(node->children[child], data.vertex1, data.vertex2, data.vertex3, data.index);
-    //                if (insert(node->children[child], data.vertex1, data.vertex2, data.vertex3, data.index))
-    //                    break;
-            }
-        }
-
-
-//        #pragma omp parallel for
-        for (size_t child = 0; child < 8; child++)
-            insertValidated |= insert(node->children[child], p1, p2, p3, pointIndex);
-        // Add the point to the appropriate child
-//        int octant = (p1.x() >= node->origin.x) + ((p1.y() >= node->origin.y) << 1) + ((p1.z() >= node->origin.z) << 2);
-//        insertValidated = insert(node->children[octant], p1, p2, p3, pointIndex);
-    }
-    return insertValidated;
+    if (index < 0 || size_t(index) >= triangles.size())
+        throw std::out_of_range("Octree triangle index");
+    node->data.emplace_back(a, b, c, index);
+    return true;
 }
 
-void Octree::queryRange(OctreeNode *node, const Vector3 &start, const Vector3 &end, std::vector<OctreeNodeData> &result, int level) const {
-    // If the node does not intersect with the query range, return
-    if (!node->intersects(start, end)) {
+void Octree::queryRange(OctreeNode *node, const Vector3 &start, const Vector3 &end,
+                        std::vector<OctreeNodeData> &result, int) const {
+    if (!node || !node->intersects(start, end))
         return;
-    }
-
-    // If the node is a leaf node, check all points in the node
-    if (node->children[0] == nullptr) {
-        result.insert(result.end(), node->data.begin(), node->data.end());
-//        for (const auto& point : node->data) {
-//            if (Vector3::isInBox(point.pos, start, end)) {
-//                result.push_back(point);
-//            }
-//        }
-    } else {
-        // If the node is not a leaf node, check all children
-        for (int i = 0; i < 8; ++i) {
-            queryRange(node->children[i], start, end, result, level + 1);
-        }
-    }
+    result.insert(result.end(), node->data.begin(), node->data.end());
+    for (auto child : node->children)
+        queryRange(child, start, end, result);
 }
