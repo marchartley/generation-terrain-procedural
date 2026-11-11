@@ -440,13 +440,10 @@ bool ImplicitPatch::checkIsInGround(const Vector3& position)
 
 Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
 {
-    Vector3 finalDimensions = dimensions;
-    if (!dimensions.isValid())
-        finalDimensions = this->getDimensions();
+    const Vector3 extent = dimensions.isValid() ? dimensions : getSamplingDimensions();
     VoxelGrid voxels;
-    voxels._cachedVoxelValues = GridF(finalDimensions);
-    voxels.fromImplicit(this);
-    return voxels.getGeometry(finalDimensions); // * Vector3(.5f, .5f, .25f));
+    voxels.setVoxelValues(getVoxelized(extent));
+    return voxels.getGeometry();
 }
 
 Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
@@ -524,13 +521,18 @@ bool ImplicitPatch::contains(float x, float y, float z)
 
 Vector3 ImplicitPatch::getGlobalPositionOf(const Vector3& posInsidePatch)
 {
-    Vector3 position = posInsidePatch + this->getBBox().min();
-    ImplicitPatch* current = this;
-    while(current->getParent()) {
-        current = current->getParent();
-        ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(current);
-        if (asUnary) {
-            position = asUnary->applyTransform(position);
+    Vector3 position = posInsidePatch + getBBox().min();
+    for (ImplicitPatch* child = this; child->parent; child = child->parent) {
+        auto* ancestor = child->parent;
+        if (auto* unary = dynamic_cast<ImplicitUnaryOperator*>(ancestor)) position = unary->applyTransform(position);
+        else if (auto* binary = dynamic_cast<ImplicitBinaryOperator*>(ancestor)) {
+            if (binary->composableB() == child) {
+                const float zero = binary->getEvaluationPositionForComposableB(position.xy()).z();
+                const float one = binary->getEvaluationPositionForComposableB(position.xy() + Vector3(0, 0, 1)).z();
+                if (!std::isfinite(one - zero) || std::abs(one - zero) < 1e-6f)
+                    throw std::domain_error("Noninvertible implicit positional operation");
+                position.z() = (position.z() - zero) / (one - zero);
+            }
         }
     }
     return position;
@@ -539,20 +541,14 @@ Vector3 ImplicitPatch::getGlobalPositionOf(const Vector3& posInsidePatch)
 Vector3 ImplicitPatch::getLocalPositionOf(const Vector3& globalPosition)
 {
     Vector3 position = globalPosition;
-    std::vector<ImplicitPatch*> ancestry;
-    ImplicitPatch* current = this;
-    while(current->getParent()) {
-        current = current->getParent();
-        ancestry.push_back(current);
+    std::vector<std::pair<ImplicitNaryOperator*, ImplicitPatch*>> ancestry;
+    for (ImplicitPatch* child = this; child->parent; child = child->parent) ancestry.emplace_back(child->parent, child);
+    for (auto it = ancestry.rbegin(); it != ancestry.rend(); ++it) {
+        if (auto* unary = dynamic_cast<ImplicitUnaryOperator*>(it->first)) position = unary->inverseTransform(position);
+        else if (auto* binary = dynamic_cast<ImplicitBinaryOperator*>(it->first))
+            if (binary->composableB() == it->second) position = binary->getEvaluationPositionForComposableB(position);
     }
-    std::reverse(ancestry.begin(), ancestry.end());
-    for (size_t i = 0; i < ancestry.size(); i++) {
-        ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(ancestry[i]);
-        if (asUnary) {
-            position = asUnary->inverseTransform(position); // asUnary->unwrapFunction(position);
-        }
-    }
-    return position - this->getBBox().min();
+    return position - getBBox().min();
 }
 
 size_t ImplicitPatch::getCurrentHistoryIndex() const
@@ -1104,102 +1100,85 @@ float ImplicitBinaryOperator::evaluateA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
 
-    return this->composableA()->evaluate(evaluationPosA);
+    return composableA() ? composableA()->evaluate(evaluationPosA) : 0.f;
 }
 
 float ImplicitBinaryOperator::evaluateB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
 
-    return this->composableB()->evaluate(evaluationPosB);
+    return composableB() ? composableB()->evaluate(evaluationPosB) : 0.f;
 }
 
 std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
-    return this->composableA()->getMaterials(evaluationPosA);
+    return composableA() ? composableA()->getMaterials(evaluationPosA) : std::map<TerrainTypes, float>{};
 }
 
 std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
-    return this->composableB()->getMaterials(evaluationPosB);
+    return composableB() ? composableB()->getMaterials(evaluationPosB) : std::map<TerrainTypes, float>{};
 }
 
 std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
-    return this->composableA()->getMaterialsAndTotalEvaluation(evaluationPosA);
+    return composableA() ? composableA()->getMaterialsAndTotalEvaluation(evaluationPosA) : std::pair<float, std::map<TerrainTypes, float>>{0.f, {}};
 }
 
 std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
-    return this->composableB()->getMaterialsAndTotalEvaluation(evaluationPosB);
+    return composableB() ? composableB()->getMaterialsAndTotalEvaluation(evaluationPosB) : std::pair<float, std::map<TerrainTypes, float>>{0.f, {}};
 }
 
 bool ImplicitBinaryOperator::contains(PredefinedShapes shape)
 {
-    return this->composableA()->contains(shape) || this->composableB()->contains(shape);
+    return (composableA() && composableA()->contains(shape)) || (composableB() && composableB()->contains(shape));
 }
 
 std::vector<ImplicitPatch *> ImplicitBinaryOperator::findAll(PredefinedShapes shape)
 {
-    return vectorMerge(this->composableA()->findAll(shape), this->composableB()->findAll(shape));
+    return vectorMerge(composableA() ? composableA()->findAll(shape) : std::vector<ImplicitPatch*>{},
+                       composableB() ? composableB()->findAll(shape) : std::vector<ImplicitPatch*>{});
+}
+
+namespace {
+AABBox implicitBinaryBounds(const ImplicitBinaryOperator& operation, bool support)
+{
+    const auto* a = operation.composableA();
+    const auto* b = operation.composableB();
+    if (!a && !b) return AABBox(Vector3(), Vector3());
+    auto box = [&](const ImplicitPatch* node) { return support ? node->getSupportBBox() : node->getBBox(); };
+    if (!a) return box(b);
+    if (!b || operation.withIntersectionOnB) return box(a);
+    const auto boundsA = box(a);
+    auto boundsB = box(b);
+    if (operation.positionalB != ImplicitPatch::FIXED_POS) {
+        const auto heights = a->getSupportBBox();
+        float low = std::min(0.f, heights.min().z());
+        float high = std::max(0.f, heights.max().z());
+        if (operation.positionalB == ImplicitPatch::INSIDE_TOP) {
+            low -= b->getDimensions().z();
+            high -= b->getDimensions().z();
+        }
+        boundsB.mini.z() += low;
+        boundsB.maxi.z() += high;
+    }
+    return AABBox(Vector3::min(boundsA.min(), boundsB.min()), Vector3::max(boundsA.max(), boundsB.max()));
+}
 }
 
 AABBox ImplicitBinaryOperator::getSupportBBox() const
 {
-    auto AABBoxA = this->composableA()->getSupportBBox();
-    if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
-        return AABBoxA;
-    }
-    auto AABBoxB = this->composableB()->getSupportBBox();
-
-    if (this->positionalB == PositionalLabel::ABOVE) {
-        // If stacked on composable A, composable B can get higher
-        float maxPossibleHeightA = AABBoxA.dimensions().z();
-        AABBoxB.maxi.z() += maxPossibleHeightA;
-    } else if (this->positionalB == PositionalLabel::INSIDE_BOTTOM) {
-        // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.dimensions().z();
-        AABBoxB.maxi.z() += maxPossibleHeightA;
-    } else if (this->positionalB == PositionalLabel::INSIDE_TOP) {
-        // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.dimensions().z();
-        AABBoxB.maxi.z() += maxPossibleHeightA;
-    } else if (this->positionalB == PositionalLabel::FIXED_POS) {
-        // Nothing to do there
-    }
-
-    return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
+    return implicitBinaryBounds(*this, true);
 }
 
 AABBox ImplicitBinaryOperator::getBBox() const
 {
-    auto AABBoxA = this->composableA()->getBBox();
-    if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
-        return AABBoxA;
-    }
-    auto AABBoxB = this->composableB()->getBBox();
-
-    if (this->positionalB == PositionalLabel::ABOVE) {
-        // If stacked on composable A, composable B can get higher
-        float maxPossibleHeightA = AABBoxA.dimensions().z();
-        AABBoxB.maxi.z() += maxPossibleHeightA;
-    } else if (this->positionalB == PositionalLabel::INSIDE_BOTTOM) {
-        // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.dimensions().z();
-        AABBoxB.maxi.z() += maxPossibleHeightA;
-    } else if (this->positionalB == PositionalLabel::INSIDE_TOP) {
-        // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.dimensions().z();
-        AABBoxB.maxi.z() += maxPossibleHeightA;
-    } else if (this->positionalB == PositionalLabel::FIXED_POS) {
-        // Nothing to do there
-    }
-
-    return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
+    return implicitBinaryBounds(*this, false);
 }
 
 void ImplicitBinaryOperator::update()
@@ -1303,7 +1282,8 @@ Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(const Vector
 
 Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector3& pos) const
 {
-    // Get the correct evaluation position for the B composent
+    if (!composableA() || !composableB()) return pos;
+    // Get the correct evaluation position for the B component
     float offsetB = 0.f;
     Vector3 positionB = pos;
     if (this->positionalB == ABOVE) {
@@ -1315,13 +1295,14 @@ Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector
     } else if (this->positionalB == FIXED_POS) {
         offsetB = 0.f;
     } else if (this->positionalB == SMOOTH_ABOVE) {
-        float heightB = this->composableB()->getDimensions().z();
-        if (heightB <= 0.f) return positionB;
-        float heightA = std::min(heightB, this->composableA()->getMaxHeight(positionB));
-        float minHeightA = this->composableA()->getMinimalHeight(this->composableB()->getBBox());
-        float heightInterp = interpolation::wyvill(heightA, minHeightA, (minHeightA + heightB));
-//        offsetB = (1.f - heightInterp / heightB) * heightB;
-        positionB.z() *= (heightInterp / heightB);
+        // Smooth the supporting height, rather than multiplying world Z by
+        // a possibly zero factor and turning B into an unbounded column.
+        const int weights[3] = {1, 2, 1};
+        float sum = 0.f;
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dy = -1; dy <= 1; ++dy)
+                sum += weights[dx + 1] * weights[dy + 1] * composableA()->getMaxHeight(pos.xy() + Vector3(dx, dy));
+        offsetB = sum / 16.f;
     } else {
         std::cerr << "Wrong position label" << std::endl;
     }
@@ -1641,12 +1622,12 @@ ImplicitPatch* ImplicitUnaryOperator::copy() const
 
 bool ImplicitUnaryOperator::contains(PredefinedShapes shape)
 {
-    return this->composableA()->contains(shape);
+    return composableA() && composableA()->contains(shape);
 }
 
 std::vector<ImplicitPatch *> ImplicitUnaryOperator::findAll(PredefinedShapes shape)
 {
-    return this->composableA()->findAll(shape);
+    return composableA() ? composableA()->findAll(shape) : std::vector<ImplicitPatch*>{};
 }
 
 void ImplicitUnaryOperator::addChild(ImplicitPatch *newChild, int index)
