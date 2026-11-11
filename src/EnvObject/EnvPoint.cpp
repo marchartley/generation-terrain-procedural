@@ -181,23 +181,28 @@ ImplicitPatch* EnvPointInstance::createImplicitPatch(const GridF &heights, Impli
         previousPrimitive = nullptr;
         return nullptr;
     }
-    ImplicitPrimitive* patch;
-    float growingState = 1.f; // this->computeGrowingState2();
-    // float growingState = this->computeGrowingState();
-    Vector3 dimensions = Vector3(this->getDefinition()->radius * growingState, this->getDefinition()->radius * growingState, this->getDefinition()->radius * growingState* this->getDefinition()->height);
-    Vector3 patchPosition = this->position.xy() - Vector3(this->getDefinition()->radius, this->getDefinition()->radius) * .5f;
-    if (previousPrimitive != nullptr) {
-        patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, dimensions, 0, {}, false);
-    } else {
-        patch = ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, dimensions, this->getDefinition()->radius * .25f * growingState, {}, false);
-        patchPosition.z() = heights(this->position.xy());
+    const float growingState = 1.f;
+    const auto* definition = getDefinition();
+    const Vector3 dimensions(definition->radius * growingState, definition->radius * growingState,
+                             definition->radius * growingState * definition->height);
+    Vector3 patchPosition = position.xy() - Vector3(definition->radius, definition->radius) * .5f;
+    patchPosition.z() = heights(position.xy());
+    const float sigma = definition->radius * .25f * growingState;
+    ImplicitPrimitive* patch = previousPrimitive;
+    if (!patch) patch = ImplicitPatch::createPredefinedShape(definition->implicitShape, dimensions, sigma, {}, false);
+    else {
+        patch->predefinedShape = definition->implicitShape;
+        patch->dimensions = dimensions;
+        patch->parametersProvided = {sigma};
+        patch->optionalCurve = {};
+        patch->update();
     }
 
     patch->position = patchPosition;
     patch->supportDimensions = dimensions;
     patch->material = this->getDefinition()->material;
     patch->name = this->getDefinition()->name;
+    for (ImplicitPatch* node = patch; node; node = node->parent) node->_cached = false;
     this->_patch = patch;
     this->geometryNeedsUpdate = false;
     return patch;

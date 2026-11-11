@@ -218,8 +218,11 @@ ImplicitPatch* EnvAreaInstance::createImplicitPatch(const GridF &heights, Implic
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        translatedCurve = previousPrimitive->optionalCurve;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, this->getDefinition()->height * growingState, translatedCurve, true);
+        patch->predefinedShape = getDefinition()->implicitShape;
+        patch->dimensions = box.dimensions() + offset;
+        patch->parametersProvided = {getDefinition()->height * growingState};
+        patch->optionalCurve = translatedCurve;
+        patch->update();
     } else {
         patch = ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, this->getDefinition()->height * growingState, translatedCurve, true);
     }
@@ -228,6 +231,7 @@ ImplicitPatch* EnvAreaInstance::createImplicitPatch(const GridF &heights, Implic
     patch->supportDimensions = box.dimensions() + offset;
     patch->material = this->getDefinition()->material;
     patch->name = this->getDefinition()->name;
+    for (ImplicitPatch* node = patch; node; node = node->parent) node->_cached = false;
     this->_patch = patch;
     this->geometryNeedsUpdate = false;
     return patch;

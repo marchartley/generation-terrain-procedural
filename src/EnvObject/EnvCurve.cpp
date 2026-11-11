@@ -321,69 +321,39 @@ ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, Impl
 }*/
 ImplicitPatch* EnvCurveInstance::createImplicitPatch(const GridF& _heights, ImplicitPrimitive *previousPrimitive)
 {
-    if (!geometryNeedsUpdate) return this->_patch;
-    if (this->getDefinition()->implicitShape == ImplicitPatch::PredefinedShapes::None) {
-        previousPrimitive = nullptr;
-        return nullptr;
+    if (!geometryNeedsUpdate) return _patch;
+    const auto* definition = getDefinition();
+    if (definition->implicitShape == ImplicitPatch::None) return nullptr;
+    const float radius = definition->width;
+    const Vector3 offset(definition->width, definition->width, radius * .5f);
+    CatmullRomSpline translatedCurve = curve;
+    GridF heights = _heights;
+    heights.raiseErrorOnBadCoord = false;
+    heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    float maxHeight = 0.f;
+    for (Vector3& p : translatedCurve) {
+        p.z() = heights(p.xy());
+        maxHeight = std::max(maxHeight, p.z());
     }
-    AABBox box = this->curve.getAABBox();
-    float growingState = 1.f; // this->computeGrowingState2();
-    // float growingState = this->computeGrowingState();
-    // float height = this->height;
-    float radius = this->getDefinition()->width * growingState;
-    Vector3 offset(this->getDefinition()->width, this->getDefinition()->width, radius * .5f);
-
-    ImplicitPrimitive* patch;
-    if (previousPrimitive != nullptr) {
-        patch = previousPrimitive;
-        /*BSpline translatedCurve = previousPrimitive->optionalCurve;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);*/
-
-        CatmullRomSpline translatedCurve = this->curve;
-        GridF heights = _heights;
-        heights.raiseErrorOnBadCoord = false;
-        heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-        float maxHeight = 0;
-        for (Vector3& p : translatedCurve) {
-            p.z() = heights(p.xy());
-            maxHeight = std::max(maxHeight, p.z());
-        }
-        if (radius == 0){
-            box = AABBox({box.center()});
-            offset = Vector3();
-        }
-        box = translatedCurve.getAABBox();
-        box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
-        translatedCurve.translate(-(box.min() - offset * .5f));
-        *patch = *ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
-        patch->position = (box.min() - offset.xy() * .5f).xy();
-        patch->supportDimensions = box.dimensions() + offset;
-
-    } else {
-        CatmullRomSpline translatedCurve = this->curve;
-        GridF heights = _heights;
-        heights.raiseErrorOnBadCoord = false;
-        heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-        float maxHeight = 0;
-        for (Vector3& p : translatedCurve) {
-            p.z() = heights(p.xy());
-            maxHeight = std::max(maxHeight, p.z());
-        }
-        if (radius == 0){
-            box = AABBox({box.center()});
-            offset = Vector3();
-        }
-        box = translatedCurve.getAABBox();
-        box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
-        translatedCurve.translate(-(box.min() - offset * .5f));
-        patch = ImplicitPatch::createPredefinedShape(this->getDefinition()->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
-        patch->position = (box.min() - offset.xy() * .5f).xy();
-        patch->supportDimensions = box.dimensions() + offset;
+    auto box = translatedCurve.getAABBox();
+    box.expand({box.min(), box.max() + offset + Vector3(0, 0, maxHeight + 10)});
+    translatedCurve.translate(-(box.min() - offset * .5f));
+    ImplicitPrimitive* patch = previousPrimitive;
+    if (!patch) patch = ImplicitPatch::createPredefinedShape(definition->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
+    else {
+        patch->predefinedShape = definition->implicitShape;
+        patch->dimensions = box.dimensions() + offset;
+        patch->parametersProvided = {radius};
+        patch->optionalCurve = translatedCurve;
+        patch->update();
     }
-    patch->material = this->getDefinition()->material;
-    patch->name = this->getDefinition()->name;
-    this->_patch = patch;
-    this->geometryNeedsUpdate = false;
+    patch->position = (box.min() - offset.xy() * .5f).xy();
+    patch->supportDimensions = box.dimensions() + offset;
+    patch->material = definition->material;
+    patch->name = definition->name;
+    for (ImplicitPatch* node = patch; node; node = node->parent) node->_cached = false;
+    _patch = patch;
+    geometryNeedsUpdate = false;
     return patch;
 }
 
