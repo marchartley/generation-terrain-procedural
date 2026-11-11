@@ -228,6 +228,9 @@ public:
 class ImplicitNaryOperator : public ImplicitPatch {
 public:
     ImplicitNaryOperator();
+    ImplicitNaryOperator(const ImplicitNaryOperator& other);
+    ImplicitNaryOperator& operator=(const ImplicitNaryOperator& other);
+    ~ImplicitNaryOperator() override;
 
     float evaluate(const Vector3& pos) const;
     std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
@@ -316,6 +319,7 @@ public:
     void addTransformation(TransformFunction transform, TransformFunction inverse) {
         transformations.emplace_back(std::move(transform), std::move(inverse));
         boundTransformations.emplace_back();
+        operationDescriptions.push_back(nullptr);
         for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
     }
 
@@ -349,7 +353,7 @@ public:
     std::function<float(const Vector3&)> noiseFunction;
     std::vector<UnaryOp> transforms;
 
-//    virtual ImplicitPatch* copy() const;
+    virtual ImplicitPatch* copy() const;
     virtual void addChild(ImplicitPatch* newChild, int index = 0);
     virtual void deleteAllChildren();
 
@@ -373,7 +377,9 @@ public:
     float _spreadingFactor = 0.f;
 
 private:
+    void addDisplacementFunction(TransformFunction displacement, const Vector3& minimum, const Vector3& maximum);
     AABBox transformBounds(AABBox bounds) const;
+    std::vector<nlohmann::json> operationDescriptions;
     std::vector<std::pair<TransformFunction, TransformFunction>> transformations;
     std::vector<std::function<AABBox(const AABBox&)>> boundTransformations;
 };

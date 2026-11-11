@@ -120,7 +120,7 @@ Vector3 ImplicitPatch::getSamplingDimensions() const
 {
     if (typeid(*this) == typeid(ImplicitNaryOperator)) {
         const auto* group = static_cast<const ImplicitNaryOperator*>(this);
-        if (group->composables.size() == 1) return group->composables.front()->getSamplingDimensions();
+        if (group->composables.size() == 1 && group->composables.front()) return group->composables.front()->getSamplingDimensions();
         if (group->composables.empty()) return Vector3(1, 1, 2);
     }
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
@@ -134,10 +134,14 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
 {
     if (const auto* heightTerrain = dynamic_cast<const Implicit2DNary*>(this))
         return heightTerrain->computeHeight(pos) - pos.z();
+    if (const auto* unary = dynamic_cast<const ImplicitUnaryOperator*>(this)) {
+        if (unary->composableA() && unary->_noise.x() == 0.f && unary->noiseFunction(pos) == 0.f)
+            return unary->composableA()->getSignedEvaluation(unary->inverseTransform(pos));
+    }
     // A one-child container must not threshold away the child's exterior field.
     if (typeid(*this) == typeid(ImplicitNaryOperator)) {
         const auto* group = static_cast<const ImplicitNaryOperator*>(this);
-        if (group->composables.size() == 1) return group->composables.front()->getSignedEvaluation(pos);
+        if (group->composables.size() == 1 && group->composables.front()) return group->composables.front()->getSignedEvaluation(pos);
     }
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
         if (primitive->predefinedShape == ImplicitHeightmap && !primitive->cachedHeightmap.empty() &&
@@ -581,7 +585,7 @@ void ImplicitPrimitive::update()
             };
         }
     } else {
-        this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
+        this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided.at(0), this->optionalCurve, dynamic_cast<Implicit2DPrimitive*>(this) != nullptr);
     }
 }
 
@@ -614,6 +618,7 @@ nlohmann::json ImplicitPrimitive::toJson()
     } else {
         content["name"] = this->name;
         content["type"] = "primitive";
+        content["heightfield"] = dynamic_cast<Implicit2DPrimitive*>(this) != nullptr;
         content["position"] = this->position;
         content["dimensions"] = this->dimensions;
         content["supportDimensions"] = this->supportDimensions;
@@ -636,7 +641,8 @@ nlohmann::json ImplicitPrimitive::toJson()
 
 ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
 {
-    ImplicitPrimitive* patch = new ImplicitPrimitive;
+    ImplicitPrimitive* patch = content.value("heightfield", false) ? new Implicit2DPrimitive : new ImplicitPrimitive;
+    std::unique_ptr<ImplicitPrimitive> owner(patch);
     patch->name = content["name"];
     patch->position = content["position"];
     patch->setDimensions(content["dimensions"]);
@@ -646,7 +652,7 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
         patch->material = materialFromString(content["material"]);
     if (content.contains("optionalCurve"))
         patch->optionalCurve = content["optionalCurve"];
-    patch->index = content["index"];
+    patch->setIndex(content["index"]);
     patch->predefinedShape = predefinedShapeFromString(content["shape"]);
     patch->parametersProvided = {content["sigmaValue"]};
     if (content.contains("mirrored"))
@@ -656,7 +662,7 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
     patch->sampledVolume = content.value("sampledVolume", false);
     if (content.contains("samples")) patch->cachedHeightmap = content["samples"].get<GridF>();
     patch->update();
-    return patch;
+    return owner.release();
 }
 
 void ImplicitPrimitive::setDimensions(const Vector3& newDimensions)
@@ -681,8 +687,12 @@ std::vector<ImplicitPatch *> ImplicitPrimitive::findAll(PredefinedShapes shape)
 
 ImplicitPatch *ImplicitPrimitive::copy() const
 {
-    ImplicitPrimitive* copy = new ImplicitPrimitive(*this);
-    copy->update();
+    ImplicitPrimitive* copy = dynamic_cast<const Implicit2DPrimitive*>(this)
+        ? static_cast<ImplicitPrimitive*>(new Implicit2DPrimitive(*static_cast<const Implicit2DPrimitive*>(this)))
+        : new ImplicitPrimitive(*this);
+    copy->parent = nullptr;
+    copy->setIndex();
+    if (copy->predefinedShape != None) copy->update();
     return copy;
 }
 
@@ -1013,13 +1023,14 @@ nlohmann::json ImplicitBinaryOperator::toJson()
 ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
 {
     ImplicitBinaryOperator* patch = new ImplicitBinaryOperator;
+    std::unique_ptr<ImplicitBinaryOperator> owner(patch);
     patch->addChild(ImplicitPatch::fromJson(content["composableA"]), 0); //patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
     patch->addChild(ImplicitPatch::fromJson(content["composableB"]), 1); //patch->composableB() = ImplicitPatch::fromJson(content["composableB"]);
     patch->name = content["name"];
     patch->composeFunction = compositionOperationFromString(content["operator"]);
     patch->blendingFactor = content["blendingFactor"];
     patch->positionalB = positionalLabelFromString(content["positionalB"]);
-    patch->index = content["index"];
+    patch->setIndex(content["index"]);
     if (content.contains("useIntersection"))
         patch->withIntersectionOnB = content["useIntersection"];
     if (content.contains("optionalCurve"))
@@ -1027,7 +1038,7 @@ ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
     patch->update();
-    return patch;
+    return owner.release();
 }
 
 void ImplicitBinaryOperator::updateCache()
@@ -1152,6 +1163,7 @@ void ImplicitUnaryOperator::addTranslation(const Vector3 &translation) {
         return point - translation;
     };
     addTransformation(translationTransform, inverseTranslationTransform);
+    operationDescriptions.back() = {{"kind", "translation"}, {"value", translation}};
 }
 
 void ImplicitUnaryOperator::addRotation(const Vector3& rotationAngles) {
@@ -1167,6 +1179,7 @@ void ImplicitUnaryOperator::addRotation(const Vector3& rotationAngles) {
         return center + Vector3::fromMatrix(inverseRotationMatrix.product((point - center).toMatrix()));
     };
     addTransformation(rotationTransform, inverseRotationTransform);
+    operationDescriptions.back() = {{"kind", "rotation"}, {"value", rotationAngles}};
 }
 
 void ImplicitUnaryOperator::addScaling(const Vector3 &scaleFactors) {
@@ -1184,6 +1197,7 @@ void ImplicitUnaryOperator::addScaling(const Vector3 &scaleFactors) {
         return center + (point - center) / scaleFactors; // Vector3(point.x() / scaleFactors.x, point.y() / scaleFactors.y, point.z() / scaleFactors.z);
     };
     addTransformation(scalingTransform, inverseScalingTransform);
+    operationDescriptions.back() = {{"kind", "scaling"}, {"value", scaleFactors}};
 }
 
 void ImplicitUnaryOperator::addDisplacementField(const GridV3 &displacementField) {
@@ -1194,20 +1208,24 @@ void ImplicitUnaryOperator::addDisplacementField(const GridV3 &displacementField
             throw std::invalid_argument("Nonfinite implicit displacement");
     field->raiseErrorOnBadCoord = false;
     field->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-    auto displacementTransform = [field](const Vector3& point) {
-        return point + field->interpolate(point);
-    };
-    auto inverseDisplacementTransform = [field](const Vector3& target) {
+    addDisplacementFunction([field](const Vector3& point) { return field->interpolate(point); },
+                            Vector3::min(field->data), Vector3::max(field->data));
+    operationDescriptions.back() = {{"kind", "displacement"}, {"field", *field}};
+}
+
+void ImplicitUnaryOperator::addDisplacementFunction(TransformFunction displacement, const Vector3& minimum, const Vector3& maximum)
+{
+    auto forward = [displacement](const Vector3& point) { return point + displacement(point); };
+    auto inverse = [displacement](const Vector3& target) {
         Vector3 point = target;
         for (int iteration = 0; iteration < 100; ++iteration) {
-            Vector3 next = target - field->interpolate(point);
+            Vector3 next = target - displacement(point);
             if ((next - point).length() <= 1e-5f) return next;
             point = next;
         }
         throw std::runtime_error("Implicit displacement inverse did not converge");
     };
-    addTransformation(displacementTransform, inverseDisplacementTransform);
-    Vector3 minimum = Vector3::min(field->data), maximum = Vector3::max(field->data);
+    addTransformation(forward, inverse);
     boundTransformations.back() = [minimum, maximum](const AABBox& box) {
         return AABBox(box.min() + minimum, box.max() + maximum);
     };
@@ -1231,6 +1249,7 @@ Vector3 ImplicitUnaryOperator::inverseTransform(const Vector3& pos) const
 
 std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3& pos) const
 {
+    if (!composableA()) return {};
     auto [value, materials] = composableA()->getMaterialsAndTotalEvaluation(inverseTransform(pos));
     if (value > 0.f) {
         const float noisy = std::clamp(value + noiseFunction(pos), 0.f, 1.f);
@@ -1254,12 +1273,12 @@ AABBox ImplicitUnaryOperator::transformBounds(AABBox bounds) const
 
 AABBox ImplicitUnaryOperator::getSupportBBox() const
 {
-    return transformBounds(composableA()->getSupportBBox());
+    return composableA() ? transformBounds(composableA()->getSupportBBox()) : AABBox(Vector3(), Vector3());
 }
 
 AABBox ImplicitUnaryOperator::getBBox() const
 {
-    return transformBounds(composableA()->getBBox());
+    return composableA() ? transformBounds(composableA()->getBBox()) : AABBox(Vector3(), Vector3());
 }
 
 std::string ImplicitUnaryOperator::toString() const
@@ -1288,6 +1307,10 @@ nlohmann::json ImplicitUnaryOperator::toJson()
         if (this->composableA())
             content["composableA"] = this->composableA()->toJson();
         content["optionalCurve"] = this->optionalCurve;
+        for (const auto& operation : operationDescriptions)
+            if (operation.is_null()) throw std::runtime_error("Cannot serialize an arbitrary implicit transform callback");
+        content["operations"] = operationDescriptions;
+        content["noise"] = _noise;
         content["spreadFactor"] = this->_spreadingFactor;
         content["mirrored"] = this->mirrored;
     }
@@ -1326,24 +1349,39 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
     } else {
         patch = new ImplicitUnaryOperator();
     }
+    std::unique_ptr<ImplicitUnaryOperator> owner(patch);
     patch->addChild(ImplicitPatch::fromJson(content["composableA"]));
-    if (content.contains("spreadFactor") && content["spreadFactor"] != 0)
-        patch->spread(content["spreadFactor"]);
+    translation = content.value("translation", Vector3());
+    rotation = content.value("rotation", Vector3());
+    scale = content.value("scale", Vector3(1, 1, 1));
+    distortion = content.value("distortion", Vector3());
     patch->name = content["name"];
-    patch->index = content["index"];
+    patch->setIndex(content["index"]);
 
-    if (translation != Vector3()) patch->translate(translation);
-    if (scale != Vector3(1.f, 1.f, 1.f)) patch->scale(scale);
-    if (rotation != Vector3()) patch->rotate(rotation);
-    if (noise != Vector3()) patch->addRandomNoise(noise.x(), noise.y(), noise.z());
-//    if (distortion != Vector3()) patch->addRandomWrap(distortion.x, distortion.y, distortion.z);
-    if (distortion != Vector3()) {
-        patch->addWrapFunction(GridV3({
-                                                       { Vector3(0.5, 0, 0), Vector3(0.7, -.2, 0), Vector3(1, -1, 0) },
-                                                       { Vector3(0.0, 0, 0), Vector3(0.7, 0, 0), Vector3(2, 0, 0) },
-                                                       { Vector3(0.5, 0, 0), Vector3(0.7, .2, 0), Vector3(1, 1, 0) }
-         }));
+    if (content.contains("operations")) {
+        for (const auto& operation : content.at("operations")) {
+            const std::string kind = operation.at("kind");
+            if (kind == "translation") patch->translate(operation.at("value").get<Vector3>());
+            else if (kind == "rotation") patch->rotate(operation.at("value").get<Vector3>());
+            else if (kind == "scaling") patch->scale(operation.at("value").get<Vector3>());
+            else if (kind == "displacement") patch->addDisplacementField(operation.at("field").get<GridV3>());
+            else if (kind == "wrap") patch->addWrapFunction(operation.at("field").get<GridV3>());
+            else if (kind == "spread") patch->spread(operation.at("value"));
+            else if (kind == "wavelets") patch->addWavelets();
+            else if (kind == "randomWrap") {
+                const Vector3 value = operation.at("value");
+                patch->addRandomWrap(value.x(), value.y(), value.z());
+            } else throw std::invalid_argument("Unknown serialized implicit transformation: " + kind);
+        }
+    } else {
+        if (translation != Vector3()) patch->translate(translation);
+        if (scale != Vector3(1, 1, 1)) patch->scale(scale);
+        if (rotation != Vector3()) patch->rotate(rotation);
+        if (distortion != Vector3()) patch->addRandomWrap(distortion.x(), distortion.y(), distortion.z());
+        if (content.contains("spreadFactor") && content["spreadFactor"] != 0) patch->spread(content["spreadFactor"]);
     }
+    if (content.contains("noise")) noise = content["noise"];
+    if (noise != Vector3()) patch->addRandomNoise(noise.x(), noise.y(), noise.z());
 
     if (content.contains("optionalCurve"))
         patch->optionalCurve = content["optionalCurve"];
@@ -1351,7 +1389,24 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
         patch->mirrored = content["mirrored"];
 
     patch->update();
-    return patch;
+    return owner.release();
+}
+
+ImplicitPatch* ImplicitUnaryOperator::copy() const
+{
+    auto* result = ImplicitUnaryOperator::fromJson(const_cast<ImplicitUnaryOperator*>(this)->toJson());
+    auto* unary = static_cast<ImplicitUnaryOperator*>(result);
+    unary->deleteAllChildren();
+    if (composableA()) unary->addChild(composableA()->copy());
+    result->parent = nullptr;
+    std::vector<ImplicitPatch*> nodes{result};
+    while (!nodes.empty()) {
+        auto* node = nodes.back(); nodes.pop_back();
+        node->setIndex();
+        if (auto* group = dynamic_cast<ImplicitNaryOperator*>(node))
+            for (auto* child : group->composables) if (child) nodes.push_back(child);
+    }
+    return result;
 }
 
 bool ImplicitUnaryOperator::contains(PredefinedShapes shape)
@@ -1429,42 +1484,76 @@ void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float 
 
 void ImplicitUnaryOperator::addRandomWrap(float amplitude, float period, float offset)
 {
-    this->_distortion = Vector3(amplitude, period, offset);
+    if (!std::isfinite(amplitude) || !std::isfinite(period) || !std::isfinite(offset))
+        throw std::invalid_argument("Nonfinite implicit noise displacement");
+    _distortion = Vector3(amplitude, period, offset);
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    this->transforms.push_back(UnaryOpWrap(noise, Vector3(amplitude, period, offset)));
+    auto displacement = [noise, amplitude, period, offset](const Vector3& p) mutable {
+        return Vector3(1, 1, 1) * (amplitude * noise.GetNoise(p.x() * period + offset,
+                                                          p.y() * period + offset, p.z() * period + offset));
+    };
+    const Vector3 margin( std::abs(amplitude), std::abs(amplitude), std::abs(amplitude));
+    addDisplacementFunction(displacement, -margin, margin);
+    operationDescriptions.back() = {{"kind", "randomWrap"}, {"value", _distortion}};
 }
 
-void ImplicitUnaryOperator::addWrapFunction(GridV3 func)
+void ImplicitUnaryOperator::addWrapFunction(GridV3 field)
 {
-//    AABBox dims = this->getSupportBBox();
-    this->transforms.push_back(UnaryOpWrap([=](const Vector3& pos) -> Vector3 {
-        auto f = func;
-        auto supportBBox = this->composableA()->getSupportBBox();
-        Vector3 normalizedPos = supportBBox.normalize(pos);
-        Vector3 posInMatrix = normalizedPos * (f.getDimensions() - Vector3(1, 1, 1));
-        Vector3 distortionValue = f.interpolate(posInMatrix);
-//        if (pos.z() == 0) //std::abs(normalizedPos.xy().maxComp() - 2.f/3.f) < 0.01f || std::abs(normalizedPos.xy().minComp() - 1.f/3.f) < 0.01f)
-//            std::cout << "Pos: " << normalizedPos << " -> " << posInMatrix << ": " << distortionValue << std::endl;
-        return distortionValue * supportBBox.dimensions();
-    }));
+    if (field.empty() || !composableA()) throw std::invalid_argument("Wrapping requires a field and child");
+    const AABBox domain = composableA()->getSupportBBox();
+    for (const auto& value : field)
+        if (!value.isValid() || !std::isfinite(value.x()) || !std::isfinite(value.y()) || !std::isfinite(value.z()))
+            throw std::invalid_argument("Nonfinite implicit wrap displacement");
+    if (domain.dimensions().minComp() <= 0.f) throw std::invalid_argument("Degenerate wrap domain");
+    field.raiseErrorOnBadCoord = false;
+    field.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    const Vector3 minimum = Vector3::min(field.data) * domain.dimensions();
+    const Vector3 maximum = Vector3::max(field.data) * domain.dimensions();
+    addDisplacementFunction([field, domain](const Vector3& point) {
+        const Vector3 uv = Vector3::min(Vector3(1, 1, 1), Vector3::max(Vector3(), ((point - domain.min()) / domain.dimensions())));
+        return field.interpolate(uv * (field.getDimensions() - Vector3(1, 1, 1))) * domain.dimensions();
+    }, minimum, maximum);
+    operationDescriptions.back() = {{"kind", "wrap"}, {"field", field}};
 }
 
 void ImplicitUnaryOperator::spread(float factor)
 {
-    this->_spreadingFactor += factor;
-    float newSpreadFactor = this->_spreadingFactor;
-    auto BBox = this->getBBox();
-    Vector3 center = BBox.center().xy();
-    this->transforms.push_back(UnaryOpSpread(BBox, factor));
+    if (!composableA() || !std::isfinite(factor) || std::abs(factor) > 10.f)
+        throw std::invalid_argument("Spreading requires a child and a finite factor in [-10,10]");
+    const auto box = getBBox();
+    if (box.dimensions().z() <= 0.f) throw std::invalid_argument("Degenerate spreading height");
+    // Exponential radial stretch stays invertible for both positive and
+    // negative factors. Z is unchanged, so the inverse is analytic.
+    auto stretch = [box, factor](const Vector3& point, bool inverse) {
+        const float h = std::clamp((point.z() - box.min().z()) / box.dimensions().z(), 0.f, 1.f);
+        const float scale = std::exp((inverse ? -factor : factor) * (1.f - 2.f * h));
+        const auto center = box.center();
+        return Vector3(center.x() + (point.x() - center.x()) * scale,
+                       center.y() + (point.y() - center.y()) * scale, point.z());
+    };
+    addTransformation([stretch](const Vector3& p) { return stretch(p, false); },
+                      [stretch](const Vector3& p) { return stretch(p, true); });
+    const float maximumScale = std::exp(std::abs(factor));
+    boundTransformations.back() = [box, maximumScale](const AABBox& input) {
+        const auto center = box.center();
+        const float rx = std::max(std::abs(input.min().x() - center.x()), std::abs(input.max().x() - center.x())) * maximumScale;
+        const float ry = std::max(std::abs(input.min().y() - center.y()), std::abs(input.max().y() - center.y())) * maximumScale;
+        return AABBox(Vector3(center.x() - rx, center.y() - ry, input.min().z()),
+                      Vector3(center.x() + rx, center.y() + ry, input.max().z()));
+    };
+    _spreadingFactor += factor;
+    operationDescriptions.back() = {{"kind", "spread"}, {"value", factor}};
 }
 
 void ImplicitUnaryOperator::addWavelets()
 {
-    this->transforms.push_back(UnaryOpWrap(
-                                   [](const Vector3& pos) -> Vector3 {
-                                   return Vector3(0, 0, .5f * std::cos(pos.x() * 1.f));
-                               }));
+    addTransformation([](const Vector3& p) { return p + Vector3(0, 0, .5f * std::cos(p.x())); },
+                      [](const Vector3& p) { return p - Vector3(0, 0, .5f * std::cos(p.x())); });
+    boundTransformations.back() = [](const AABBox& box) {
+        return AABBox(box.min() - Vector3(0, 0, .5f), box.max() + Vector3(0, 0, .5f));
+    };
+    operationDescriptions.back() = {{"kind", "wavelets"}};
 }
 
 
@@ -1853,6 +1942,7 @@ std::function<float (const Vector3&)> ImplicitPatch::convert2DfunctionTo3Dfuncti
 {
     std::function<float (const Vector3&)> _3Dfunction = [func](const Vector3& pos) {
         float height = func(pos);
+        if (!std::isfinite(height) || height <= 0.f) return 0.f;
         float inverse_isovalue = .5f - (pos.z() / height); //height * .5f - pos.z;
         float isovalue = 1.f - std::abs(inverse_isovalue);
         return std::max(0.f, isovalue);
@@ -2293,6 +2383,43 @@ ImplicitNaryOperator::ImplicitNaryOperator()
 
 }
 
+ImplicitNaryOperator::ImplicitNaryOperator(const ImplicitNaryOperator& other)
+    : ImplicitPatch(other)
+{
+    parent = nullptr;
+    setIndex();
+    try {
+        for (auto* child : other.composables) {
+            composables.push_back(child ? child->copy() : nullptr);
+            if (composables.back()) composables.back()->parent = this;
+        }
+    } catch (...) {
+        ImplicitNaryOperator::deleteAllChildren();
+        throw;
+    }
+}
+
+ImplicitNaryOperator& ImplicitNaryOperator::operator=(const ImplicitNaryOperator& other)
+{
+    if (&other == this) return *this;
+    // Snapshot before deletion: the source may itself be a descendant.
+    ImplicitNaryOperator replacement(other);
+    auto* oldParent = parent;
+    const int oldIndex = index;
+    ImplicitNaryOperator::deleteAllChildren();
+    ImplicitPatch::operator=(replacement);
+    parent = oldParent;
+    index = oldIndex;
+    composables.swap(replacement.composables);
+    for (auto* child : composables) if (child) child->parent = this;
+    return *this;
+}
+
+ImplicitNaryOperator::~ImplicitNaryOperator()
+{
+    ImplicitNaryOperator::deleteAllChildren();
+}
+
 float ImplicitNaryOperator::evaluate(const Vector3& pos) const
 {
     return getMaterialsAndTotalEvaluation(pos).first;
@@ -2303,6 +2430,7 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
     std::map<TerrainTypes, float> exterior;
     float strongestExterior = 0.f;
     for (int i = int(composables.size()) - 1; i >= 0; --i) {
+        if (!composables[i]) continue;
         auto materials = composables[i]->getMaterials(pos);
         float value = 0.f;
         for (const auto& [material, amount] : materials)
@@ -2323,10 +2451,12 @@ AABBox ImplicitNaryOperator::getSupportBBox() const
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {
+        if (!compo) continue;
         auto BBox = compo->getSupportBBox();
         minPos = Vector3::min(minPos, BBox.min());
         maxPos = Vector3::max(maxPos, BBox.max());
     }
+    if (!minPos.isValid() || !maxPos.isValid()) return AABBox(Vector3(), Vector3());
     return {minPos, maxPos};
 }
 
@@ -2334,10 +2464,12 @@ AABBox ImplicitNaryOperator::getBBox() const
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {
+        if (!compo) continue;
         auto BBox = compo->getBBox();
         minPos = Vector3::min(minPos, BBox.min());
         maxPos = Vector3::max(maxPos, BBox.max());
     }
+    if (!minPos.isValid() || !maxPos.isValid()) return AABBox(Vector3(), Vector3());
     return {minPos, maxPos};
 }
 
@@ -2350,7 +2482,7 @@ std::string ImplicitNaryOperator::toString() const
 {
     std::vector<std::string> compoNames;
     for (auto& compo : this->composables)
-        compoNames.push_back(compo->name);
+        if (compo) compoNames.push_back(compo->name);
     return this->name + ": N-operation between " + join(compoNames, ",");
 }
 
@@ -2361,13 +2493,14 @@ nlohmann::json ImplicitNaryOperator::toJson()
         content["file"] = this->used_json_filename;
     } else {
         content["type"] = "nary";
+        content["heightfield"] = dynamic_cast<Implicit2DNary*>(this) != nullptr;
         content["name"] = this->name;
         content["index"] = this->index;
         content["optionalCurve"] = this->optionalCurve;
         content["mirrored"] = this->mirrored;
         std::vector<nlohmann::json> composableJson;
         for (auto& compo : this->composables)
-            composableJson.push_back(compo->toJson());
+            if (compo) composableJson.push_back(compo->toJson());
         content["composables"] = composableJson;
     }
 
@@ -2376,24 +2509,25 @@ nlohmann::json ImplicitNaryOperator::toJson()
 
 ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
 {
-    ImplicitNaryOperator* patch = new ImplicitNaryOperator;
+    ImplicitNaryOperator* patch = content.value("heightfield", false) ? new Implicit2DNary : new ImplicitNaryOperator;
+    std::unique_ptr<ImplicitNaryOperator> owner(patch);
     for (auto& compoJson : content["composables"]) {
         patch->addChild(ImplicitPatch::fromJson(compoJson));
     }
     patch->name = content["name"];
-    patch->index = content["index"];
+    patch->setIndex(content["index"]);
     if (content.contains("optionalCurve"))
         patch->optionalCurve = content["optionalCurve"];
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
     patch->update();
-    return patch;
+    return owner.release();
 }
 
 bool ImplicitNaryOperator::contains(PredefinedShapes shape)
 {
     for (auto& compo : composables)
-        if (compo->contains(shape))
+        if (compo && compo->contains(shape))
             return true;
     return false;
 }
@@ -2402,7 +2536,7 @@ std::vector<ImplicitPatch *> ImplicitNaryOperator::findAll(PredefinedShapes shap
 {
     std::vector<ImplicitPatch*> res;
     for (auto& compo : this->composables)
-        res = vectorMerge(res, compo->findAll(shape));
+        if (compo) res = vectorMerge(res, compo->findAll(shape));
     return res;
 }
 
@@ -2433,11 +2567,12 @@ void ImplicitNaryOperator::updateCache()
 {
     ImplicitPatch::updateCache();
     for (auto& compo : this->composables)
-        compo->updateCache();
+        if (compo) compo->updateCache();
 }
 
 ImplicitPatch *ImplicitNaryOperator::copy() const
 {
+    if (const auto* heightfield = dynamic_cast<const Implicit2DNary*>(this)) return new Implicit2DNary(*heightfield);
     return new ImplicitNaryOperator(*this);
 }
 
@@ -2448,15 +2583,27 @@ void ImplicitNaryOperator::addChild(ImplicitPatch *newChild, int index)
         throw std::out_of_range("Implicit child index outside the existing slots");
     for (ImplicitPatch* ancestor = this; ancestor; ancestor = ancestor->parent)
         if (ancestor == newChild) throw std::invalid_argument("Implicit child would create a cycle");
-    if (index == -1) {
-        this->composables.push_back(newChild);
-    } else {
-        if (composables[index] && composables[index]->parent == this)
-            this->composables[index]->parent = nullptr;
-        this->composables[index] = newChild;
+    const auto existing = std::find(composables.begin(), composables.end(), newChild);
+    if (existing != composables.end()) {
+        if (index >= 0 && size_t(index) == size_t(existing - composables.begin())) return;
+        throw std::invalid_argument("An implicit node cannot own the same child twice");
     }
-    newChild->setParent(this);
-//    std::cout << newChild->toString() << " is now child of " << this->toString() << std::endl;
+    // Allocate before detaching so a failed append leaves the source intact.
+    if (index == -1) composables.reserve(composables.size() + 1);
+    if (auto* previousParent = newChild->parent) {
+        auto slot = std::find(previousParent->composables.begin(), previousParent->composables.end(), newChild);
+        if (slot == previousParent->composables.end())
+            throw std::logic_error("Implicit parent does not contain its child");
+        *slot = nullptr; // Preserve fixed-arity slots during wrapping/replacement.
+        for (ImplicitPatch* node = previousParent; node; node = node->parent) node->_cached = false;
+    }
+    if (index == -1) composables.push_back(newChild);
+    else {
+        if (composables[index] && composables[index]->parent == this) composables[index]->parent = nullptr;
+        composables[index] = newChild;
+    }
+    newChild->parent = this;
+    for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
 }
 
 void ImplicitNaryOperator::deleteAllChildren()
@@ -2559,23 +2706,17 @@ std::pair<float, std::map<TerrainTypes, float> > Implicit2DNary::getMaterialsAnd
 
 float Implicit2DNary::evaluate(const Vector3 &pos) const
 {
-    if (_cached)
-        return _cachedMaxHeight(pos.xy());
-    float res = (pos.z() < computeHeight(pos) ? 1.f : 0.f);
-    return res;
+    return computeHeight(pos) > pos.z() ? 1.f : 0.f;
 }
 
 GridF Implicit2DNary::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
-    if (!_cached || _cachedMaxHeight.empty()) reevaluateAll();
-    const Vector3 extent = dimensions.isValid() ? dimensions :
-        Vector3(getSizeX(), getSizeY(), std::max(2.f, std::ceil(_cachedMaxHeight.max()) + 2.f));
-    return TerrainSampling::heightField(_cachedMaxHeight, extent, scale);
+    return ImplicitPatch::getVoxelized(dimensions, scale);
 }
 
 bool Implicit2DNary::contains(const Vector3 &v)
 {
-    return this->getHeight(v) <= v.z();
+    return computeHeight(v) > v.z();
 }
 
 bool Implicit2DNary::checkIsInGround(const Vector3 &position)
@@ -2585,17 +2726,16 @@ bool Implicit2DNary::checkIsInGround(const Vector3 &position)
 
 Vector3 Implicit2DNary::getNormal(const Vector3 &pos) const
 {
-    float x0 = evaluate(Vector3(pos.x() - 1, pos.y()));
-    float x1 = evaluate(Vector3(pos.x() + 1, pos.y()));
-    float y0 = evaluate(Vector3(pos.x(), pos.y() - 1));
-    float y1 = evaluate(Vector3(pos.x(), pos.y() + 1));
-
-    return Vector3(x1 - x0, y1 - y0, 2.f).normalized();
+    const float x0 = computeHeight(pos - Vector3(1, 0));
+    const float x1 = computeHeight(pos + Vector3(1, 0));
+    const float y0 = computeHeight(pos - Vector3(0, 1));
+    const float y1 = computeHeight(pos + Vector3(0, 1));
+    return Vector3(x0 - x1, y0 - y1, 2.f).normalized();
 }
 
 float Implicit2DNary::getMaxHeight(const Vector3 &pos)
 {
-    return this->evaluate(pos);
+    return computeHeight(pos);
 }
 
 float Implicit2DNary::getMinHeight(const Vector3 &pos)
@@ -2610,9 +2750,7 @@ float Implicit2DNary::getMinimalHeight(const Vector3 &minBox, const Vector3 &max
 
 float Implicit2DNary::getMaximalHeight(const Vector3 &minBox, const Vector3 &maxBox)
 {
-    if (!_cached)
-        this->reevaluateAll();
-    return this->_cachedMaxHeight.max();
+    return ImplicitPatch::getMaximalHeight(minBox, maxBox);
 }
 
 void Implicit2DNary::reevaluateAll()
