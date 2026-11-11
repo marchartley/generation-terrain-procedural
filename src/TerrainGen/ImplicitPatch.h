@@ -100,8 +100,8 @@ public:
     virtual bool undo() { return false; }
     virtual bool redo() { return false; }
 
-    virtual void saveMap([[maybe_unused]] const std::string& filename) { }
-    virtual void retrieveMap(const std::string& filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
+    virtual void saveMap(const std::string& filename);
+    virtual void retrieveMap(const std::string& filename);
     virtual Mesh getGeometry(const Vector3& dimensions = Vector3::invalid);
 
     virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3 &minPos = Vector3::invalid, const Vector3 &maxPos = Vector3::invalid);
@@ -133,6 +133,7 @@ public:
     bool mirrored = false;
 
     std::string used_json_filename = "";
+    nlohmann::json referenceProperties = nlohmann::json::object();
 
     CatmullRomSpline optionalCurve;
 
@@ -315,6 +316,8 @@ public:
     using TransformFunction = std::function<Vector3(const Vector3&)>;
 
     ImplicitUnaryOperator();
+    ImplicitUnaryOperator(const ImplicitUnaryOperator&) = delete;
+    ImplicitUnaryOperator& operator=(const ImplicitUnaryOperator&) = delete;
 
     void addTransformation(TransformFunction transform, TransformFunction inverse) {
         transformations.emplace_back(std::move(transform), std::move(inverse));

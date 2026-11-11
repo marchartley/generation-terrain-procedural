@@ -11,6 +11,8 @@
 
 #include "serialization/Serializer.h"
 #include <memory>
+#include <filesystem>
+#include <QSaveFile>
 
 float ImplicitPatch::isovalue = .5f;
 const float ImplicitPatch::zResolution = .1f;
@@ -31,6 +33,12 @@ ImplicitPatch::ImplicitPatch()
 }
 
 namespace {
+thread_local bool snapshotSerialization = false;
+struct SnapshotScope {
+    bool previous = snapshotSerialization;
+    SnapshotScope() { snapshotSerialization = true; }
+    ~SnapshotScope() { snapshotSerialization = previous; }
+};
 float implicitColumnBoundary(const ImplicitPatch& patch, const Vector3& position, bool top)
 {
     const auto bounds = patch.getSupportBBox();
@@ -229,35 +237,117 @@ void ImplicitPatch::setIndex(int newIndex)
 
 ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
 {
-    ImplicitPatch* result = nullptr;
+    namespace fs = std::filesystem;
+    static thread_local unsigned depth = 0;
+    static thread_local std::vector<fs::path> includes;
+    if (depth >= 256) throw std::invalid_argument("Implicit JSON nesting exceeds 256 nodes");
+    struct DepthScope { unsigned& value; explicit DepthScope(unsigned& v) : value(v) { ++value; } ~DepthScope() { --value; } } scope(depth);
+    if (!content.is_object()) throw std::invalid_argument("Implicit JSON node must be an object");
+    if (content.contains(json_identifier)) {
+        if (content.value("schemaVersion", 1) != 1) throw std::invalid_argument("Unsupported implicit JSON schema version");
+        return fromJson(content.at(json_identifier));
+    }
+    std::unique_ptr<ImplicitPatch> result;
     if (content.contains("type")) {
-        std::string type = toUpper(content["type"]);
-        if (type == "PRIMITIVE")
-            result = ImplicitPrimitive::fromJson(content);
-        else if (type == "COMPOSE" || type == "BINARY")
-            result = ImplicitBinaryOperator::fromJson(content);
-        else if (type == "UNARY")
-            result = ImplicitUnaryOperator::fromJson(content);
-        else if (type == "NARY")
-            result = ImplicitNaryOperator::fromJson(content);
+        const std::string type = toUpper(content.at("type"));
+        if (type == "PRIMITIVE") result.reset(ImplicitPrimitive::fromJson(content));
+        else if (type == "COMPOSE" || type == "BINARY") result.reset(ImplicitBinaryOperator::fromJson(content));
+        else if (type == "UNARY") result.reset(ImplicitUnaryOperator::fromJson(content));
+        else if (type == "NARY") result.reset(ImplicitNaryOperator::fromJson(content));
+        else throw std::invalid_argument("Unknown implicit JSON node type: " + type);
     } else if (content.contains("file")) {
-        std::string filename = content["file"];
-        if (filename.substr(filename.size() - 5) == ".json") {
-            nlohmann::json newContent = nlohmann::json::parse(std::ifstream(filename));
-            result = ImplicitPatch::fromJson(newContent[ImplicitPatch::json_identifier]);
-        } else {
-            Vector3 dimensions = content["dimensions"];
-            TerrainTypes material = materialFromString(content["material"]);
-            result = ImplicitPrimitive::fromHeightmap(filename, dimensions);
-            dynamic_cast<ImplicitPrimitive*>(result)->material = material;
+        fs::path path(content.at("file").get<std::string>());
+        if (path.empty()) throw std::invalid_argument("Empty implicit include filename");
+        if (path.is_relative() && !includes.empty()) {
+            const auto relative = includes.back().parent_path() / path;
+            if (fs::exists(relative)) path = relative;
         }
-        result->used_json_filename = filename;
-        return result;
-    }
-    if (result != nullptr) {
-        result->updateCache();
-    }
-    return result;
+        if (!fs::exists(path)) throw std::runtime_error("Implicit file not found: " + path.string());
+        path = fs::canonical(path);
+        if (std::find(includes.begin(), includes.end(), path) != includes.end())
+            throw std::invalid_argument("Recursive implicit file include: " + path.string());
+        includes.push_back(path);
+        struct IncludeScope { std::vector<fs::path>& paths; ~IncludeScope() { paths.pop_back(); } } includeScope{includes};
+        const bool jsonFile = toUpper(path.extension().string()) == ".JSON";
+        if (jsonFile) {
+            std::ifstream input(path);
+            if (!input) throw std::runtime_error("Cannot read implicit file: " + path.string());
+            result.reset(fromJson(nlohmann::json::parse(input)));
+        } else {
+            result.reset(ImplicitPrimitive::fromHeightmap(path.string(), content.value("dimensions", Vector3::invalid)));
+        }
+        if (content.contains("material")) {
+            const auto material = materialFromString(content.at("material"));
+            std::vector<ImplicitPatch*> nodes{result.get()};
+            while (!nodes.empty()) {
+                auto* node = nodes.back(); nodes.pop_back();
+                if (auto* primitive = dynamic_cast<ImplicitPrimitive*>(node)) primitive->material = material;
+                if (auto* group = dynamic_cast<ImplicitNaryOperator*>(node))
+                    for (auto* child : group->composables) if (child) nodes.push_back(child);
+            }
+        }
+        const auto originalBounds = result->getBBox();
+        const Vector3 desiredPosition = content.value("position", originalBounds.min());
+        const Vector3 desiredDimensions = content.value("dimensions", originalBounds.dimensions());
+        if (jsonFile && desiredDimensions != originalBounds.dimensions()) {
+            if (originalBounds.dimensions().minComp() <= 0.f || desiredDimensions.minComp() <= 0.f)
+                throw std::invalid_argument("Cannot resize a degenerate implicit include");
+            auto wrapper = std::make_unique<ImplicitUnaryOperator>();
+            wrapper->addChild(result.release());
+            wrapper->scale(desiredDimensions / originalBounds.dimensions());
+            result = std::move(wrapper);
+        }
+        if (desiredPosition != result->getBBox().min()) {
+            if (auto* primitive = dynamic_cast<ImplicitPrimitive*>(result.get())) primitive->position += desiredPosition - result->getBBox().min();
+            else {
+                const Vector3 shift = desiredPosition - result->getBBox().min();
+                auto wrapper = std::make_unique<ImplicitTranslation>();
+                wrapper->addChild(result.release());
+                wrapper->translate(shift);
+                result = std::move(wrapper);
+            }
+        }
+        result->used_json_filename = path.string();
+        result->referenceProperties = content;
+    } else throw std::invalid_argument("Implicit JSON node requires a type or file");
+    result->updateCache();
+    return result.release();
+}
+
+void ImplicitPatch::saveMap(const std::string& filename)
+{
+    const std::string payload = nlohmann::json({{"schemaVersion", 1}, {json_identifier, toJson()}}).dump(1, '\t');
+    QSaveFile file(QString::fromStdString(filename));
+    if (!file.open(QIODevice::WriteOnly) || file.write(payload.data(), qint64(payload.size())) != qint64(payload.size()) || !file.commit())
+        throw std::runtime_error("Cannot atomically save implicit terrain: " + filename);
+}
+
+void ImplicitPatch::retrieveMap(const std::string& filename)
+{
+    std::unique_ptr<ImplicitPatch> decoded(fromJson({{"file", filename}}));
+    if (typeid(*this) == typeid(ImplicitNaryOperator) || typeid(*this) == typeid(Implicit2DNary)) {
+        auto* target = static_cast<ImplicitNaryOperator*>(this);
+        if (typeid(*decoded) == typeid(*this)) *target = *static_cast<ImplicitNaryOperator*>(decoded.get());
+        else {
+            ImplicitNaryOperator replacement;
+            replacement.addChild(decoded.release());
+            *target = replacement;
+        }
+    } else if (auto* target = dynamic_cast<ImplicitPrimitive*>(this)) {
+        auto* source = dynamic_cast<ImplicitPrimitive*>(decoded.get());
+        if (!source || typeid(*target) != typeid(*source)) throw std::invalid_argument("Implicit load cannot change the receiver's primitive type");
+        auto* oldParent = parent;
+        const int oldIndex = index;
+        *target = *source;
+        parent = oldParent;
+        index = oldIndex;
+        target->update();
+    } else throw std::invalid_argument("Load transformed terrain through an implicit root container");
+    // Loading a whole map creates an editable snapshot rather than an include
+    // that would serialize back to the map's own filename.
+    used_json_filename.clear();
+    referenceProperties = nlohmann::json::object();
+    updateCache();
 }
 
 void ImplicitPatch::updateCache()
@@ -601,7 +691,8 @@ std::string ImplicitPrimitive::toString() const
 nlohmann::json ImplicitPrimitive::toJson()
 {
     nlohmann::json content;
-    if (!this->used_json_filename.empty()) {
+    if (!this->used_json_filename.empty() && !snapshotSerialization) {
+        content = referenceProperties;
         content["file"] = this->used_json_filename;
         content["position"] = this->position;
         content["dimensions"] = this->dimensions;
@@ -990,7 +1081,8 @@ std::string ImplicitBinaryOperator::toString() const
 nlohmann::json ImplicitBinaryOperator::toJson()
 {
     nlohmann::json content;
-    if (!this->used_json_filename.empty()) {
+    if (!this->used_json_filename.empty() && !snapshotSerialization) {
+        content = referenceProperties;
         content["file"] = this->used_json_filename;
         /*std::ifstream file(this->used_json_filename);
         nlohmann::json old_json_content = nlohmann::json::parse(file);
@@ -1289,7 +1381,8 @@ std::string ImplicitUnaryOperator::toString() const
 nlohmann::json ImplicitUnaryOperator::toJson()
 {
     nlohmann::json content;
-    if (!this->used_json_filename.empty()) {
+    if (!this->used_json_filename.empty() && !snapshotSerialization) {
+        content = referenceProperties;
         content["file"] = this->used_json_filename;
         /*std::ifstream file(this->used_json_filename);
         nlohmann::json old_json_content = nlohmann::json::parse(file);
@@ -1394,6 +1487,7 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
 
 ImplicitPatch* ImplicitUnaryOperator::copy() const
 {
+    SnapshotScope snapshot;
     auto* result = ImplicitUnaryOperator::fromJson(const_cast<ImplicitUnaryOperator*>(this)->toJson());
     auto* unary = static_cast<ImplicitUnaryOperator*>(result);
     unary->deleteAllChildren();
@@ -2165,8 +2259,7 @@ ImplicitPatch::CompositionFunction compositionOperationFromString(const std::str
         return ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND;
 
     // Error
-    std::cerr << "Wrong operation string given" << std::endl;
-    return ImplicitPatch::CompositionFunction::NONE;
+    throw std::invalid_argument("Unknown implicit composition: " + name);
 }
 
 std::string stringFromCompositionOperation(ImplicitPatch::CompositionFunction operation)
@@ -2228,8 +2321,7 @@ ImplicitPatch::PredefinedShapes predefinedShapeFromString(const std::string& _na
         return ImplicitPatch::PredefinedShapes::DistanceMap;
 
     // Error
-    std::cerr << "Wrong predefined shape string given. (" << name << ")" << std::endl;
-    return ImplicitPatch::PredefinedShapes::Sphere;
+    throw std::invalid_argument("Unknown implicit shape: " + name);
 }
 
 std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape)
@@ -2292,8 +2384,7 @@ ImplicitPatch::PositionalLabel positionalLabelFromString(const std::string& _nam
         return ImplicitPatch::PositionalLabel::SMOOTH_ABOVE;
 
     // Error
-    std::cerr << "Wrong positional label string given. (" << name << ")" << std::endl;
-    return ImplicitPatch::PositionalLabel::ABOVE;
+    throw std::invalid_argument("Unknown implicit positional label: " + name);
 }
 
 std::string stringFromPositionalLabel(ImplicitPatch::PositionalLabel label)
@@ -2340,8 +2431,7 @@ TerrainTypes materialFromString(const std::string& _name)
         return BEDROCK;
 
     // Impossible
-    std::cerr << "Unknown material string given. (" << name << ")" << std::endl;
-    return LAST;
+    throw std::invalid_argument("Unknown implicit material: " + name);
 }
 
 std::string stringFromMaterial(TerrainTypes material)
@@ -2489,7 +2579,8 @@ std::string ImplicitNaryOperator::toString() const
 nlohmann::json ImplicitNaryOperator::toJson()
 {
     nlohmann::json content;
-    if (!this->used_json_filename.empty()) {
+    if (!this->used_json_filename.empty() && !snapshotSerialization) {
+        content = referenceProperties;
         content["file"] = this->used_json_filename;
     } else {
         content["type"] = "nary";

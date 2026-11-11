@@ -227,6 +227,7 @@ void LayerBasedGrid::fromImplicit(ImplicitPatch* implicitTerrain)
     while (typeid(*materialSource) == typeid(ImplicitNaryOperator)) {
         const auto* group = static_cast<const ImplicitNaryOperator*>(materialSource);
         if (group->composables.size() != 1) break;
+        if (!group->composables.front()) break;
         materialSource = group->composables.front();
     }
     auto materialAt = [&](int x, int y, float z) {
