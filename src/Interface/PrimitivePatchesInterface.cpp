@@ -146,6 +146,8 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     auto blendingButton = new RadioButtonElement("Blend", ImplicitPatch::CompositionFunction::BLEND, currentOperation);
     auto replacingButton = new RadioButtonElement("Replace", ImplicitPatch::CompositionFunction::REPLACE, currentOperation);
     auto oneSideBlendButton = new RadioButtonElement("1-blend", ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND, currentOperation);
+    auto differenceButton = new RadioButtonElement("A minus B", ImplicitPatch::DIFFERENCE, currentOperation);
+    auto intersectionButton = new RadioButtonElement("A intersect B", ImplicitPatch::INTERSECTION, currentOperation);
 
     auto abovePosButton = new RadioButtonElement("Above", ImplicitPatch::PositionalLabel::ABOVE, currentPositioning);
     auto insideTopPosButton = new RadioButtonElement("Inside top", ImplicitPatch::PositionalLabel::INSIDE_TOP, currentPositioning);
@@ -195,7 +197,7 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Bedrock", TerrainTypes::BEDROCK));
     densityCombobox->setOnSelectionChanged([=](int) { this->selectedTerrainType = densityCombobox->getSelection<TerrainTypes>(); });
 
-    auto applyIntersectionButton = new CheckboxElement("Intersection", applyIntersection);
+    auto applyIntersectionButton = new CheckboxElement("Always intersect", applyIntersection);
 
     auto createStructureButton = new ButtonElement("Auto gen.", [=]() { this->structureAutoGeneration(); });
 
@@ -212,6 +214,8 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
         blendingButton,
         replacingButton,
         oneSideBlendButton,
+        differenceButton,
+        intersectionButton,
 
         abovePosButton,
         insideTopPosButton,
@@ -1802,6 +1806,8 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         auto blendingButton = new RadioButtonElement("Blend", ImplicitPatch::CompositionFunction::BLEND, patchAsBinary->composeFunction);
         auto replacingButton = new RadioButtonElement("Replace", ImplicitPatch::CompositionFunction::REPLACE, patchAsBinary->composeFunction);
         auto oneSideBlendButton = new RadioButtonElement("1-blend", ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND, patchAsBinary->composeFunction);
+        auto differenceButton = new RadioButtonElement("A minus B", ImplicitPatch::DIFFERENCE, patchAsBinary->composeFunction);
+        auto intersectionButton = new RadioButtonElement("A intersect B", ImplicitPatch::INTERSECTION, patchAsBinary->composeFunction);
 
         auto abovePosButton = new RadioButtonElement("Above", ImplicitPatch::PositionalLabel::ABOVE, patchAsBinary->positionalB);
         auto insideTopPosButton = new RadioButtonElement("Inside top", ImplicitPatch::PositionalLabel::INSIDE_TOP, patchAsBinary->positionalB);
@@ -1809,7 +1815,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         auto fixedPosButton = new RadioButtonElement("Fixed", ImplicitPatch::PositionalLabel::FIXED_POS, patchAsBinary->positionalB);
 
         auto blendingFactorSlider = new SliderElement("Blend factor", 0.1f, 10.f, .1f, patchAsBinary->blendingFactor);
-        auto applyIntersectionButton = new CheckboxElement("Intersection", patchAsBinary->withIntersectionOnB);
+        auto applyIntersectionButton = new CheckboxElement("Always intersect", patchAsBinary->withIntersectionOnB);
         auto swapButton = new ButtonElement("Swap A and B", [=]() { patchAsBinary->swapAB(); });
 
         /*
@@ -1836,6 +1842,8 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
             blendingButton,
             replacingButton,
             oneSideBlendButton,
+            differenceButton,
+            intersectionButton,
 
             abovePosButton,
             insideTopPosButton,

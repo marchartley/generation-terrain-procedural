@@ -6,8 +6,6 @@ class ImplicitPrimitive;
 class ImplicitBinaryOperator;
 class ImplicitUnaryOperator;
 class ImplicitNaryOperator;
-class ImplicitCSG;
-class UnaryOp;
 class LayerBasedGrid;
 
 #include "DataStructure/Vector3.h"
@@ -27,7 +25,9 @@ public:
         BLEND,
         REPLACE,
         ONE_SIDE_BLEND,
-        NONE
+        NONE,
+        DIFFERENCE,
+        INTERSECTION
     };
 
     enum PositionalLabel {
@@ -377,7 +377,6 @@ public:
     bool hasOnlySerializableTransforms() const {
         return std::none_of(operationDescriptions.begin(), operationDescriptions.end(), [](const auto& op) { return op.is_null(); });
     }
-    std::vector<UnaryOp> transforms;
 
     virtual ImplicitPatch* copy() const;
     virtual void addChild(ImplicitPatch* newChild, int index = 0);
@@ -497,57 +496,6 @@ public:
 
 
 
-
-class UnaryOp {
-public:
-    UnaryOp();
-    std::function<Vector3(const Vector3&)> wrap;
-    std::function<Vector3(const Vector3&)> unwrap;
-};
-class UnaryOpTranslate: public UnaryOp {
-public:
-    UnaryOpTranslate(const Vector3& translation);
-};
-class UnaryOpRotate: public UnaryOp {
-public:
-    UnaryOpRotate(const Vector3& rotationAngles, const Vector3& center);
-};
-class UnaryOpScale: public UnaryOp {
-public:
-    UnaryOpScale(const Vector3& scaling, const Vector3& center);
-};
-class UnaryOpWrap: public UnaryOp {
-public:
-    UnaryOpWrap(FastNoiseLite noise, const Vector3& strength);
-    UnaryOpWrap(std::function<Vector3(const Vector3&)> func);
-    UnaryOpWrap(GridV3 wrapper);
-    GridV3 wrapper;
-};
-class UnaryOpSpread: public UnaryOp {
-public:
-    UnaryOpSpread(AABBox BBox, float spreadFactor);
-};
-
-/*
-class ImplicitCSG : public ImplicitOperator {
-public:
-    ImplicitCSG();
-
-    enum CSG_Operation {
-        Union,
-        Difference,
-        Intersection
-    };
-
-    float evaluate(const Vector3& pos);
-    std::map<TerrainMaterial, float> getMaterials(const Vector3& pos);
-    std::string toString();
-    nlohmann::json toJson();
-    static ImplicitPatch* fromJson(nlohmann::json content);
-
-    CSG_Operation operation = Union;
-};
-*/
 
 ImplicitPatch::CompositionFunction compositionOperationFromString(const std::string& name);
 std::string stringFromCompositionOperation(ImplicitPatch::CompositionFunction operation);

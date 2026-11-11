@@ -1142,6 +1142,11 @@ std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3
     if (operationEvaluation == 0) {
         return {};
     }
+    if (composeFunction == DIFFERENCE && !withIntersectionOnB) {
+        for (const auto& [material, amount] : materialsAndEvalsForA)
+            result[material] = contributionA > 0.f ? amount * operationEvaluation / contributionA : 0.f;
+        return result;
+    }
     float mu_A = contributionA;
     float mu_B = contributionB;
     float rA = mu_A / (mu_A + mu_B);
@@ -1188,13 +1193,22 @@ float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB) const
 {
     if (!std::isfinite(blendingFactor) || blendingFactor <= 0.f)
         throw std::invalid_argument("Implicit blend exponent must be finite and positive");
-    if (withIntersectionOnB) return std::min(evalA, evalB);
+    if (!std::isfinite(evalA) || !std::isfinite(evalB) || !std::isfinite(isovalue))
+        throw std::invalid_argument("Implicit composition requires finite field values and threshold");
+    if (withIntersectionOnB || composeFunction == INTERSECTION) return std::min(evalA, evalB);
     float evaluation = 0.f;
     if (this->composeFunction == STACK) {
         evaluation = std::max(evalA, evalB);
     } else if (this->composeFunction == REPLACE) {
         evaluation = (evalB > ImplicitPatch::isovalue ? evalB : evalA);
+    } else if (composeFunction == DIFFERENCE) {
+        evaluation = std::min(evalA, std::clamp(2.f * isovalue - evalB, 0.f, 1.f));
     } else if (this->composeFunction == BLEND || this->composeFunction == ONE_SIDE_BLEND) {
+        if (composeFunction == ONE_SIDE_BLEND) {
+            float weight = std::clamp(evalB / std::max(isovalue, 1e-6f), 0.f, 1.f);
+            weight = weight * weight * (3.f - 2.f * weight);
+            evalB *= weight;
+        }
         evaluation = std::pow(std::pow(evalA, this->blendingFactor) + std::pow(evalB, this->blendingFactor), 1.f/this->blendingFactor);
     } else if (composeFunction == NONE) {
         evaluation = evalA;
@@ -1262,7 +1276,8 @@ AABBox implicitBinaryBounds(const ImplicitBinaryOperator& operation, bool suppor
     if (!a && !b) return AABBox(Vector3(), Vector3());
     auto box = [&](const ImplicitPatch* node) { return support ? node->getSupportBBox() : node->getBBox(); };
     if (!a) return box(b);
-    if (!b || operation.withIntersectionOnB) return box(a);
+    if (!b || operation.withIntersectionOnB || operation.composeFunction == ImplicitPatch::INTERSECTION ||
+        operation.composeFunction == ImplicitPatch::DIFFERENCE || operation.composeFunction == ImplicitPatch::NONE) return box(a);
     const auto boundsA = box(a);
     auto boundsB = box(b);
     if (operation.positionalB != ImplicitPatch::FIXED_POS) {
@@ -1455,21 +1470,6 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
     this->noiseFunction = [](const Vector3&) { return 0.f; };
     _generatedNoiseType = noiseFunction.target_type().hash_code();
 }
-/*
-    this->wrapFunction = [=](const Vector3& pos) {
-        for (int i = 0; i < this->transforms.size(); i++)
-            pos = this->transforms[i].wrap(pos);
-        return pos;
-    };
-    this->unwrapFunction = [=](const Vector3& pos) {
-        for (int i = this->transforms.size() - 1; i >= 0; i--)
-            pos = this->transforms[i].unwrap(pos);
-        return pos;
-    };
-    this->noiseFunction = [](const Vector3&) { return 0.f; };
-    _generatedNoiseType = noiseFunction.target_type().hash_code();
-}
-*/
 float ImplicitUnaryOperator::evaluate(const Vector3& pos) const
 {
     return getMaterialsAndTotalEvaluation(pos).first;
@@ -1772,32 +1772,17 @@ ImplicitPatch* ImplicitUnaryOperator::composableA() const
 
 void ImplicitUnaryOperator::translate(const Vector3& translation)
 {
-    return this->addTranslation(translation);
-    /*this->_translation += translation;
-    this->transforms.push_back(UnaryOpTranslate(translation));*/
+    addTranslation(translation);
 }
 
-void ImplicitUnaryOperator::rotate(const Vector3& angles) //float angleX, float angleY, float angleZ)
+void ImplicitUnaryOperator::rotate(const Vector3& angles)
 {
-    return this->addRotation(angles); // Vector3(angleX, angleY, angleZ));
-    /*
-    this->_rotation += Vector3(angleX, angleY, angleZ);
-
-    auto AABBox = this->getBBox();
-    Vector3 center = AABBox.center();
-    this->transforms.push_back(UnaryOpRotate(Vector3(angleX, angleY, angleZ), center));
-    */
+    addRotation(angles);
 }
 
-void ImplicitUnaryOperator::scale(const Vector3& scaleFactor)
+void ImplicitUnaryOperator::scale(const Vector3& factor)
 {
-    return this->addScaling(scaleFactor);
-    /*
-    this->_scale *= scaleFactor;
-    auto BBox = this->getBBox();
-    Vector3 center = BBox.center();
-    this->transforms.push_back(UnaryOpScale(scaleFactor, center));
-    */
+    addScaling(factor);
 }
 
 void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float offset)
@@ -2286,196 +2271,6 @@ void ImplicitPatch::setParent(ImplicitNaryOperator *newParent)
     this->parent = newParent;
 }
 
-/*
-ImplicitCSG::ImplicitCSG()
-{
-
-}
-
-float ImplicitCSG::evaluate(const Vector3& pos)
-{
-    float valA = this->evaluateA(pos);
-    float valB = this->evaluateB(pos);
-
-    float evaluation = 0.f;
-    switch (this->operation) {
-    case Union:
-        evaluation = std::max(valA, valB);
-        break;
-    case Difference:
-        evaluation = valB - valA;
-        break;
-    case Intersection:
-        evaluation = std::min(valA, valB);
-        break;
-    }
-    return evaluation;
-}
-
-std::map<TerrainTypes, float> ImplicitCSG::getMaterials(const Vector3& pos)
-{
-    auto matsA = this->getMaterialsA(pos);
-    auto matsB = this->getMaterialsB(pos);
-
-    float evaluation = 0.f;
-    switch (this->operation) {
-    case Union:
-        evaluation = std::max(valA, valB);
-        break;
-    case Difference:
-        evaluation = valB - valA;
-        break;
-    case Intersection:
-        evaluation = std::min(valA, valB);
-        break;
-    }
-    return evaluation;
-}
-*/
-
-UnaryOpTranslate::UnaryOpTranslate(const Vector3& translation)
-    : UnaryOp()
-{
-    this->wrap = [=](const Vector3& pos) {
-        return pos + translation;
-    };
-    this->unwrap = [=](const Vector3& pos) {
-        return pos - translation;
-    };
-}
-
-UnaryOpRotate::UnaryOpRotate(const Vector3& rotationAngles, const Vector3& center)
-    : UnaryOp()
-{
-    float angleX = rotationAngles.x();
-    float angleY = rotationAngles.y();
-    float angleZ = rotationAngles.z();
-    Matrix Rx (3, 3, std::vector<float>({
-        1, 0, 0,
-        0, cos(angleX), -sin(angleX),
-        0, sin(angleX), cos(angleX)
-    }).data());
-    Matrix Rz (3, 3, std::vector<float>({
-             cos(angleY), 0, -sin(angleY),
-             0, 1, 0,
-             sin(angleY), 0, cos(angleY)
-         }).data());
-    Matrix Ry (3, 3, std::vector<float>({
-             cos(angleZ), -sin(angleZ), 0,
-             sin(angleZ), cos(angleZ), 0,
-             0, 0, 1
-         }).data());
-    Matrix R = Rx.product(Ry).product(Rz);
-
-    angleX *= -1.f;
-    angleY *= -1.f;
-    angleZ *= -1.f;
-    Matrix _Rx (3, 3, std::vector<float>({
-            1, 0, 0,
-            0, cos(angleX), -sin(angleX),
-            0, sin(angleX), cos(angleX)
-        }).data());
-    Matrix _Rz (3, 3, std::vector<float>({
-             cos(angleY), 0, -sin(angleY),
-             0, 1, 0,
-             sin(angleY), 0, cos(angleY)
-         }).data());
-    Matrix _Ry (3, 3, std::vector<float>({
-             cos(angleZ), -sin(angleZ), 0,
-             sin(angleZ), cos(angleZ), 0,
-             0, 0, 1
-         }).data());
-    Matrix _R = _Rx.product(_Ry).product(_Rz);
-
-    //    std::function<Vector3(const Vector3&)> previousWrapFunction = this->wrapFunction;
-    //    std::function<Vector3(const Vector3&)> previousUnwrapFunction = this->unwrapFunction;
-    this->wrap = [=](const Vector3& pos) -> Vector3 {
-        // Exactly the rotation function, but with the matrix computed only once
-        return center + (pos - center).applyTransform(R);
-    };
-    this->unwrap = [=](const Vector3& pos) -> Vector3 {
-        // Exactly the rotation function, but with the matrix computed only once
-        return center + (pos - center).applyTransform(_R);
-    };
-}
-
-UnaryOpScale::UnaryOpScale(const Vector3& scaling, const Vector3& center)
-    : UnaryOp()
-{
-    this->wrap = [=] (const Vector3& pos) {
-        return center - (pos - center) * scaling;
-    };
-    this->unwrap = [=] (const Vector3& pos) {
-        return center + (pos - center) / scaling;
-    };
-}
-
-UnaryOpWrap::UnaryOpWrap(FastNoiseLite noise, const Vector3& strength)
-    : UnaryOp()
-{
-    this->wrap = [=] (const Vector3& pos) {
-        FastNoiseLite _noise = noise;
-        return pos + Vector3(1.f, 1.f, 1.f) * _noise.GetNoise((float)pos.x() * strength.y() + strength.z(), (float)pos.y() * strength.y() + strength.z(), (float)pos.z() * strength.y() + strength.z()) * strength.x();
-    };
-    this->unwrap = [=] (const Vector3& pos) {
-        FastNoiseLite _noise = noise;
-        return pos - Vector3(1.f, 1.f, 1.f) * _noise.GetNoise((float)pos.x() * strength.y() + strength.z(), (float)pos.y() * strength.y() + strength.z(), (float)pos.z() * strength.y() + strength.z()) * strength.x();
-    };
-}
-
-UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (const Vector3&)> func)
-{
-    this->wrap = [=] (const Vector3& pos) {
-        Vector3 newPos = pos + func(pos);
-        return newPos;
-    };
-    this->unwrap = [=] (const Vector3& pos) {
-        return pos - func(pos);
-    };
-}
-
-UnaryOpWrap::UnaryOpWrap(GridV3 wrapper)
-    : wrapper(wrapper)
-{
-    this->wrap = [=] (const Vector3& pos) {
-        Vector3 newPos = pos + this->wrapper.at(pos);
-        return newPos;
-    };
-    this->unwrap = [=] (const Vector3& pos) {
-        return pos - this->wrapper.at(pos);
-    };
-}
-
-UnaryOpSpread::UnaryOpSpread(AABBox BBox, float spreadFactor)
-    : UnaryOp()
-{
-    Vector3 center = BBox.center();
-    Vector3 dimensions = BBox.dimensions();
-    this->wrap = [=](const Vector3& pos) -> Vector3 {
-        Vector3 p = pos;
-        float relativeHeight = interpolation::linear(p.z(), BBox.min().z(), BBox.max().z());
-        relativeHeight = interpolation::smooth(relativeHeight);
-//        float heightFactor = (1.f - relativeHeight);
-        float heightFactor = -(relativeHeight - .5f) * 2.f; // Top = -1, bottom = 1
-        float factor = spreadFactor * heightFactor;
-        Vector3 toCenter = (p.xy() - center.xy());
-        Vector3 displacement = toCenter.normalize() * dimensions * factor;
-        return pos + displacement;
-    };
-    this->unwrap = [=](const Vector3& pos) -> Vector3 {
-        Vector3 p = pos;
-        float relativeHeight = interpolation::linear(p.z(), BBox.min().z(), BBox.max().z());
-        relativeHeight = interpolation::smooth(relativeHeight);
-//        float heightFactor = (1.f - relativeHeight);
-        float heightFactor = -(relativeHeight - .5f) * 2.f; // Top = -1, bottom = 1
-        float factor = spreadFactor * heightFactor;
-        Vector3 toCenter = (p.xy() - center.xy());
-        Vector3 displacement = toCenter.normalize() * dimensions * .5f * factor;
-        return pos - displacement;
-    };
-}
-
-
 ImplicitPatch::CompositionFunction compositionOperationFromString(const std::string& _name)
 {
     std::string name = toUpper(_name);
@@ -2489,6 +2284,10 @@ ImplicitPatch::CompositionFunction compositionOperationFromString(const std::str
         return ImplicitPatch::CompositionFunction::REPLACE;
     else if (name == "ONE_SIDE_BLEND")
         return ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND;
+    else if (name == "DIFFERENCE" || name == "SUBTRACT")
+        return ImplicitPatch::DIFFERENCE;
+    else if (name == "INTERSECTION")
+        return ImplicitPatch::INTERSECTION;
 
     // Error
     throw std::invalid_argument("Unknown implicit composition: " + name);
@@ -2506,6 +2305,10 @@ std::string stringFromCompositionOperation(ImplicitPatch::CompositionFunction op
         return "Replace";
     else if (operation == ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND)
         return "One_side_blend";
+    else if (operation == ImplicitPatch::DIFFERENCE)
+        return "Difference";
+    else if (operation == ImplicitPatch::INTERSECTION)
+        return "Intersection";
 
     // Impossible
     std::cerr << "Unknown operation given." << std::endl;
@@ -2692,12 +2495,6 @@ std::string stringFromMaterial(TerrainTypes material)
     // Impossible
     std::cerr << "Unknown material type given." << std::endl;
     return "";
-}
-
-UnaryOp::UnaryOp()
-{
-    this->wrap = [=] (const Vector3& pos) { return pos; };
-    this->unwrap = [=] (const Vector3& pos) { return pos; };
 }
 
 ImplicitNaryOperator::ImplicitNaryOperator()
