@@ -4,6 +4,7 @@
 #include "Interface/TerrainGenerationInterface.h"
 // #include "EnvObject/EnvObject.h"
 #include "Interface/EnvObjsInterface.h"
+#include "Interface/PrimitivePatchesInterface.h"
 
 #include <chrono>
 
@@ -331,7 +332,11 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
             } else if (applyOn == EROSION_APPLIED::HEIGHTMAP) {
                 terrain = heightmap.get();
             } else if (applyOn == EROSION_APPLIED::IMPLICIT_TERRAIN) {
-                implicitTerrain->composables = {ImplicitPrimitive::fromVoxelField(implicitTerrain->getVoxelized())};
+                auto snapshot = std::unique_ptr<ImplicitPrimitive>(ImplicitPrimitive::fromVoxelField(implicitTerrain->getVoxelized()));
+                if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches"))) editor->clearSelection();
+                if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects"))) environment->detachImplicitRoot();
+                implicitTerrain->deleteAllChildren();
+                implicitTerrain->addChild(snapshot.release());
                 // implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())};
                 implicitTerrain->_cached = false;
 //                implicitTerrain->update();

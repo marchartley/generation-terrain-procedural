@@ -463,8 +463,7 @@ public:
     Implicit2DNary();
 
     std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
-    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluation(const Vector3 &pos) const;
-    float evaluate(const Vector3& pos) const; // In this case, returns the height
+    float evaluate(const Vector3& pos) const; // Bounded density; computeHeight returns height.
 
     GridF getVoxelized(const Vector3& dimensions = Vector3::invalid, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
@@ -488,6 +487,7 @@ public:
     Implicit2DPrimitive();
 
     float evaluate(const Vector3 &pos) const;
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const override;
 };
 
 

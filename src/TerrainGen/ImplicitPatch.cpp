@@ -211,6 +211,12 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
 {
     if (const auto* heightTerrain = dynamic_cast<const Implicit2DNary*>(this))
         return heightTerrain->computeHeight(pos) - pos.z();
+    if (const auto* heightPrimitive = dynamic_cast<const Implicit2DPrimitive*>(this)) {
+        if (!LayerBasedGrid::invisibleLayers.count(heightPrimitive->material)) {
+            const float height = heightPrimitive->evaluate(pos.xy());
+            return height > 0.f ? height - pos.z() : -1.f;
+        }
+    }
     if (const auto* unary = dynamic_cast<const ImplicitUnaryOperator*>(this)) {
         if (unary->composableA() && unary->_noise.x() == 0.f && unary->noiseAt(pos) == 0.f)
             return unary->composableA()->getSignedEvaluation(unary->inverseTransform(pos));
@@ -2903,15 +2909,10 @@ std::map<TerrainTypes, float> Implicit2DNary::getMaterials(const Vector3 &pos) c
     return {{DIRT, evaluate(pos)}};
 }
 
-std::pair<float, std::map<TerrainTypes, float> > Implicit2DNary::getMaterialsAndTotalEvaluation(const Vector3 &pos) const
-{
-    float eval = this->evaluate(pos);
-    return {eval, {{DIRT, eval}}};
-}
-
 float Implicit2DNary::evaluate(const Vector3 &pos) const
 {
-    return computeHeight(pos) > pos.z() ? 1.f : 0.f;
+    const float range = std::max(1.f, getDimensions().z());
+    return std::clamp(isovalue + (computeHeight(pos) - pos.z()) * (.5f / range), 0.f, 1.f);
 }
 
 GridF Implicit2DNary::getVoxelized(const Vector3& dimensions, const Vector3& scale)
@@ -2960,41 +2961,52 @@ float Implicit2DNary::getMaximalHeight(const Vector3 &minBox, const Vector3 &max
 
 void Implicit2DNary::reevaluateAll()
 {
-    auto dims = this->getSupportBBox().max();
-    int dimX = std::max(0.f, dims.x());
-    int dimY = std::max(0.f, dims.y());
-    if (dimX == 0 && dimY == 0) {
-        dimX = 100;
-        dimY = 100;
+    updateCache();
+    getVoxelized();
+}
+
+namespace {
+std::pair<float, float> implicitHeightContributions(const ImplicitPatch* node, const Vector3& point)
+{
+    if (!node) return {0.f, 0.f};
+    if (const auto* primitive = dynamic_cast<const Implicit2DPrimitive*>(node)) {
+        const float height = std::abs(primitive->evaluate(point.xy()));
+        return LayerBasedGrid::invisibleLayers.count(primitive->material)
+            ? std::pair<float, float>{0.f, height} : std::pair<float, float>{height, 0.f};
     }
-    this->_cachedMaxHeight = GridF(dimX, dimY, 1, -1);
-    this->_cachedMaxHeight.raiseErrorOnBadCoord = false;
-    this->_cachedMaxHeight.defaultValueOnBadCoord = 0.f;
-#pragma omp parallel for collapse(2)
-    for (int x = 0; x < dimX; x++) {
-        for (int y = 0; y < dimY; y++) {
-            this->_cachedMaxHeight(x, y) = computeHeight(Vector3(x, y)); // This updates the cached heights array
+    if (const auto* unary = dynamic_cast<const ImplicitUnaryOperator*>(node)) {
+        if (unary->_noise.x() != 0.f || unary->noiseAt(point.xy()) != 0.f)
+            throw std::invalid_argument("Use a 3D implicit root for density-noise operations");
+        const Vector3 local = unary->inverseTransform(point.xy());
+        const Vector3 zero = unary->applyTransform(local.xy());
+        const Vector3 one = unary->applyTransform(local.xy() + Vector3(0, 0, 1));
+        if ((one.xy() - zero.xy()).norm() > 1e-5f || one.z() <= zero.z())
+            throw std::invalid_argument("Transform does not preserve a single-valued upward heightfield; use a 3D root");
+        auto heights = implicitHeightContributions(unary->composableA(), local.xy());
+        auto transformed = [&](float h) {
+            return h > 0.f ? std::max(0.f, unary->applyTransform(local.xy() + Vector3(0, 0, h)).z()) : 0.f;
+        };
+        return {transformed(heights.first), transformed(heights.second)};
+    }
+    if (dynamic_cast<const ImplicitBinaryOperator*>(node))
+        throw std::invalid_argument("Use a 3D implicit root for binary composition");
+    if (const auto* group = dynamic_cast<const ImplicitNaryOperator*>(node)) {
+        std::pair<float, float> result{0.f, 0.f};
+        for (const auto* child : group->composables) {
+            const auto heights = implicitHeightContributions(child, point);
+            result.first = std::max(result.first, heights.first);
+            result.second = std::max(result.second, heights.second);
         }
+        return result;
     }
-    this->_cached = true;
+    throw std::invalid_argument("A heightfield root requires height-valued primitives");
+}
 }
 
 float Implicit2DNary::computeHeight(const Vector3 &pos) const
 {
-    float maxSolid = 0.f;
-    float maxInvisible = 0.f;
-
-    for (const auto& comp : composables) {
-        if (auto asPrimitive = dynamic_cast<Implicit2DPrimitive*>(comp)) {
-            float elemHeight = std::abs(asPrimitive->evaluate(pos.xy()));
-            if ((LayerBasedGrid::invisibleLayers.count(asPrimitive->material) != 0)) {
-                maxInvisible = std::max(maxInvisible, elemHeight);
-            } else {
-                maxSolid = std::max(maxSolid, elemHeight);
-            }
-        }
-    }
-    return maxSolid - maxInvisible;
+    const auto heights = implicitHeightContributions(this, pos.xy());
+    return heights.first - heights.second;
 }
 
 
@@ -3006,16 +3018,18 @@ Implicit2DPrimitive::Implicit2DPrimitive()
 }
 float Implicit2DPrimitive::evaluate(const Vector3& pos) const
 {
-    auto [minPos, maxPos] = this->getBBox();
-    auto [minSupportPos, maxSupportPos] = this->getSupportBBox();
-    if (!Vector3::isInBox(pos, minSupportPos, maxSupportPos))
-        return 0.f;
-    float evaluation = 0.f;
+    const auto bounds = getBBox();
+    if (!Vector3::isInBox(pos.xy(), bounds.min().xy(), bounds.max().xy())) return 0.f;
+    const float localHeight = evalFunction(pos.xy() - position.xy());
+    if (!std::isfinite(localHeight) || localHeight <= 0.f) return 0.f;
+    const float height = std::max(0.f, position.z() + localHeight);
+    return LayerBasedGrid::invisibleLayers.count(material) ? -height : height;
+}
 
-    Vector3 evalPos = pos - this->position.xy();
-    if (Vector3::isInBox(pos, minPos, maxPos)) {
-        evaluation = this->evalFunction(evalPos) * ((LayerBasedGrid::invisibleLayers.count(this->material) != 0) ? -1.f : 1.f);
-    }
-
-    return evaluation;
+std::map<TerrainTypes, float> Implicit2DPrimitive::getMaterials(const Vector3& pos) const
+{
+    const float height = std::abs(evaluate(pos.xy()));
+    if (height <= 0.f) return {{material, 0.f}};
+    const float range = std::max(1.f, std::abs(dimensions.z()) + std::abs(position.z()));
+    return {{material, std::clamp(isovalue + (height - pos.z()) * (.5f / range), 0.f, 1.f)}};
 }
