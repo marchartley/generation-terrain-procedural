@@ -1,214 +1,107 @@
 #include "DataStructure/Voxel.h"
-
 #include <sstream>
-#include "DataStructure/Matrix3.h"
+#include <limits>
+#include <filesystem>
+#include <cstdint>
+#include <QSaveFile>
 
-VoxelDataFile::VoxelDataFile()
-{}
-
-VoxelDataFile::VoxelDataFile(const GridF& dVec)
-    : data(dVec) {}
-
-void VoxelDataFile::write(const std::string &filename) {
-    std::ofstream outFile(filename, std::ios::binary);
-    if (outFile.is_open()) {
-        int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
-        outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
-        outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
-        outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
-
-        size_t dataSize = data.size();
-        outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
-        outFile.write(reinterpret_cast<const char*>(((Matrix3<char>)data).data.data()), dataSize * sizeof(float));
-
-        outFile.close();
-        std::cout << "Data written to file successfully." << std::endl;
-    } else {
-        std::cerr << "Unable to open file for writing." << std::endl;
-    }
+namespace {
+std::string readFile(const std::string &name) {
+    std::ifstream in(name, std::ios::binary);
+    if (!in)
+        throw std::runtime_error("Cannot open grid file: " + name);
+    std::ostringstream bytes;
+    bytes << in.rdbuf();
+    if (in.bad())
+        throw std::runtime_error("Grid file read failed");
+    return bytes.str();
 }
-
-void VoxelDataFile::load(const std::string &filename) {
-    std::ifstream inFile(filename);
-    if (inFile.is_open()) {
-        std::string line;
-        if (std::getline(inFile, line)) {
-            std::istringstream iss(line);
-            int w, h, d, dump;
-            iss >> w >> h >> d >> dump;
-
-            // Check for the old text format
-            if (iss.eof() && w > 0 && h > 0 && d > 0) {
-                // Rewind and load using the old text format
-                inFile.seekg(0, std::ios::beg);
-                loadFromFileOld(filename);
-                return;
-            }
+void writeFile(const std::string &name, const std::string &bytes) {
+    QSaveFile out(QString::fromStdString(name));
+    if (!out.open(QIODevice::WriteOnly))
+        throw std::runtime_error("Cannot open grid output: " + name);
+    if (out.write(bytes.data(), qint64(bytes.size())) != qint64(bytes.size()) || !out.commit())
+        throw std::runtime_error("Atomic grid output failed: " + name);
+}
+} // namespace
+VoxelDataFile::VoxelDataFile() = default;
+VoxelDataFile::VoxelDataFile(const GridF &values) : data(values) {}
+void VoxelDataFile::write(const std::string &name) { writeFile(name, stringifyGridF(data)); }
+void VoxelDataFile::load(const std::string &name) {
+    auto bytes = readFile(name);
+    std::istringstream header(bytes.substr(0, bytes.find('\n')));
+    int x, y, z;
+    if ((header >> x >> y >> z) && x >= 0 && y >= 0 && z >= 0)
+        loadFromFileOld(name);
+    else
+        data = loadGridF(bytes);
+}
+void VoxelDataFile::loadFromFileBinary(const std::string &name) {
+    auto replacement = loadGridF(readFile(name));
+    data = std::move(replacement);
+}
+void VoxelDataFile::loadFromFileOld(const std::string &name) {
+    std::ifstream in(name);
+    std::string line;
+    std::getline(in, line);
+    std::istringstream header(line);
+    int x, y, z, chunk = 0;
+    if (!(header >> x >> y >> z) || x < 0 || y < 0 || z < 0)
+        throw std::invalid_argument("Invalid legacy voxel header");
+    const auto count = grid_detail::count<float>(x, y, z);
+    const auto fileBytes = std::filesystem::file_size(name);
+    if (count > fileBytes)
+        throw std::invalid_argument("Legacy voxel payload is too short for its dimensions");
+    header >> std::ws;
+    const bool chunked = !header.eof();
+    if (chunked && !(header >> chunk))
+        throw std::invalid_argument("Invalid legacy chunk header");
+    header >> std::ws;
+    if (!header.eof())
+        throw std::invalid_argument("Trailing legacy header fields");
+    if (chunked && chunk <= 0)
+        throw std::invalid_argument("Invalid legacy chunk size");
+    if (chunked && count) {
+        uintmax_t required = 1;
+        for (uintmax_t factor : {(uintmax_t(x) + chunk - 1) / chunk, (uintmax_t(y) + chunk - 1) / chunk,
+                                 uintmax_t(chunk), uintmax_t(chunk), uintmax_t(z)}) {
+            if (factor && required > fileBytes / factor)
+                throw std::invalid_argument("Truncated padded legacy chunks");
+            required *= factor;
         }
-
-        // Rewind and check for the new binary format
-        inFile.seekg(0, std::ios::beg);
-        int potentialWidth, potentialHeight, potentialDepth;
-        inFile.read(reinterpret_cast<char*>(&potentialWidth), sizeof(potentialWidth));
-        inFile.read(reinterpret_cast<char*>(&potentialDepth), sizeof(potentialDepth));
-        inFile.read(reinterpret_cast<char*>(&potentialHeight), sizeof(potentialHeight));
-
-        if (potentialWidth > 0 && potentialHeight > 0 && potentialDepth > 0) {
-            // Assume it's the new binary format
-            try {
-                inFile.seekg(0, std::ios::beg);
-                loadFromFileBinary(filename);
-            } catch(const std::exception& e) {
-                inFile.seekg(0, std::ios::beg);
-                loadFromFileOld(filename);
-            }
-        } else {
-            std::cerr << "Unable to determine the file format." << std::endl;
-        }
-
-        inFile.close();
-    } else {
-        std::cerr << "Unable to open file for reading." << std::endl;
     }
-}
-
-void VoxelDataFile::loadFromFileBinary(const std::string &filename) {
-    std::ifstream inFile(filename, std::ios::binary);
-    if (inFile.is_open()) {
-        int width, depth, height;
-        inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
-        inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
-        inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
-
-        size_t dataSize;
-        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
-        data.data.resize(dataSize);
-        inFile.read(reinterpret_cast<char*>(data.data.data()), dataSize * sizeof(float));
-        data.sizeX = width;
-        data.sizeY = depth;
-        data.sizeZ = height;
-        data._updateStrides();
-        inFile.close();
-        std::cout << "Data loaded from file successfully." << std::endl;
-    } else {
-        std::cerr << "Unable to open file for reading." << std::endl;
-    }
-}
-
-void VoxelDataFile::loadFromFileOld(const std::string &filename) {
-    std::ifstream in;
-    in.open(filename);
-    if (in.fail()) {
-        std::cerr << "Unable to open file " << filename << "..." << std::endl;
-        return;
-    }
-    int _x, _y, _z;
-    int _chunkSize;
-
-    std::string firstLine;
-    std::getline(in, firstLine);  // Read the entire first line
-
-    std::stringstream ss(firstLine);
-    ss >> _x >> _y >> _z;
-
-    GridF _cachedVoxelValues = GridF(_x, _y, _z, 0.f);
-
-    if (ss >> _chunkSize) { // Compatibility with previous terrain saving system
-        int chunkSize = _chunkSize;
-        float map_val;
-//        int iChunk = 0;
-        for (int xChunk = 0; xChunk < std::ceil(_x / (float)chunkSize); xChunk++) {
-            for (int yChunk = 0; yChunk < std::ceil(_y / (float)chunkSize); yChunk++) {
-                Vector3 offset(xChunk * chunkSize, yChunk * chunkSize, 0.f);
-                for (int x = 0; x < chunkSize; x++) {
-                    for (int y = 0; y < chunkSize; y++) {
-                        for (int z = 0; z < _z; z++) {
-                            in >> map_val;
-                            _cachedVoxelValues.at(Vector3(x, y, z) + offset) = map_val;
+    GridF replacement(x, y, z);
+    if (chunked) {
+        if (chunk <= 0)
+            throw std::invalid_argument("Invalid legacy chunk size");
+        for (int64_t cx = 0; cx < x; cx += chunk)
+            for (int64_t cy = 0; cy < y; cy += chunk)
+                for (int64_t dx = 0; dx < chunk; ++dx)
+                    for (int64_t dy = 0; dy < chunk; ++dy)
+                        for (int zz = 0; zz < z; ++zz) {
+                            float value;
+                            if (!(in >> value))
+                                throw std::invalid_argument("Truncated legacy chunks");
+                            if (cx + dx < x && cy + dy < y)
+                                replacement.unsafe(cx + dx, cy + dy, zz) = std::max(-1.f, value);
                         }
-                    }
-                }
-            }
-        }
     } else {
-        std::cout << "Retrieving..." << std::endl;
-        for (size_t i = 0; i < _cachedVoxelValues.size(); i++)
-            in >> _cachedVoxelValues[i];
-    }
-    _cachedVoxelValues.iterateParallel([&](size_t i) {
-        if (_cachedVoxelValues[i] < -1.f)
-            _cachedVoxelValues[i] = -1.f;
-    });
-    this->data = _cachedVoxelValues;
-}
-
-
-
-
-
-
-
-
-VectorFieldDataFile::VectorFieldDataFile()
-{}
-
-VectorFieldDataFile::VectorFieldDataFile(const GridV3& dVec)
-    : data(dVec) {}
-
-void VectorFieldDataFile::write(const std::string &filename) {
-    std::ofstream outFile(filename, std::ios::binary);
-    if (outFile.is_open()) {
-        int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
-        outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
-        outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
-        outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
-
-        size_t dataSize = data.size();
-        outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
-        // Write each Vector3 as raw binary data
-        for (const auto& vec : data.data) {
-            outFile.write(reinterpret_cast<const char*>(&vec), sizeof(vec));
+        for (auto &value : replacement) {
+            if (!(in >> value))
+                throw std::invalid_argument("Truncated legacy voxel data");
+            value = std::max(-1.f, value);
         }
-
-        outFile.close();
-//        std::cout << "Data written to file successfully." << std::endl;
-    } else {
-        std::cerr << "Unable to open file " << filename << " for writing." << std::endl;
     }
+    in >> std::ws;
+    if (!in.eof())
+        throw std::invalid_argument("Trailing legacy voxel data");
+    data = std::move(replacement);
 }
-
-void VectorFieldDataFile::load(const std::string &filename) {
-    loadFromFileBinary(filename);
-}
-
-void VectorFieldDataFile::loadFromFileBinary(const std::string &filename) {
-    std::ifstream inFile(filename, std::ios::binary);
-    if (inFile.is_open()) {
-        int width, depth, height;
-        inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
-        inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
-        inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
-
-        size_t dataSize;
-        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
-        data.data.resize(dataSize);
-        // Read each Vector3 from raw binary data
-        for (size_t i = 0; i < dataSize; ++i) {
-            auto& vec = data.data[i];
-            inFile.read(reinterpret_cast<char*>(&vec), sizeof(vec));/*
-            inFile.read(reinterpret_cast<char*>(&(vec.x)), sizeof(vec.x));
-            inFile.read(reinterpret_cast<char*>(&(vec.y)), sizeof(vec.y));
-            inFile.read(reinterpret_cast<char*>(&(vec.z)), sizeof(vec.z));
-            std::cout << vec << " " << std::flush;*/
-//            inFile.read(reinterpret_cast<const char*>(&vec.valid), sizeof(vec.valid));
-        }
-        data.sizeX = width;
-        data.sizeY = depth;
-        data.sizeZ = height;
-        data._updateStrides();
-        inFile.close();
-        std::cout << "Data loaded from file successfully." << std::endl;
-    } else {
-        std::cerr << "Unable to open file for reading." << std::endl;
-    }
+VectorFieldDataFile::VectorFieldDataFile() = default;
+VectorFieldDataFile::VectorFieldDataFile(const GridV3 &values) : data(values) {}
+void VectorFieldDataFile::write(const std::string &name) { writeFile(name, stringifyGridV3(data)); }
+void VectorFieldDataFile::load(const std::string &name) { loadFromFileBinary(name); }
+void VectorFieldDataFile::loadFromFileBinary(const std::string &name) {
+    auto replacement = loadGridV3(readFile(name));
+    data = std::move(replacement);
 }

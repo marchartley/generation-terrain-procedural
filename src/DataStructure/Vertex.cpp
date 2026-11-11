@@ -1,7 +1,9 @@
 #include "DataStructure/Vertex.h"
 #include <QGLViewer/qglviewer.h>
+#include <QOpenGLContext>
+#include <stdexcept>
 
-Vertex::Vertex() : Vertex(0.0, 0.0, 0.0, 0.0)
+Vertex::Vertex() : Vertex(0.0, 0.0, 0.0, -1.0)
 {
 
 }
@@ -16,6 +18,9 @@ Vertex::Vertex(const Vector3& v, float isosurface)
 }
 
 void Vertex::display() {
+    if (!QOpenGLContext::currentContext())
+        throw std::logic_error("Vertex display requires a current OpenGL context");
+    glPushAttrib(GL_CURRENT_BIT);
     glPushMatrix();
     glTranslatef(x(), y(), z());
     float mini_change = 0.01; //(rand() % 100)/3000.0;
@@ -40,4 +45,5 @@ void Vertex::display() {
     glVertex3f(- mini_change, - mini_change, - mini_change);
     glEnd();
     glPopMatrix();
+    glPopAttrib();
 }

@@ -14,13 +14,15 @@ KelvinletPoint::KelvinletPoint()
 }
 
 KelvinletCurve* KelvinletPoint::cloneToCurveKelvinlet() const {
-    KelvinletCurve* k;
+    KelvinletCurve *k = nullptr;
     std::string my_type = toLower(this->getShortName());
     if (my_type == "grab") k = new GrabKelvinletCurve;
     else if (my_type == "scale") k = new ScaleKelvinletCurve;
     else if (my_type == "twist") k = new TwistKelvinletCurve;
     else if (my_type == "pinch") k = new PinchKelvinletCurve;
 
+    if (!k)
+        throw std::invalid_argument("Unknown point Kelvinlet type");
     k->radialScale = radialScale;
     k->mu = mu;
     k->v = v;
@@ -43,24 +45,11 @@ Vector3 GrabKelvinlet::evaluate(const Vector3 &p) const
     const float radius = rvector.norm();
     const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3::origin;
-    auto identity = Matrix::identity(3);
-    const float epsilon = this->radialScale;
-    const float repsilon3 = repsilon * repsilon * repsilon;
-
-    float a = 1.f / (4 * M_PI * mu);
-    float b = a / (4 * (1.f - v));
-    // float c = 2 / (3 * a - 2 * b);
-
-    Matrix first = identity * float((a - b) * 1. / repsilon);
-    float second = b / (repsilon3);
-    Matrix last = identity * float((a * epsilon * epsilon) / (2 * repsilon3));
-
-    Matrix rrt = rvector.toMatrix() * rvector.toMatrix().transpose();
-
-    const auto force = first + rrt * second + last;
-
-    auto res = Matrix::matprod(force, this->force().toMatrix());
-    return Vector3::fromMatrix(res);
+    const float a = 1.f / (4 * float(M_PI) * mu), b = a / (4 * (1 - v));
+    const float inv = 1.f / repsilon, inv3 = inv * inv * inv;
+    const auto f = force();
+    return f * ((a - b) * inv + a * radialScale * radialScale * .5f * inv3) +
+           rvector * (b * inv3 * rvector.dot(f));
 }
 
 TwistKelvinlet::TwistKelvinlet()
@@ -199,11 +188,15 @@ KelvinletCurve& KelvinletCurve::reset() {
 }
 
 KelvinletCurve& KelvinletCurve::translate(const Vector3 &translation) {
+    if (!curve)
+        throw std::invalid_argument("No Kelvinlet curve");
     this->curve->translate(translation);
     return *this;
 }
 
 KelvinletCurve& KelvinletCurve::scale(float scaling) {
+    if (!curve || !std::isfinite(scaling) || scaling <= 0)
+        throw std::invalid_argument("Invalid curve scaling");
     Kelvinlet::scale(scaling);
     this->curve->scale(scaling);
     return *this;
@@ -233,24 +226,11 @@ Vector3 GrabKelvinletCurve::evaluate(const Vector3 &p) const
     const float radius = rvector.norm();
     const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
-    auto identity = Matrix::identity(3);
-    const float epsilon = this->radialScale;
-    const float repsilon3 = repsilon * repsilon * repsilon;
-
-    float a = 1.f / (4 * M_PI * mu);
-    float b = a / (4 * (1.f - v));
-    // float c = 2 / (3 * a - 2 * b);
-
-    Matrix first = identity * float((a - b) * 1. / repsilon);
-    float second = b / (repsilon3);
-    Matrix last = identity * float((a * epsilon * epsilon) / (2 * repsilon3));
-
-    Matrix rrt = rvector.toMatrix() * rvector.toMatrix().transpose();
-
-    const auto force = first + rrt * second + last;
-
-    auto res = force * (dir * this->force()).toMatrix();
-    return Vector3::fromMatrix(res);
+    const float a = 1.f / (4 * float(M_PI) * mu), b = a / (4 * (1 - v));
+    const float inv = 1.f / repsilon, inv3 = inv * inv * inv;
+    const auto f = dir * force();
+    return f * ((a - b) * inv + a * radialScale * radialScale * .5f * inv3) +
+           rvector * (b * inv3 * rvector.dot(f));
 }
 
 TwistKelvinletCurve::TwistKelvinletCurve()
@@ -372,6 +352,9 @@ RelativeKelvinlet::RelativeKelvinlet(Kelvinlet* kelvinlet, const Vector3 &anchor
 
 Vector3 RelativeKelvinlet::evaluate(const Vector3& p, float angle, float scaleFactor, bool KelvinletPositionIsRelativeToAnchor) const
 {
+    if (!kelvinlet || !anchorPoint.isValid() || !p.isValid() || !std::isfinite(zoom) || zoom <= 0 ||
+        !std::isfinite(angle) || !std::isfinite(scaleFactor))
+        throw std::invalid_argument("Invalid relative Kelvinlet transform");
     Vector3 evaluationPoint = ((p - anchorPoint) / zoom).rotate(Vector3(0, 0, -angle)) + (KelvinletPositionIsRelativeToAnchor ? Vector3::origin : anchorPoint * zoom);
     return kelvinlet->evaluate(evaluationPoint).rotate(Vector3(0, 0, angle)) * scaleFactor;
 }

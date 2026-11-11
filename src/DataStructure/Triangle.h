@@ -17,6 +17,10 @@ public:
     const Vector3& operator[](size_t i) const;
     Vector3& operator[](size_t i);
 
+    // Direct edits to public vertices require updateGeometry(). Prefer setVertex.
+    Triangle &setVertex(size_t i, const Vector3 &value);
+    Triangle &updateGeometry();
+    Vector3 getNormal() const;
     Triangle &enlarge(float addedSize);
 
     static std::vector<Triangle> vectorsToTriangles(const std::vector<std::vector<Vector3>>& vectors);
