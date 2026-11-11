@@ -194,7 +194,7 @@ void TerrainGenerationInterface::layersToImplicit()
     if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
         environment->detachImplicitRoot();
     implicitTerrain->deleteAllChildren();
-    implicitTerrain->addChild(ImplicitPrimitive::fromVoxelField(layerGrid->voxelize()));
+    implicitTerrain->addChild(ImplicitPrimitive::fromLayerGrid(*layerGrid));
     implicitTerrain->scaling = layerGrid->scaling;
     implicitTerrain->translation = layerGrid->translation;
     implicitTerrain->updateCache();

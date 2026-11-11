@@ -1850,22 +1850,22 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
 
 
         auto shapeCombobox = new ComboboxElement("Shape");
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Sphere", ImplicitPatch::Sphere));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Block", ImplicitPatch::Block));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Gaussian", ImplicitPatch::Gaussian));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cylinder", ImplicitPatch::Cylinder));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Rock", ImplicitPatch::Rock));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountain", ImplicitPatch::Mountain));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Dune", ImplicitPatch::Dune));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Basin", ImplicitPatch::Basin));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cave", ImplicitPatch::Cave));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Arch", ImplicitPatch::Arch));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Noise", ImplicitPatch::Noise2D));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountains", ImplicitPatch::MountainChain));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Polygon", ImplicitPatch::Polygon));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Tunnel", ImplicitPatch::ParametricTunnel));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Ripple", ImplicitPatch::Ripple));
-        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("...", ImplicitPatch::ImplicitHeightmap));
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Sphere", ImplicitPatch::Sphere), patchAsPrimitive->predefinedShape == ImplicitPatch::Sphere);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Block", ImplicitPatch::Block), patchAsPrimitive->predefinedShape == ImplicitPatch::Block);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Gaussian", ImplicitPatch::Gaussian), patchAsPrimitive->predefinedShape == ImplicitPatch::Gaussian);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cylinder", ImplicitPatch::Cylinder), patchAsPrimitive->predefinedShape == ImplicitPatch::Cylinder);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Rock", ImplicitPatch::Rock), patchAsPrimitive->predefinedShape == ImplicitPatch::Rock);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountain", ImplicitPatch::Mountain), patchAsPrimitive->predefinedShape == ImplicitPatch::Mountain);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Dune", ImplicitPatch::Dune), patchAsPrimitive->predefinedShape == ImplicitPatch::Dune);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Basin", ImplicitPatch::Basin), patchAsPrimitive->predefinedShape == ImplicitPatch::Basin);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Cave", ImplicitPatch::Cave), patchAsPrimitive->predefinedShape == ImplicitPatch::Cave);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Arch", ImplicitPatch::Arch), patchAsPrimitive->predefinedShape == ImplicitPatch::Arch);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Noise", ImplicitPatch::Noise2D), patchAsPrimitive->predefinedShape == ImplicitPatch::Noise2D);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Mountains", ImplicitPatch::MountainChain), patchAsPrimitive->predefinedShape == ImplicitPatch::MountainChain);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Polygon", ImplicitPatch::Polygon), patchAsPrimitive->predefinedShape == ImplicitPatch::Polygon);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Tunnel", ImplicitPatch::ParametricTunnel), patchAsPrimitive->predefinedShape == ImplicitPatch::ParametricTunnel);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Ripple", ImplicitPatch::Ripple), patchAsPrimitive->predefinedShape == ImplicitPatch::Ripple);
+        shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("...", ImplicitPatch::ImplicitHeightmap), patchAsPrimitive->predefinedShape == ImplicitPatch::ImplicitHeightmap);
         shapeCombobox->setOnSelectionChanged([=](int) {
             auto shape = shapeCombobox->getSelection<ImplicitPatch::PredefinedShapes>();
             // this->setSelectedShape(shape);
@@ -1885,14 +1885,17 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         auto sigmaSlider = new SliderElement("Sigma", 0.f, 20.f, .1f, patchAsPrimitive->parametersProvided[0]);
 
         auto densityCombobox = new ComboboxElement("Density");
-        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Air", TerrainTypes::AIR));
-        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Water", TerrainTypes::WATER));
-        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Coral", TerrainTypes::CORAL));
-        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Sand", TerrainTypes::SAND));
-        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Dirt", TerrainTypes::DIRT));
-        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Rock", TerrainTypes::ROCK));
-        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Bedrock", TerrainTypes::BEDROCK));
-        densityCombobox->setOnSelectionChanged([=](int) { patchAsPrimitive->material = densityCombobox->getSelection<TerrainTypes>(); });
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Air", TerrainTypes::AIR), patchAsPrimitive->material == TerrainTypes::AIR);
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Water", TerrainTypes::WATER), patchAsPrimitive->material == TerrainTypes::WATER);
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Coral", TerrainTypes::CORAL), patchAsPrimitive->material == TerrainTypes::CORAL);
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Sand", TerrainTypes::SAND), patchAsPrimitive->material == TerrainTypes::SAND);
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Dirt", TerrainTypes::DIRT), patchAsPrimitive->material == TerrainTypes::DIRT);
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Rock", TerrainTypes::ROCK), patchAsPrimitive->material == TerrainTypes::ROCK);
+        densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Bedrock", TerrainTypes::BEDROCK), patchAsPrimitive->material == TerrainTypes::BEDROCK);
+        densityCombobox->setOnSelectionChanged([=](int) {
+            patchAsPrimitive->material = densityCombobox->getSelection<TerrainTypes>();
+            patchAsPrimitive->sampledMaterialColumns = ImplicitPrimitive::MaterialColumns();
+        });
 
 
         UI->add({

@@ -8,6 +8,7 @@ class ImplicitUnaryOperator;
 class ImplicitNaryOperator;
 class ImplicitCSG;
 class UnaryOp;
+class LayerBasedGrid;
 
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
@@ -220,11 +221,14 @@ public:
 
     std::string heightmapFilename = "";
     GridF cachedHeightmap;
+    using MaterialColumns = Matrix3<std::vector<std::pair<TerrainTypes, float>>>;
+    MaterialColumns sampledMaterialColumns;
     size_t _generatedFunctionType = 0;
     size_t _generatedShapeSignature = 0;
     bool sampledVolume = false;
     float sampledFieldScale = 1.f;
     static ImplicitPrimitive* fromVoxelField(const GridF& values, ImplicitPrimitive* prim = nullptr);
+    static ImplicitPrimitive* fromLayerGrid(LayerBasedGrid& layers, ImplicitPrimitive* prim = nullptr);
 
     static ImplicitPrimitive* fromHeightmap(const std::string& filename, const Vector3& dimensions = Vector3::invalid, ImplicitPrimitive *prim = nullptr);
     static ImplicitPrimitive* fromHeightmap(GridF heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);

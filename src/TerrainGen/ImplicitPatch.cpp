@@ -79,12 +79,16 @@ size_t implicitFieldSignature(const ImplicitPatch& node, bool& cacheable)
     FieldHash hash;
     hash.add(typeid(node).hash_code());
     hash.add(ImplicitPatch::isovalue);
+    for (auto material : LayerBasedGrid::invisibleLayers) hash.add(int(material));
     hash.add(node.mirrored);
     hash.vector(node.scaling); hash.vector(node.translation);
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(&node)) {
         hash.add(primitiveShapeSignature(*primitive));
         hash.vector(primitive->position); hash.vector(primitive->supportDimensions);
         hash.add(int(primitive->material));
+        hash.vector(primitive->sampledMaterialColumns.getDimensions());
+        for (const auto& column : primitive->sampledMaterialColumns)
+            for (const auto& [material, thickness] : column) { hash.add(int(material)); hash.add(thickness); }
         hash.add(primitive->evaluationFunctionType());
         if (primitive->evaluationFunctionType() != primitive->_generatedFunctionType) cacheable = false;
     }
@@ -107,6 +111,18 @@ size_t implicitFieldSignature(const ImplicitPatch& node, bool& cacheable)
         }
     }
     return hash.value;
+}
+void readImplicitTerrainFrame(ImplicitPatch& patch, const nlohmann::json& content)
+{
+    const Vector3 scale = content.value("terrainScaling", patch.scaling);
+    const Vector3 translation = content.value("terrainTranslation", patch.translation);
+    auto finite = [](const Vector3& value) {
+        return value.isValid() && std::isfinite(value.x()) && std::isfinite(value.y()) && std::isfinite(value.z());
+    };
+    if (!finite(scale) || scale.x() == 0.f || scale.y() == 0.f || scale.z() == 0.f || !finite(translation))
+        throw std::invalid_argument("Implicit terrain frame requires finite translation and finite nonzero scale");
+    patch.scaling = scale;
+    patch.translation = translation;
 }
 float implicitColumnBoundary(const ImplicitPatch& patch, const Vector3& position, bool top)
 {
@@ -228,10 +244,16 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
     }
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
         if (primitive->hasGeneratedField() && primitive->predefinedShape == ImplicitHeightmap && !primitive->cachedHeightmap.empty() &&
-            (LayerBasedGrid::invisibleLayers.count(primitive->material) == 0)) {
+            (!primitive->sampledMaterialColumns.empty() || LayerBasedGrid::invisibleLayers.count(primitive->material) == 0)) {
             const Vector3 local = pos - primitive->position;
-            if (primitive->sampledVolume || primitive->cachedHeightmap.sizeZ > 1)
-                return primitive->cachedHeightmap.interpolate(local);
+            if (primitive->sampledVolume || primitive->cachedHeightmap.sizeZ > 1) {
+                const float value = primitive->cachedHeightmap.interpolate(local);
+                if (value > 0.f && !primitive->sampledMaterialColumns.empty()) {
+                    const auto materials = primitive->getMaterials(pos);
+                    if (!materials.empty() && LayerBasedGrid::invisibleLayers.count(materials.begin()->first)) return -value;
+                }
+                return value;
+            }
             if (local.x() < 0.f || local.y() < 0.f || local.x() > primitive->dimensions.x() - 1.f || local.y() > primitive->dimensions.y() - 1.f)
                 return -1.f;
             return TerrainSampling::heightAt(primitive->cachedHeightmap, local.x(), local.y()) - local.z();
@@ -356,7 +378,10 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
             std::vector<ImplicitPatch*> nodes{result.get()};
             while (!nodes.empty()) {
                 auto* node = nodes.back(); nodes.pop_back();
-                if (auto* primitive = dynamic_cast<ImplicitPrimitive*>(node)) primitive->material = material;
+                if (auto* primitive = dynamic_cast<ImplicitPrimitive*>(node)) {
+                    primitive->material = material;
+                    primitive->sampledMaterialColumns = ImplicitPrimitive::MaterialColumns();
+                }
                 if (auto* group = dynamic_cast<ImplicitNaryOperator*>(node))
                     for (auto* child : group->composables) if (child) nodes.push_back(child);
             }
@@ -368,6 +393,7 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
             if (originalBounds.dimensions().minComp() <= 0.f || desiredDimensions.minComp() <= 0.f)
                 throw std::invalid_argument("Cannot resize a degenerate implicit include");
             auto wrapper = std::make_unique<ImplicitUnaryOperator>();
+            wrapper->scaling = result->scaling; wrapper->translation = result->translation;
             wrapper->addChild(result.release());
             wrapper->scale(desiredDimensions / originalBounds.dimensions());
             result = std::move(wrapper);
@@ -377,6 +403,7 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
             else {
                 const Vector3 shift = desiredPosition - result->getBBox().min();
                 auto wrapper = std::make_unique<ImplicitTranslation>();
+                wrapper->scaling = result->scaling; wrapper->translation = result->translation;
                 wrapper->addChild(result.release());
                 wrapper->translate(shift);
                 result = std::move(wrapper);
@@ -385,6 +412,7 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
         result->used_json_filename = path.string();
         result->referenceProperties = content;
     } else throw std::invalid_argument("Implicit JSON node requires a type or file");
+    readImplicitTerrainFrame(*result, content);
     result->updateCache();
     return result.release();
 }
@@ -761,7 +789,20 @@ float ImplicitPrimitive::evaluate(const Vector3& pos) const
 
 std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(const Vector3& pos) const
 {
-    return {{this->material, this->evaluate(pos)}};
+    TerrainTypes selected = material;
+    if (!sampledMaterialColumns.empty()) {
+        const Vector3 local = pos - position;
+        selected = AIR;
+        if (local.x() >= 0.f && local.y() >= 0.f && local.z() >= 0.f &&
+            local.x() < sampledMaterialColumns.sizeX && local.y() < sampledMaterialColumns.sizeY) {
+            float top = 0.f;
+            for (const auto& [label, thickness] : sampledMaterialColumns(int(local.x()), int(local.y()))) {
+                top += thickness;
+                if (local.z() < top) { selected = label; break; }
+            }
+        }
+    }
+    return {{selected, evaluate(pos)}};
 }
 
 AABBox ImplicitPrimitive::getSupportBBox() const
@@ -783,6 +824,8 @@ void ImplicitPrimitive::update()
 
 
     if (this->predefinedShape == ImplicitHeightmap) {
+        for (float value : cachedHeightmap) if (!std::isfinite(value)) throw std::invalid_argument("Nonfinite implicit sample");
+        if (cachedHeightmap.empty() && heightmapFilename.empty()) throw std::invalid_argument("Sampled primitive requires samples or a filename");
         if (this->cachedHeightmap.size() == 0) {
             this->cachedHeightmap = Heightmap(this->heightmapFilename, this->dimensions.x(), this->dimensions.y()).heights;
         }
@@ -819,6 +862,7 @@ std::string ImplicitPrimitive::toString() const
 
 nlohmann::json ImplicitPrimitive::toJson()
 {
+    if (!hasGeneratedField() && !snapshotSerialization) throw std::runtime_error("Sample a custom evaluation callback before serializing it");
     nlohmann::json content;
     if (!this->used_json_filename.empty() && !snapshotSerialization) {
         content = referenceProperties;
@@ -853,9 +897,21 @@ nlohmann::json ImplicitPrimitive::toJson()
         if (predefinedShape == ImplicitHeightmap && !cachedHeightmap.empty()) {
             content["sampledVolume"] = sampledVolume;
             content["samples"] = cachedHeightmap;
+            if (!sampledMaterialColumns.empty()) {
+                nlohmann::json columns = nlohmann::json::array();
+                for (const auto& column : sampledMaterialColumns) {
+                    nlohmann::json intervals = nlohmann::json::array();
+                    for (const auto& [label, thickness] : column)
+                        intervals.push_back({{"material", stringFromMaterial(label)}, {"thickness", thickness}});
+                    columns.push_back(std::move(intervals));
+                }
+                content["materialColumns"] = {{"sizeX", sampledMaterialColumns.sizeX}, {"sizeY", sampledMaterialColumns.sizeY}, {"columns", columns}};
+            }
         }
     }
 
+    content["terrainScaling"] = scaling;
+    content["terrainTranslation"] = translation;
     return content;
 }
 
@@ -881,7 +937,27 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
         patch->heightmapFilename = content["filename"];
     patch->sampledVolume = content.value("sampledVolume", false);
     if (content.contains("samples")) patch->cachedHeightmap = content["samples"].get<GridF>();
+    if (content.contains("materialColumns")) {
+        const auto& saved = content.at("materialColumns");
+        const size_t nx = saved.at("sizeX"), ny = saved.at("sizeY");
+        if (!patch->sampledVolume || patch->predefinedShape != ImplicitHeightmap ||
+            nx != patch->cachedHeightmap.sizeX || ny != patch->cachedHeightmap.sizeY ||
+            !saved.at("columns").is_array() || saved.at("columns").size() != nx * ny)
+            throw std::invalid_argument("Material columns do not match the sampled field");
+        patch->sampledMaterialColumns = MaterialColumns(nx, ny, 1);
+        for (size_t i = 0; i < nx * ny; ++i) {
+            float total = 0.f;
+            if (!saved.at("columns").at(i).is_array()) throw std::invalid_argument("Material column must be an interval array");
+            for (const auto& interval : saved.at("columns").at(i)) {
+                const float thickness = interval.at("thickness");
+                total += thickness;
+                if (!std::isfinite(thickness) || thickness <= 0.f || !std::isfinite(total)) throw std::invalid_argument("Invalid material interval thickness");
+                patch->sampledMaterialColumns.data[i].emplace_back(materialFromString(interval.at("material")), thickness);
+            }
+        }
+    }
     patch->update();
+    readImplicitTerrainFrame(*patch, content);
     return owner.release();
 }
 
@@ -914,7 +990,7 @@ ImplicitPatch *ImplicitPrimitive::copy() const
         : new ImplicitPrimitive(*this);
     copy->parent = nullptr;
     copy->setIndex();
-    if (copy->predefinedShape != None) copy->update();
+    if (hasGeneratedField() && copy->predefinedShape != None) copy->update();
     return copy;
 }
 
@@ -966,6 +1042,9 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string
     if (prim == nullptr)
         prim = new ImplicitPrimitive;
     prim->sampledVolume = false;
+    prim->sampledMaterialColumns = MaterialColumns();
+    prim->used_json_filename.clear();
+    prim->referenceProperties = nlohmann::json::object();
     if (heightmap.height() > 1)
         prim->setDimensions(heightmap.getDimensions());
     else
@@ -992,6 +1071,10 @@ ImplicitPrimitive* ImplicitPrimitive::fromVoxelField(const GridF& values, Implic
     for (float value : values) if (!std::isfinite(value)) throw std::invalid_argument("Nonfinite implicit volume sample");
     if (!prim) prim = new ImplicitPrimitive;
     prim->sampledVolume = true;
+    prim->sampledMaterialColumns = MaterialColumns();
+    prim->heightmapFilename.clear();
+    prim->used_json_filename.clear();
+    prim->referenceProperties = nlohmann::json::object();
     prim->cachedHeightmap = values;
     prim->cachedHeightmap.raiseErrorOnBadCoord = false;
     prim->cachedHeightmap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
@@ -1003,6 +1086,26 @@ ImplicitPrimitive* ImplicitPrimitive::fromVoxelField(const GridF& values, Implic
     prim->name = "Sampled terrain";
     prim->update();
     return prim;
+}
+
+ImplicitPrimitive* ImplicitPrimitive::fromLayerGrid(LayerBasedGrid& layers, ImplicitPrimitive* prim)
+{
+    for (const auto& column : layers.getLayers()) {
+        float total = 0.f;
+        for (const auto& [label, thickness] : column) {
+            total += thickness;
+            if (label < AIR || label >= LAST || !std::isfinite(thickness) || thickness <= 0.f || !std::isfinite(total))
+                throw std::invalid_argument("Invalid layered snapshot interval");
+        }
+    }
+    std::unique_ptr<ImplicitPrimitive> owned;
+    if (!prim) { owned = std::make_unique<ImplicitPrimitive>(); prim = owned.get(); }
+    fromVoxelField(layers.voxelize(), prim);
+    prim->sampledMaterialColumns = layers.getLayers();
+    prim->scaling = layers.scaling;
+    prim->translation = layers.translation;
+    prim->name = "Layered terrain snapshot";
+    return owned ? owned.release() : prim;
 }
 
 
@@ -1228,6 +1331,8 @@ nlohmann::json ImplicitBinaryOperator::toJson()
         content["mirrored"] = this->mirrored;
     }
 
+    content["terrainScaling"] = scaling;
+    content["terrainTranslation"] = translation;
     return content;
 }
 
@@ -1249,6 +1354,7 @@ ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
     patch->update();
+    readImplicitTerrainFrame(*patch, content);
     return owner.release();
 }
 
@@ -1503,6 +1609,8 @@ std::string ImplicitUnaryOperator::toString() const
 
 nlohmann::json ImplicitUnaryOperator::toJson()
 {
+    if (noiseFunctionType() != _generatedNoiseType && !snapshotSerialization)
+        throw std::runtime_error("Sample a custom noise callback before serializing it");
     nlohmann::json content;
     if (!this->used_json_filename.empty() && !snapshotSerialization) {
         content = referenceProperties;
@@ -1531,6 +1639,8 @@ nlohmann::json ImplicitUnaryOperator::toJson()
         content["mirrored"] = this->mirrored;
     }
 
+    content["terrainScaling"] = scaling;
+    content["terrainTranslation"] = translation;
     return content;
 }
 
@@ -1605,6 +1715,7 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
         patch->mirrored = content["mirrored"];
 
     patch->update();
+    readImplicitTerrainFrame(*patch, content);
     return owner.release();
 }
 
@@ -1615,6 +1726,7 @@ ImplicitPatch* ImplicitUnaryOperator::copy() const
     auto* unary = static_cast<ImplicitUnaryOperator*>(result);
     unary->deleteAllChildren();
     if (composableA()) unary->addChild(composableA()->copy());
+    if (noiseFunctionType() != _generatedNoiseType) unary->setNoiseFunction(noiseFunction);
     result->parent = nullptr;
     std::vector<ImplicitPatch*> nodes{result};
     while (!nodes.empty()) {
@@ -2715,6 +2827,8 @@ nlohmann::json ImplicitNaryOperator::toJson()
         content["composables"] = composableJson;
     }
 
+    content["terrainScaling"] = scaling;
+    content["terrainTranslation"] = translation;
     return content;
 }
 
@@ -2732,6 +2846,7 @@ ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
     patch->update();
+    readImplicitTerrainFrame(*patch, content);
     return owner.release();
 }
 
