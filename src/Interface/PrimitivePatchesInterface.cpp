@@ -6,6 +6,23 @@
 //#include "Utils/stb_image.h"
 #include "Curves/Contour.h"
 #include "Graphics/MarchingCubes.h"
+#include "Interface/EnvObjsInterface.h"
+#include <QSaveFile>
+#include <QSignalBlocker>
+#include <memory>
+
+namespace {
+void wrapImplicitChild(ImplicitPatch* child, ImplicitUnaryOperator* wrapper)
+{
+    if (!child || !child->parent) throw std::invalid_argument("Wrapping requires an attached implicit child");
+    auto* parent = child->parent;
+    auto slot = std::find(parent->composables.begin(), parent->composables.end(), child);
+    if (slot == parent->composables.end()) throw std::logic_error("Missing implicit child slot");
+    parent->addChild(wrapper, int(slot - parent->composables.begin()));
+    wrapper->addChild(child);
+}
+}
+
 
 PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
     : ActionInterface("primitivepatches", "Implicit modeling", "model", "Feature primitives", "feature_primitive_button.png", parent)
@@ -338,17 +355,20 @@ void PrimitivePatchesInterface::createPatchWithOperation(const Vector3& pos)
             previousMain = this->implicitTerrain->composables.front();
         }
     }
+    auto* originalParent = dynamic_cast<ImplicitNaryOperator*>(_parent);
+    int originalSlot = -1;
+    if (originalParent) {
+        auto slot = std::find(originalParent->composables.begin(), originalParent->composables.end(), previousMain);
+        if (slot == originalParent->composables.end()) throw std::logic_error("Missing selected implicit child");
+        originalSlot = int(slot - originalParent->composables.begin());
+    }
     ImplicitPatch* operation = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
 
     if (_parent == nullptr) {
         this->implicitTerrain->deleteAllChildren();
         this->implicitTerrain->addChild(operation);
     } else {
-        auto* parent = dynamic_cast<ImplicitNaryOperator*>(_parent);
-        auto slot = std::find(parent->composables.begin(), parent->composables.end(), previousMain);
-        if (slot == parent->composables.end())
-            throw std::logic_error("Selected implicit patch is missing from its parent");
-        parent->addChild(operation, int(slot - parent->composables.begin()));
+        originalParent->addChild(operation, originalSlot);
     }
 //        ImplicitPatch* newOperation = this->createOperationPatchFromParameters(previousMain, patch);
 //        this->implicitTerrain = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
@@ -436,8 +456,6 @@ void PrimitivePatchesInterface::updateMapWithCurrentPatch()
     //heightmap->fromImplicit(implicitTerrain.get());
 //    voxelGrid->fromLayerBased(*layerGrid);
 //    heightmap->fromLayerGrid(*layerGrid);
-    this->savePatchesAsFile(this->mainFilename);
-
     Q_EMIT this->terrainUpdated();
 }
 
@@ -474,21 +492,9 @@ void PrimitivePatchesInterface::addNoiseOnSelectedPatch()
     if (AsBin != nullptr) {
         noisePatch = AsBin;
     } else {
+        if (!selectedPatch) return;
         noisePatch = new ImplicitNoise;
-        noisePatch->addChild(selectedPatch);
-        if (selectedPatch == this->implicitTerrain.get()) {
-            this->implicitTerrain->deleteAllChildren();
-            this->implicitTerrain->addChild(noisePatch);
-        } else {
-            ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
-            ImplicitBinaryOperator* parentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(_parent);
-            if (parentAsBinary) {
-                if (selectedPatch == parentAsBinary->composableA())
-                    parentAsBinary->addChild(noisePatch, 0);
-                else
-                    parentAsBinary->addChild(noisePatch, 1);
-            }
-        }
+        wrapImplicitChild(selectedPatch, noisePatch);
     }
     float amplitude = this->selectedSigma * .01f;
     noisePatch->addRandomNoise(amplitude);
@@ -510,21 +516,9 @@ void PrimitivePatchesInterface::addDistortionOnSelectedPatch()
     if (AsBin != nullptr) {
         distortionPatch = AsBin;
     } else {
+        if (!selectedPatch) return;
         distortionPatch = new ImplicitWraping;
-        distortionPatch->addChild(selectedPatch);
-        if (selectedPatch == this->implicitTerrain.get()) {
-            this->implicitTerrain->deleteAllChildren();
-            this->implicitTerrain->addChild(distortionPatch);
-        } else {
-            ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
-            ImplicitBinaryOperator* parent = dynamic_cast<ImplicitBinaryOperator*>(_parent);
-            if (parent) {
-                if (selectedPatch == parent->composableA())
-                    parent->addChild(distortionPatch, 0);
-                else
-                    parent->addChild(distortionPatch, 1);
-            }
-        }
+        wrapImplicitChild(selectedPatch, distortionPatch);
     }
     GridV3 disto = GridV3({
 //                                                  { Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), /*Vector3(0.0, 0.0, 0), */Vector3(0.0, -.5, 0)/*, Vector3(0.0, 0.5, 0) */},
@@ -557,21 +551,9 @@ void PrimitivePatchesInterface::addSpreadOnSelectedPatch()
     if (AsBin != nullptr) {
         distortionPatch = AsBin;
     } else {
+        if (!selectedPatch) return;
         distortionPatch = new ImplicitSpread;
-        distortionPatch->addChild(selectedPatch);
-        if (selectedPatch == this->implicitTerrain.get()) {
-            this->implicitTerrain->deleteAllChildren();
-            this->implicitTerrain->addChild(distortionPatch);
-        } else {
-            ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
-            ImplicitBinaryOperator* parent = dynamic_cast<ImplicitBinaryOperator*>(_parent);
-            if (parent) {
-                if (selectedPatch == parent->composableA())
-                    parent->addChild(distortionPatch, 0);
-                else
-                    parent->addChild(distortionPatch, 1);
-            }
-        }
+        wrapImplicitChild(selectedPatch, distortionPatch);
     }
     float amplitude = this->selectedSigma / 10.f;
     distortionPatch->spread(amplitude);
@@ -705,12 +687,11 @@ void PrimitivePatchesInterface::deformationFromFlow()
 
 void PrimitivePatchesInterface::savePatchesAsFile(const std::string& filename)
 {
-    this->lastTimeFileHasBeenModified = QDateTime::currentDateTime().addDays(1); // Just to avoid the reloading during the save
-    nlohmann::json content = this->implicitTerrain->toJson();
-    std::ofstream out(filename, std::ios_base::out | std::ios_base::trunc);
-    out << nlohmann::json({ {ImplicitPatch::json_identifier, content} }).dump(1, '\t');
-    out.flush();
-    this->lastTimeFileHasBeenModified = QDateTime::currentDateTime();
+    const auto payload = nlohmann::json({{ImplicitPatch::json_identifier, implicitTerrain->toJson()}}).dump(1, '\t');
+    QSaveFile file(QString::fromStdString(filename));
+    if (!file.open(QIODevice::WriteOnly) || file.write(payload.data(), qint64(payload.size())) != qint64(payload.size()) || !file.commit())
+        throw std::runtime_error("Cannot atomically save implicit terrain: " + filename);
+    lastTimeFileHasBeenModified = QFileInfo(QString::fromStdString(filename)).lastModified();
 }
 
 void PrimitivePatchesInterface::loadPatchesFromFile(const std::string& filename)
@@ -721,7 +702,14 @@ void PrimitivePatchesInterface::loadPatchesFromFile(const std::string& filename)
     nlohmann::json json_content = nlohmann::json::parse(content);
     this->lastTimeFileHasBeenModified = QFileInfo(QString::fromStdString(filename)).lastModified();
     if (json_content.contains(ImplicitPatch::json_identifier)) {
-        *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitNaryOperator::fromJson(json_content[ImplicitPatch::json_identifier]));
+        std::unique_ptr<ImplicitPatch> decoded(ImplicitPatch::fromJson(json_content.at(ImplicitPatch::json_identifier)));
+        auto* group = dynamic_cast<ImplicitNaryOperator*>(decoded.get());
+        if (!group) throw std::invalid_argument("The implicit editor expects an operator root");
+        ImplicitNaryOperator replacement(*group);
+        clearSelection();
+        if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
+            environment->detachImplicitRoot();
+        *implicitTerrain = replacement;
 //        this->implicitTerrain->composables = {ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier])};
         this->updateMapWithCurrentPatch();
         this->updatePrimitiveList();
@@ -1180,7 +1168,8 @@ void PrimitivePatchesInterface::openPrimitiveModificationDialog(QListWidgetItem 
             break;
         }
     }
-    if (selectedPatch) {
+    if (selectedPatch && selectedPatch->parent &&
+        (dynamic_cast<ImplicitPrimitive*>(selectedPatch) || dynamic_cast<ImplicitBinaryOperator*>(selectedPatch))) {
         PatchReplacementDialog* dialog = new PatchReplacementDialog(this, selectedPatch);
         int result = dialog->exec();
 //            this->debugMeshDisplayed = false;
@@ -1436,100 +1425,36 @@ void PrimitivePatchesInterface::moveDebugBoxWithControlPoint()
 
 void PrimitivePatchesInterface::translatePatch(const Vector3& translation)
 {
-//        QObject::blockSignals(true);
-    // Get patch being manipulated
-    if (this->selectedPatch() != nullptr) {
-        // primitiveControlPoint->blockSignals(true);
-        primitiveSelectionGui->blockSignals(true);
-
-        ImplicitTranslation* manipulatedAsUnary = dynamic_cast<ImplicitTranslation*>(this->selectedPatch());
-        if (manipulatedAsUnary == nullptr) {
-            // It's not an unary yet, but the parent might be
-            manipulatedAsUnary = dynamic_cast<ImplicitTranslation*>(this->naiveApproachToGetParent(this->selectedPatch()));
-        }
-
-        if (manipulatedAsUnary != nullptr) { // We are updating an unary operator
-            manipulatedAsUnary->translate(translation); // Just update it
-        } else { // Otherwise, create a new Unary operator
-            ImplicitTranslation* translate = new ImplicitTranslation;
-            if (this->selectedPatch() == this->implicitTerrain.get()) {
-                this->implicitTerrain->deleteAllChildren();
-                this->implicitTerrain->addChild(translate);
-            } else {
-                ImplicitNaryOperator* parentAsNaryOperator = this->selectedPatch()->getParent(); //dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
-                if (parentAsNaryOperator) {
-                    for (size_t i = 0; i < parentAsNaryOperator->composables.size(); i++) {
-                        if (parentAsNaryOperator->composables[i] == selectedPatch()) {
-                            parentAsNaryOperator->addChild(translate, i);
-                            break;
-                        }
-                    }
-                }
-            }
-            translate->addChild(this->selectedPatch());
-            translate->translate(translation);
-            this->storedPatches.push_back(translate);
-            this->updatePrimitiveList();
-            this->primitiveSelectionGui->setCurrentItem(translate->index);
-
-
-        }
-        this->updateMapWithCurrentPatch();
-
-        // primitiveControlPoint->blockSignals(false);
-        primitiveSelectionGui->blockSignals(false);
+    auto* selected = selectedPatch();
+    if (!selected) return;
+    QSignalBlocker blocker(primitiveSelectionGui);
+    auto* operation = dynamic_cast<ImplicitTranslation*>(selected);
+    if (!operation) operation = dynamic_cast<ImplicitTranslation*>(selected->parent);
+    if (!operation) {
+        operation = new ImplicitTranslation;
+        wrapImplicitChild(selected, operation);
     }
+    operation->translate(translation);
+    updateMapWithCurrentPatch();
+    updatePrimitiveList();
+    primitiveSelectionGui->setCurrentItem(operation->index);
 }
 
 void PrimitivePatchesInterface::rotatePatch(const Vector3& rotation)
 {
-    std::cout << "Rotation applied : " << rotation << std::endl;
-//        QObject::blockSignals(true);
-    // Get patch being manipulated
-    if (this->selectedPatch() != nullptr) {
-        // primitiveControlPoint->blockSignals(true);
-        primitiveSelectionGui->blockSignals(true);
-
-        ImplicitRotation* manipulatedAsUnary = dynamic_cast<ImplicitRotation*>(this->selectedPatch());
-        if (manipulatedAsUnary == nullptr) {
-            // It's not an unary yet, but the parent might be
-            manipulatedAsUnary = dynamic_cast<ImplicitRotation*>(this->naiveApproachToGetParent(this->selectedPatch()));
-        }
-
-        if (manipulatedAsUnary != nullptr) { // We are updating an unary operator
-            std::cout << "We'll rotate " << manipulatedAsUnary->toString() << std::endl;
-            manipulatedAsUnary->rotate(rotation); // Just update it
-        } else { // Otherwise, create a new Unary operator
-            std::cout << "We'll create a new operator" << std::endl;
-            ImplicitRotation* rotate = new ImplicitRotation;
-            rotate->rotate(rotation);
-            if (this->selectedPatch() == this->implicitTerrain.get()) {
-                this->implicitTerrain->deleteAllChildren();
-                this->implicitTerrain->addChild(rotate);
-            } else {
-                ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
-                if (parentAsNaryOperator) {
-                    for (size_t i = 0; i < parentAsNaryOperator->composables.size(); i++) {
-                        auto& c = parentAsNaryOperator->composables[i];
-                        if (this->selectedPatch() == c) {
-                            parentAsNaryOperator->addChild(rotate, i);
-                            std::cout << "Rotation inserted in position " << i << std::endl;
-                        }
-                    }
-                }
-            }
-            rotate->addChild(this->selectedPatch());
-
-
-            this->storedPatches.push_back(rotate);
-            this->updatePrimitiveList();
-            this->primitiveSelectionGui->setCurrentItem(rotate->index);
-        }
-        this->updateMapWithCurrentPatch();
-
-        // primitiveControlPoint->blockSignals(false);
-        primitiveSelectionGui->blockSignals(false);
+    auto* selected = selectedPatch();
+    if (!selected) return;
+    QSignalBlocker blocker(primitiveSelectionGui);
+    auto* operation = dynamic_cast<ImplicitRotation*>(selected);
+    if (!operation) operation = dynamic_cast<ImplicitRotation*>(selected->parent);
+    if (!operation) {
+        operation = new ImplicitRotation;
+        wrapImplicitChild(selected, operation);
     }
+    operation->rotate(rotation);
+    updateMapWithCurrentPatch();
+    updatePrimitiveList();
+    primitiveSelectionGui->setCurrentItem(operation->index);
 }
 
 ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(const Vector3& position, ImplicitPatch *replacedPatch)
@@ -1864,6 +1789,9 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
 PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller, ImplicitPatch *patchToModify)
     : QDialog(), caller(caller), patch(patchToModify)
 {
+    originalPatch = patchToModify;
+    draftPatch.reset(patchToModify->copy());
+    patch = draftPatch.get();
     bool patchIsOperation = (dynamic_cast<ImplicitBinaryOperator*>(patch) != nullptr);
 
     auto UI = new InterfaceUI();
@@ -2127,6 +2055,17 @@ void PatchReplacementDialog::cancel()
 void PatchReplacementDialog::confirm()
 {
     patch->update();
+    if (!originalPatch || !originalPatch->parent) throw std::logic_error("Edited implicit patch is detached");
+    auto* parent = originalPatch->parent;
+    auto slot = std::find(parent->composables.begin(), parent->composables.end(), originalPatch);
+    if (slot == parent->composables.end()) throw std::logic_error("Edited implicit patch is missing from its parent");
+    std::unique_ptr<ImplicitPatch> replacement(patch->copy());
+    replacement->setIndex(originalPatch->index);
+    parent->addChild(replacement.get(), int(slot - parent->composables.begin()));
+    replacement.release();
+    if (caller) caller->clearSelection();
+    delete originalPatch;
+    originalPatch = nullptr;
     setResult(1);
     this->done(1);
 }

@@ -328,10 +328,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
     voxelGrid->setVoxelValues(values);
     this->heightmap->fromVoxelGrid(*voxelGrid);
     this->layerGrid->fromVoxelGrid(*voxelGrid);
-    ImplicitPrimitive* implicitHeightmap = ImplicitPrimitive::fromHeightmap(heightmap->heights, "");
-    implicitHeightmap->material = TerrainTypes::DIRT;
-    this->implicitTerrain->composables = {implicitHeightmap};
-    this->implicitTerrain->_cached = false;
+    heightmapToImplicit();
     this->initialTerrainValues = values;
 
     this->addTerrainAction(nlohmann::json({
@@ -455,10 +452,7 @@ void TerrainGenerationInterface::createTerrainFromFile(const std::string& filena
         return;
     }*/
     displayProcessTime("Generating implicit terrain... ", [&]() {
-        ImplicitPrimitive* implicitHeightmap = ImplicitPrimitive::fromHeightmap(heightmap->heights, ""); // , dynamic_cast<ImplicitPrimitive*>(implicitTerrain.get()));
-        implicitHeightmap->material = TerrainTypes::DIRT;
-        this->implicitTerrain->composables = {implicitHeightmap};
-        this->implicitTerrain->_cached = false;
+        heightmapToImplicit();
     });
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
@@ -494,7 +488,14 @@ void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_con
 void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json json_content)
 {
     std::cout << "Load implicit: " << showTime(timeIt([&]() {
-        *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]));
+        std::unique_ptr<ImplicitPatch> decoded(ImplicitPatch::fromJson(json_content.at(ImplicitPatch::json_identifier)));
+        auto* group = dynamic_cast<ImplicitNaryOperator*>(decoded.get());
+        if (!group) throw std::invalid_argument("Implicit terrain file requires an operator root");
+        ImplicitNaryOperator replacement(*group);
+        if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches"))) editor->clearSelection();
+        if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects"))) environment->detachImplicitRoot();
+        *implicitTerrain = replacement;
+        implicitTerrain->updateCache();
     })) << std::endl;
 /*
     EnvArea* reef = EnvArea::instantiate("reef"));

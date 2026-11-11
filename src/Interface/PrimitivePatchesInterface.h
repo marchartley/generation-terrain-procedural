@@ -188,6 +188,8 @@ public:
     QPushButton* validButton;
     PrimitivePatchesInterface* caller = nullptr;
     ImplicitPatch* patch = nullptr;
+    ImplicitPatch* originalPatch = nullptr;
+    std::shared_ptr<ImplicitPatch> draftPatch;
 };
 
 #endif // PRIMITIVEPATCHESINTERFACE_H
