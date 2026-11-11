@@ -194,5 +194,5 @@ $RECYCLE.BIN/
 /Python_tests/snake-tests/
 /Python_tests/test_island_heightmap/heightmaps/result_height-demo-*.png
 
-# Local data-structure correction and optimization tracker
-/NOTES_Data-Structures.md
+
+NOTES_*.md
