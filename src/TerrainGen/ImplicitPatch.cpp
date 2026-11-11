@@ -213,14 +213,14 @@ Vector3 ImplicitPatch::getNormal(const Vector3& pos) const
 {
     float delta = 1e-3; // Not too big, not too small...
 
-    float minusX = this->evaluate(pos - Vector3(delta, 0, 0));
-    float plusX = this->evaluate(pos + Vector3(delta, 0, 0));
-    float minusY = this->evaluate(pos - Vector3(0, delta, 0));
-    float plusY = this->evaluate(pos + Vector3(0, delta, 0));
-    float minusZ = this->evaluate(pos - Vector3(0, 0, delta));
-    float plusZ = this->evaluate(pos + Vector3(0, 0, delta));
+    float minusX = this->getSignedEvaluation(pos - Vector3(delta, 0, 0));
+    float plusX = this->getSignedEvaluation(pos + Vector3(delta, 0, 0));
+    float minusY = this->getSignedEvaluation(pos - Vector3(0, delta, 0));
+    float plusY = this->getSignedEvaluation(pos + Vector3(0, delta, 0));
+    float minusZ = this->getSignedEvaluation(pos - Vector3(0, 0, delta));
+    float plusZ = this->getSignedEvaluation(pos + Vector3(0, 0, delta));
 
-    return Vector3(plusX - minusX, plusY - minusY, plusZ - minusZ).normalize();
+    return Vector3(minusX - plusX, minusY - plusY, minusZ - plusZ).normalize();
 }
 
 void ImplicitPatch::setIndex(int newIndex)
@@ -280,14 +280,7 @@ void ImplicitPatch::updateCache()
 
 bool ImplicitPatch::checkIsInGround(const Vector3& position)
 {
-    auto eval = this->getMaterials(position);
-    float groundValue = 0.f;
-    float outsideValue = 0.f;
-    for (auto& [mat, val] : eval) {
-        groundValue += ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? 0.f : val);
-        outsideValue += ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? val : 0.f);
-    }
-    return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
+    return getSignedEvaluation(position) > 0.f;
 }
 
 Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
@@ -303,82 +296,55 @@ Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
 
 Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    AABBox myAABBox = AABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
-    //    if (!minPos.isValid()) minPos = Vector3();
-    //    if (!maxPos.isValid()) maxPos = this->getDimensions();
-
-    Vector3 currentPosition = origin;
-    if (!Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max()))
-        currentPosition = Collision::intersectionRayAABBox(origin, dir, myAABBox);
-    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * .01f, myAABBox.max() + Vector3(1, 1, 1) * .01f});
-    if (!currentPosition.isValid())
-        return Vector3::invalid;
-
-    Vector3 normalizedDir = dir.normalized();
-
-    // auto values = this->getVoxelValues();
-    // values.raiseErrorOnBadCoord = false;
-
-    Vector3 stepSizes = Vector3(1, 1, 1) / normalizedDir;
-    float tMaxX = (dir.x() > 0) ? (std::ceil(currentPosition.x()) - currentPosition.x()) / dir.x() :
-                      (currentPosition.x() - std::floor(currentPosition.x())) / (-dir.x());
-    float tMaxY = (dir.y() > 0) ? (std::ceil(currentPosition.y()) - currentPosition.y()) / dir.y() :
-                      (currentPosition.y() - std::floor(currentPosition.y())) / (-dir.y());
-    float tMaxZ = (dir.z() > 0) ? (std::ceil(currentPosition.z()) - currentPosition.z()) / dir.z() :
-                      (currentPosition.z() - std::floor(currentPosition.z())) / (-dir.z());
-
-    // Calculate steps in each axis based on stepSizes
-    float tDeltaX = std::abs(stepSizes.x() * dir.x());
-    float tDeltaY = std::abs(stepSizes.y() * dir.y());
-    float tDeltaZ = std::abs(stepSizes.z() * dir.z());
-
-    while (Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max())) {
-        if (checkIsInGround(currentPosition) > 0) {
-            return currentPosition;
+    // Density is not a distance bound. Walk a bounded ray interval, then refine
+    // the first detected air/solid transition using the rendering field.
+    auto finite = [](const Vector3& v) {
+        return v.isValid() && std::isfinite(v.x()) && std::isfinite(v.y()) && std::isfinite(v.z());
+    };
+    if (!finite(origin) || !finite(dir) || dir.norm2() == 0.f) return Vector3::invalid;
+    const Vector3 direction = dir.normalized();
+    auto bounds = getSupportBBox();
+    if (!finite(bounds.min()) || !finite(bounds.max())) return Vector3::invalid;
+    if (minPos.isValid()) bounds.mini = Vector3::max(bounds.min(), minPos);
+    if (maxPos.isValid()) bounds.maxi = Vector3::min(bounds.max(), maxPos);
+    if ((bounds.max() - bounds.min()).minComp() < 0.f) return Vector3::invalid;
+    float entry = 0.f, exit = std::numeric_limits<float>::infinity();
+    for (int axis = 0; axis < 3; ++axis) {
+        if (direction[axis] == 0.f) {
+            if (origin[axis] < bounds.min()[axis] || origin[axis] > bounds.max()[axis])
+                return Vector3::invalid;
+            continue;
         }
-
-        if (tMaxX < tMaxY && tMaxX < tMaxZ) {
-            currentPosition.x() += dir.x();
-            tMaxX += tDeltaX;
-        } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
-            currentPosition.y() += dir.y();
-            tMaxY += tDeltaY;
-        } else {
-            currentPosition.z() += dir.z();
-            tMaxZ += tDeltaZ;
-        }
+        float first = (bounds.min()[axis] - origin[axis]) / direction[axis];
+        float last = (bounds.max()[axis] - origin[axis]) / direction[axis];
+        if (first > last) std::swap(first, last);
+        entry = std::max(entry, first);
+        exit = std::min(exit, last);
+        if (entry > exit) return Vector3::invalid;
     }
-    if (currentPosition.z() <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
-        return currentPosition.xy(); // There is no ground here, still want to detect the collision... I guess...
-    return Vector3::invalid;
-    /*auto myAABBox = this->getBBox();
-    myAABBox.mini = Vector3::max(myAABBox.mini, minPos);
-    myAABBox.maxi = Vector3::min(myAABBox.maxi, maxPos);
-
-    Vector3 currPos = origin;
-    if (!Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max()))
-        currPos = Collision::intersectionRayAABBox(origin, dir, myAABBox);
-    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1), myAABBox.max() + Vector3(1, 1, 1)});
-    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
-    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
-    // Continue while we are in the grid or we are heading towards the grid
-    while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
-    {
-        if (Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max())) {
-            if (this->checkIsInGround(currPos)) {
-                return currPos;
+    if (!std::isfinite(exit)) return Vector3::invalid;
+    float previous = entry;
+    if (getSignedEvaluation(origin + direction * entry) > 0.f)
+        return origin + direction * entry;
+    // Use double loop counters so floating-point addition cannot stall at
+    // large coordinates. Features thinner than zResolution remain sampled.
+    const double count = std::ceil((double(exit) - entry) / zResolution);
+    for (double i = 1; i <= count; ++i) {
+        const float t = float(std::min(double(exit), double(entry) + i * zResolution));
+        if (getSignedEvaluation(origin + direction * t) > 0.f) {
+            float lower = previous, upper = t;
+            for (int refinement = 0; refinement < 20; ++refinement) {
+                const float middle = lower + (upper - lower) * .5f;
+                if (getSignedEvaluation(origin + direction * middle) > 0.f) upper = middle;
+                else lower = middle;
             }
+            return origin + direction * (lower + (upper - lower) * .5f);
         }
-        currPos += dir;
-        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
-        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
+        previous = t;
     }
-
-    if (currPos.z() <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
-        return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
-    return Vector3::invalid();*/
-
+    return Vector3::invalid;
 }
+
 
 float ImplicitPatch::getHeight(float x, float y)
 {
