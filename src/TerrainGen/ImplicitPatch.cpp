@@ -176,10 +176,7 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMateria
     for (const auto& [mat, val] : materials)
         totalValue += val * ((LayerBasedGrid::invisibleLayers.count(mat) != 0) ? -1.f : 1.f);
 
-    if (totalValue < 0) {
-        return {-totalValue, {{WATER, -totalValue}}};
-    }
-    return {totalValue, {{SAND, totalValue}}};
+    return {std::abs(totalValue), std::move(materials)};
 }
 
 Vector3 ImplicitPatch::getDimensions() const
@@ -786,29 +783,7 @@ ImplicitBinaryOperator::ImplicitBinaryOperator()
 
 float ImplicitBinaryOperator::evaluate(const Vector3& pos) const
 {
-    // Get the function, depending on the chosen operator
-    float evalA = this->evaluateA(pos);
-    float evalB = this->evaluateB(pos);
-
-    return this->evaluateFromAandB(evalA, evalB);
-    /*
-    if (this->withIntersectionOnB && evalA < ImplicitPatch::isovalue) {
-        return evalA; // TODO: Check if we need to use "isovalue" in the condition
-    }
-
-    float evaluation = 0.f;
-    if (this->composeFunction == STACK) {
-        evaluation = std::max(evalA, evalB);
-    } else if (this->composeFunction == REPLACE) {
-        evaluation = (evalB > ImplicitPatch::isovalue ? evalB : evalA);
-    } else if (this->composeFunction == BLEND) {
-        evaluation = std::pow(std::pow(evalA, this->blendingFactor) + std::pow(evalB, this->blendingFactor), 1.f/this->blendingFactor);
-    } else {
-        std::cerr << "Wrong composition function" << std::endl;
-    }
-    evaluation = std::clamp(evaluation, 0.f, 1.f);
-    return evaluation;
-    */
+    return getMaterialsAndTotalEvaluation(pos).first;
 }
 
 std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3& pos) const
@@ -821,61 +796,12 @@ std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3
     auto [contributionB, materialsAndEvalsForB] = this->getMaterialsAndTotalEvaluationB(pos);
     float operationEvaluation = this->evaluateFromAandB(contributionA, contributionB);
 
-    if (this->withIntersectionOnB && contributionA < ImplicitPatch::isovalue) {
-        return materialsAndEvalsForA;
-    }
-
     std::map<TerrainTypes, float> result;
 
 
     if (operationEvaluation == 0) {
         return {};
     }
-/*
-    // Contribution A and B are [0, 1]
-    // op eval is [0, 1]
-    // The contribution of A and B are the gradients of the composite function (?)
-    // Or is it "partial derivative" ? Don't know the difference...
-    float delta = 1e-3;
-    float AminusDelta = std::clamp(contributionA - delta, 0.f, 1.f);
-    float AplusDelta = std::clamp(contributionA + delta, 0.f, 1.f);
-    float BminusDelta = std::clamp(contributionB - delta, 0.f, 1.f);
-    float BplusDelta = std::clamp(contributionB + delta, 0.f, 1.f);
-    float deltaA = (AplusDelta - AminusDelta);
-    float deltaB = (BplusDelta - BminusDelta);
-    float gradX0 = evaluateFromAandB(AplusDelta, contributionB);
-    float gradX1 = evaluateFromAandB(AminusDelta, contributionB);
-    float gradY0 = evaluateFromAandB(contributionA, BplusDelta);
-    float gradY1 = evaluateFromAandB(contributionA, BminusDelta);
-    float varyX = (gradX0 - gradX1);
-    float varyY = (gradY0 - gradY1);
-    float gradX = varyX / deltaA;
-    float gradY = varyY / deltaB;
-
-
-    // No sense to put any material if gradient is null
-//    if (gradX <= 0.f && gradY <= 0.f) {
-//        return {{TerrainMaterial(), 0.f}};
-//    }
-    if (gradX <= 0.f && gradY <= 0.f) {
-        gradX = 1.f; //return {{TerrainMaterial(), 0.f}};
-        gradY = 1.f;
-    }
-
-    // Force 0 on null materials
-    float ratioA = 0.f;
-    float ratioB = 0.f;
-    if (contributionA <= 0) {
-        ratioA = 0.f;
-        ratioB = (operationEvaluation / contributionB);
-    } else if (contributionB <= 0) {
-        ratioA = (operationEvaluation / contributionA);
-        ratioB = 0.f;
-    } else {
-        ratioA = (gradX / (gradX + gradY)) * (contributionA > 0 ? (operationEvaluation / contributionA) : 0.f);
-        ratioB = (gradY / (gradX + gradY)) * (contributionB > 0 ? (operationEvaluation / contributionB) : 0.f);
-    }
-*/
     float mu_A = contributionA;
     float mu_B = contributionB;
     float rA = mu_A / (mu_A + mu_B);
@@ -885,32 +811,9 @@ std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3
     float globalCoef = operationEvaluation / (tempA + tempB);
     float ratioA = rA * globalCoef;
     float ratioB = rB * globalCoef;
-/*
-    Vector3 gradient = Vector3(gradX, gradY);
-//                evaluateFromAandB(contributionA + delta, contributionB) - evaluateFromAandB(contributionA - delta, contributionB),
-//                evaluateFromAandB(contributionA, contributionB + delta) - evaluateFromAandB(contributionA, contributionB - delta)
-//                );
-//    float sumOfContributions = gradient.x() + gradient.y; //contributionA + contributionB;
-    float ratioA = gradient.x; // / operationEvaluation;
-    float ratioB = gradient.y; // / operationEvaluation;
-    float sumOfRatios = ratioA + ratioB;
-    if (sumOfRatios == 0) {
-        return {{TerrainMaterial(), 0.f}};
+    if (composeFunction == NONE && !withIntersectionOnB) {
+        return materialsAndEvalsForA;
     }
-    // Get ratioA + ratioB = 1
-    ratioA = ratioA / sumOfRatios;
-    ratioB = ratioB / sumOfRatios;
-    // Ratio depends on self evaluation
-    if (contributionA > 0)
-        ratioA = operationEvaluation * ratioA / contributionA;
-    else
-        ratioA = 0.f;
-
-    if (contributionB > 0)
-        ratioB = operationEvaluation * ratioB / contributionB;
-    else
-        ratioB = 0.f; */
-
     if (this->composeFunction == REPLACE || this->composeFunction == ONE_SIDE_BLEND) {
         if (contributionB > ImplicitPatch::isovalue) {
             ratioA = 0.f;
@@ -943,9 +846,9 @@ std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3
 
 float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB) const
 {
-    if (this->withIntersectionOnB && evalA < ImplicitPatch::isovalue) {
-        return evalA; // TODO: Check if we need to use "isovalue" in the condition
-    }
+    if (!std::isfinite(blendingFactor) || blendingFactor <= 0.f)
+        throw std::invalid_argument("Implicit blend exponent must be finite and positive");
+    if (withIntersectionOnB) return std::min(evalA, evalB);
     float evaluation = 0.f;
     if (this->composeFunction == STACK) {
         evaluation = std::max(evalA, evalB);
@@ -953,8 +856,10 @@ float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB) const
         evaluation = (evalB > ImplicitPatch::isovalue ? evalB : evalA);
     } else if (this->composeFunction == BLEND || this->composeFunction == ONE_SIDE_BLEND) {
         evaluation = std::pow(std::pow(evalA, this->blendingFactor) + std::pow(evalB, this->blendingFactor), 1.f/this->blendingFactor);
+    } else if (composeFunction == NONE) {
+        evaluation = evalA;
     } else {
-        std::cerr << "Wrong composition function" << std::endl;
+        throw std::invalid_argument("Unknown implicit composition function");
     }
     evaluation = std::clamp(evaluation, 0.f, 1.f);
     return evaluation;
@@ -1235,12 +1140,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
 */
 float ImplicitUnaryOperator::evaluate(const Vector3& pos) const
 {
-//    Vector3 evaluationPos = this->unwrapFunction(pos);
-    Vector3 evaluationPos = inverseTransform(pos);
-    float evaluation = this->composableA()->evaluate(evaluationPos) + this->noiseFunction(pos);
-    evaluation = std::clamp(evaluation, 0.f, 1.f);
-
-    return evaluation;
+    return getMaterialsAndTotalEvaluation(pos).first;
 }
 
 void ImplicitUnaryOperator::addTranslation(const Vector3 &translation) {
@@ -1331,16 +1231,14 @@ Vector3 ImplicitUnaryOperator::inverseTransform(const Vector3& pos) const
 
 std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3& pos) const
 {
-    Vector3 evaluationPos = this->inverseTransform(pos);
-    auto [eval, materials] = this->composableA()->getMaterialsAndTotalEvaluation(evaluationPos);
-            if (eval > 0.f) {
-        float noiseValue = this->noiseFunction(pos);
-        for (auto& [mat, val] : materials) {
-            val += (noiseValue * (val / eval));
-        }
+    auto [value, materials] = composableA()->getMaterialsAndTotalEvaluation(inverseTransform(pos));
+    if (value > 0.f) {
+        const float noisy = std::clamp(value + noiseFunction(pos), 0.f, 1.f);
+        for (auto& [material, amount] : materials) amount *= noisy / value;
     }
     return materials;
 }
+
 AABBox ImplicitUnaryOperator::transformBounds(AABBox bounds) const
 {
     for (size_t i = 0; i < transformations.size(); ++i) {
@@ -2397,10 +2295,7 @@ ImplicitNaryOperator::ImplicitNaryOperator()
 
 float ImplicitNaryOperator::evaluate(const Vector3& pos) const
 {
-    float maxVal = 0.f;
-    for (auto& compo : this->composables)
-        maxVal = maxVal + compo->evaluate(pos); //std::max(maxVal, compo->evaluate(pos));
-    return maxVal;
+    return getMaterialsAndTotalEvaluation(pos).first;
 }
 
 std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos) const
