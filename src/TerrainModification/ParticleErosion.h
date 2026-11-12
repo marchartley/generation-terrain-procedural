@@ -117,8 +117,11 @@ struct ErosionBalance {
     double measuredTerrainChange = 0.;
     double unappliedTerrainChange = 0.;
     double sedimentResidual = 0.;
+    double proposedTerrainChange = 0.;
+    double rejectedDetachment = 0.;
+    double rejectedDeposition = 0.;
     // Scalar density sums and occupancy counts are not geometric volume.
-    enum Measure { HEIGHT_VOLUME, LAYER_VOLUME, DENSITY_SUM, OCCUPIED_VOXELS, UNMEASURED_FIELD };
+    enum Measure { HEIGHT_VOLUME, LAYER_VOLUME, DENSITY_SUM, OCCUPIED_VOXELS, BINARY_EFFECTIVE_VOLUME, UNMEASURED_FIELD };
     Measure measure = UNMEASURED_FIELD;
     bool terrainMeasured = false;
 };
@@ -129,6 +132,8 @@ public:
     ErosionBalance balance;
 
     std::vector<ParticleHistory> process();
+    // Replay proposed contacts in order against native terrain capacity.
+    void reconcileTerrainExchanges(std::vector<ParticleHistory>& tracks);
     void initializeParticle(ErosionParticle& particle, Vector3& position, Vector3& velocity, float radius, float density, float initialCapacity, float maxCapacity);
     ParticleHistory trackParticlePositions(ErosionParticle& particle);
     float computeErosionValue(const ErosionParticle &particle, float vRel);

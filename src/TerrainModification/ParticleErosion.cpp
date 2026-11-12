@@ -212,137 +212,297 @@ std::vector<ErosionPoint> ParticleErosion::computeErosionValuesFromHistory(const
 }
 
 namespace {
-struct BrushEvent {
-    ErosionPoint point;
-    int x0, x1, y0, y1, z0, z1;
-    double normalization = 0.;
-};
-
 bool finitePosition(const Vector3& p)
 {
     return p.isValid() && std::isfinite(p.x()) && std::isfinite(p.y()) && std::isfinite(p.z());
 }
+}
 
-// Equations 9/13: normalized hemisphere height or linear radial voxel kernel.
-// Each XY tile owns its output columns, so overlapping brushes need no locks or
-// full-terrain buffers per particle/thread. Event order is stable across threads.
-GridF rasterizeErosion(const std::vector<std::vector<ErosionPoint>>& tracks,
-                       const Vector3& dimensions, float radius, bool heightField)
+namespace {
+// Alter only eligible intervals near the contact. Return the volume actually
+// exchanged; unavailable bedrock cannot become a particle's sediment.
+double exchangeColumn(std::vector<std::pair<TerrainTypes,float>>& column,
+                      float center, double request, float radius)
 {
-    if (!std::isfinite(radius) || radius <= 0.f)
-        throw std::invalid_argument("Erosion brush radius must be finite and positive");
-    GridF result(dimensions);
-    if (result.empty()) return result;
-    constexpr int tileWidth = 8;
-    const int nx = int(result.sizeX), ny = int(result.sizeY), nz = int(result.sizeZ);
-    const int tilesX = (nx + tileWidth - 1) / tileWidth;
-    const int tilesY = (ny + tileWidth - 1) / tileWidth;
-    std::vector<BrushEvent> events;
-    for (const auto& track : tracks) for (const auto& point : track) {
-        if (!finitePosition(point.position) || !std::isfinite(point.erosionValue))
-            throw std::invalid_argument("Erosion points must be finite");
-        if (point.erosionValue == 0.f) continue;
-        BrushEvent event;
-        event.point = point;
-        // Clamp in floating point before integer conversion (including remote events).
-        auto lower = [radius](float c, int n) { return int(std::clamp(std::ceil(double(c)-radius), 0., double(n))); };
-        auto upper = [radius](float c, int n) { return int(std::clamp(std::floor(double(c)+radius)+1., 0., double(n))); };
-        event.x0 = lower(point.position.x(),nx); event.x1 = upper(point.position.x(),nx);
-        event.y0 = lower(point.position.y(),ny); event.y1 = upper(point.position.y(),ny);
-        event.z0 = heightField ? 0 : lower(point.position.z(),nz);
-        event.z1 = heightField ? 1 : upper(point.position.z(),nz);
-        if (event.x0 >= event.x1 || event.y0 >= event.y1 || event.z0 >= event.z1) continue;
-        events.push_back(event);
+    struct Span { float lo,hi; TerrainTypes material; };
+    std::vector<Span> spans;
+    float top=0.f;
+    for (const auto& layer : column) {
+        spans.push_back({top,top+layer.second,layer.first}); top+=layer.second;
     }
-    auto weight = [radius,heightField](const BrushEvent& event, int x, int y, int z) {
-        const double dx = double(x)-event.point.position.x(), dy = double(y)-event.point.position.y();
-        const double dz = heightField ? 0. : double(z)-event.point.position.z();
-        const double squared = dx*dx+dy*dy+dz*dz;
-        if (squared >= double(radius)*radius) return 0.;
-        return heightField ? std::sqrt(double(radius)*radius-squared) : 1.-std::sqrt(squared)/radius;
+    const float upper=std::max(top,center+radius);
+    if (upper>top) spans.push_back({top,upper,AIR});
+    const bool eroding=request>0.;
+    std::vector<size_t> candidates;
+    for (size_t i=0;i<spans.size();++i) {
+        const bool air=LayerBasedGrid::invisibleLayers.count(spans[i].material)!=0;
+        if (air!=eroding && spans[i].hi>std::max(0.f,center-radius) && spans[i].lo<center+radius)
+            candidates.push_back(i);
+    }
+    auto distance=[&](size_t i) { return std::max({spans[i].lo-center,center-spans[i].hi,0.f}); };
+    std::stable_sort(candidates.begin(),candidates.end(),[&](size_t a,size_t b){ return distance(a)<distance(b); });
+    std::vector<Span> replacements;
+    double remaining=std::abs(request), accepted=0.;
+    for (size_t i : candidates) {
+        const float lo=std::max({0.f,spans[i].lo,center-radius});
+        const float hi=std::min(spans[i].hi,center+radius);
+        const float amount=float(std::min(remaining,double(hi-lo)));
+        if (amount<=0.f) continue;
+        const float start=std::clamp(center-amount*.5f,lo,hi-amount);
+        float end=start+amount;
+        if (double(end-start)>remaining) end=std::nextafter(end,start);
+        if (end<=start) continue;
+        replacements.push_back({start,end,eroding?AIR:SAND});
+        accepted+=double(end)-start;
+        remaining-=double(end)-start;
+        if (remaining<=0.) break;
+    }
+    if (accepted==0.) return 0.;
+    std::vector<std::pair<TerrainTypes,float>> updated;
+    auto append=[&](TerrainTypes material,float amount) {
+        if (amount<=0.f) return;
+        if (!updated.empty() && updated.back().first==material) updated.back().second+=amount;
+        else updated.push_back({material,amount});
     };
-    #pragma omp parallel for schedule(dynamic, 8)
-    for (size_t i = 0; i < events.size(); ++i) {
-        auto& e = events[i];
-        for (int z=e.z0; z<e.z1; ++z) for (int y=e.y0; y<e.y1; ++y) for (int x=e.x0; x<e.x1; ++x)
-            e.normalization += weight(e,x,y,z);
-    }
-    std::vector<std::vector<size_t>> tiles(size_t(tilesX)*tilesY);
-    for (size_t i=0; i<events.size(); ++i) {
-        const auto& e=events[i];
-        if (e.normalization <= 0.) continue;
-        for (int ty=e.y0/tileWidth; ty<=(e.y1-1)/tileWidth; ++ty)
-            for (int tx=e.x0/tileWidth; tx<=(e.x1-1)/tileWidth; ++tx)
-                tiles[size_t(ty)*tilesX+tx].push_back(i);
-    }
-    #pragma omp parallel for schedule(dynamic, 1)
-    for (size_t tile=0; tile<tiles.size(); ++tile) {
-        const int tx=int(tile%tilesX)*tileWidth, ty=int(tile/tilesX)*tileWidth;
-        for (size_t index : tiles[tile]) {
-            const auto& e=events[index];
-            const double scale=-double(e.point.erosionValue)/e.normalization;
-            for (int z=e.z0; z<e.z1; ++z)
-                for (int y=std::max(ty,e.y0); y<std::min(ty+tileWidth,e.y1); ++y)
-                    for (int x=std::max(tx,e.x0); x<std::min(tx+tileWidth,e.x1); ++x)
-                        result(x,y,z) += float(scale*weight(e,x,y,z));
+    for (const auto& span : spans) {
+        auto replacement=std::find_if(replacements.begin(),replacements.end(),[&](const Span& r){return r.lo>=span.lo && r.hi<=span.hi;});
+        if (replacement==replacements.end()) append(span.material,span.hi-span.lo);
+        else {
+            append(span.material,replacement->lo-span.lo);
+            append(replacement->material,replacement->hi-replacement->lo);
+            append(span.material,span.hi-replacement->hi);
         }
     }
-    return result;
+    while (!updated.empty() && LayerBasedGrid::invisibleLayers.count(updated.back().first)) updated.pop_back();
+    column=std::move(updated);
+    return eroding?accepted:-accepted;
 }
 }
 
-void ParticleErosion::modifyHeightmap(const std::vector<std::vector<ErosionPoint>>& allErosions)
+void ParticleErosion::reconcileTerrainExchanges(std::vector<ParticleHistory>& tracks)
 {
-    heightmap->heights += rasterizeErosion(allErosions, heightmap->heights.getDimensions(), particleSize, true);
-}
-
-void ParticleErosion::modifyVoxelGrid(const std::vector<std::vector<ErosionPoint>>& allErosions)
-{
-    GridF changes = rasterizeErosion(allErosions, voxelGrid->getDimensions(), particleSize, false);
-    auto values = voxelGrid->getVoxelValues();
-    // Carry upper density excess upward within each independent column (section 4.4).
-    // Excess leaving the top is exported. Lower clamping is a density-grid limitation.
-    #pragma omp parallel for collapse(2)
-    for (int y=0; y<int(values.sizeY); ++y) for (int x=0; x<int(values.sizeX); ++x) {
-        float excess=0.f;
-        for (int z=0; z<int(values.sizeZ); ++z) {
-            if (changes(x,y,z)==0.f && excess==0.f) continue;
-            const float previous=values(x,y,z);
-            const float value=previous+changes(x,y,z)+excess;
-            // Existing converted terrains may contain signed fields beyond [-1,1].
-            // Preserve their range rather than clamping unrelated preexisting matter.
-            const float upper=std::max(1.f,previous), lower=std::min(-1.f,previous);
-            excess=std::max(0.f,value-upper);
-            changes(x,y,z)=std::clamp(value,lower,upper)-previous;
+    const bool layers=layerBasedGrid && terrain==layerBasedGrid;
+    const bool heights=heightmap && terrain==heightmap;
+    const bool voxels=voxelGrid && terrain==voxelGrid;
+    const bool binary=voxels && applyOn==BINARY_VOXELS;
+    std::vector<std::vector<size_t>> indices(tracks.size());
+    std::vector<size_t> next(tracks.size(),0);
+    std::vector<double> loads(tracks.size(),0.), initial(tracks.size(),0.);
+    for (size_t i=0;i<tracks.size();++i) {
+        if (tracks[i].history.empty()) continue;
+        initial[i]=loads[i]=tracks[i].history.front().particleState.capacity;
+        for (size_t j=0;j<tracks[i].history.size();++j) if (tracks[i].history[j].terrainModificationApplied) {
+            indices[i].push_back(j);
+            balance.proposedTerrainChange-=tracks[i].history[j].exchange.erosionValue;
         }
     }
-    voxelGrid->applyModification(std::move(changes));
-    voxelGrid->saveState();
+    GridF values, original;
+    auto columns=layers ? layerBasedGrid->getLayers() : Matrix3<std::vector<std::pair<TerrainTypes,float>>>();
+    GridF* hitStorage=binaryHitAccumulator?binaryHitAccumulator:&binaryHits;
+    GridF workingHits;
+    const double binaryUnit=double(binaryHitThreshold)/binaryHitScale;
+    if (binary && (!std::isfinite(binaryUnit) || binaryUnit<=0. || binaryHitScale<=0.f || binaryHitThreshold<=0.f)) throw std::invalid_argument("Invalid binary hit units");
+    if (heights) values=heightmap->heights;
+    if (voxels) {
+        original=voxelGrid->getVoxelValues(); values=original;
+        if (binary) {
+            workingHits=hitStorage->getDimensions()==values.getDimensions()?*hitStorage:GridF(values.getDimensions());
+            for (size_t i=0;i<values.size();++i)
+                values[i]=float(std::clamp((original[i]>0.f?binaryUnit:0.)-workingHits[i]/binaryHitScale,0.,binaryUnit));
+        }
+    }
+    const Vector3 dims=layers?columns.getDimensions():values.getDimensions();
+    constexpr int width=8;
+    const int nx=int(dims.x()), ny=int(dims.y());
+    const int txCount=(nx+width-1)/width, tyCount=(ny+width-1)/width;
+    struct Event {
+        size_t track,state;
+        double request,normalization=0.;
+        Vector3 position;
+        int x0,x1,y0,y1,z0,z1;
+        std::vector<double> accepted;
+    };
+    const bool surface=heights||layers;
+    auto weight=[&](const Event& e,int x,int y,int z) {
+        const double dx=x-double(e.position.x()),dy=y-double(e.position.y());
+        const double dz=surface?0.:z-double(e.position.z());
+        const double d2=dx*dx+dy*dy+dz*dz, r=particleSize;
+        return d2>=r*r?0.:(surface?std::sqrt(r*r-d2):1.-std::sqrt(d2)/r);
+    };
+    while (true) {
+        std::vector<Event> events;
+        for (size_t i=0;i<tracks.size();++i) if (next[i]<indices[i].size()) {
+            const size_t j=indices[i][next[i]];
+            const auto& state=tracks[i].history[j];
+            const double request=std::clamp(double(state.exchange.erosionValue),-loads[i],
+                std::max(0.,double(state.particleState.properties->maxCapacity)-loads[i]));
+            Event e;
+            e.track=i;e.state=j;e.request=request;e.position=state.exchange.position;
+            auto lower=[&](float c,int n){return int(std::clamp(std::ceil(double(c)-particleSize),0.,double(n)));};
+            auto upper=[&](float c,int n){return int(std::clamp(std::floor(double(c)+particleSize)+1.,0.,double(n)));};
+            e.x0=lower(e.position.x(),nx);e.x1=upper(e.position.x(),nx);
+            e.y0=lower(e.position.y(),ny);e.y1=upper(e.position.y(),ny);
+            e.z0=surface?0:lower(e.position.z(),int(dims.z()));
+            e.z1=surface?1:upper(e.position.z(),int(dims.z()));
+            events.push_back(std::move(e));
+        }
+        if (events.empty()) break;
+        // Field offsets have no finite matter reservoir. Preserve their native
+        // field units while still preventing deposits from an empty carrier.
+        if (!heights && !layers && !voxels) {
+            for (auto& e : events) e.accepted.push_back(e.request);
+        } else {
+            #pragma omp parallel for schedule(dynamic,8)
+            for (size_t i=0;i<events.size();++i) {
+                auto& e=events[i];
+                for (int z=e.z0;z<e.z1;++z) for (int y=e.y0;y<e.y1;++y) for (int x=e.x0;x<e.x1;++x)
+                    e.normalization+=weight(e,x,y,z);
+            }
+            struct Work { size_t event,slot; };
+            std::vector<std::vector<Work>> tiles(size_t(txCount)*tyCount);
+            for (size_t i=0;i<events.size();++i) {
+                auto& e=events[i];
+                if (e.normalization<=0. || e.request==0.) continue;
+                for (int ty=e.y0/width;ty<=(e.y1-1)/width;++ty) for (int tx=e.x0/width;tx<=(e.x1-1)/width;++tx) {
+                    tiles[size_t(ty)*txCount+tx].push_back({i,e.accepted.size()});
+                    e.accepted.push_back(0.);
+                }
+            }
+            std::atomic<bool> failed{false};std::exception_ptr error;
+            #pragma omp parallel for schedule(dynamic,1)
+            for (size_t tile=0;tile<tiles.size();++tile) {
+                if (failed.load(std::memory_order_relaxed)) continue;
+                try {
+                    const int tx=int(tile%txCount)*width,ty=int(tile/txCount)*width;
+                    for (const auto& work : tiles[tile]) {
+                        auto& e=events[work.event];double accepted=0.;
+                        for (int z=e.z0;z<e.z1;++z) for (int y=std::max(ty,e.y0);y<std::min(ty+width,e.y1);++y)
+                            for (int x=std::max(tx,e.x0);x<std::min(tx+width,e.x1);++x) {
+                                const double request=e.request*weight(e,x,y,z)/e.normalization;
+                                if (request==0.) continue;
+                                if (layers) accepted+=exchangeColumn(columns(x,y),e.position.z(),request,particleSize);
+                                else {
+                                    double remaining=std::abs(request);
+                                    // A saturated density sample can deposit above itself.
+                                    const int end=(!surface && !binary && request<0.)?int(values.sizeZ):z+1;
+                                    for (int zz=z;zz<end && remaining>0.;++zz) {
+                                        float& cell=values(x,y,zz);
+                                        const double lo=heights||binary?0.:std::min(-1.f,original(x,y,zz));
+                                        const double hi=heights?std::numeric_limits<float>::max():
+                                            (binary?binaryUnit:std::max(1.f,original(x,y,zz)));
+                                        const double amount=std::min(remaining,request>0.?std::max(0.,double(cell)-lo):std::max(0.,hi-cell));
+                                        const float previous=cell;
+                                        cell=float(request>0.?double(cell)-amount:double(cell)+amount);
+                                        if (std::abs(double(cell)-previous)>amount) cell=std::nextafter(cell,previous);
+                                        const double actual=std::abs(double(cell)-previous);
+                                        remaining-=actual;
+                                        accepted+=request>0.?actual:-actual;
+                                    }
+                                }
+                            }
+                        e.accepted[work.slot]=accepted;
+                    }
+                } catch (...) { if (!failed.exchange(true)) error=std::current_exception(); }
+            }
+            if (error) std::rethrow_exception(error);
+        }
+        for (const auto& e : events) {
+            double accepted=0.;for (double part : e.accepted) accepted+=part;
+            auto& state=tracks[e.track].history[e.state];
+            const double proposed=state.exchange.erosionValue;
+            if (proposed>0.) balance.rejectedDetachment+=std::max(0.,proposed-accepted);
+            else balance.rejectedDeposition+=std::max(0.,accepted-proposed);
+            loads[e.track]+=accepted;
+            state.exchange.erosionValue=float(accepted);
+            state.terrainModificationApplied=accepted!=0.;
+            ++next[e.track];
+        }
+    }
+    for (size_t i=0;i<tracks.size();++i) {
+        double load=initial[i];
+        for (auto& state : tracks[i].history) {
+            if (state.terrainModificationApplied) load+=state.exchange.erosionValue;
+            state.particleState.capacity=float(std::clamp(load,0.,double(state.particleState.properties->maxCapacity)));
+        }
+    }
+    if (heights) heightmap->heights=std::move(values);
+    else if (layers) layerBasedGrid->getLayers()=std::move(columns);
+    else if (voxels) {
+        if (binary) {
+            for (size_t i=0;i<values.size();++i) {
+                const float matter=values[i];
+                bool solid=original[i]>0.f;
+                if (matter<=0.f) solid=false;
+                else if (matter>=binaryUnit) solid=true;
+                workingHits[i]=float(((solid?binaryUnit:0.)-matter)*binaryHitScale);
+                values[i]=solid?1.f:-1.f;
+            }
+            *hitStorage=std::move(workingHits);
+        }
+        voxelGrid->applyModification(values-original);voxelGrid->saveState();
+    } else {
+        std::vector<std::vector<ErosionPoint>> points(tracks.size());
+        for (size_t i=0;i<tracks.size();++i) points[i]=tracks[i].getErosionPoints();
+        modifyImplicitTerrain(points);
+    }
 }
 
-void ParticleErosion::modifyBinaryVoxelGrid(const std::vector<std::vector<ErosionPoint>>& allErosions)
+namespace {
+void applyNativePoints(ParticleErosion& erosion, TerrainModel* target,
+                       const std::vector<std::vector<ErosionPoint>>& points)
 {
-    if (!std::isfinite(binaryHitScale) || !std::isfinite(binaryHitThreshold) ||
-        binaryHitScale<=0.f || binaryHitThreshold<=0.f)
-        throw std::invalid_argument("Binary erosion hit scale and threshold must be finite and positive");
-    GridF changes=rasterizeErosion(allErosions,voxelGrid->getDimensions(),particleSize,false);
-    auto values=voxelGrid->getVoxelValues();
-    GridF& hits=binaryHitAccumulator ? *binaryHitAccumulator : binaryHits;
-    if (hits.getDimensions()!=values.getDimensions()) hits=GridF(values.getDimensions());
-    #pragma omp parallel for
-    for (size_t i=0;i<values.size();++i) {
-        const bool solid=values[i]>0.f;
-        // Retain fractional hits so repeated small brushes eventually affect occupancy.
-        // Do not charge already empty cells for further detachment (or solid cells for filling).
-        const float accumulated=hits[i]-changes[i]*binaryHitScale;
-        hits[i]=solid ? std::max(0.f,accumulated) : std::min(0.f,accumulated);
-        float occupancy=solid ? 1.f : -1.f;
-        if (solid && hits[i]>=binaryHitThreshold) { occupancy=-1.f; hits[i]=0.f; }
-        else if (!solid && hits[i]<=-binaryHitThreshold) { occupancy=1.f; hits[i]=0.f; }
-        changes[i]=occupancy-values[i];
+    if (!target || !std::isfinite(erosion.particleSize) || erosion.particleSize<=0.f)
+        throw std::invalid_argument("Native erosion requires a terrain and positive finite radius");
+    std::vector<ParticleHistory> tracks(points.size());
+    for (size_t i=0;i<points.size();++i) {
+        double prefix=0., minimum=0., maximum=0.;
+        for (const auto& point : points[i]) {
+            if (!finitePosition(point.position) || !std::isfinite(point.erosionValue))
+                throw std::invalid_argument("Erosion points must be finite");
+            prefix+=point.erosionValue;minimum=std::min(minimum,prefix);maximum=std::max(maximum,prefix);
+        }
+        const double capacity=maximum-minimum;
+        if (!std::isfinite(capacity) || capacity>std::numeric_limits<float>::max())
+            throw std::invalid_argument("Erosion point quantities overflow");
+        ErosionParticle particle;
+        particle.properties=std::make_shared<ParticleProperties>();
+        particle.properties->maxCapacity=float(capacity);
+        particle.capacity=float(-minimum);
+        tracks[i].add(particle);
+        for (const auto& point : points[i]) {
+            ParticleState state(particle);state.exchange=point;
+            state.terrainModificationApplied=point.erosionValue!=0.f;
+            tracks[i].add(state);
+        }
     }
-    voxelGrid->applyModification(std::move(changes));
-    voxelGrid->saveState();
+    TerrainModel* previous=erosion.terrain;
+    erosion.balance=ErosionBalance();
+    erosion.terrain=target;
+    try { erosion.reconcileTerrainExchanges(tracks); }
+    catch (...) { erosion.terrain=previous;throw; }
+    erosion.terrain=previous;
+}
+}
+
+void ParticleErosion::modifyHeightmap(const std::vector<std::vector<ErosionPoint>>& points)
+{
+    applyNativePoints(*this,heightmap,points);
+}
+
+void ParticleErosion::modifyVoxelGrid(const std::vector<std::vector<ErosionPoint>>& points)
+{
+    const auto previous=applyOn;applyOn=DENSITY_VOXELS;
+    try { applyNativePoints(*this,voxelGrid,points); }
+    catch (...) {applyOn=previous;throw;}
+    applyOn=previous;
+}
+
+void ParticleErosion::modifyBinaryVoxelGrid(const std::vector<std::vector<ErosionPoint>>& points)
+{
+    const auto previous=applyOn;applyOn=BINARY_VOXELS;
+    try { applyNativePoints(*this,voxelGrid,points); }
+    catch (...) {applyOn=previous;throw;}
+    applyOn=previous;
 }
 
 void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<ErosionPoint>>& allErosions)
@@ -421,88 +581,9 @@ void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<Erosio
     }
 }
 
-void ParticleErosion::modifyLayerBased(const std::vector<std::vector<ErosionPoint>>& allErosions)
+void ParticleErosion::modifyLayerBased(const std::vector<std::vector<ErosionPoint>>& points)
 {
-    if (!std::isfinite(particleSize) || particleSize<=0.f)
-        throw std::invalid_argument("Erosion brush radius must be finite and positive");
-    auto& columns = layerBasedGrid->getLayers();
-    // Prepare column-local operations using equation 10's hemisphere footprint.
-    // Per-event rasterization is only 2D; no volumetric conversion is needed.
-    struct Interval { float center, amount; };
-    std::vector<std::vector<Interval>> operations(columns.size());
-    for (const auto& track : allErosions) for (const auto& point : track) {
-        if (!finitePosition(point.position) || !std::isfinite(point.erosionValue))
-            throw std::invalid_argument("Erosion points must be finite");
-        if (point.erosionValue == 0.f) continue;
-        // Sparse footprint, normalized on the in-domain column samples.
-        const int x0=int(std::clamp(std::ceil(double(point.position.x())-particleSize),0.,double(columns.sizeX)));
-        const int x1=int(std::clamp(std::floor(double(point.position.x())+particleSize)+1.,0.,double(columns.sizeX)));
-        const int y0=int(std::clamp(std::ceil(double(point.position.y())-particleSize),0.,double(columns.sizeY)));
-        const int y1=int(std::clamp(std::floor(double(point.position.y())+particleSize)+1.,0.,double(columns.sizeY)));
-        double normalization=0.;
-        auto height = [&](int x,int y) {
-            const double dx=x-double(point.position.x()),dy=y-double(point.position.y());
-            return std::sqrt(std::max(0.,double(particleSize)*particleSize-dx*dx-dy*dy));
-        };
-        for (int y=y0;y<y1;++y) for (int x=x0;x<x1;++x) normalization+=height(x,y);
-        if (normalization==0.) continue;
-        for (int y=y0;y<y1;++y) for (int x=x0;x<x1;++x) {
-            const float amount=float(point.erosionValue*height(x,y)/normalization);
-            if (amount!=0.f) operations[columns.getIndex(x,y,0)].push_back({point.position.z(),amount});
-        }
-    }
-    // Different workers own different material stacks. Preserve the order of
-    // overlapping operations within a stack and keep all final deposit events.
-    #pragma omp parallel for schedule(dynamic, 16)
-    for (size_t i=0;i<columns.size();++i) {
-        auto& column=columns[i];
-        for (const auto& op : operations[i]) {
-            const bool eroding=op.amount>0.f;
-            float remaining=std::abs(op.amount);
-            struct Span { float lo,hi; TerrainTypes material; };
-            std::vector<Span> spans;
-            float top=0.f;
-            for (const auto& layer : column) {
-                spans.push_back({top,top+layer.second,layer.first}); top+=layer.second;
-            }
-            // Explicit air above the stack permits deposition and cavity filling.
-            spans.push_back({top,std::max(top,op.center)+remaining+particleSize,AIR});
-            std::vector<size_t> candidates;
-            for (size_t j=0;j<spans.size();++j) {
-                const bool air=LayerBasedGrid::invisibleLayers.count(spans[j].material)!=0;
-                if (air!=eroding) candidates.push_back(j);
-            }
-            auto distance = [&](size_t j) {
-                return std::max({spans[j].lo-op.center,op.center-spans[j].hi,0.f});
-            };
-            std::stable_sort(candidates.begin(),candidates.end(),[&](size_t a,size_t b) { return distance(a)<distance(b); });
-            std::vector<Span> replacements;
-            for (size_t j : candidates) {
-                const auto span=spans[j];
-                const float amount=std::min(remaining,span.hi-span.lo);
-                if (amount<=0.f) continue;
-                const float start=std::clamp(op.center-amount*.5f,span.lo,span.hi-amount);
-                replacements.push_back({start,start+amount,eroding?AIR:SAND});
-                remaining-=amount;
-                if (remaining<=1e-7f) break;
-            }
-            std::vector<std::pair<TerrainTypes,float>> updated;
-            for (const auto& span : spans) {
-                const auto replacement=std::find_if(replacements.begin(),replacements.end(),[&](const Span& r) {
-                    return r.lo>=span.lo && r.hi<=span.hi;
-                });
-                if (replacement==replacements.end()) updated.push_back({span.material,span.hi-span.lo});
-                else {
-                    if (replacement->lo>span.lo) updated.push_back({span.material,replacement->lo-span.lo});
-                    updated.push_back({replacement->material,replacement->hi-replacement->lo});
-                    if (replacement->hi<span.hi) updated.push_back({span.material,span.hi-replacement->hi});
-                }
-            }
-            column=std::move(updated);
-        }
-        const auto [x,y,z]=columns.getCoord(i);
-        layerBasedGrid->cleanLayer(x,y);
-    }
+    applyNativePoints(*this,layerBasedGrid,points);
 }
 
 std::vector<ParticleHistory> ParticleErosion::process()
@@ -598,7 +679,6 @@ std::vector<ParticleHistory> ParticleErosion::process()
     flowfieldValues.returned_value_on_outside=RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 
     std::vector<ParticleHistory> tracks(quantity);
-    std::vector<std::vector<ErosionPoint>> allErosions(quantity);
     std::atomic<bool> failed{false};
     std::exception_ptr error;
     particleSimulationTime = timeIt([&]() {
@@ -610,13 +690,14 @@ std::vector<ParticleHistory> ParticleErosion::process()
                 ErosionParticle particle;
                 initializeParticle(particle, position, velocity, particleSize, matterDensity, capacity, maxCapacity);
                 tracks[i] = trackParticlePositions(particle);
-                allErosions[i] = computeErosionValuesFromHistory(tracks[i], *boundariesTree);
             } catch (...) {
                 if (!failed.exchange(true)) error = std::current_exception();
             }
         }
     });
     if (error) std::rethrow_exception(error);
+    auto audit=[&]() {
+        balance.initialSediment=balance.finalSediment=0.;
     double exchanges=0.;
     for (const auto& track : tracks) {
         if (track.history.empty()) continue;
@@ -627,6 +708,8 @@ std::vector<ParticleHistory> ParticleErosion::process()
     }
     balance.requestedTerrainChange=-exchanges;
     balance.sedimentResidual=balance.initialSediment+exchanges-balance.finalSediment;
+    };
+    audit();
     if (!applyTheErosion || strengthValue == 0.f) return tracks;
     // Measure in the native representation's units; never label a field sum as volume.
     auto measure = [&]() {
@@ -640,19 +723,20 @@ std::vector<ParticleHistory> ParticleErosion::process()
                 for (const auto& layer : column)
                     if (!LayerBasedGrid::invisibleLayers.count(layer.first)) sum+=layer.second;
         } else if (asVoxels) {
-            balance.measure=applyOn==BINARY_VOXELS ? ErosionBalance::OCCUPIED_VOXELS : ErosionBalance::DENSITY_SUM;
-            for (float value : voxelGrid->getVoxelValues()) sum+=applyOn==BINARY_VOXELS ? double(value>0.f) : value;
+            balance.measure=applyOn==BINARY_VOXELS ? ErosionBalance::BINARY_EFFECTIVE_VOLUME : ErosionBalance::DENSITY_SUM;
+            const auto values=voxelGrid->getVoxelValues();
+            const GridF& hits=binaryHitAccumulator?*binaryHitAccumulator:binaryHits;
+            for (size_t i=0;i<values.size();++i) {
+                if (applyOn==BINARY_VOXELS) sum+=(values[i]>0.f?double(binaryHitThreshold)/binaryHitScale:0.)-
+                    (hits.getDimensions()==values.getDimensions()?hits[i]/double(binaryHitScale):0.);
+                else sum+=values[i];
+            }
         }
         return sum;
     };
     const double before=measure();
-    terrainModifTime = timeIt([&]() {
-        if (asImplicit) modifyImplicitTerrain(allErosions);
-        else if (asVoxels && applyOn==BINARY_VOXELS) modifyBinaryVoxelGrid(allErosions);
-        else if (asVoxels) modifyVoxelGrid(allErosions);
-        else if (asHeightmap) modifyHeightmap(allErosions);
-        else if (asLayers) modifyLayerBased(allErosions);
-    });
+    terrainModifTime = timeIt([&]() { reconcileTerrainExchanges(tracks); });
+    audit();
     balance.measuredTerrainChange=measure()-before;
     balance.terrainMeasured=!asImplicit;
     // Occupancy is quantized; compare to continuous sediment only for volume/density adapters.
