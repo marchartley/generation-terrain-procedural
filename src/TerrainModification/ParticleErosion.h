@@ -63,7 +63,7 @@ public:
 
 struct ErosionPoint {
     Vector3 position;
-    float erosionValue;
+    float erosionValue = 0.f;
 //    Vector3 velocity;
 };
 
@@ -121,6 +121,8 @@ struct ErosionBalance {
     double finalSediment = 0.; // remaining load, including particles leaving the domain
     double requestedTerrainChange = 0.;
     double measuredTerrainChange = 0.;
+    double geometricVolumeChange = 0.;
+    bool geometricVolumeMeasured = false;
     double unappliedTerrainChange = 0.;
     double sedimentResidual = 0.;
     double proposedTerrainChange = 0.;
@@ -136,6 +138,10 @@ class ParticleErosion {
 public:
     ParticleErosion();
     ErosionBalance balance;
+    // Optional finite-domain cell-center quadrature for implicit/density geometry.
+    // Height/layer volume and binary occupancy are measured without sampling.
+    bool auditGeometry = false;
+    float auditSamplesPerUnit = 1.f;
 
     std::vector<ParticleHistory> process();
     // Replay proposed contacts in order against native terrain capacity.

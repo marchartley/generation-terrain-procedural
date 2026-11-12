@@ -105,6 +105,8 @@ size_t implicitFieldSignature(const ImplicitPatch& node, bool& cacheable)
             cacheable = false;
     }
     if (const auto* group = dynamic_cast<const ImplicitNaryOperator*>(&node)) {
+        hash.add(group->additive);
+        hash.add(group->firstChildIsBase);
         hash.add(group->composables.size());
         for (const auto* child : group->composables) {
             hash.add(reinterpret_cast<size_t>(child));

@@ -8,6 +8,7 @@
 #include <stdexcept>
 
 #include "DataStructure/BVH.h"
+#include "TerrainGen/TerrainSampling.h"
 #include "EnvObject/EnvironmentalScene.h"
 
 Vector3 ErosionParticle::predictNextPos(float dt)
@@ -20,13 +21,14 @@ std::vector<ParticleContact> ErosionParticle::bounce(float dt, SpacePartitioning
 {
     std::vector<ParticleContact> contacts;
     float remaining=dt;
+    Vector3 acceleration=force,target=mediumVelocity;
     restitution=std::clamp(restitution,0.f,1.f);damping=std::clamp(damping,0.f,1.f);
     while (remaining>0.f) {
         // Exact solution for acceleration and a linear drag target frozen over
         // this segment. This avoids timestep-dependent terminal velocities.
         auto motion=[&](float time) {
-            if (responseTime<=0.f) return std::pair<Vector3,Vector3>{velocity*time+force*(.5f*time*time),velocity+force*time};
-            const Vector3 terminal=mediumVelocity+force*responseTime;
+            if (responseTime<=0.f) return std::pair<Vector3,Vector3>{velocity*time+acceleration*(.5f*time*time),velocity+acceleration*time};
+            const Vector3 terminal=target+acceleration*responseTime;
             const float decay=std::exp(-time/responseTime);
             const float integrated=-responseTime*std::expm1(-time/responseTime);
             return std::pair<Vector3,Vector3>{terminal*time+(velocity-terminal)*integrated,
@@ -54,17 +56,12 @@ std::vector<ParticleContact> ErosionParticle::bounce(float dt, SpacePartitioning
         if (int(contacts.size())>=maxBounces) break;
         // Persistent support balances inward acceleration/drag. Tangential motion
         // continues; do not tunnel through the same triangle during the remainder.
-        if (std::abs(velocity.dot(normal))<1e-3f && force.dot(normal)<=0.f && mediumVelocity.dot(normal)<=0.f) {
-            Vector3 acceleration=force-normal*force.dot(normal);
-            Vector3 tangentTarget=mediumVelocity-normal*mediumVelocity.dot(normal);
+        if (std::abs(velocity.dot(normal))<1e-3f && acceleration.dot(normal)<=0.f && target.dot(normal)<=0.f) {
             velocity-=normal*velocity.dot(normal);
-            if (responseTime>0.f) {
-                const Vector3 terminal=tangentTarget+acceleration*responseTime;
-                const float decay=std::exp(-remaining/responseTime);
-                pos+=terminal*remaining+(velocity-terminal)*(-responseTime*std::expm1(-remaining/responseTime));
-                velocity=terminal+(velocity-terminal)*decay;
-            } else {pos+=velocity*remaining+acceleration*(.5f*remaining*remaining);velocity+=acceleration*remaining;}
-            break;
+            acceleration-=normal*acceleration.dot(normal);
+            target-=normal*target.dot(normal);
+            // Continue collision queries along the support: a wall may lie in
+            // the remaining tangential path even though the floor is balanced.
         }
     }
     dir=velocity;
@@ -180,7 +177,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
 {
     ParticleHistory history;
     if (terrain->checkIsInGround(particle.pos)) return history;
-    history.history.reserve(1024);
+    history.history.reserve(std::min(maxTrackingSteps,64));
     history.add(particle);
     history.termination=ParticleHistory::TIME_LIMIT;
     int collisionsLeft=maxCollisions<0?std::numeric_limits<int>::max():maxCollisions;
@@ -793,12 +790,39 @@ std::vector<ParticleHistory> ParticleErosion::process()
         }
         return sum;
     };
+    auto geometryVolume=[&]() {
+        if (asHeightmap || asLayers) return measure();
+        if (asVoxels && applyOn==BINARY_VOXELS) {
+            double count=0.;for (float value : voxelGrid->getVoxelValues()) count+=value>0.f;
+            return count;
+        }
+        if (!auditGeometry) return 0.;
+        const float scale=auditSamplesPerUnit;
+        const Vector3 counts=TerrainSampling::sampleDimensions(terrainSize,Vector3(scale,scale,scale));
+        const int nx=int(counts.x()),ny=int(counts.y()),nz=int(counts.z());
+        auto density=asVoxels?voxelGrid->getVoxelValues():GridF();
+        density.defaultValueOnBadCoord=-1.f;
+        double volume=0.;
+        #pragma omp parallel for collapse(3) reduction(+:volume)
+        for (int z=0;z<nz;++z) for (int y=0;y<ny;++y) for (int x=0;x<nx;++x) {
+            const Vector3 lo=Vector3(x,y,z)/scale;
+            const Vector3 hi=Vector3::min(Vector3(x+1,y+1,z+1)/scale,terrainSize);
+            const Vector3 point=(lo+hi)*.5f;
+            const float value=asImplicit?implicitTerrain->getSignedEvaluation(point):
+                density.interpolate(point,RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE);
+            if (value>0.f) volume+=double(hi.x()-lo.x())*(hi.y()-lo.y())*(hi.z()-lo.z());
+        }
+        return volume;
+    };
+    const double geometricBefore=geometryVolume();
     const double before=measure();
     terrainModifTime = timeIt([&]() { reconcileTerrainExchanges(tracks); });
     audit();
     balance.measuredTerrainChange=measure()-before;
+    balance.geometricVolumeMeasured=asHeightmap || asLayers || applyOn==BINARY_VOXELS || auditGeometry;
+    if (balance.geometricVolumeMeasured) balance.geometricVolumeChange=geometryVolume()-geometricBefore;
     balance.terrainMeasured=!asImplicit;
-    // Occupancy is quantized; compare to continuous sediment only for volume/density adapters.
+    // Compare native reservoir units, including fractional binary matter credit.
     if (balance.terrainMeasured && balance.measure!=ErosionBalance::OCCUPIED_VOXELS)
         balance.unappliedTerrainChange=balance.requestedTerrainChange-balance.measuredTerrainChange;
     return tracks;
