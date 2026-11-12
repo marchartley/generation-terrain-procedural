@@ -76,6 +76,9 @@ public:
 
     void computeVoxelGroups();
     GridF getVoxelValues();
+    // Borrowed immutable cache. Acquire on the owning thread before parallel
+    // reads; valid only until the next terrain mutation/cache rebuild.
+    const GridF& getVoxelValuesView();
     GridF getVoxelized(const Vector3& dimensions = Vector3::invalid, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
     Mesh getGeometry(const Vector3& dimensions = Vector3::invalid);

@@ -649,6 +649,11 @@ void VoxelGrid::computeVoxelGroups()
 
 GridF VoxelGrid::getVoxelValues()
 {
+    return getVoxelValuesView();
+}
+
+const GridF& VoxelGrid::getVoxelValuesView()
+{
     if (this->_cachedHistoryIndex != int(this->getCurrentHistoryIndex())) {
         this->_cachedHistoryIndex = this->getCurrentHistoryIndex();
 
