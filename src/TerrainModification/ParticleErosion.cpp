@@ -16,33 +16,76 @@ Vector3 ErosionParticle::predictNextPos(float dt)
 }
 
 std::vector<ParticleContact> ErosionParticle::bounce(float dt, SpacePartitioning* boundaries,
-                                                   float restitution, float damping, int maxBounces)
+    float restitution, float damping, int maxBounces, const Vector3& mediumVelocity, float responseTime)
 {
     std::vector<ParticleContact> contacts;
-    Vector3 driftVelocity = velocity + force * (.5f * dt);
-    float remaining = dt;
-    size_t lastTriangle = size_t(-1);
-    restitution = std::clamp(restitution, 0.f, 1.f);
-    damping = std::clamp(damping, 0.f, 1.f);
-    while (remaining > 0.f) {
-        const Vector3 destination = pos + driftVelocity * remaining;
-        auto [hit, triangle] = boundaries->getIntersectionAndTriangleIndex(pos, destination, lastTriangle);
-        if (!hit.isValid()) { pos = destination; break; }
-        Vector3 normal = boundaries->triangles[triangle].normal.normalized();
-        if (normal.dot(driftVelocity) > 0.f) normal = -normal;
-        const float distance = (destination - pos).norm();
-        const float fraction = distance > 0.f ? std::clamp((hit - pos).norm() / distance, 0.f, 1.f) : 0.f;
-        remaining *= 1.f - fraction;
-        contacts.push_back({hit, normal, driftVelocity});
-        driftVelocity = (driftVelocity - normal * ((1.f + restitution) * driftVelocity.dot(normal))) * damping;
-        // Separate the ray origin from the surface, without moving the recorded contact.
-        pos = hit + normal * 1e-4f;
-        lastTriangle = triangle;
-        if (int(contacts.size()) >= maxBounces) break;
+    float remaining=dt;
+    restitution=std::clamp(restitution,0.f,1.f);damping=std::clamp(damping,0.f,1.f);
+    while (remaining>0.f) {
+        // Exact solution for acceleration and a linear drag target frozen over
+        // this segment. This avoids timestep-dependent terminal velocities.
+        auto motion=[&](float time) {
+            if (responseTime<=0.f) return std::pair<Vector3,Vector3>{velocity*time+force*(.5f*time*time),velocity+force*time};
+            const Vector3 terminal=mediumVelocity+force*responseTime;
+            const float decay=std::exp(-time/responseTime);
+            const float integrated=-responseTime*std::expm1(-time/responseTime);
+            return std::pair<Vector3,Vector3>{terminal*time+(velocity-terminal)*integrated,
+                                            terminal+(velocity-terminal)*decay};
+        };
+        auto [displacement,endVelocity]=motion(remaining);
+        const Vector3 destination=pos+displacement;
+        auto [hit,triangle]=boundaries->getIntersectionAndTriangleIndex(pos,destination);
+        if (!hit.isValid()) {pos=destination;velocity=endVelocity;break;}
+        Vector3 normal=boundaries->triangles[triangle].normal.normalized();
+        if (normal.dot(displacement)>0.f) normal=-normal;
+        float lo=0.f,hi=remaining;
+        // Refine the hit time against the contacted plane along the curved path.
+        for (int i=0;i<20;++i) {
+            const float middle=(lo+hi)*.5f;
+            if (normal.dot(pos+motion(middle).first-hit)>0.f) lo=middle;else hi=middle;
+        }
+        const float hitTime=(lo+hi)*.5f;
+        auto [toHit,incoming]=motion(hitTime);
+        hit=pos+toHit;
+        contacts.push_back({hit,normal,incoming});
+        remaining-=hitTime;
+        velocity=(incoming-normal*((1.f+restitution)*incoming.dot(normal)))*damping;
+        pos=hit+normal*1e-4f;
+        if (int(contacts.size())>=maxBounces) break;
+        // Persistent support balances inward acceleration/drag. Tangential motion
+        // continues; do not tunnel through the same triangle during the remainder.
+        if (std::abs(velocity.dot(normal))<1e-3f && force.dot(normal)<=0.f && mediumVelocity.dot(normal)<=0.f) {
+            Vector3 acceleration=force-normal*force.dot(normal);
+            Vector3 tangentTarget=mediumVelocity-normal*mediumVelocity.dot(normal);
+            velocity-=normal*velocity.dot(normal);
+            if (responseTime>0.f) {
+                const Vector3 terminal=tangentTarget+acceleration*responseTime;
+                const float decay=std::exp(-remaining/responseTime);
+                pos+=terminal*remaining+(velocity-terminal)*(-responseTime*std::expm1(-remaining/responseTime));
+                velocity=terminal+(velocity-terminal)*decay;
+            } else {pos+=velocity*remaining+acceleration*(.5f*remaining*remaining);velocity+=acceleration*remaining;}
+            break;
+        }
     }
-    velocity = driftVelocity + force * (.5f * dt);
-    dir = velocity;
+    dir=velocity;
     return contacts;
+}
+
+namespace {
+float clearSettlingSpeed(float radius,float grainDensity,float fluidDensity,float viscosity,float gravity)
+{
+    const double stokes=(2./9.)*radius*radius*std::abs(double(grainDensity)-fluidDensity)*gravity/viscosity;
+    const double reynolds=2.*radius*fluidDensity*stokes/viscosity;
+    if (reynolds<=.1) return float(stokes);
+    // Schiller–Naumann below Re=1000, constant drag coefficient above it.
+    double lo=0.,hi=stokes;
+    for (int i=0;i<32;++i) {
+        const double speed=(lo+hi)*.5, re=2.*radius*fluidDensity*speed/viscosity;
+        const double correction=re<1000.?1.+.15*std::pow(re,.687):.44*re/24.;
+        if (speed*correction<stokes) lo=speed;else hi=speed;
+    }
+    return float((lo+hi)*.5);
+}
 }
 
 void ErosionParticle::addForce(const Vector3& f) { force += f; }
@@ -104,28 +147,31 @@ Vector3 ParticleErosion::computeSettlingVelocity(const ErosionParticle& particle
     const float concentration = particle.properties->maxCapacity > 0.f
         ? std::clamp(particle.capacity / particle.properties->maxCapacity, 0.f, 1.f) : 0.f;
     const float hindered = std::pow(1.f - concentration, 5.f);
-    // Stokes slip of sediment grains, not the radius/density of the carrier parcel.
-    return gravityDefault * ((2.f / 9.f) * sedimentRadius * sedimentRadius *
-                            (sedimentDensity - density) / viscosity * hindered);
+    const bool cached=settlingCacheValid && settlingCacheKey==std::array<float,5>{sedimentRadius,sedimentDensity,gravity,airViscosity,waterViscosity};
+    const float speed=cached && density==1.f?settlingAir:
+        (cached && density==1000.f?settlingWater:
+         clearSettlingSpeed(sedimentRadius,sedimentDensity,density,viscosity,gravity));
+    const float direction=sedimentDensity>=density?1.f:-1.f;
+    return Vector3(0,0,-direction*speed*hindered);
 }
 
-float ParticleErosion::computeErosionValue(const ErosionParticle& particle, float vRel)
+float ParticleErosion::computeErosionValue(const ErosionParticle& particle, float vRel, float contactTime)
 {
     const float length = std::max(particle.properties->radius * .002f, 1e-6f);
     const float shear = shearingStressConstantK * std::pow(std::max(0.f, vRel) / length, shearingRatePower);
     const float excess = std::max(0.f, shear - criticalShearValue);
     if (excess == 0.f) return 0.f;
     const float hemisphere = .5f * particle.properties->volume;
-    const float detached = erosionFactor * std::pow(excess, erosionPowerValue) * hemisphere * dt;
+    const float detached = erosionFactor * std::pow(excess, erosionPowerValue) * hemisphere * (contactTime<0.f?dt:contactTime);
     return std::clamp(detached, 0.f, std::max(0.f, particle.properties->maxCapacity - particle.capacity));
 }
 
-float ParticleErosion::computeDepositionValue(const ErosionParticle& particle)
+float ParticleErosion::computeDepositionValue(const ErosionParticle& particle, float contactTime)
 {
     if (particle.capacity <= 0.f || particle.properties->volume <= 0.f) return 0.f;
     const float area = M_PI * particle.properties->radius * particle.properties->radius;
     // Convert settling flux to a volume exchanged over this contact step.
-    const float amount = depositFactor * computeSettlingVelocity(particle).norm() * area * dt *
+    const float amount = depositFactor * computeSettlingVelocity(particle).norm() * area * (contactTime<0.f?dt:contactTime) *
                          (particle.capacity / particle.properties->volume);
     return std::clamp(amount, 0.f, particle.capacity);
 }
@@ -134,33 +180,31 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
 {
     ParticleHistory history;
     if (terrain->checkIsInGround(particle.pos)) return history;
-    const int maxSteps = int(std::min(500. / dt, double(std::numeric_limits<int>::max() - 1)));
-    history.history.reserve(std::min(maxSteps, 1024));
+    history.history.reserve(1024);
     history.add(particle);
-    int collisionsLeft = maxCollisions < 0 ? std::numeric_limits<int>::max() : maxCollisions;
-    const float relaxation = std::exp(-.5f * dt / flowResponseTime);
-    for (int step = 0; step < maxSteps && collisionsLeft > 0; ++step) {
-        const float density = environmentalDensities.interpolate(particle.pos);
-        particle.force = gravityDefault * (1.f - density / particle.properties->density);
-        const float load = particle.properties->maxCapacity > 0.f
-            ? particle.capacity / particle.properties->maxCapacity : 0.f;
-        const Vector3 target = flowfieldValues.interpolate(particle.pos) + computeSettlingVelocity(particle) * load;
-        // Exact drag relaxation in two half steps around the Verlet drift/kick.
-        particle.velocity = target + (particle.velocity - target) * relaxation;
-        auto contacts = particle.bounce(dt, boundariesTree, bounciness, bouncingCoefficient,
-                                       std::min(8, collisionsLeft));
-        const float endDensity=environmentalDensities.interpolate(particle.pos);
-        const Vector3 endAcceleration=gravityDefault*(1.f-endDensity/particle.properties->density);
-        particle.velocity+=(endAcceleration-particle.force)*(.5f*dt);
-        const Vector3 endTarget=flowfieldValues.interpolate(particle.pos)+computeSettlingVelocity(particle)*load;
-        particle.velocity=endTarget+(particle.velocity-endTarget)*relaxation;
-        particle.force=endAcceleration;
+    history.termination=ParticleHistory::TIME_LIMIT;
+    int collisionsLeft=maxCollisions<0?std::numeric_limits<int>::max():maxCollisions;
+    double elapsed=0.;
+    int step=0;
+    for (; elapsed<maxSimulationTime && collisionsLeft>0 && step<maxTrackingSteps; ++step) {
+        const float density=environmentalDensities.interpolate(particle.pos);
+        particle.force=gravityDefault*(1.f-density/particle.properties->density);
+        const float load=particle.properties->maxCapacity>0.f?particle.capacity/particle.properties->maxCapacity:0.f;
+        const Vector3 target=flowfieldValues.interpolate(particle.pos)+computeSettlingVelocity(particle)*load;
+        const float speed=std::max(particle.velocity.norm(),target.norm());
+        const float stepDt=float(std::min({double(dt),double(maxSimulationTime)-elapsed,.25,
+            double(particle.properties->radius)*.25/std::max(double(speed),1e-6),
+            std::sqrt(double(particle.properties->radius)*.5/std::max(double(particle.force.norm()),1e-6))}));
+        auto contacts=particle.bounce(stepDt,boundariesTree,bounciness,bouncingCoefficient,
+                                    std::min(8,collisionsLeft),target,flowResponseTime);
+        elapsed+=stepDt;
+        const float contactTime=stepDt/std::max(size_t(1),contacts.size());
         for (const auto& contact : contacts) {
             --collisionsLeft;
             const Vector3 endPosition = particle.pos;
             particle.pos = contact.position;
             const Vector3 tangent = contact.velocity - contact.normal * contact.velocity.dot(contact.normal);
-            float detached = computeErosionValue(particle, tangent.norm());
+            float detached = computeErosionValue(particle, tangent.norm(),contactTime);
             if (!densityMap.empty()) {
                 const float resistance = std::clamp(densityMap.interpolate(contact.position), 0.f, 1.f);
                 detached *= 1.f - std::clamp(materialImpact, 0.f, 1.f) * resistance;
@@ -168,7 +212,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
             const Vector3 settling = computeSettlingVelocity(particle);
             const float orientation = settling.norm2() > 0.f
                 ? std::max(0.f, -settling.normalized().dot(contact.normal)) : 0.f;
-            const float deposited = computeDepositionValue(particle) * orientation;
+            const float deposited = computeDepositionValue(particle,contactTime) * orientation;
             const float exchange = detached - deposited;
             particle.capacity = std::clamp(particle.capacity + exchange, 0.f, particle.properties->maxCapacity);
             ParticleState state(particle);
@@ -180,24 +224,30 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
         if (wrapPositions)
             particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrainSize.x(), terrainSize.y(), 1000));
         history.add(particle);
-        if (!Vector3::isInBox(particle.pos.xy(), Vector3(), terrainSize.xy()) || particle.pos.z() < -20.f ||
-            (!contacts.empty() && particle.velocity.norm2() < 1e-8f)) break;
-    }
-    // Unload remaining sediment only onto upward-facing ground below an in-domain parcel.
-    // A parcel leaving the domain exports its remaining load instead.
-    if (depositFactor > 0.f && particle.capacity > 0.f &&
-        Vector3::isInBox(particle.pos.xy(), Vector3(), terrainSize.xy())) {
-        auto [hit, triangle] = boundariesTree->getIntersectionAndTriangleIndex(
-            particle.pos, Vector3(particle.pos.x(), particle.pos.y(), -1.f));
-        if (hit.isValid() && boundariesTree->triangles[triangle].normal.z() > 0.f) {
-            particle.pos = hit;
-            const float amount = particle.capacity;
-            particle.capacity = 0.f;
-            ParticleState state(particle);
-            state.exchange = {hit, -amount};
-            state.terrainModificationApplied = true;
-            history.add(state);
+        if (!Vector3::isInBox(particle.pos.xy(),Vector3(),terrainSize.xy()) || particle.pos.z()<-20.f) {
+            history.termination=ParticleHistory::LEFT_DOMAIN;break;
         }
+        const bool supported=!contacts.empty() && contacts.back().normal.z()>.5f &&
+            particle.force.dot(contacts.back().normal)<=0.f && target.dot(contacts.back().normal)<=0.f;
+        if (supported && particle.velocity.norm()<=restSpeed && target.xy().norm()<=restSpeed) {
+            // Mechanical rest deposits at the actual support, never at a remote
+            // point below a trajectory truncated by a time/collision limit.
+            if (depositFactor>0.f && particle.capacity>0.f) {
+                ParticleState settled(particle);
+                settled.exchange={contacts.back().position,-particle.capacity};
+                settled.terrainModificationApplied=true;
+                particle.capacity=settled.particleState.capacity=0.f;
+                history.add(settled);
+            }
+            history.termination=ParticleHistory::RESTING;break;
+        }
+        if (contacts.empty() && particle.velocity.norm()<1e-8f && particle.force.norm()<1e-8f && target.norm()<1e-8f) {
+            history.termination=ParticleHistory::STATIONARY;break;
+        }
+    }
+    if (history.termination==ParticleHistory::TIME_LIMIT) {
+        if (collisionsLeft<=0) history.termination=ParticleHistory::COLLISION_LIMIT;
+        else if (step>=maxTrackingSteps) history.termination=ParticleHistory::STEP_LIMIT;
     }
     return history;
 }
@@ -591,7 +641,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
     if (!terrain || !boundariesTree || quantity < 0 || posAndDirs.size() < size_t(quantity))
         throw std::invalid_argument("Erosion requires a terrain, boundaries and one emission per particle");
     for (float value : {dt, size, matterDensity, flowResponseTime, sedimentRadius, sedimentDensity,
-                        airViscosity, waterViscosity})
+                        airViscosity, waterViscosity, maxSimulationTime, restSpeed})
         if (!std::isfinite(value) || value <= 0.f)
             throw std::invalid_argument("Erosion time, sizes, densities and viscosities must be finite and positive");
     for (float value : {strength, maxCapacityFactor, erosion, deposit, gravity, shearingStressConstantK,
@@ -599,6 +649,12 @@ std::vector<ParticleHistory> ParticleErosion::process()
         if (!std::isfinite(value) || value < 0.f)
             throw std::invalid_argument("Erosion strengths and shear parameters must be finite and nonnegative");
     balance = ErosionBalance();
+    settlingCacheValid=false;
+    if (maxTrackingSteps<=0) throw std::invalid_argument("Erosion tracking step limit must be positive");
+    settlingAir=clearSettlingSpeed(sedimentRadius,sedimentDensity,1.f,airViscosity,gravity);
+    settlingWater=clearSettlingSpeed(sedimentRadius,sedimentDensity,1000.f,waterViscosity,gravity);
+    settlingCacheKey={sedimentRadius,sedimentDensity,gravity,airViscosity,waterViscosity};
+    settlingCacheValid=true;
     terrainModifTime = 0.f;
     VoxelGrid* asVoxels = dynamic_cast<VoxelGrid*>(terrain);
     Heightmap* asHeightmap = dynamic_cast<Heightmap*>(terrain);
@@ -697,12 +753,15 @@ std::vector<ParticleHistory> ParticleErosion::process()
     });
     if (error) std::rethrow_exception(error);
     auto audit=[&]() {
-        balance.initialSediment=balance.finalSediment=0.;
+        balance.initialSediment=balance.finalSediment=balance.exportedSediment=balance.retainedSediment=0.;
     double exchanges=0.;
     for (const auto& track : tracks) {
         if (track.history.empty()) continue;
         balance.initialSediment+=track.history.front().particleState.capacity;
-        balance.finalSediment+=track.history.back().particleState.capacity;
+        const float remaining=track.history.back().particleState.capacity;
+        balance.finalSediment+=remaining;
+        if (track.termination==ParticleHistory::LEFT_DOMAIN) balance.exportedSediment+=remaining;
+        else balance.retainedSediment+=remaining;
         for (const auto& state : track.history)
             if (state.terrainModificationApplied) exchanges+=state.exchange.erosionValue;
     }

@@ -1,5 +1,6 @@
 #ifndef PARTICLEEROSION_H
 #define PARTICLEEROSION_H
+#include <array>
 
 class ParticleErosion;
 
@@ -49,7 +50,8 @@ public:
     Vector3 predictNextPos(float dt);
     // force stores acceleration; contacts retain the incoming velocity.
     std::vector<ParticleContact> bounce(float dt, SpacePartitioning* boundaries,
-                                       float restitution = 1.f, float damping = 1.f, int maxBounces = 8);
+                                       float restitution = 1.f, float damping = 1.f, int maxBounces = 8,
+                                       const Vector3& mediumVelocity = Vector3(), float responseTime = 0.f);
 
     void addForce(const Vector3& f);
     void addVelocity(const Vector3& v);
@@ -75,6 +77,8 @@ struct ParticleState {
 };
 
 struct ParticleHistory {
+    enum Termination { INVALID_START, TIME_LIMIT, STEP_LIMIT, COLLISION_LIMIT, LEFT_DOMAIN, RESTING, STATIONARY };
+    Termination termination = INVALID_START;
     void add(const ParticleState& state) { history.push_back(state); }
 
     std::vector<ParticleState> history;
@@ -112,6 +116,8 @@ enum EROSION_APPLIED { DENSITY_VOXELS, HEIGHTMAP, IMPLICIT_TERRAIN, LAYER_TERRAI
 
 struct ErosionBalance {
     double initialSediment = 0.;
+    double exportedSediment = 0.;
+    double retainedSediment = 0.;
     double finalSediment = 0.; // remaining load, including particles leaving the domain
     double requestedTerrainChange = 0.;
     double measuredTerrainChange = 0.;
@@ -136,8 +142,8 @@ public:
     void reconcileTerrainExchanges(std::vector<ParticleHistory>& tracks);
     void initializeParticle(ErosionParticle& particle, Vector3& position, Vector3& velocity, float radius, float density, float initialCapacity, float maxCapacity);
     ParticleHistory trackParticlePositions(ErosionParticle& particle);
-    float computeErosionValue(const ErosionParticle &particle, float vRel);
-    float computeDepositionValue(const ErosionParticle& particle);
+    float computeErosionValue(const ErosionParticle &particle, float vRel, float contactTime = -1.f);
+    float computeDepositionValue(const ErosionParticle& particle, float contactTime = -1.f);
     Vector3 computeSettlingVelocity(const ErosionParticle& particle) const;
 
     std::vector<ErosionPoint> computeErosionValuesFromHistory(const ParticleHistory& history, SpacePartitioning& boundaries);
@@ -211,6 +217,13 @@ public:
     float sedimentDensity = 2650.f; // kg/m^3
     float airViscosity = 1.8e-5f; // Pa s
     float waterViscosity = 1e-3f; // Pa s
+    float maxSimulationTime = 500.f;
+    int maxTrackingSteps = 100000;
+    float restSpeed = 1e-3f;
+    // Clear-fluid settling speeds cached for the two standard media per process().
+    bool settlingCacheValid = false;
+    std::array<float,5> settlingCacheKey{};
+    float settlingAir = 0.f, settlingWater = 0.f;
     float flowResponseTime = 1.f; // seconds; bounded relaxation toward medium velocity
     // Keep sub-hit precision between batches; +/- threshold toggles occupancy.
     GridF binaryHits;
