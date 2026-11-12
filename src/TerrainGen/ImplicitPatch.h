@@ -128,6 +128,10 @@ public:
     virtual float getSizeZ() const { return this->getBBox().max().z(); }
 
     GridF getVoxelized(const Vector3& dimensions = Vector3::invalid, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    // Samples at bounds.min() + latticeCoordinate / scale. Unlike the canvas
+    // sampler this explicit domain may include negative terrain coordinates.
+    GridF sampleBounds(const AABBox& bounds, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    Mesh getGeometryInBounds(const AABBox& bounds, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
     int index = -1;
     std::string name;
@@ -183,8 +187,11 @@ public:
     GridF _cachedMaxHeight;
     GridF _cachedVoxelized;
     Vector3 _cachedVoxelScale = Vector3(1, 1, 1);
+    Vector3 _cachedVoxelOrigin = Vector3();
     bool _cached = false;
     size_t _cachedFieldSignature = 0;
+protected:
+    GridF samplePreparedBounds(const AABBox& bounds, const Vector3& scale, const Vector3& counts);
 };
 
 class ImplicitPrimitive : public ImplicitPatch {

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <limits>
 
 // Scalar fields are sampled at integer coordinates, positive inside, zero on
 // the surface. Scale is samples per terrain unit; dimensions are terrain units.
@@ -16,7 +17,16 @@ inline Vector3 sampleDimensions(const Vector3& dimensions, const Vector3& scale)
         !std::isfinite(scale.x()) || !std::isfinite(scale.y()) || !std::isfinite(scale.z()) ||
         dimensions.minComp() <= 0.f || scale.minComp() <= 0.f)
         throw std::invalid_argument("Terrain sampling requires positive finite dimensions and scale");
-    return (dimensions * scale).roundedUp();
+    Vector3 counts;
+    for (size_t axis = 0; axis < 3; ++axis) {
+        const double count = std::ceil(double(dimensions[axis]) * double(scale[axis]));
+        // Matrix3's coordinate dimensions are represented as float and then int.
+        // Reject products that would overflow that conversion before allocation.
+        const float limit = std::nextafter(float(std::numeric_limits<int>::max()), 0.f);
+        if (!std::isfinite(count) || count > limit) throw std::invalid_argument("Terrain sample count exceeds the supported coordinate range");
+        counts[axis] = float(std::max(1., count));
+    }
+    return counts;
 }
 
 inline float heightAt(const GridF& heights, float x, float y)

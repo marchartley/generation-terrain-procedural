@@ -480,10 +480,33 @@ bool ImplicitPatch::checkIsInGround(const Vector3& position)
 
 Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
 {
-    const Vector3 extent = dimensions.isValid() ? dimensions : getSamplingDimensions();
-    VoxelGrid voxels;
-    voxels.setVoxelValues(getVoxelized(extent));
-    return voxels.getGeometry();
+    prepareImplicitField(this);
+    const Vector3 extent = getSamplingDimensions();
+    // TerrainModel::getGeometry takes a mesh lattice resolution, while
+    // getVoxelized takes spatial extent and samples per terrain unit.
+    const Vector3 counts = TerrainSampling::sampleDimensions(dimensions.isValid() ? dimensions : extent, Vector3(1, 1, 1));
+    const Vector3 scale = counts / extent;
+    if (counts.minComp() < 2.f) return Mesh();
+    auto mesh = Mesh::applyMarchingCubes(samplePreparedBounds(AABBox(Vector3(), extent), scale, counts));
+    mesh.scale(Vector3(1, 1, 1) / scale);
+    mesh.useIndices = false;
+    mesh.computeNormals();
+    return mesh;
+}
+
+Mesh ImplicitPatch::getGeometryInBounds(const AABBox& bounds, const Vector3& scale)
+{
+    const auto values = sampleBounds(bounds, scale);
+    const Vector3 spacing = Vector3(1, 1, 1) / scale;
+    if (!std::isfinite(spacing.x()) || !std::isfinite(spacing.y()) || !std::isfinite(spacing.z()))
+        throw std::invalid_argument("Implicit mesh spacing is not representable");
+    if (values.getDimensions().minComp() < 2.f) return Mesh();
+    auto mesh = Mesh::applyMarchingCubes(values);
+    mesh.scale(spacing);
+    mesh.translate(bounds.min());
+    mesh.useIndices = false;
+    mesh.computeNormals();
+    return mesh;
 }
 
 Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
@@ -602,13 +625,34 @@ size_t ImplicitPatch::getCurrentHistoryIndex() const
 GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
     prepareImplicitField(this);
-    if (!std::isfinite(isovalue)) throw std::invalid_argument("Implicit isovalue must be finite");
     const Vector3 extent = dimensions.isValid() ? dimensions : getSamplingDimensions();
     const auto counts = TerrainSampling::sampleDimensions(extent, scale);
+    return samplePreparedBounds(AABBox(Vector3(), extent), scale, counts);
+}
+
+GridF ImplicitPatch::sampleBounds(const AABBox& bounds, const Vector3& scale)
+{
+    auto finite = [](const Vector3& point) {
+        return point.isValid() && std::isfinite(point.x()) && std::isfinite(point.y()) && std::isfinite(point.z());
+    };
+    if (!finite(bounds.min()) || !finite(bounds.max())) throw std::invalid_argument("Implicit sample bounds must be finite");
+    const auto counts = TerrainSampling::sampleDimensions(bounds.dimensions(), scale);
+    prepareImplicitField(this);
+    return samplePreparedBounds(bounds, scale, counts);
+}
+
+GridF ImplicitPatch::samplePreparedBounds(const AABBox& bounds, const Vector3& scale, const Vector3& counts)
+{
+    auto finite = [](const Vector3& value) {
+        return value.isValid() && std::isfinite(value.x()) && std::isfinite(value.y()) && std::isfinite(value.z());
+    };
+    if (!finite(bounds.min()) || !finite(bounds.max()) || bounds.dimensions().minComp() <= 0.f ||
+        !finite(scale) || scale.minComp() <= 0.f) throw std::invalid_argument("Invalid prepared implicit sampling domain");
+    if (!std::isfinite(isovalue)) throw std::invalid_argument("Implicit isovalue must be finite");
     bool cacheable = true;
     const size_t signature = implicitFieldSignature(*this, cacheable);
     if (_cached && cacheable && _cachedFieldSignature == signature &&
-        _cachedVoxelized.getDimensions() == counts && _cachedVoxelScale == scale) return _cachedVoxelized;
+        _cachedVoxelized.getDimensions() == counts && _cachedVoxelScale == scale && _cachedVoxelOrigin == bounds.min()) return _cachedVoxelized;
     _cached = false;
     _cachedVoxelized = GridF(counts, -1.f);
     std::atomic<bool> failed{false};
@@ -616,7 +660,7 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
     _cachedVoxelized.iterateParallel([&](int x, int y, int z) {
         if (failed.load(std::memory_order_relaxed)) return;
         try {
-            const float value = getSignedEvaluation(Vector3(x, y, z) / scale);
+            const float value = getSignedEvaluation(bounds.min() + Vector3(x, y, z) / scale);
             if (!std::isfinite(value)) throw std::domain_error("Implicit field returned a nonfinite sample");
             _cachedVoxelized(x, y, z) = value;
         } catch (...) {
@@ -626,6 +670,7 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
     if (error) std::rethrow_exception(error);
     _cachedVoxelized.defaultValueOnBadCoord = -1.f;
     _cachedVoxelScale = scale;
+    _cachedVoxelOrigin = bounds.min();
     _cachedFieldSignature = signature;
     _cached = cacheable;
     return _cachedVoxelized;

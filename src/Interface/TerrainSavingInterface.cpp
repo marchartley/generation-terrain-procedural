@@ -1,4 +1,5 @@
 #include "TerrainSavingInterface.h"
+#include <QSaveFile>
 #include "GUIElements/InterfaceUtils.h"
 
 TerrainSavingInterface::TerrainSavingInterface(QWidget *parent):
@@ -22,7 +23,7 @@ InterfaceUI* TerrainSavingInterface::createGUI()
     auto UI = new InterfaceUI();
 
     auto selectedFilenameLabel = new LabelElement((this->mainFilename == "" ? "No file selected" : QString::fromStdString(this->mainFilename).split("/").back().split("\\").back().toStdString()));
-    auto fileSelectionButton = new ButtonElement("...", [&]() {
+    auto fileSelectionButton = new ButtonElement("...", [this, selectedFilenameLabel]() {
         std::string path = "saved_maps/Geometry/";
         QString fileSelection = QFileDialog::getSaveFileName(this, "Saving file", QString::fromStdString(path), "*.json", nullptr, QFileDialog::DontConfirmOverwrite);
         if (!fileSelection.isEmpty()) {
@@ -34,6 +35,7 @@ InterfaceUI* TerrainSavingInterface::createGUI()
     auto saveHeightmapCheck = new CheckboxElement("Heightmap", saveHeightmap);
     auto saveVoxelsCheck = new CheckboxElement("Voxels", saveVoxels);
     auto saveLayersCheck = new CheckboxElement("Layers", saveLayers);
+    auto saveImplicitCheck = new CheckboxElement("Implicit", saveImplicit);
 
     auto saveButton = new ButtonElement("Save", [this]() {
         time_t now = std::time(0);
@@ -49,6 +51,7 @@ InterfaceUI* TerrainSavingInterface::createGUI()
         saveHeightmapCheck,
         saveVoxelsCheck,
         saveLayersCheck,
+        saveImplicitCheck,
         saveButton
     });
 
@@ -96,6 +99,18 @@ std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(const std::
             file << m.toSTL();
             file.close();
         }, verbose);
+    }
+    if (saveImplicit) {
+        if (!implicitTerrain) throw std::invalid_argument("Missing implicit terrain for geometry export");
+        const auto support = implicitTerrain->getSupportBBox();
+        const Vector3 padding(2, 2, 2);
+        const auto meshBounds = AABBox(support.min() - padding, support.max() + padding);
+        const std::string destination = filename + "-implicit.stl";
+        const std::string payload = implicitTerrain->getGeometryInBounds(meshBounds).toSTL();
+        QSaveFile output(QString::fromStdString(destination));
+        if (!output.open(QIODevice::WriteOnly) || output.write(payload.data(), qint64(payload.size())) != qint64(payload.size()) || !output.commit())
+            throw std::runtime_error("Cannot atomically export implicit geometry: " + destination);
+        filenames.push_back(destination);
     }
     return filenames;
 }

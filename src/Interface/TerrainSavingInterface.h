@@ -26,6 +26,7 @@ public:
     bool saveHeightmap = true;
     bool saveVoxels = true;
     bool saveLayers = true;
+    bool saveImplicit = false;
 };
 
 #endif // TERRAINSAVINGINTERFACE_H
