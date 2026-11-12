@@ -272,7 +272,7 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
     // A one-child container must not threshold away the child's exterior field.
     if (typeid(*this) == typeid(ImplicitNaryOperator)) {
         const auto* group = static_cast<const ImplicitNaryOperator*>(this);
-        if (group->composables.size() == 1 && group->composables.front()) return group->composables.front()->getSignedEvaluation(pos);
+        if (!group->additive && group->composables.size() == 1 && group->composables.front()) return group->composables.front()->getSignedEvaluation(pos);
     }
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
         if (primitive->hasGeneratedField() && primitive->predefinedShape == ImplicitHeightmap && !primitive->cachedHeightmap.empty() &&
@@ -2587,7 +2587,7 @@ ImplicitNaryOperator::ImplicitNaryOperator()
 }
 
 ImplicitNaryOperator::ImplicitNaryOperator(const ImplicitNaryOperator& other)
-    : ImplicitPatch(other)
+    : ImplicitPatch(other), additive(other.additive), firstChildIsBase(other.firstChildIsBase)
 {
     parent = nullptr;
     setIndex();
@@ -2614,6 +2614,8 @@ ImplicitNaryOperator& ImplicitNaryOperator::operator=(const ImplicitNaryOperator
     ImplicitPatch::operator=(replacement);
     parent = oldParent;
     index = oldIndex;
+    additive = replacement.additive;
+    firstChildIsBase = replacement.firstChildIsBase;
     composables.swap(replacement.composables);
     for (auto* child : composables) if (child) child->parent = this;
     return *this;
@@ -2631,6 +2633,33 @@ float ImplicitNaryOperator::evaluate(const Vector3& pos) const
 
 std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos) const
 {
+    if (additive) {
+        std::map<TerrainTypes,float> result;
+        size_t start=0;
+        if (firstChildIsBase && !composables.empty() && composables.front()) {
+            // Preserve the unnormalized signed field of sampled/SDF bases.
+            const float value=isovalue+composables.front()->getSignedEvaluation(pos);
+            result[value>=0.f ? DIRT : AIR]=std::abs(value);
+            start=1;
+        }
+        for (size_t i=start;i<composables.size();++i) {
+            const auto* child=composables[i];
+            if (!child) continue;
+            const auto* primitive=dynamic_cast<const ImplicitPrimitive*>(child);
+            if (primitive && primitive->hasGeneratedField() && primitive->predefinedShape==Sphere) {
+                // Offsets may exceed one: do not clamp their field amplitude as
+                // ordinary occupancy primitives do. Keep compact support intact.
+                if (primitive->getSupportBBox().contains(pos)) {
+                    const Vector3 radius=primitive->dimensions*.5f;
+                    const float falloff=std::max(0.f,1.f-((pos-primitive->position-radius)/radius).norm());
+                    result[primitive->material]+=falloff*primitive->parametersProvided.front();
+                }
+            } else {
+                for (const auto& [material,amount] : child->getMaterials(pos)) result[material]+=amount;
+            }
+        }
+        return result;
+    }
     std::map<TerrainTypes, float> exterior;
     float strongestExterior = 0.f;
     for (int i = int(composables.size()) - 1; i >= 0; --i) {
@@ -2698,6 +2727,10 @@ nlohmann::json ImplicitNaryOperator::toJson()
         content["file"] = this->used_json_filename;
     } else {
         content["type"] = "nary";
+        if (additive) {
+            content["additive"] = true;
+            content["firstChildIsBase"] = firstChildIsBase;
+        }
         content["heightfield"] = dynamic_cast<Implicit2DNary*>(this) != nullptr;
         content["name"] = this->name;
         content["index"] = this->index;
@@ -2718,6 +2751,8 @@ ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
 {
     ImplicitNaryOperator* patch = content.value("heightfield", false) ? new Implicit2DNary : new ImplicitNaryOperator;
     std::unique_ptr<ImplicitNaryOperator> owner(patch);
+    patch->additive = content.value("additive", false);
+    patch->firstChildIsBase = content.value("firstChildIsBase", false);
     for (auto& compoJson : content["composables"]) {
         patch->addChild(ImplicitPatch::fromJson(compoJson));
     }
@@ -2822,6 +2857,8 @@ void ImplicitNaryOperator::deleteAllChildren()
             delete child;
     }
     this->composables.clear();
+    additive = false;
+    firstChildIsBase = false;
 }
 
 nlohmann::json ImplicitTranslation::toJson()

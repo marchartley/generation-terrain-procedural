@@ -8,7 +8,6 @@
 #include <stdexcept>
 
 #include "DataStructure/BVH.h"
-#include "TerrainModification/RockErosion.h"
 #include "EnvObject/EnvironmentalScene.h"
 
 Vector3 ErosionParticle::predictNextPos(float dt)
@@ -200,68 +199,112 @@ std::vector<ErosionPoint> ParticleErosion::computeErosionValuesFromHistory(const
     return points;
 }
 
+namespace {
+struct BrushEvent {
+    ErosionPoint point;
+    int x0, x1, y0, y1, z0, z1;
+    double normalization = 0.;
+};
+
+bool finitePosition(const Vector3& p)
+{
+    return p.isValid() && std::isfinite(p.x()) && std::isfinite(p.y()) && std::isfinite(p.z());
+}
+
+// Equations 9/13: normalized hemisphere height or linear radial voxel kernel.
+// Each XY tile owns its output columns, so overlapping brushes need no locks or
+// full-terrain buffers per particle/thread. Event order is stable across threads.
+GridF rasterizeErosion(const std::vector<std::vector<ErosionPoint>>& tracks,
+                       const Vector3& dimensions, float radius, bool heightField)
+{
+    if (!std::isfinite(radius) || radius <= 0.f)
+        throw std::invalid_argument("Erosion brush radius must be finite and positive");
+    GridF result(dimensions);
+    if (result.empty()) return result;
+    constexpr int tileWidth = 8;
+    const int nx = int(result.sizeX), ny = int(result.sizeY), nz = int(result.sizeZ);
+    const int tilesX = (nx + tileWidth - 1) / tileWidth;
+    const int tilesY = (ny + tileWidth - 1) / tileWidth;
+    std::vector<BrushEvent> events;
+    for (const auto& track : tracks) for (const auto& point : track) {
+        if (!finitePosition(point.position) || !std::isfinite(point.erosionValue))
+            throw std::invalid_argument("Erosion points must be finite");
+        if (point.erosionValue == 0.f) continue;
+        BrushEvent event;
+        event.point = point;
+        // Clamp in floating point before integer conversion (including remote events).
+        auto lower = [radius](float c, int n) { return int(std::clamp(std::ceil(double(c)-radius), 0., double(n))); };
+        auto upper = [radius](float c, int n) { return int(std::clamp(std::floor(double(c)+radius)+1., 0., double(n))); };
+        event.x0 = lower(point.position.x(),nx); event.x1 = upper(point.position.x(),nx);
+        event.y0 = lower(point.position.y(),ny); event.y1 = upper(point.position.y(),ny);
+        event.z0 = heightField ? 0 : lower(point.position.z(),nz);
+        event.z1 = heightField ? 1 : upper(point.position.z(),nz);
+        if (event.x0 >= event.x1 || event.y0 >= event.y1 || event.z0 >= event.z1) continue;
+        events.push_back(event);
+    }
+    auto weight = [radius,heightField](const BrushEvent& event, int x, int y, int z) {
+        const double dx = double(x)-event.point.position.x(), dy = double(y)-event.point.position.y();
+        const double dz = heightField ? 0. : double(z)-event.point.position.z();
+        const double squared = dx*dx+dy*dy+dz*dz;
+        if (squared >= double(radius)*radius) return 0.;
+        return heightField ? std::sqrt(double(radius)*radius-squared) : 1.-std::sqrt(squared)/radius;
+    };
+    #pragma omp parallel for schedule(dynamic, 8)
+    for (size_t i = 0; i < events.size(); ++i) {
+        auto& e = events[i];
+        for (int z=e.z0; z<e.z1; ++z) for (int y=e.y0; y<e.y1; ++y) for (int x=e.x0; x<e.x1; ++x)
+            e.normalization += weight(e,x,y,z);
+    }
+    std::vector<std::vector<size_t>> tiles(size_t(tilesX)*tilesY);
+    for (size_t i=0; i<events.size(); ++i) {
+        const auto& e=events[i];
+        if (e.normalization <= 0.) continue;
+        for (int ty=e.y0/tileWidth; ty<=(e.y1-1)/tileWidth; ++ty)
+            for (int tx=e.x0/tileWidth; tx<=(e.x1-1)/tileWidth; ++tx)
+                tiles[size_t(ty)*tilesX+tx].push_back(i);
+    }
+    #pragma omp parallel for schedule(dynamic, 1)
+    for (size_t tile=0; tile<tiles.size(); ++tile) {
+        const int tx=int(tile%tilesX)*tileWidth, ty=int(tile/tilesX)*tileWidth;
+        for (size_t index : tiles[tile]) {
+            const auto& e=events[index];
+            const double scale=-double(e.point.erosionValue)/e.normalization;
+            for (int z=e.z0; z<e.z1; ++z)
+                for (int y=std::max(ty,e.y0); y<std::min(ty+tileWidth,e.y1); ++y)
+                    for (int x=std::max(tx,e.x0); x<std::min(tx+tileWidth,e.x1); ++x)
+                        result(x,y,z) += float(scale*weight(e,x,y,z));
+        }
+    }
+    return result;
+}
+}
+
 void ParticleErosion::modifyHeightmap(const std::vector<std::vector<ErosionPoint>>& allErosions)
 {
-    GridF modifications(heightmap->heights.getDimensions());
-    std::vector<GridF> submodifications(allErosions.size(), modifications);
-
-    #pragma omp parallel for
-    for (size_t i = 0; i < allErosions.size(); i++) {
-        const auto& erosionValuesAndPositions = allErosions[i];
-        Vector3 previousPos(false);
-        for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
-            Vector3 pos = erosionValuesAndPositions[iRock].position;
-            float val = erosionValuesAndPositions[iRock].erosionValue;
-            int size = particleSize;
-            val *= 100.f;
-            RockErosion(size, val).computeErosionMatrix2D(submodifications[i], pos);
-        }
-    }
-
-    for (const auto& sub : submodifications)
-        modifications += sub;
-
-    if (densityMap.size() > 0) {
-        for (size_t i = 0; i < modifications.size(); i++) {
-            modifications[i] = (modifications[i] > 0 ? modifications[i] : modifications[i] * ((1.f - materialImpact) + (1.f - densityMap[i]) * materialImpact));
-        }
-    }
-
-    heightmap->heights += modifications * 0.5f;
+    heightmap->heights += rasterizeErosion(allErosions, heightmap->heights.getDimensions(), particleSize, true);
 }
 
 void ParticleErosion::modifyVoxelGrid(const std::vector<std::vector<ErosionPoint>>& allErosions)
 {
-    GridF modifications(voxelGrid->getDimensions());
-    std::vector<GridF> submodifications(allErosions.size(), modifications);
-
-    #pragma omp parallel for
-    for (size_t i = 0; i < allErosions.size(); i++) {
-        const auto& erosionValuesAndPositions = allErosions[i];
-        Vector3 previousPos(false);
-        for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
-            Vector3 pos = erosionValuesAndPositions[iRock].position;
-            float val = erosionValuesAndPositions[iRock].erosionValue;
-            int size = particleSize;
-            val *= 100.f;
-            RockErosion(size, val).computeErosionMatrix(submodifications[i], pos - Vector3(.5f, .5f, .5f));
+    GridF changes = rasterizeErosion(allErosions, voxelGrid->getDimensions(), particleSize, false);
+    auto values = voxelGrid->getVoxelValues();
+    // Carry upper density excess upward within each independent column (section 4.4).
+    // Excess leaving the top is exported. Lower clamping is a density-grid limitation.
+    #pragma omp parallel for collapse(2)
+    for (int y=0; y<int(values.sizeY); ++y) for (int x=0; x<int(values.sizeX); ++x) {
+        float excess=0.f;
+        for (int z=0; z<int(values.sizeZ); ++z) {
+            if (changes(x,y,z)==0.f && excess==0.f) continue;
+            const float previous=values(x,y,z);
+            const float value=previous+changes(x,y,z)+excess;
+            // Existing converted terrains may contain signed fields beyond [-1,1].
+            // Preserve their range rather than clamping unrelated preexisting matter.
+            const float upper=std::max(1.f,previous), lower=std::min(-1.f,previous);
+            excess=std::max(0.f,value-upper);
+            changes(x,y,z)=std::clamp(value,lower,upper)-previous;
         }
     }
-    for (const auto& sub : submodifications)
-        modifications += sub;
-
-    if (densityMap.size() > 0) {
-        for (size_t i = 0; i < modifications.size(); i++) {
-            modifications[i] = (modifications[i] > 0 ? modifications[i] : modifications[i] * ((1.f - materialImpact) + (1.f - densityMap[i]) * materialImpact));
-        }
-    }
-
-    for (int x = 0; x < modifications.sizeX; x++)
-        for (int y = 0; y < modifications.sizeY; y++)
-            for (int z = 0; z < 2; z++)
-                modifications.at(x, y, z) = 0;
-    voxelGrid->applyModification(modifications * 0.5f);
-    voxelGrid->limitVoxelValues(2.f, false);
+    voxelGrid->applyModification(std::move(changes));
     voxelGrid->saveState();
 }
 
@@ -271,11 +314,15 @@ void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<Erosio
     if (!root || typeid(*root) != typeid(ImplicitNaryOperator))
         throw std::invalid_argument("Implicit erosion requires an ordinary 3D root container");
     if (!std::isfinite(particleSize)) throw std::invalid_argument("Erosion particle size must be finite");
-    const float dimensions = std::floor(particleSize);
-    if (dimensions < 1.f || allErosions.empty()) return;
+    const float dimensions = 2.f * particleSize;
+    if (dimensions <= 0.f) throw std::invalid_argument("Erosion particle radius must be positive");
+    if (allErosions.empty()) return;
     std::vector<std::unique_ptr<ImplicitNaryOperator>> groups;
     groups.reserve(allErosions.size());
-    for (size_t i = 0; i < allErosions.size(); ++i) groups.push_back(std::make_unique<ImplicitNaryOperator>());
+    for (size_t i = 0; i < allErosions.size(); ++i) {
+        groups.push_back(std::make_unique<ImplicitNaryOperator>());
+        groups.back()->additive = true;
+    }
     std::atomic<bool> failed{false};
     std::exception_ptr error;
     #pragma omp parallel for
@@ -288,8 +335,9 @@ void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<Erosio
                 if (!point.position.isValid() || !std::isfinite(point.position.x()) || !std::isfinite(point.position.y()) ||
                     !std::isfinite(point.position.z()) || !std::isfinite(point.erosionValue))
                     throw std::invalid_argument("Implicit erosion points must be finite");
-                const double value = double(point.erosionValue) * 100. * (j + 1 == points.size() ? .1 : 1.);
-                const double amplitude = std::abs(value) * .1;
+                const double value = point.erosionValue;
+                // Corrected compact linear kernel: integral over its support is |Q|.
+                const double amplitude = 3. * std::abs(value) / (M_PI * std::pow(double(particleSize), 3));
                 if (amplitude > std::numeric_limits<float>::max()) throw std::invalid_argument("Implicit erosion amplitude overflow");
                 if (amplitude == 0.) continue;
                 std::unique_ptr<ImplicitPrimitive> sphere(ImplicitPatch::createPredefinedShape(
@@ -306,6 +354,7 @@ void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<Erosio
     }
     if (error) std::rethrow_exception(error);
     auto total = std::make_unique<ImplicitNaryOperator>();
+    total->additive = true;
     for (auto& group : groups) {
         if (!group->composables.empty()) {
             total->addChild(group.get());
@@ -313,56 +362,109 @@ void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<Erosio
         }
     }
     if (!total->composables.empty()) {
-        root->addChild(total.get());
-        total.release();
+        if (!root->additive && !root->composables.empty()) {
+            // Allocate everything before publishing. Retain the original tree's
+            // composition as a single base, then add signed erosion field offsets.
+            auto base = std::make_unique<ImplicitNaryOperator>();
+            std::vector<ImplicitPatch*> replacement{base.get(), total.get()};
+            base->composables.swap(root->composables);
+            for (auto* child : base->composables) if (child) child->parent = base.get();
+            base->parent = root;
+            total->parent = root;
+            root->composables.swap(replacement);
+            root->additive = true;
+            root->firstChildIsBase = true;
+            base.release(); total.release();
+            for (ImplicitPatch* node=root; node; node=node->parent) node->_cached=false;
+        } else {
+            root->addChild(total.get());
+            root->additive = true;
+            total.release();
+        }
     }
 }
 
 void ParticleErosion::modifyLayerBased(const std::vector<std::vector<ErosionPoint>>& allErosions)
 {
-    for (size_t i = 0; i < allErosions.size(); i++) {
-        const auto& erosionValuesAndPositions = allErosions[i];
-        Vector3 previousPos(false);
-        bool isTheOnlyDepositRock = true;
-        for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
-            bool lastRock = iRock == erosionValuesAndPositions.size() - 1;
-            Vector3 pos = erosionValuesAndPositions[iRock].position;
-            float val = erosionValuesAndPositions[iRock].erosionValue;
-            if (std::abs(val) < 1e-4) continue;
-
-            if (lastRock)
-                continue;
-            previousPos = pos;
-            val *= 1.f;
-            float max = std::abs(val) * std::sqrt(particleSize*particleSize)/particleSize;
-            float radius = max;
-            float radiusXY = max;
-            for (int x = -radiusXY; x < radiusXY; x++) {
-                for (int y = -radiusXY; y < radiusXY; y++) {
-                    if (x*x + y*y < radiusXY * radiusXY) {
-                        float halfHeight = .5f * std::sqrt(radius*radius - (x*x + y*y))/radius;
-                        float startZ = std::max(0.f, pos.z() - halfHeight);
-                        float endZ = pos.z() + halfHeight;
-                        layerBasedGrid->transformLayer(pos.x() + x, pos.y() + y, startZ, endZ, (val > 0 ? TerrainTypes::AIR : TerrainTypes::SAND));
-                    }
-                }
-            }
+    auto& columns = layerBasedGrid->getLayers();
+    // Prepare column-local operations using equation 10's hemisphere footprint.
+    // Per-event rasterization is only 2D; no volumetric conversion is needed.
+    struct Interval { float center, amount; };
+    std::vector<std::vector<Interval>> operations(columns.size());
+    for (const auto& track : allErosions) for (const auto& point : track) {
+        if (!finitePosition(point.position) || !std::isfinite(point.erosionValue))
+            throw std::invalid_argument("Erosion points must be finite");
+        if (point.erosionValue == 0.f) continue;
+        // Sparse footprint, normalized on the in-domain column samples.
+        const int x0=int(std::clamp(std::ceil(double(point.position.x())-particleSize),0.,double(columns.sizeX)));
+        const int x1=int(std::clamp(std::floor(double(point.position.x())+particleSize)+1.,0.,double(columns.sizeX)));
+        const int y0=int(std::clamp(std::ceil(double(point.position.y())-particleSize),0.,double(columns.sizeY)));
+        const int y1=int(std::clamp(std::floor(double(point.position.y())+particleSize)+1.,0.,double(columns.sizeY)));
+        double normalization=0.;
+        auto height = [&](int x,int y) {
+            const double dx=x-double(point.position.x()),dy=y-double(point.position.y());
+            return std::sqrt(std::max(0.,double(particleSize)*particleSize-dx*dx-dy*dy));
+        };
+        for (int y=y0;y<y1;++y) for (int x=x0;x<x1;++x) normalization+=height(x,y);
+        if (normalization==0.) continue;
+        for (int y=y0;y<y1;++y) for (int x=x0;x<x1;++x) {
+            const float amount=float(point.erosionValue*height(x,y)/normalization);
+            if (amount!=0.f) operations[columns.getIndex(x,y,0)].push_back({point.position.z(),amount});
         }
     }
+    // Different workers own different material stacks. Preserve the order of
+    // overlapping operations within a stack and keep all final deposit events.
+    #pragma omp parallel for schedule(dynamic, 16)
+    for (size_t i=0;i<columns.size();++i) {
+        auto& column=columns[i];
+        for (const auto& op : operations[i]) {
+            const bool eroding=op.amount>0.f;
+            float remaining=std::abs(op.amount);
+            struct Span { float lo,hi; TerrainTypes material; };
+            std::vector<Span> spans;
+            float top=0.f;
+            for (const auto& layer : column) {
+                spans.push_back({top,top+layer.second,layer.first}); top+=layer.second;
+            }
+            // Explicit air above the stack permits deposition and cavity filling.
+            spans.push_back({top,std::max(top,op.center)+remaining+particleSize,AIR});
+            std::vector<size_t> candidates;
+            for (size_t j=0;j<spans.size();++j) {
+                const bool air=LayerBasedGrid::invisibleLayers.count(spans[j].material)!=0;
+                if (air!=eroding) candidates.push_back(j);
+            }
+            auto distance = [&](size_t j) {
+                return std::max({spans[j].lo-op.center,op.center-spans[j].hi,0.f});
+            };
+            std::stable_sort(candidates.begin(),candidates.end(),[&](size_t a,size_t b) { return distance(a)<distance(b); });
+            std::vector<Span> replacements;
+            for (size_t j : candidates) {
+                const auto span=spans[j];
+                const float amount=std::min(remaining,span.hi-span.lo);
+                if (amount<=0.f) continue;
+                const float start=std::clamp(op.center-amount*.5f,span.lo,span.hi-amount);
+                replacements.push_back({start,start+amount,eroding?AIR:SAND});
+                remaining-=amount;
+                if (remaining<=1e-7f) break;
+            }
+            std::vector<std::pair<TerrainTypes,float>> updated;
+            for (const auto& span : spans) {
+                const auto replacement=std::find_if(replacements.begin(),replacements.end(),[&](const Span& r) {
+                    return r.lo>=span.lo && r.hi<=span.hi;
+                });
+                if (replacement==replacements.end()) updated.push_back({span.material,span.hi-span.lo});
+                else {
+                    if (replacement->lo>span.lo) updated.push_back({span.material,replacement->lo-span.lo});
+                    updated.push_back({replacement->material,replacement->hi-replacement->lo});
+                    if (replacement->hi<span.hi) updated.push_back({span.material,span.hi-replacement->hi});
+                }
+            }
+            column=std::move(updated);
+        }
+        const auto [x,y,z]=columns.getCoord(i);
+        layerBasedGrid->cleanLayer(x,y);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 std::vector<ParticleHistory> ParticleErosion::process()
 {
@@ -383,15 +485,11 @@ std::vector<ParticleHistory> ParticleErosion::process()
     LayerBasedGrid* asLayers = dynamic_cast<LayerBasedGrid*>(terrain);
 
     terrainSize = voxelGrid->getDimensions(); //terrain->getDimensions();
-    float starting_distance = pow(terrainSize.maxComp()/2.f, 2);
-    starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
-    starting_distance *= 2.0; // Leave a little bit of gap
 
     if (densityMap.size() > 0) {
         densityMap.raiseErrorOnBadCoord = false;
         densityMap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     }
-    // Hydraulic erosion parameters
     float strengthValue = strength;
     float maxCapacity = 1.f * strengthValue * maxCapacityFactor;
     erosionFactor = .01f * strengthValue * erosion;
@@ -400,19 +498,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
 
     particleSize = size;
 
-//    GridF modifications((asHeightmap ? Vector3(terrainSize.x, terrainSize.y, 1) : terrainSize));
-
     gravityDefault = Vector3(0, 0, -gravity);
-//    auto environmentalDensities = [&](const Vector3& pos) {
-//        if (pos.z() < 0) return 1000.f;
-//        return 1.f;
-//    };
-//    auto flowfieldValues = [&](const Vector3& pos) {
-//        return Vector3();
-//    };
-//    GridV3 gravityfieldValues = GridV3(terrainSize, Vector3(0, 0, -gravity));
-//    gravityfieldValues.raiseErrorOnBadCoord = false;
-//    gravityfieldValues.defaultValueOnBadCoord = Vector3(0, 0, -gravity);
 
     environmentalDensities = voxelGrid->getEnvironmentalDensities();
     environmentalDensities.raiseErrorOnBadCoord = false;
@@ -423,7 +509,6 @@ std::vector<ParticleHistory> ParticleErosion::process()
         Vector3 waterDir = Vector3(0, waterForce, 0).rotate(0, 0, (waterFlowfieldRotation / 180) * PI);
         for (size_t i = 0; i < flowfieldValues.size(); i++) {
             Vector3 pos = flowfieldValues.getCoordAsVector3(i);
-//            if (pos.x() > flowfieldValues.sizeX / 2) continue;
             if (environmentalDensities(pos) < 100) { // In the air
                 flowfieldValues(pos) = airDir;
             } else { // In water
@@ -453,21 +538,6 @@ std::vector<ParticleHistory> ParticleErosion::process()
     }
     flowfieldValues.raiseErrorOnBadCoord = false;
     flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-
-//    ImageViewer::get().addImage(flowfieldValues.sliceXY(flowfieldValues.sizeZ / 2));
-//    ImageViewer::get().show();
-
-//    std::vector<BSpline> tunnels(quantity);
-//    std::vector<GridF> submodifications(quantity, GridF(modifications.getDimensions()));
-//    std::vector<int> nbPos(quantity), nbErosions(quantity);
-//    std::vector<std::vector<std::pair<float, Vector3>>> allErosions(quantity);
-//    std::vector<std::vector<std::pair<float, Vector3>>> allErosionsIfErosionWasOn(quantity);
-
-    // Cache computations of the erosion matrix
-    RockErosion::createPrecomputedAttackMask(particleSize);
-    RockErosion::createPrecomputedAttackMask(particleSize * 2);
-    RockErosion::createPrecomputedAttackMask2D(particleSize);
-    RockErosion::createPrecomputedAttackMask2D(particleSize * 2);
 
     std::vector<ParticleHistory> tracks(quantity);
     std::vector<std::vector<ErosionPoint>> allErosions(quantity);

@@ -275,6 +275,10 @@ public:
     virtual void addChild(ImplicitPatch* newChild, int index = -1);
     virtual void deleteAllChildren();
 
+    // Opt-in signed field accumulation for erosion. Other groups keep the
+    // existing last-active-child composition. A base preserves its signed field.
+    bool additive = false;
+    bool firstChildIsBase = false;
     std::vector<ImplicitPatch*> composables;
 };
 
