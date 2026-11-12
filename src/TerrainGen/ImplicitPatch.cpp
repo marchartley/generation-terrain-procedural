@@ -255,6 +255,36 @@ Vector3 ImplicitPatch::getSamplingDimensions() const
     return Vector3::max(getBBox().max().roundedUp() + Vector3(0, 0, 2), Vector3(1, 1, 2));
 }
 
+namespace {
+float erosionFieldContribution(const ImplicitPatch* node, const Vector3& pos)
+{
+    if (!node) return 0.f;
+    if (const auto* group=dynamic_cast<const ImplicitNaryOperator*>(node); group && group->additive) {
+        size_t start=0;
+        float result=0.f;
+        if (group->firstChildIsBase && !group->composables.empty() && group->composables.front()) {
+            result=ImplicitPatch::isovalue+group->composables.front()->getSignedEvaluation(pos);
+            start=1;
+        }
+        for (size_t i=start;i<group->composables.size();++i)
+            result+=erosionFieldContribution(group->composables[i],pos);
+        return result;
+    }
+    if (const auto* primitive=dynamic_cast<const ImplicitPrimitive*>(node);
+        primitive && primitive->hasGeneratedField() && primitive->predefinedShape==ImplicitPatch::Sphere) {
+        if (!primitive->getSupportBBox().contains(pos)) return 0.f;
+        const Vector3 radius=primitive->dimensions*.5f;
+        const float falloff=std::max(0.f,1.f-((pos-primitive->position-radius)/radius).norm());
+        const float value=falloff*primitive->parametersProvided.front();
+        return LayerBasedGrid::invisibleLayers.count(primitive->material) ? -value : value;
+    }
+    float result=0.f;
+    for (const auto& [material,amount] : node->getMaterials(pos))
+        result+=LayerBasedGrid::invisibleLayers.count(material) ? -amount : amount;
+    return result;
+}
+}
+
 float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
 {
     if (const auto* heightTerrain = dynamic_cast<const Implicit2DNary*>(this))
@@ -272,6 +302,7 @@ float ImplicitPatch::getSignedEvaluation(const Vector3& pos) const
     // A one-child container must not threshold away the child's exterior field.
     if (typeid(*this) == typeid(ImplicitNaryOperator)) {
         const auto* group = static_cast<const ImplicitNaryOperator*>(this);
+        if (group->additive) return erosionFieldContribution(group,pos)-isovalue;
         if (!group->additive && group->composables.size() == 1 && group->composables.front()) return group->composables.front()->getSignedEvaluation(pos);
     }
     if (const auto* primitive = dynamic_cast<const ImplicitPrimitive*>(this)) {
@@ -2639,7 +2670,13 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
         if (firstChildIsBase && !composables.empty() && composables.front()) {
             // Preserve the unnormalized signed field of sampled/SDF bases.
             const float value=isovalue+composables.front()->getSignedEvaluation(pos);
-            result[value>=0.f ? DIRT : AIR]=std::abs(value);
+            TerrainTypes baseMaterial=DIRT;
+            float strongest=0.f;
+            for (const auto& [material,amount] : composables.front()->getMaterials(pos))
+                if (!LayerBasedGrid::invisibleLayers.count(material) && amount>strongest) {
+                    strongest=amount; baseMaterial=material;
+                }
+            result[value>=0.f ? baseMaterial : AIR]=std::abs(value);
             start=1;
         }
         for (size_t i=start;i<composables.size();++i) {

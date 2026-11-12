@@ -77,6 +77,11 @@ ParticleErosion::ParticleErosion()
 void ParticleErosion::initializeParticle(ErosionParticle& particle, Vector3& position, Vector3& velocity,
                                          float radius, float density, float initialLoad, float maxCapacity)
 {
+    for (float value : {radius,density,maxCapacity,initialLoad})
+        if (!std::isfinite(value) || value<0.f)
+            throw std::invalid_argument("Invalid erosion particle properties");
+    if (radius<=0.f || density<=0.f || !position.isValid() || !velocity.isValid())
+        throw std::invalid_argument("Erosion particles require a positive radius/density and valid launch state");
     particle = ErosionParticle();
     particle.pos = position;
     particle.dir = particle.velocity = velocity;
@@ -88,6 +93,8 @@ void ParticleErosion::initializeParticle(ErosionParticle& particle, Vector3& pos
     particle.properties->radius = radius;
     particle.properties->volume = (4.f / 3.f) * M_PI * radius * radius * radius;
     particle.properties->mass = density * particle.properties->volume;
+    if (!std::isfinite(particle.properties->mass) || !std::isfinite(particle.properties->volume))
+        throw std::invalid_argument("Erosion particle mass or volume overflow");
 }
 
 Vector3 ParticleErosion::computeSettlingVelocity(const ErosionParticle& particle) const
@@ -142,7 +149,12 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
         particle.velocity = target + (particle.velocity - target) * relaxation;
         auto contacts = particle.bounce(dt, boundariesTree, bounciness, bouncingCoefficient,
                                        std::min(8, collisionsLeft));
-        particle.velocity = target + (particle.velocity - target) * relaxation;
+        const float endDensity=environmentalDensities.interpolate(particle.pos);
+        const Vector3 endAcceleration=gravityDefault*(1.f-endDensity/particle.properties->density);
+        particle.velocity+=(endAcceleration-particle.force)*(.5f*dt);
+        const Vector3 endTarget=flowfieldValues.interpolate(particle.pos)+computeSettlingVelocity(particle)*load;
+        particle.velocity=endTarget+(particle.velocity-endTarget)*relaxation;
+        particle.force=endAcceleration;
         for (const auto& contact : contacts) {
             --collisionsLeft;
             const Vector3 endPosition = particle.pos;
@@ -308,6 +320,31 @@ void ParticleErosion::modifyVoxelGrid(const std::vector<std::vector<ErosionPoint
     voxelGrid->saveState();
 }
 
+void ParticleErosion::modifyBinaryVoxelGrid(const std::vector<std::vector<ErosionPoint>>& allErosions)
+{
+    if (!std::isfinite(binaryHitScale) || !std::isfinite(binaryHitThreshold) ||
+        binaryHitScale<=0.f || binaryHitThreshold<=0.f)
+        throw std::invalid_argument("Binary erosion hit scale and threshold must be finite and positive");
+    GridF changes=rasterizeErosion(allErosions,voxelGrid->getDimensions(),particleSize,false);
+    auto values=voxelGrid->getVoxelValues();
+    GridF& hits=binaryHitAccumulator ? *binaryHitAccumulator : binaryHits;
+    if (hits.getDimensions()!=values.getDimensions()) hits=GridF(values.getDimensions());
+    #pragma omp parallel for
+    for (size_t i=0;i<values.size();++i) {
+        const bool solid=values[i]>0.f;
+        // Retain fractional hits so repeated small brushes eventually affect occupancy.
+        // Do not charge already empty cells for further detachment (or solid cells for filling).
+        const float accumulated=hits[i]-changes[i]*binaryHitScale;
+        hits[i]=solid ? std::max(0.f,accumulated) : std::min(0.f,accumulated);
+        float occupancy=solid ? 1.f : -1.f;
+        if (solid && hits[i]>=binaryHitThreshold) { occupancy=-1.f; hits[i]=0.f; }
+        else if (!solid && hits[i]<=-binaryHitThreshold) { occupancy=1.f; hits[i]=0.f; }
+        changes[i]=occupancy-values[i];
+    }
+    voxelGrid->applyModification(std::move(changes));
+    voxelGrid->saveState();
+}
+
 void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<ErosionPoint>>& allErosions)
 {
     auto* root = dynamic_cast<ImplicitNaryOperator*>(implicitTerrain);
@@ -386,6 +423,8 @@ void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<Erosio
 
 void ParticleErosion::modifyLayerBased(const std::vector<std::vector<ErosionPoint>>& allErosions)
 {
+    if (!std::isfinite(particleSize) || particleSize<=0.f)
+        throw std::invalid_argument("Erosion brush radius must be finite and positive");
     auto& columns = layerBasedGrid->getLayers();
     // Prepare column-local operations using equation 10's hemisphere footprint.
     // Per-event rasterization is only 2D; no volumetric conversion is needed.
@@ -484,60 +523,78 @@ std::vector<ParticleHistory> ParticleErosion::process()
     ImplicitPatch* asImplicit = dynamic_cast<ImplicitPatch*>(terrain);
     LayerBasedGrid* asLayers = dynamic_cast<LayerBasedGrid*>(terrain);
 
-    terrainSize = voxelGrid->getDimensions(); //terrain->getDimensions();
+    if (!asVoxels && !asHeightmap && !asImplicit && !asLayers)
+        throw std::invalid_argument("Unsupported particle erosion terrain representation");
+    if (applyOn==BINARY_VOXELS && !asVoxels)
+        throw std::invalid_argument("Binary erosion requires a voxel terrain");
+    // Bind the adapter to the actual terrain instead of an optional companion.
+    if (asVoxels) voxelGrid=asVoxels;
+    if (asHeightmap) heightmap=asHeightmap;
+    if (asImplicit) implicitTerrain=asImplicit;
+    if (asLayers) layerBasedGrid=asLayers;
+    terrainSize=terrain->getDimensions();
+    if (!finitePosition(terrainSize) || terrainSize.minComp()<=0.f)
+        throw std::invalid_argument("Erosion terrain dimensions must be positive and finite");
+    for (const auto& emission : posAndDirs)
+        if (!finitePosition(emission.first) || !finitePosition(emission.second))
+            throw std::invalid_argument("Erosion emissions must have finite positions and velocities");
+    for (float value : {bounciness,bouncingCoefficient,airForce,waterForce,airFlowfieldRotation,
+                        waterFlowfieldRotation,materialImpact})
+        if (!std::isfinite(value)) throw std::invalid_argument("Erosion flow and collision parameters must be finite");
 
-    if (densityMap.size() > 0) {
-        densityMap.raiseErrorOnBadCoord = false;
-        densityMap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    if (!densityMap.empty()) {
+        densityMap.raiseErrorOnBadCoord=false;
+        densityMap.returned_value_on_outside=RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     }
-    float strengthValue = strength;
-    float maxCapacity = 1.f * strengthValue * maxCapacityFactor;
-    erosionFactor = .01f * strengthValue * erosion;
-    depositFactor = .01f * strengthValue * deposit;
-    float capacity = maxCapacity * initialCapacity;
-
-    particleSize = size;
-
-    gravityDefault = Vector3(0, 0, -gravity);
-
-    environmentalDensities = voxelGrid->getEnvironmentalDensities();
-    environmentalDensities.raiseErrorOnBadCoord = false;
-    environmentalDensities.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-    flowfieldValues = GridV3(terrainSize);
-    if (flowType == FLOWFIELD_TYPE::BASIC) {
-        Vector3 airDir = Vector3(0, airForce, 0).rotate(0, 0, (airFlowfieldRotation / 180) * PI);
-        Vector3 waterDir = Vector3(0, waterForce, 0).rotate(0, 0, (waterFlowfieldRotation / 180) * PI);
-        for (size_t i = 0; i < flowfieldValues.size(); i++) {
-            Vector3 pos = flowfieldValues.getCoordAsVector3(i);
-            if (environmentalDensities(pos) < 100) { // In the air
-                flowfieldValues(pos) = airDir;
-            } else { // In water
-                flowfieldValues(pos) = waterDir;
+    const float strengthValue=strength;
+    const float maxCapacity=strength*maxCapacityFactor;
+    erosionFactor=.01f*strength*erosion;
+    depositFactor=.01f*strength*deposit;
+    if (!std::isfinite(maxCapacity) || !std::isfinite(erosionFactor) || !std::isfinite(depositFactor))
+        throw std::invalid_argument("Erosion strength products overflow");
+    const float capacity=maxCapacity*std::clamp(initialCapacity,0.f,1.f);
+    particleSize=size;
+    gravityDefault=Vector3(0,0,-gravity);
+    environmentalDensities=terrain->getEnvironmentalDensities();
+    environmentalDensities.raiseErrorOnBadCoord=false;
+    environmentalDensities.returned_value_on_outside=RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    for (float value : environmentalDensities)
+        if (!std::isfinite(value) || value<0.f) throw std::invalid_argument("Invalid medium density");
+    // The medium can extend above a heightmap or beyond the terrain's solid extent.
+    const Vector3 fieldSize=environmentalDensities.getDimensions();
+    flowfieldValues=GridV3(fieldSize);
+    if (flowType==BASIC) {
+        const Vector3 airDir=Vector3(0,airForce,0).rotate(0,0,airFlowfieldRotation*PI/180.f);
+        const Vector3 waterDir=Vector3(0,waterForce,0).rotate(0,0,waterFlowfieldRotation*PI/180.f);
+        #pragma omp parallel for
+        for (size_t i=0;i<flowfieldValues.size();++i)
+            flowfieldValues[i]=environmentalDensities[i]<100.f ? airDir : waterDir;
+    } else if (flowType==FLOWFIELD_IMAGE || flowType==FLOWFIELD_ENVOBJECTS) {
+        if (flowType==FLOWFIELD_ENVOBJECTS && scene) {
+            flowfieldValues=scene->flowfield.resize(fieldSize);
+            #pragma omp parallel for
+            for (size_t i=0;i<flowfieldValues.size();++i)
+                flowfieldValues[i]*=environmentalDensities[i]<100.f ? airForce : waterForce;
+        } else {
+            // The interface passes environmental-object flow through these fields too.
+            // Preserve 3D fields; image fields extend their sole Z slice vertically.
+            GridV3 air=airFlow.empty() ? GridV3() : airFlow.resize(fieldSize.x(),fieldSize.y(),airFlow.sizeZ>1 ? fieldSize.z() : 1);
+            GridV3 water=waterFlow.empty() ? GridV3() : waterFlow.resize(fieldSize.x(),fieldSize.y(),waterFlow.sizeZ>1 ? fieldSize.z() : 1);
+            #pragma omp parallel for
+            for (size_t i=0;i<flowfieldValues.size();++i) {
+                const Vector3 p=flowfieldValues.getCoordAsVector3(i);
+                const bool inAir=environmentalDensities[i]<100.f;
+                const GridV3& source=inAir ? air : water;
+                if (!source.empty()) flowfieldValues[i]=source.interpolate(p)*(inAir ? airForce : waterForce);
             }
         }
-    } else if (flowType == FLOWFIELD_TYPE::FLOWFIELD_IMAGE) {
-        /*
-        airFlow = airFlow.resize(terrainSize.x, terrainSize.y, 1) * airForce * 10.f;
-        waterFlow = waterFlow.resize(terrainSize.x, terrainSize.y, 1) * waterForce * 10.f;
-        for (size_t i = 0; i < flowfieldValues.size(); i++) {
-            if (environmentalDensities.at(flowfieldValues.getCoordAsVector3(i)) < 100) { // In the air
-                flowfieldValues.at(i) = airFlow.at(flowfieldValues.getCoordAsVector3(i).xy());
-            } else { // In water
-                flowfieldValues.at(i) = waterFlow.at(flowfieldValues.getCoordAsVector3(i).xy());
-            }
-        }*/
-    } else if (flowType == FLOWFIELD_TYPE::FLUID_SIMULATION) {
-        flowfieldValues = GridV3(voxelGrid->getFlowfield(fluidSimType).resize(terrainSize) * airForce).meanSmooth();
-        Vector3 aspectRatio = terrainSize.normalized();
-        for (auto& v : flowfieldValues)
-            v *= aspectRatio;
-    } else if (flowType == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
-        flowfieldValues = this->scene->flowfield.resize(terrainSize).meanSmooth();
-        for (auto& v : flowfieldValues)
-            v = v.xy();
-    }
-    flowfieldValues.raiseErrorOnBadCoord = false;
-    flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    } else if (flowType==FLUID_SIMULATION) {
+        flowfieldValues=terrain->getFlowfield(fluidSimType).resize(fieldSize)*airForce;
+    } else throw std::invalid_argument("Unknown erosion velocity field source");
+    for (const auto& velocity : flowfieldValues)
+        if (!finitePosition(velocity)) throw std::invalid_argument("Invalid medium velocity");
+    flowfieldValues.raiseErrorOnBadCoord=false;
+    flowfieldValues.returned_value_on_outside=RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 
     std::vector<ParticleHistory> tracks(quantity);
     std::vector<std::vector<ErosionPoint>> allErosions(quantity);
@@ -562,6 +619,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
     if (!applyTheErosion || strengthValue == 0.f) return tracks;
     terrainModifTime = timeIt([&]() {
         if (asImplicit) modifyImplicitTerrain(allErosions);
+        else if (asVoxels && applyOn==BINARY_VOXELS) modifyBinaryVoxelGrid(allErosions);
         else if (asVoxels) modifyVoxelGrid(allErosions);
         else if (asHeightmap) modifyHeightmap(allErosions);
         else if (asLayers) modifyLayerBased(allErosions);

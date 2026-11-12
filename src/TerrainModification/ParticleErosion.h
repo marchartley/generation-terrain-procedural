@@ -124,6 +124,7 @@ public:
     std::vector<ErosionPoint> computeErosionValuesFromHistory(const ParticleHistory& history, SpacePartitioning& boundaries);
 
     void modifyHeightmap(const std::vector<std::vector<ErosionPoint>> &allErosions);
+    void modifyBinaryVoxelGrid(const std::vector<std::vector<ErosionPoint>>& allErosions);
     void modifyVoxelGrid(const std::vector<std::vector<ErosionPoint>>& allErosions);
     void modifyImplicitTerrain(const std::vector<std::vector<ErosionPoint>>& allErosions);
     void modifyLayerBased(const std::vector<std::vector<ErosionPoint>>& allErosions);
@@ -192,6 +193,11 @@ public:
     float airViscosity = 1.8e-5f; // Pa s
     float waterViscosity = 1e-3f; // Pa s
     float flowResponseTime = 1.f; // seconds; bounded relaxation toward medium velocity
+    // Keep sub-hit precision between batches; +/- threshold toggles occupancy.
+    GridF binaryHits;
+    GridF* binaryHitAccumulator = nullptr;
+    float binaryHitScale = 1000.f;
+    float binaryHitThreshold = 1000.f;
     std::shared_ptr<EnvironmentalScene> scene;
 };
 

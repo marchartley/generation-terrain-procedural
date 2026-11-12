@@ -71,11 +71,12 @@ public:
 
 
 //    std::shared_ptr<VoxelGrid> grid;
-    VoxelGrid* voxelGrid;
-    Heightmap* heightmap;
-    LayerBasedGrid* layerBasedGrid;
-    ImplicitPatch* implicitTerrain;
+    VoxelGrid* voxelGrid = nullptr;
+    Heightmap* heightmap = nullptr;
+    LayerBasedGrid* layerBasedGrid = nullptr;
+    ImplicitPatch* implicitTerrain = nullptr;
 
+    GridF binaryHits; // persists across Apply() iterations of one erosion operation
     int maxRockSize;
     int rockAmount;
     float maxRockStrength;

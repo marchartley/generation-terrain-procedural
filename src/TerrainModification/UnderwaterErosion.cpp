@@ -189,8 +189,6 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
     erosionProcess.applyOn = applyOn;
     erosionProcess.terrain = terrain;
     erosionProcess.boundariesTree = &boundariesTree;
-    erosionProcess.particleSimulationTime = particleSimulationTime;
-    erosionProcess.terrainModifTime = terrainModifTime;
     erosionProcess.startingPoint = startingPoint;
     erosionProcess.originalDirection = originalDirection;
     erosionProcess.randomnessFactor = randomnessFactor;
@@ -234,6 +232,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
     erosionProcess.implicitTerrain = implicitTerrain;
     erosionProcess.layerBasedGrid = layerBasedGrid;
 
+    erosionProcess.binaryHitAccumulator = &binaryHits;
     auto allReturns = erosionProcess.process();
     particleSimulationTime = erosionProcess.particleSimulationTime;
     terrainModifTime = erosionProcess.terrainModifTime;

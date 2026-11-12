@@ -327,7 +327,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
         GridV3 airFlowfield = GridV3();
 
         for (int iteration = 0; iteration < numberOfIterations; iteration++) {
-            if (applyOn == EROSION_APPLIED::DENSITY_VOXELS) {
+            if (applyOn == EROSION_APPLIED::DENSITY_VOXELS || applyOn == EROSION_APPLIED::BINARY_VOXELS) {
                 terrain = voxelGrid.get();
             } else if (applyOn == EROSION_APPLIED::HEIGHTMAP) {
                 terrain = heightmap.get();
@@ -357,17 +357,12 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                     m = Mesh::applyMarchingCubes(layerGrid->voxelize().meanSmooth(3, 3, 3, true).resize(geomSize));
                 } else {
                     m = terrain->getGeometry(geomSize * Vector3(1.f, 1.f, (applyOn == IMPLICIT_TERRAIN ? 10.f : 1.f)));
-                    if (applyOn == IMPLICIT_TERRAIN) {
-
-                    } else if (applyOn == HEIGHTMAP) {
-                        m.translate(Vector3(.5f, .5f, 0.f));
-                    } else if (applyOn == DENSITY_VOXELS) {
-                        m.translate(Vector3(.5f, .5f, .5f));
-                    }
+                    // Terrain scalar samples and height vertices use integer coordinates.
+                    // Collision geometry must use the same frame as alteration brushes.
                 }
             });
             triangles = m.getTriangles();
-            if (applyOn == EROSION_APPLIED::DENSITY_VOXELS) {
+            if (applyOn == EROSION_APPLIED::DENSITY_VOXELS || applyOn == EROSION_APPLIED::BINARY_VOXELS) {
                 std::vector<std::vector<Vector3>> _triangles;
                 _triangles.reserve(triangles.size());
                 for (int i = triangles.size() - 1; i >= 0; i--) {
@@ -1089,13 +1084,10 @@ InterfaceUI* ErosionInterface::createGUI()
     auto displayTrajectoriesButton = new CheckboxElement("Display path", displayTrajectories);
 
     auto applyOnVoxels = new RadioButtonElement("on voxels", EROSION_APPLIED::DENSITY_VOXELS, applyOn);
-    // applyOnVoxels->setChecked(this->applyOn == EROSION_APPLIED::DENSITY_VOXELS).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::DENSITY_VOXELS; });
     auto applyOnHeightmap = new RadioButtonElement("on heightmap", EROSION_APPLIED::HEIGHTMAP, applyOn);
-    // applyOnHeightmap->setChecked(this->applyOn == EROSION_APPLIED::HEIGHTMAP).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::HEIGHTMAP; });
     auto applyOnImplicit = new RadioButtonElement("on implicit", EROSION_APPLIED::IMPLICIT_TERRAIN, applyOn);
-    // applyOnImplicit->setChecked(this->applyOn == EROSION_APPLIED::IMPLICIT_TERRAIN).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::IMPLICIT_TERRAIN; });
+    auto applyOnBinary = new RadioButtonElement("on binary voxels", EROSION_APPLIED::BINARY_VOXELS, applyOn);
     auto applyOnLayers = new RadioButtonElement("on layers", EROSION_APPLIED::LAYER_TERRAIN, applyOn);
-    // applyOnLayers->setChecked(this->applyOn == EROSION_APPLIED::LAYER_TERRAIN).setOnChecked([=](bool checked) { if (checked) applyOn = EROSION_APPLIED::LAYER_TERRAIN; });
 
     auto useBasicFlowfield = new RadioButtonElement("Basic flowfield", FLOWFIELD_TYPE::BASIC, flowfieldUsed);
     // useBasicFlowfield->setChecked(this->flowfieldUsed == FLOWFIELD_TYPE::BASIC).setOnChecked([=](bool checked) { if (checked) this->flowfieldUsed = FLOWFIELD_TYPE::BASIC; });
@@ -1150,12 +1142,13 @@ InterfaceUI* ErosionInterface::createGUI()
 
 
     UI->add({
+        /*
         thermalButton,
         hydraulicButton,
         gobelinsButton,
         desertButton,
         volcanoButton,
-
+        */
         rockStrengthSlider,
         rockQttSlider,
         gravitySlider,
@@ -1176,36 +1169,42 @@ InterfaceUI* ErosionInterface::createGUI()
         // createHorizontalGroup({noLimitCollisionButton, singleCollisionButton, twoCollisionButton, tenCollisionButton}),
         confirmFromSurface,
         confirmFromSkyButton,
-        confirmFromRiverButton,
+        /*confirmFromRiverButton,
         confirmFromRiver2Button,
         confirmFromRandom,
         confirmFromSideButton,
         confirmFromBigSideButton,
         confirmFromVolcanoButton,
         confirmFromVolcano2Button,
-        confirmFromVolcano3Button,
+        confirmFromVolcano3Button,*/
 
         displayTrajectoriesButton,
         displayBoundariesButton,
 
-        applyOnHeightmap,
-        applyOnVoxels,
-        applyOnImplicit,
-        applyOnLayers,
+        createHorizontalGroup({
+            createVerticalGroup({
+                applyOnHeightmap,
+                applyOnVoxels,
+                applyOnBinary,
+                applyOnImplicit,
+                applyOnLayers,
+            }),
+            createVerticalGroup({
+                useBasicFlowfield,
+                useImageFlowfield,
+                useEnvObjFlowfield,
+                labWater, browseWaterFlow,
+                labAir, browseAirFlow,
+                useSimulatedFlowfield, simulationTypeButton,
 
-        useBasicFlowfield,
-        useImageFlowfield,
-        useEnvObjFlowfield,
-        labWater, browseWaterFlow,
-        labAir, browseAirFlow,
-        useSimulatedFlowfield, simulationTypeButton,
-
-        useImageDensity,
-        useLayeredDensity,
-        labDensityField,
-        densityFieldFileChooser,
-        useNativeDensity,
-        useRandomDensity
+                useImageDensity,
+                useLayeredDensity,
+                labDensityField,
+                densityFieldFileChooser,
+                useNativeDensity,
+                useRandomDensity
+            })
+        })
     });
     return UI;
 }
