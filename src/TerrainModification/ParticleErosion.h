@@ -20,6 +20,12 @@ struct ParticleProperties {
     float maxCapacity;
 };
 
+struct ParticleContact {
+    Vector3 position;
+    Vector3 normal;
+    Vector3 velocity;
+};
+
 class ErosionParticle {
 public:
     Vector3 pos;
@@ -31,7 +37,7 @@ public:
 //    float radius;
 //    float volume;
 //    float mass;
-    float capacity;
+    float capacity = 0.f;
 //    float maxCapacity;
     std::shared_ptr<ParticleProperties> properties;
 
@@ -41,7 +47,9 @@ public:
 
     void update();
     Vector3 predictNextPos(float dt);
-    std::vector<Vector3> bounce(float dt, SpacePartitioning* boundaries);
+    // force stores acceleration; contacts retain the incoming velocity.
+    std::vector<ParticleContact> bounce(float dt, SpacePartitioning* boundaries,
+                                       float restitution = 1.f, float damping = 1.f, int maxBounces = 8);
 
     void addForce(const Vector3& f);
     void addVelocity(const Vector3& v);
@@ -62,6 +70,8 @@ struct ParticleState {
     ParticleState(ErosionParticle& p) : particleState(p) {}
     ErosionParticle particleState;
     bool terrainModificationApplied = false;
+    // Positive means detached (terrain loses material); negative means deposited.
+    ErosionPoint exchange;
 };
 
 struct ParticleHistory {
@@ -109,6 +119,7 @@ public:
     ParticleHistory trackParticlePositions(ErosionParticle& particle);
     float computeErosionValue(const ErosionParticle &particle, float vRel);
     float computeDepositionValue(const ErosionParticle& particle);
+    Vector3 computeSettlingVelocity(const ErosionParticle& particle) const;
 
     std::vector<ErosionPoint> computeErosionValuesFromHistory(const ParticleHistory& history, SpacePartitioning& boundaries);
 
@@ -119,8 +130,8 @@ public:
 
 
     EROSION_APPLIED applyOn;
-    TerrainModel* terrain;
-    SpacePartitioning* boundariesTree;
+    TerrainModel* terrain = nullptr;
+    SpacePartitioning* boundariesTree = nullptr;
     float particleSimulationTime;
     float terrainModifTime;
     Vector3 startingPoint;
@@ -170,11 +181,17 @@ public:
     float depositFactor;
     float erosionFactor;
 
-    VoxelGrid* voxelGrid;
-    Heightmap* heightmap;
-    ImplicitPatch* implicitTerrain;
-    LayerBasedGrid* layerBasedGrid;
+    VoxelGrid* voxelGrid = nullptr;
+    Heightmap* heightmap = nullptr;
+    ImplicitPatch* implicitTerrain = nullptr;
+    LayerBasedGrid* layerBasedGrid = nullptr;
 
+    // Sediment grains and carrier parcels are distinct from the terrain brush.
+    float sedimentRadius = 1e-4f; // meters, used only for settling
+    float sedimentDensity = 2650.f; // kg/m^3
+    float airViscosity = 1.8e-5f; // Pa s
+    float waterViscosity = 1e-3f; // Pa s
+    float flowResponseTime = 1.f; // seconds; bounded relaxation toward medium velocity
     std::shared_ptr<EnvironmentalScene> scene;
 };
 
