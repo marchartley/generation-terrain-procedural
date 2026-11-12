@@ -171,8 +171,9 @@ public:
     void setParent(ImplicitNaryOperator* newParent);
     ImplicitNaryOperator* parent = nullptr;
 
+private:
     static int currentMaxIndex;
-
+public:
     static std::string json_identifier;
 
     virtual void reevaluateAll() {}

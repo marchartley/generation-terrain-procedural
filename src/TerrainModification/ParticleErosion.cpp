@@ -1,4 +1,7 @@
 #include "ParticleErosion.h"
+#include <atomic>
+#include <exception>
+#include <memory>
 
 #include  "DataStructure/BVH.h"
 #include "Graphics/Mesh.h"
@@ -560,44 +563,54 @@ void ParticleErosion::modifyVoxelGrid(const std::vector<std::vector<ErosionPoint
 
 void ParticleErosion::modifyImplicitTerrain(const std::vector<std::vector<ErosionPoint>>& allErosions)
 {
-    std::vector<ImplicitNaryOperator*> allNary(allErosions.size());
-    for (size_t i = 0; i < allNary.size(); i++) {
-        allNary[i] = new ImplicitNaryOperator;
-    }
-
+    auto* root = dynamic_cast<ImplicitNaryOperator*>(implicitTerrain);
+    if (!root || typeid(*root) != typeid(ImplicitNaryOperator))
+        throw std::invalid_argument("Implicit erosion requires an ordinary 3D root container");
+    if (!std::isfinite(particleSize)) throw std::invalid_argument("Erosion particle size must be finite");
+    const float dimensions = std::floor(particleSize);
+    if (dimensions < 1.f || allErosions.empty()) return;
+    std::vector<std::unique_ptr<ImplicitNaryOperator>> groups;
+    groups.reserve(allErosions.size());
+    for (size_t i = 0; i < allErosions.size(); ++i) groups.push_back(std::make_unique<ImplicitNaryOperator>());
+    std::atomic<bool> failed{false};
+    std::exception_ptr error;
     #pragma omp parallel for
-    for (size_t i = 0; i < allErosions.size(); i++) {
-        const auto& erosionValuesAndPositions = allErosions[i];
-        Vector3 previousPos(false);
-        for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
-            Vector3 pos = erosionValuesAndPositions[iRock].position;
-            float val = erosionValuesAndPositions[iRock].erosionValue;
-            int size = particleSize;
-            val *= 100.f;
-            if (iRock == erosionValuesAndPositions.size() - 1) {
-                val *= .1f;
+    for (size_t i = 0; i < allErosions.size(); ++i) {
+        if (failed.load(std::memory_order_relaxed)) continue;
+        try {
+            const auto& points = allErosions[i];
+            for (size_t j = 0; j < points.size(); ++j) {
+                const auto& point = points[j];
+                if (!point.position.isValid() || !std::isfinite(point.position.x()) || !std::isfinite(point.position.y()) ||
+                    !std::isfinite(point.position.z()) || !std::isfinite(point.erosionValue))
+                    throw std::invalid_argument("Implicit erosion points must be finite");
+                const double value = double(point.erosionValue) * 100. * (j + 1 == points.size() ? .1 : 1.);
+                const double amplitude = std::abs(value) * .1;
+                if (amplitude > std::numeric_limits<float>::max()) throw std::invalid_argument("Implicit erosion amplitude overflow");
+                if (amplitude == 0.) continue;
+                std::unique_ptr<ImplicitPrimitive> sphere(ImplicitPatch::createPredefinedShape(
+                    ImplicitPatch::Sphere, Vector3(dimensions, dimensions, dimensions), float(amplitude)));
+                sphere->material = value > 0. ? AIR : DIRT;
+                sphere->setSupportDimensions(sphere->dimensions);
+                sphere->position = point.position - sphere->dimensions * .5f;
+                groups[i]->addChild(sphere.get());
+                sphere.release();
             }
-//                    if (val <= 0.f) continue; // Fits the paper Paris et al. Terrain Amplification with Implicit 3D Features (2019)
-            float dimensions = size;
-            if (dimensions < 1.f) continue;
-            previousPos = pos;
-            auto sphere = dynamic_cast<ImplicitPrimitive*>(ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(dimensions, dimensions, dimensions), std::abs(val)*.1f));
-            sphere->material = (val > 0 ? TerrainTypes::AIR : TerrainTypes::DIRT);
-            sphere->dimensions = Vector3(dimensions, dimensions, dimensions);
-            sphere->supportDimensions = sphere->dimensions;
-            sphere->position = pos - sphere->dimensions * .5f;
-            allNary[i]->composables.push_back(sphere);
+        } catch (...) {
+            if (!failed.exchange(true)) error = std::current_exception();
         }
     }
-
-    ImplicitNaryOperator* totalErosion = new ImplicitNaryOperator;
-    for (auto& op : allNary)
-        if (!op->composables.empty())
-            totalErosion->composables.push_back(op);
-    if (!totalErosion->composables.empty())
-    {
-        dynamic_cast<ImplicitNaryOperator*>(implicitTerrain)->addChild(totalErosion);
-        implicitTerrain->_cached = false;
+    if (error) std::rethrow_exception(error);
+    auto total = std::make_unique<ImplicitNaryOperator>();
+    for (auto& group : groups) {
+        if (!group->composables.empty()) {
+            total->addChild(group.get());
+            group.release();
+        }
+    }
+    if (!total->composables.empty()) {
+        root->addChild(total.get());
+        total.release();
     }
 }
 

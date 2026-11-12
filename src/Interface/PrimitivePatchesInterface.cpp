@@ -426,7 +426,6 @@ void PrimitivePatchesInterface::resetPatch()
     clearSelection();
     if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects"))) environment->detachImplicitRoot();
 //    delete this->implicitTerrain;
-    ImplicitPatch::currentMaxIndex = -1;
     this->implicitTerrain->deleteAllChildren(); // = new ImplicitPrimitive;
     this->implicitTerrain->name = "Identity";
     this->updateMapWithCurrentPatch();
@@ -1595,7 +1594,7 @@ void PrimitivePatchesInterface::updateFunctionSize()
 
 void PrimitivePatchesInterface::updatePrimitiveList()
 {
-    if (this->isVisible()) {
+    if (this->isVisible() && primitiveSelectionGui) {
         primitiveSelectionGui->clear();
         this->storedPatches.clear();
         bool patchesCanBeLocked = this->mainFilename != "";
@@ -1605,11 +1604,9 @@ void PrimitivePatchesInterface::updatePrimitiveList()
         this->nbBinaryOperators = 0;
         this->nbUnaryOperators = 0;
         this->nbNaryOperators = 0;
-        int currentIndex = 0;
 
         while (!waitingPatches.empty()) {
             auto [current, level, locked] = waitingPatches.back();
-            current->index = currentIndex++;
             if (current != this->implicitTerrain.get() && current->parent == nullptr)
                     std::cout << current->toString() << " has no parent" << std::endl;
             bool childrenAreLocked = locked || (current->used_json_filename != "" && patchesCanBeLocked && current->used_json_filename != this->mainFilename);
@@ -1621,7 +1618,7 @@ void PrimitivePatchesInterface::updatePrimitiveList()
             ImplicitNaryOperator* currentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(current);
             if (currentAsNaryOperator) {
                 for (const auto& c : currentAsNaryOperator->composables)
-                    waitingPatches.push_back({c, level+1, childrenAreLocked});
+                    if (c) waitingPatches.push_back({c, level+1, childrenAreLocked});
             }
 
             // Counting patches
@@ -1636,7 +1633,6 @@ void PrimitivePatchesInterface::updatePrimitiveList()
         }
 //        if (nbPrimitives > 1) // If there is more than just the Identity
 //            this->savePatchesAsFile(this->mainFilename);
-        ImplicitPatch::currentMaxIndex = currentIndex;
         this->findAllSubfiles();
     }
 }

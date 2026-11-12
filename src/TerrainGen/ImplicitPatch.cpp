@@ -15,6 +15,7 @@
 #include <random>
 #include <atomic>
 #include <exception>
+#include <mutex>
 #include <QSaveFile>
 
 float ImplicitPatch::isovalue = .5f;
@@ -326,10 +327,15 @@ Vector3 ImplicitPatch::getNormal(const Vector3& pos) const
 
 void ImplicitPatch::setIndex(int newIndex)
 {
-    if (newIndex == -1)
-        newIndex = ImplicitPatch::currentMaxIndex + 1;
-    this->index = newIndex;
-    ImplicitPatch::currentMaxIndex = std::max(this->index, ImplicitPatch::currentMaxIndex);
+    static std::mutex indexMutex;
+    std::lock_guard<std::mutex> lock(indexMutex);
+    if (newIndex < -1) throw std::invalid_argument("Implicit node index must be nonnegative or automatically assigned");
+    if (newIndex == -1) {
+        if (currentMaxIndex == std::numeric_limits<int>::max()) throw std::overflow_error("Implicit node indices exhausted");
+        newIndex = currentMaxIndex + 1;
+    }
+    index = newIndex;
+    currentMaxIndex = std::max(index, currentMaxIndex);
 }
 
 ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
@@ -928,7 +934,8 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
         patch->material = materialFromString(content["material"]);
     if (content.contains("optionalCurve"))
         patch->optionalCurve = content["optionalCurve"];
-    patch->setIndex(content["index"]);
+    patch->setIndex(content["index"]); // Advance beyond IDs recorded by older sessions.
+    patch->setIndex(); // This imported node is a new live instance, not an alias.
     patch->predefinedShape = predefinedShapeFromString(content["shape"]);
     patch->parametersProvided = {content["sigmaValue"]};
     if (content.contains("mirrored"))
@@ -1361,7 +1368,8 @@ ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
     patch->composeFunction = compositionOperationFromString(content["operator"]);
     patch->blendingFactor = content["blendingFactor"];
     patch->positionalB = positionalLabelFromString(content["positionalB"]);
-    patch->setIndex(content["index"]);
+    patch->setIndex(content["index"]); // Advance beyond IDs recorded by older sessions.
+    patch->setIndex(); // This imported node is a new live instance, not an alias.
     if (content.contains("useIntersection"))
         patch->withIntersectionOnB = content["useIntersection"];
     if (content.contains("optionalCurve"))
@@ -1677,7 +1685,8 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
     scale = content.value("scale", Vector3(1, 1, 1));
     distortion = content.value("distortion", Vector3());
     patch->name = content["name"];
-    patch->setIndex(content["index"]);
+    patch->setIndex(content["index"]); // Advance beyond IDs recorded by older sessions.
+    patch->setIndex(); // This imported node is a new live instance, not an alias.
 
     if (content.contains("operations")) {
         for (const auto& operation : content.at("operations")) {
@@ -2632,7 +2641,8 @@ ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
         patch->addChild(ImplicitPatch::fromJson(compoJson));
     }
     patch->name = content["name"];
-    patch->setIndex(content["index"]);
+    patch->setIndex(content["index"]); // Advance beyond IDs recorded by older sessions.
+    patch->setIndex(); // This imported node is a new live instance, not an alias.
     if (content.contains("optionalCurve"))
         patch->optionalCurve = content["optionalCurve"];
     if (content.contains("mirrored"))
