@@ -517,6 +517,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
                         shearingRatePower, erosionPowerValue, criticalShearValue, initialCapacity})
         if (!std::isfinite(value) || value < 0.f)
             throw std::invalid_argument("Erosion strengths and shear parameters must be finite and nonnegative");
+    balance = ErosionBalance();
     terrainModifTime = 0.f;
     VoxelGrid* asVoxels = dynamic_cast<VoxelGrid*>(terrain);
     Heightmap* asHeightmap = dynamic_cast<Heightmap*>(terrain);
@@ -616,7 +617,35 @@ std::vector<ParticleHistory> ParticleErosion::process()
         }
     });
     if (error) std::rethrow_exception(error);
+    double exchanges=0.;
+    for (const auto& track : tracks) {
+        if (track.history.empty()) continue;
+        balance.initialSediment+=track.history.front().particleState.capacity;
+        balance.finalSediment+=track.history.back().particleState.capacity;
+        for (const auto& state : track.history)
+            if (state.terrainModificationApplied) exchanges+=state.exchange.erosionValue;
+    }
+    balance.requestedTerrainChange=-exchanges;
+    balance.sedimentResidual=balance.initialSediment+exchanges-balance.finalSediment;
     if (!applyTheErosion || strengthValue == 0.f) return tracks;
+    // Measure in the native representation's units; never label a field sum as volume.
+    auto measure = [&]() {
+        double sum=0.;
+        if (asHeightmap) {
+            balance.measure=ErosionBalance::HEIGHT_VOLUME;
+            for (float value : heightmap->heights) sum+=value;
+        } else if (asLayers) {
+            balance.measure=ErosionBalance::LAYER_VOLUME;
+            for (const auto& column : layerBasedGrid->getLayers())
+                for (const auto& layer : column)
+                    if (!LayerBasedGrid::invisibleLayers.count(layer.first)) sum+=layer.second;
+        } else if (asVoxels) {
+            balance.measure=applyOn==BINARY_VOXELS ? ErosionBalance::OCCUPIED_VOXELS : ErosionBalance::DENSITY_SUM;
+            for (float value : voxelGrid->getVoxelValues()) sum+=applyOn==BINARY_VOXELS ? double(value>0.f) : value;
+        }
+        return sum;
+    };
+    const double before=measure();
     terrainModifTime = timeIt([&]() {
         if (asImplicit) modifyImplicitTerrain(allErosions);
         else if (asVoxels && applyOn==BINARY_VOXELS) modifyBinaryVoxelGrid(allErosions);
@@ -624,6 +653,11 @@ std::vector<ParticleHistory> ParticleErosion::process()
         else if (asHeightmap) modifyHeightmap(allErosions);
         else if (asLayers) modifyLayerBased(allErosions);
     });
+    balance.measuredTerrainChange=measure()-before;
+    balance.terrainMeasured=!asImplicit;
+    // Occupancy is quantized; compare to continuous sediment only for volume/density adapters.
+    if (balance.terrainMeasured && balance.measure!=ErosionBalance::OCCUPIED_VOXELS)
+        balance.unappliedTerrainChange=balance.requestedTerrainChange-balance.measuredTerrainChange;
     return tracks;
 }
 

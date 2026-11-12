@@ -110,9 +110,23 @@ enum EROSION_APPLIED { DENSITY_VOXELS, HEIGHTMAP, IMPLICIT_TERRAIN, LAYER_TERRAI
 #include "TerrainModification/UnderwaterErosion.h"
 
 
+struct ErosionBalance {
+    double initialSediment = 0.;
+    double finalSediment = 0.; // remaining load, including particles leaving the domain
+    double requestedTerrainChange = 0.;
+    double measuredTerrainChange = 0.;
+    double unappliedTerrainChange = 0.;
+    double sedimentResidual = 0.;
+    // Scalar density sums and occupancy counts are not geometric volume.
+    enum Measure { HEIGHT_VOLUME, LAYER_VOLUME, DENSITY_SUM, OCCUPIED_VOXELS, UNMEASURED_FIELD };
+    Measure measure = UNMEASURED_FIELD;
+    bool terrainMeasured = false;
+};
+
 class ParticleErosion {
 public:
     ParticleErosion();
+    ErosionBalance balance;
 
     std::vector<ParticleHistory> process();
     void initializeParticle(ErosionParticle& particle, Vector3& position, Vector3& velocity, float radius, float density, float initialCapacity, float maxCapacity);
