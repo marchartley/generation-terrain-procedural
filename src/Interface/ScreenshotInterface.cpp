@@ -1,4 +1,8 @@
 #include "ScreenshotInterface.h"
+#include <QFileDialog>
+#include <QDebug>
+#include <QListView>
+#include <QTreeView>
 #include "GUIElements/CommonInterface.h"
 
 ScreenshotInterface::ScreenshotInterface(QWidget *parent)

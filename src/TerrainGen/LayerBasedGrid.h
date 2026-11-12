@@ -9,10 +9,7 @@ class LayerBasedGrid;
 //#include "TerrainGen/Heightmap.h"
 //#include "TerrainGen/VoxelChunk.h"
 #include "DataStructure/Voxel.h"
-#include <vector>
 #include <map>
-#include <tuple>
-#include "Graphics/Mesh.h"
 //#include "Utils/FastNoiseLit.h"
 //#include "Curves/Contour.h"
 #include "TerrainGen/ImplicitPatch.h"

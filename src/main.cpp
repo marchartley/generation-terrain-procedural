@@ -6,19 +6,19 @@
 
 //#define OPENVDB_DLL
 #include "Utils/Globals.h"
-#include <QGuiApplication>
+#include <QDir>
+#include <QDirIterator>
+#include <QMouseEvent>
+#include <QProcess>
+#include <QSurfaceFormat>
 #include <qapplication.h>
 #include <iostream>
 
-#include <chrono>
 #include <fstream>
-#include <iostream>
-#include <random>
 #include <string>
 #include <complex>
 #include <cstdlib>
 #include <cstdio>
-#include <unistd.h>
 
 #include "Interface/Interface.h"
 

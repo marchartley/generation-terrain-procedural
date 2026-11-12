@@ -1,4 +1,6 @@
 #include "Utils/Globals.h"
+#include <QThread>
+#include <QOpenGLVersionFunctionsFactory>
 #include "Utils/Random.h"
 
 #include <string>

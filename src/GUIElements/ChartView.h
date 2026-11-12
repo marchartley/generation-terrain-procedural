@@ -1,8 +1,12 @@
 #ifndef CHARTVIEW_H
 #define CHARTVIEW_H
 
-#include <QtCharts>
 #include <QChartView>
+
+QT_BEGIN_NAMESPACE
+class QGestureEvent;
+class QValueAxis;
+QT_END_NAMESPACE
 
 #include "GUIElements/PlottingData.h"
 #include "GUIElements/ImageData.h"

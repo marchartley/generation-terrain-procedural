@@ -1,4 +1,13 @@
 #include "Interface/Interface.h"
+#include <QAction>
+#include <QDockWidget>
+#include <QMenu>
+#include <QMenuBar>
+#include <QGridLayout>
+#include "GUIElements/StickyFrame.h"
+#include <QSignalBlocker>
+#include <QStatusBar>
+#include <QToolBar>
 #include "GUIElements/InterfaceUtils.h"
 
 #include "Interface/KarstPathGenerationInterface.h"

@@ -1,4 +1,5 @@
 #include "ErosionInterface.h"
+#include <QFileDialog>
 
 #include "GUIElements/InterfaceUtils.h"
 #include "Interface/TerrainGenerationInterface.h"

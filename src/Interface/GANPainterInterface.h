@@ -1,5 +1,6 @@
 #ifndef GANPAINTERINTERFACE_H
 #define GANPAINTERINTERFACE_H
+#include <QProcess>
 
 #include "Interface/Interface.h"
 

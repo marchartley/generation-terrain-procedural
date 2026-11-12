@@ -1,6 +1,8 @@
 #include "OpenFoamParser.h"
-#include "TerrainGen/VoxelGrid.h"
-#include "Graphics/CubeMesh.h"
+#include <QDirIterator>
+#include <fstream>
+#include <sstream>
+#include "Graphics/Mesh.h"
 
 OpenFoamParser::OpenFoamParser()
 {

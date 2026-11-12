@@ -16,7 +16,6 @@ class Shader;
 #include "DataStructure/Matrix.h"
 #include "DataStructure/Vector4.h"
 #include <glm/glm.hpp>
-#include <string>
 
 class Shader
 {

@@ -1,4 +1,5 @@
 #include "TerrainSavingInterface.h"
+#include <QFileDialog>
 #include <QSaveFile>
 #include "GUIElements/InterfaceUtils.h"
 

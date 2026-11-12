@@ -1,4 +1,5 @@
 #include "Graphics/ShaderElement.h"
+#include "Graphics/Shader.h"
 
 ShaderElement::ShaderElement()
 {

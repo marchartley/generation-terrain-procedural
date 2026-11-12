@@ -3,7 +3,7 @@
 
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
-#include "DataStructure/Image.h"
+#include "Curves/CatmullRomSpline.h"
 
 #include "Utils/Signals.h"
 

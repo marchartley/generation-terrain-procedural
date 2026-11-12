@@ -1,4 +1,5 @@
 #include "Gizmo3D.h"
+#include <QMouseEvent>
 
 #include "Utils/Collisions.h"
 #include "Graphics/Sphere.h"
