@@ -189,6 +189,8 @@ public:
     PrimitivePatchesInterface* caller = nullptr;
     ImplicitPatch* patch = nullptr;
     ImplicitPatch* originalPatch = nullptr;
+    int originalIndex = -1;
+    QLabel* validationError = nullptr;
     std::shared_ptr<ImplicitPatch> draftPatch;
     ImplicitPatch* firstDraftChild = nullptr;
 };

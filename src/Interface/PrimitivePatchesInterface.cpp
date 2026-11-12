@@ -1634,7 +1634,9 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
 PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller, ImplicitPatch *patchToModify)
     : QDialog(), caller(caller), patch(patchToModify)
 {
+    if (!patchToModify) throw std::invalid_argument("Missing implicit primitive to edit");
     originalPatch = patchToModify;
+    originalIndex = patchToModify->index;
     draftPatch.reset(patchToModify->copy());
     patch = draftPatch.get();
     bool patchIsOperation = (dynamic_cast<ImplicitBinaryOperator*>(patch) != nullptr);
@@ -1732,6 +1734,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         auto widthSlider = new SliderElement("Width / radius", 0.f, 50.f, .1f, patchAsPrimitive->dimensions.x());
         auto depthSlider = new SliderElement("Depth", 0.f, 50.f, .1f, patchAsPrimitive->dimensions.y());
         auto heightSlider = new SliderElement("Height", 0.f, 50.f, .1f, patchAsPrimitive->dimensions.z());
+        if (patchAsPrimitive->parametersProvided.empty()) patchAsPrimitive->parametersProvided.push_back(1.f);
         auto sigmaSlider = new SliderElement("Sigma", 0.f, 20.f, .1f, patchAsPrimitive->parametersProvided[0]);
 
         auto densityCombobox = new ComboboxElement("Density");
@@ -1888,8 +1891,12 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
 
     auto cancelButton = new ButtonElement("Annuler", [=]() { this->cancel(); });
     auto validButton = new ButtonElement("Confirmer", [=]() { this->confirm(); });
+    auto error = new LabelElement("");
+    validationError = error->label();
+    validationError->setWordWrap(true);
+    validationError->hide();
 
-    UI->add({createHorizontalGroup({cancelButton, validButton})});
+    UI->add({error, createHorizontalGroup({cancelButton, validButton})});
     setLayout(UI->get()->layout());
     setSizeGripEnabled(true);
 }
@@ -1907,38 +1914,63 @@ void PatchReplacementDialog::cancel()
 
 void PatchReplacementDialog::confirm()
 {
-    patch->update();
-    if (!originalPatch || !originalPatch->parent) throw std::logic_error("Edited implicit patch is detached");
-    auto* parent = originalPatch->parent;
-    if (std::find(parent->composables.begin(), parent->composables.end(), originalPatch) == parent->composables.end())
-        throw std::logic_error("Edited implicit patch is missing from its parent");
-    // Scene objects retain aliases to primitive nodes and descendants. Commit
-    // parameters in place so editing a parent never replaces their identities.
-    if (auto* target = dynamic_cast<ImplicitPrimitive*>(originalPatch)) {
-        auto* source = dynamic_cast<ImplicitPrimitive*>(patch);
-        if (!source || typeid(*source) != typeid(*target)) throw std::invalid_argument("Edited primitive type changed");
-        const int index = target->index;
-        *target = *source;
-        target->parent = parent;
-        target->index = index;
-        target->update();
-    } else if (auto* target = dynamic_cast<ImplicitBinaryOperator*>(originalPatch)) {
-        auto* source = dynamic_cast<ImplicitBinaryOperator*>(patch);
-        if (!source) throw std::invalid_argument("Edited operation type changed");
-        if (source->composableA() != firstDraftChild) target->swapAB();
-        target->composeFunction = source->composeFunction;
-        target->positionalB = source->positionalB;
-        target->blendingFactor = source->blendingFactor;
-        target->withIntersectionOnB = source->withIntersectionOnB;
-        target->name = source->name;
-        target->mirrored = source->mirrored;
-        target->optionalCurve = source->optionalCurve;
-    } else throw std::invalid_argument("Unsupported implicit parameter editor node");
-    originalPatch->used_json_filename.clear();
-    originalPatch->referenceProperties = nlohmann::json::object();
-    for (ImplicitPatch* node = originalPatch; node; node = node->parent) node->_cached = false;
-    if (caller) caller->clearSelection();
-    originalPatch = nullptr;
-    setResult(1);
-    done(1);
+    try {
+        validationError->clear();
+        validationError->hide();
+        if (!originalPatch) throw std::logic_error("This edit has already finished");
+        if (caller) {
+            // Hot reload can destroy the original while this dialog's event loop
+            // remains active. Compare identities against live nodes before touching
+            // the saved pointer; IDs also distinguish an address reused by new data.
+            bool found = false;
+            std::vector<ImplicitPatch*> pending;
+            if (caller->implicitTerrain) pending.push_back(caller->implicitTerrain.get());
+            while (!pending.empty()) {
+                auto* node = pending.back();
+                pending.pop_back();
+                if (node == originalPatch && node->index == originalIndex) { found = true; break; }
+                if (auto* group = dynamic_cast<ImplicitNaryOperator*>(node))
+                    for (auto* child : group->composables) if (child) pending.push_back(child);
+            }
+            if (!found) throw std::logic_error("This primitive was removed or reloaded. Close this editor and select it again.");
+        }
+        patch->update();
+        if (!originalPatch || !originalPatch->parent) throw std::logic_error("Edited implicit patch is detached");
+        auto* parent = originalPatch->parent;
+        if (std::find(parent->composables.begin(), parent->composables.end(), originalPatch) == parent->composables.end())
+            throw std::logic_error("Edited implicit patch is missing from its parent");
+        // Scene objects retain aliases to primitive nodes and descendants. Commit
+        // parameters in place so editing a parent never replaces their identities.
+        if (auto* target = dynamic_cast<ImplicitPrimitive*>(originalPatch)) {
+            auto* source = dynamic_cast<ImplicitPrimitive*>(patch);
+            if (!source || typeid(*source) != typeid(*target)) throw std::invalid_argument("Edited primitive type changed");
+            const int index = target->index;
+            *target = *source;
+            target->parent = parent;
+            target->index = index;
+            target->update();
+        } else if (auto* target = dynamic_cast<ImplicitBinaryOperator*>(originalPatch)) {
+            auto* source = dynamic_cast<ImplicitBinaryOperator*>(patch);
+            if (!source) throw std::invalid_argument("Edited operation type changed");
+            if (source->composableA() != firstDraftChild) target->swapAB();
+            target->composeFunction = source->composeFunction;
+            target->positionalB = source->positionalB;
+            target->blendingFactor = source->blendingFactor;
+            target->withIntersectionOnB = source->withIntersectionOnB;
+            target->name = source->name;
+            target->mirrored = source->mirrored;
+            target->optionalCurve = source->optionalCurve;
+        } else throw std::invalid_argument("Unsupported implicit parameter editor node");
+        originalPatch->used_json_filename.clear();
+        originalPatch->referenceProperties = nlohmann::json::object();
+        for (ImplicitPatch* node = originalPatch; node; node = node->parent) node->_cached = false;
+        if (caller) caller->clearSelection();
+        originalPatch = nullptr;
+        setResult(1);
+        done(1);
+    } catch (const std::exception& error) {
+        validationError->setText(QString::fromUtf8(error.what()));
+        validationError->show();
+    }
+
 }

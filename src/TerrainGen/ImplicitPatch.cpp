@@ -1069,13 +1069,16 @@ std::vector<ImplicitPatch *> ImplicitPrimitive::findAll(PredefinedShapes shape)
 
 ImplicitPatch *ImplicitPrimitive::copy() const
 {
-    ImplicitPrimitive* copy = dynamic_cast<const Implicit2DPrimitive*>(this)
+    std::unique_ptr<ImplicitPrimitive> copy(dynamic_cast<const Implicit2DPrimitive*>(this)
         ? static_cast<ImplicitPrimitive*>(new Implicit2DPrimitive(*static_cast<const Implicit2DPrimitive*>(this)))
-        : new ImplicitPrimitive(*this);
+        : new ImplicitPrimitive(*this));
     copy->parent = nullptr;
     copy->setIndex();
-    if (hasGeneratedField() && copy->predefinedShape != None) copy->update();
-    return copy;
+    if (hasGeneratedField() && copy->predefinedShape != None) {
+        if (copy->parametersProvided.empty()) copy->parametersProvided.push_back(1.f);
+        copy->update();
+    }
+    return copy.release();
 }
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(const std::string& filename, const Vector3& dimensions, ImplicitPrimitive *prim)
@@ -1803,20 +1806,20 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
 ImplicitPatch* ImplicitUnaryOperator::copy() const
 {
     SnapshotScope snapshot;
-    auto* result = ImplicitUnaryOperator::fromJson(const_cast<ImplicitUnaryOperator*>(this)->toJson());
-    auto* unary = static_cast<ImplicitUnaryOperator*>(result);
+    std::unique_ptr<ImplicitPatch> result(ImplicitUnaryOperator::fromJson(const_cast<ImplicitUnaryOperator*>(this)->toJson()));
+    auto* unary = static_cast<ImplicitUnaryOperator*>(result.get());
     unary->deleteAllChildren();
     if (composableA()) unary->addChild(composableA()->copy());
     if (noiseFunctionType() != _generatedNoiseType) unary->setNoiseFunction(noiseFunction);
     result->parent = nullptr;
-    std::vector<ImplicitPatch*> nodes{result};
+    std::vector<ImplicitPatch*> nodes{result.get()};
     while (!nodes.empty()) {
         auto* node = nodes.back(); nodes.pop_back();
         node->setIndex();
         if (auto* group = dynamic_cast<ImplicitNaryOperator*>(node))
             for (auto* child : group->composables) if (child) nodes.push_back(child);
     }
-    return result;
+    return result.release();
 }
 
 bool ImplicitUnaryOperator::contains(PredefinedShapes shape)
@@ -2589,6 +2592,7 @@ ImplicitNaryOperator::ImplicitNaryOperator(const ImplicitNaryOperator& other)
     parent = nullptr;
     setIndex();
     try {
+        composables.reserve(other.composables.size());
         for (auto* child : other.composables) {
             composables.push_back(child ? child->copy() : nullptr);
             if (composables.back()) composables.back()->parent = this;
