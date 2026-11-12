@@ -16,6 +16,7 @@
 #include <atomic>
 #include <exception>
 #include <mutex>
+#include <unordered_map>
 #include <QSaveFile>
 
 float ImplicitPatch::isovalue = .5f;
@@ -258,7 +259,175 @@ Vector3 ImplicitPatch::getSamplingDimensions() const
 }
 
 namespace {
-float erosionFieldContribution(const ImplicitPatch* node, const Vector3& pos)
+float erosionFieldContributionDirect(const ImplicitPatch* node,const Vector3& pos);
+thread_local std::vector<size_t> offsetCandidates;
+
+// Compile immutable offset data once per sampling operation. The public scene
+// remains editable; no bounds or primitive pointers are cached across operations.
+class PreparedOffsetQueries {
+    enum class Kind { Zero, Sphere, Sum, Fallback };
+    struct Branch {
+        AABBox bounds=AABBox(Vector3(),Vector3());
+        size_t begin=0,end=0;
+        int left=-1,right=-1;
+    };
+    struct Node {
+        Kind kind=Kind::Fallback;
+        const ImplicitPatch* source=nullptr;
+        const ImplicitPatch* base=nullptr;
+        Vector3 position,radius;
+        float amplitude=0.f;
+        bool negative=false,compact=false;
+        AABBox bounds=AABBox(Vector3(),Vector3());
+        std::vector<size_t> children,order,always;
+        std::vector<Branch> branches;
+    };
+    std::unordered_map<const ImplicitPatch*,size_t> lookup_;
+    std::vector<Node> nodes_;
+
+    static bool valid(const AABBox& box) {
+        for (int axis=0;axis<3;++axis)
+            if (!std::isfinite(box.min()[axis]) || !std::isfinite(box.max()[axis]) || box.min()[axis]>box.max()[axis]) return false;
+        return true;
+    }
+    int buildBranches(Node& node,size_t begin,size_t end) {
+        AABBox bounds=nodes_[node.children[node.order[begin]]].bounds;
+        for (size_t i=begin+1;i<end;++i) {
+            const auto& box=nodes_[node.children[node.order[i]]].bounds;
+            bounds=AABBox(Vector3::min(bounds.min(),box.min()),Vector3::max(bounds.max(),box.max()));
+        }
+        const int index=int(node.branches.size());
+        node.branches.push_back({bounds,begin,end,-1,-1});
+        if (end-begin>4) {
+            const Vector3 size=bounds.dimensions();
+            const int axis=size.x()>=size.y() && size.x()>=size.z()?0:(size.y()>=size.z()?1:2);
+            const size_t middle=begin+(end-begin)/2;
+            std::nth_element(node.order.begin()+begin,node.order.begin()+middle,node.order.begin()+end,[&](size_t a,size_t b) {
+                const float ca=nodes_[node.children[a]].bounds.center()[axis],cb=nodes_[node.children[b]].bounds.center()[axis];
+                return ca<cb || (ca==cb && a<b);
+            });
+            const int left=buildBranches(node,begin,middle),right=buildBranches(node,middle,end);
+            node.branches[index].left=left;node.branches[index].right=right;
+        }
+        return index;
+    }
+    size_t compile(const ImplicitPatch* source) {
+        const auto found=lookup_.find(source);
+        if (found!=lookup_.end()) return found->second;
+        const size_t index=nodes_.size();
+        lookup_.emplace(source,index);nodes_.emplace_back();
+        Node node;node.source=source;
+        const auto* group=dynamic_cast<const ImplicitNaryOperator*>(source);
+        const auto* sphere=dynamic_cast<const ImplicitPrimitive*>(source);
+        if (!source) {node.kind=Kind::Zero;node.compact=true;}
+        else if (sphere && sphere->hasGeneratedField() && sphere->predefinedShape==ImplicitPatch::Sphere &&
+                 sphere->dimensions.minComp()>0.f && !sphere->parametersProvided.empty() && valid(sphere->getSupportBBox())) {
+            node.kind=Kind::Sphere;node.compact=true;
+            node.bounds=sphere->getSupportBBox();node.position=sphere->position;node.radius=sphere->dimensions*.5f;
+            node.amplitude=sphere->parametersProvided.front();
+            node.negative=LayerBasedGrid::invisibleLayers.count(sphere->material)!=0;
+        } else if (group && typeid(*group)==typeid(ImplicitNaryOperator) && group->additive) {
+            node.kind=Kind::Sum;node.compact=true;
+            size_t start=0;
+            if (group->firstChildIsBase && !group->composables.empty() && group->composables.front()) {
+                node.base=group->composables.front();node.compact=false;start=1;
+                discover(node.base);
+            }
+            bool haveBounds=false;
+            for (size_t i=start;i<group->composables.size();++i) {
+                const size_t child=compile(group->composables[i]);
+                node.children.push_back(child);
+                if (!nodes_[child].compact) node.compact=false;
+                else {
+                    const auto box=nodes_[child].bounds;
+                    node.bounds=haveBounds?AABBox(Vector3::min(node.bounds.min(),box.min()),Vector3::max(node.bounds.max(),box.max())):box;
+                    haveBounds=true;
+                }
+            }
+            if (node.children.size()>4) {
+                for (size_t i=0;i<node.children.size();++i)
+                    (nodes_[node.children[i]].compact?node.order:node.always).push_back(i);
+                node.branches.reserve(node.order.size()*2);
+                if (!node.order.empty()) buildBranches(node,0,node.order.size());
+            }
+        } else if (group) {
+            // Unknown composition/transform semantics stay on the live evaluator.
+            // Discover additive descendants for signed queries inside transforms.
+            for (const auto* child:group->composables) discover(child);
+        }
+        nodes_[index]=std::move(node);
+        return index;
+    }
+    void candidates(const Node& node,int branch,const Vector3& point) const {
+        const auto& b=node.branches[branch];
+        if (!b.bounds.contains(point)) return;
+        if (b.left>=0) {candidates(node,b.left,point);candidates(node,b.right,point);}
+        else for (size_t i=b.begin;i<b.end;++i) {
+            const size_t ordinal=node.order[i];
+            if (nodes_[node.children[ordinal]].bounds.contains(point)) offsetCandidates.push_back(ordinal);
+        }
+    }
+    float evaluate(size_t index,const Vector3& point) const {
+        const auto& node=nodes_[index];
+        switch (node.kind) {
+        case Kind::Zero:return 0.f;
+        case Kind::Fallback:return erosionFieldContributionDirect(node.source,point);
+        case Kind::Sphere: {
+            if (!node.bounds.contains(point)) return 0.f;
+            const float falloff=std::max(0.f,1.f-((point-node.position-node.radius)/node.radius).norm());
+            const float value=falloff*node.amplitude;
+            return node.negative?-value:value;
+        }
+        case Kind::Sum: {
+            float result=node.base?ImplicitPatch::isovalue+node.base->getSignedEvaluation(point):0.f;
+            if (node.children.size()<=4) {
+                for (size_t child:node.children)
+                    if (!nodes_[child].compact || nodes_[child].bounds.contains(point)) result+=evaluate(child,point);
+            } else {
+                // BVH order is spatial. Restore original operand order before
+                // summation, and retain nested group rounding exactly.
+                struct Restore {
+                    size_t mark=offsetCandidates.size();
+                    ~Restore(){offsetCandidates.resize(mark);}
+                } frame;
+                for (size_t ordinal:node.always) offsetCandidates.push_back(ordinal);
+                if (!node.branches.empty()) candidates(node,0,point);
+                const size_t end=offsetCandidates.size();
+                std::sort(offsetCandidates.begin()+frame.mark,offsetCandidates.begin()+end);
+                for (size_t i=frame.mark;i<end;++i) {
+                    const size_t child=node.children[offsetCandidates[i]];
+                    result+=evaluate(child,point);
+                }
+            }
+            return result;
+        }
+        }
+        return 0.f;
+    }
+    void discover(const ImplicitPatch* source) {
+        const auto* group=dynamic_cast<const ImplicitNaryOperator*>(source);
+        if (!group) return;
+        if (typeid(*group)==typeid(ImplicitNaryOperator) && group->additive) {compile(source);return;}
+        for (const auto* child:group->composables) discover(child);
+    }
+public:
+    explicit PreparedOffsetQueries(const ImplicitPatch* root){discover(root);}
+    bool evaluate(const ImplicitPatch* source,const Vector3& point,float& result) const {
+        const auto found=lookup_.find(source);
+        if (found==lookup_.end()) return false;
+        result=evaluate(found->second,point);return true;
+    }
+};
+thread_local const PreparedOffsetQueries* activeOffsetQueries=nullptr;
+struct OffsetQueryScope {
+    const PreparedOffsetQueries* previous=activeOffsetQueries;
+    explicit OffsetQueryScope(const PreparedOffsetQueries* queries){activeOffsetQueries=queries;}
+    ~OffsetQueryScope(){activeOffsetQueries=previous;}
+    OffsetQueryScope(const OffsetQueryScope&)=delete;
+    OffsetQueryScope& operator=(const OffsetQueryScope&)=delete;
+};
+
+float erosionFieldContributionDirect(const ImplicitPatch* node, const Vector3& pos)
 {
     if (!node) return 0.f;
     if (const auto* group=dynamic_cast<const ImplicitNaryOperator*>(node); group && group->additive) {
@@ -269,7 +438,7 @@ float erosionFieldContribution(const ImplicitPatch* node, const Vector3& pos)
             start=1;
         }
         for (size_t i=start;i<group->composables.size();++i)
-            result+=erosionFieldContribution(group->composables[i],pos);
+            result+=erosionFieldContributionDirect(group->composables[i],pos);
         return result;
     }
     if (const auto* primitive=dynamic_cast<const ImplicitPrimitive*>(node);
@@ -284,6 +453,12 @@ float erosionFieldContribution(const ImplicitPatch* node, const Vector3& pos)
     for (const auto& [material,amount] : node->getMaterials(pos))
         result+=LayerBasedGrid::invisibleLayers.count(material) ? -amount : amount;
     return result;
+}
+float erosionFieldContribution(const ImplicitPatch* node,const Vector3& pos)
+{
+    float result;
+    if (activeOffsetQueries && activeOffsetQueries->evaluate(node,pos,result)) return result;
+    return erosionFieldContributionDirect(node,pos);
 }
 }
 
@@ -601,6 +776,8 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
         if (entry > exit) return Vector3::invalid;
     }
     if (!std::isfinite(exit)) return Vector3::invalid;
+    PreparedOffsetQueries offsets(this);
+    OffsetQueryScope offsetScope(&offsets);
     float previous = entry;
     if (getSignedEvaluation(origin + direction * entry) > 0.f)
         return origin + direction * entry;
@@ -721,10 +898,12 @@ GridF ImplicitPatch::samplePreparedBounds(const AABBox& bounds, const Vector3& s
     std::atomic<bool> failed{false};
     std::exception_ptr error;
     ColumnQueryCache columns;
+    PreparedOffsetQueries offsets(this);
     _cachedVoxelized.iterateParallel([&](int x, int y, int z) {
         if (failed.load(std::memory_order_relaxed)) return;
         try {
             ColumnQueryScope columnScope(cacheable ? &columns : nullptr);
+            OffsetQueryScope offsetScope(&offsets);
             const float value = getSignedEvaluation(bounds.min() + Vector3(x, y, z) / scale);
             if (!std::isfinite(value)) throw std::domain_error("Implicit field returned a nonfinite sample");
             _cachedVoxelized(x, y, z) = value;
