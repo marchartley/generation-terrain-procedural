@@ -9,16 +9,15 @@ class ParticleErosion;
 #include "TerrainGen/Heightmap.h"
 #include "TerrainGen/LayerBasedGrid.h"
 #include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/LayerBasedGrid.h"
 #include "TerrainGen/ImplicitPatch.h"
 #include "EnvObject/EnvObject.h"
 
 struct ParticleProperties {
-    float density;
-    float radius;
-    float volume;
-    float mass;
-    float maxCapacity;
+    float density = 0.f;
+    float radius = 0.f;
+    float volume = 0.f;
+    float mass = 0.f;
+    float maxCapacity = 0.f;
 };
 
 struct ParticleContact {
@@ -53,6 +52,11 @@ public:
                                        float restitution = 1.f, float damping = 1.f, int maxBounces = 8,
                                        const Vector3& mediumVelocity = Vector3(), float responseTime = 0.f);
 
+    // Reuse caller-owned contact storage in the per-step hot path.
+    void bounce(float dt, SpacePartitioning* boundaries, std::vector<ParticleContact>& contacts,
+                float restitution = 1.f, float damping = 1.f, int maxBounces = 8,
+                const Vector3& mediumVelocity = Vector3(), float responseTime = 0.f);
+
     void addForce(const Vector3& f);
     void addVelocity(const Vector3& v);
 
@@ -67,28 +71,47 @@ struct ErosionPoint {
 //    Vector3 velocity;
 };
 
+// Motion scratch and shared ownership belong to the active particle, not every
+// recorded step. A snapshot contains only the data consumed by paths and replay.
+struct ParticleSnapshot {
+    Vector3 pos;
+    Vector3 velocity;
+    float capacity = 0.f;
+    ParticleSnapshot() = default;
+    explicit ParticleSnapshot(const ErosionParticle& p)
+        : pos(p.pos), velocity(p.velocity), capacity(p.capacity) {}
+};
+
 struct ParticleState {
-    ParticleState() {}
-    ParticleState(ErosionParticle& p) : particleState(p) {}
-    ErosionParticle particleState;
+    ParticleState() = default;
+    ParticleState(const ErosionParticle& p) : particleState(p) {}
+    ParticleSnapshot particleState;
     bool terrainModificationApplied = false;
     // Positive means detached (terrain loses material); negative means deposited.
     ErosionPoint exchange;
 };
 
+enum class ParticleHistoryMode { Trajectory, ContactsOnly };
+
 struct ParticleHistory {
     enum Termination { INVALID_START, TIME_LIMIT, STEP_LIMIT, COLLISION_LIMIT, LEFT_DOMAIN, RESTING, STATIONARY };
     Termination termination = INVALID_START;
+    void add(const ErosionParticle& particle) {
+        if (history.empty()) properties_ = *particle.properties;
+        history.emplace_back(particle);
+    }
     void add(const ParticleState& state) { history.push_back(state); }
+    const ParticleProperties& properties() const { return properties_; }
 
     std::vector<ParticleState> history;
 
-    std::vector<Vector3> getPositions();
-    std::vector<float> getCapacities();
-    std::vector<Vector3> getErosionPositions();
-    std::vector<float> getErosionValues();
-
-    std::vector<ErosionPoint> getErosionPoints();
+    std::vector<Vector3> getPositions() const;
+    std::vector<float> getCapacities() const;
+    std::vector<Vector3> getErosionPositions() const;
+    std::vector<float> getErosionValues() const;
+    std::vector<ErosionPoint> getErosionPoints() const;
+private:
+    ParticleProperties properties_;
 };
 
 struct EnvironmentProperty {
@@ -111,7 +134,6 @@ enum DENSITY_TYPE { NATIVE, DENSITY_IMAGE, UNUSED, RANDOM_DENSITY, LAYERED_DENSI
 enum EROSION_APPLIED { DENSITY_VOXELS, HEIGHTMAP, IMPLICIT_TERRAIN, LAYER_TERRAIN, BINARY_VOXELS};
 
 
-#include "TerrainModification/UnderwaterErosion.h"
 
 
 struct ErosionBalance {
@@ -138,6 +160,7 @@ class ParticleErosion {
 public:
     ParticleErosion();
     ErosionBalance balance;
+    ParticleHistoryMode historyMode = ParticleHistoryMode::Trajectory;
     // Optional finite-domain cell-center quadrature for implicit/density geometry.
     // Height/layer volume and binary occupancy are measured without sampling.
     bool auditGeometry = false;

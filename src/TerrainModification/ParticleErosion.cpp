@@ -16,10 +16,10 @@ Vector3 ErosionParticle::predictNextPos(float dt)
     return pos + velocity * dt + force * (.5f * dt * dt);
 }
 
-std::vector<ParticleContact> ErosionParticle::bounce(float dt, SpacePartitioning* boundaries,
+void ErosionParticle::bounce(float dt, SpacePartitioning* boundaries, std::vector<ParticleContact>& contacts,
     float restitution, float damping, int maxBounces, const Vector3& mediumVelocity, float responseTime)
 {
-    std::vector<ParticleContact> contacts;
+    contacts.clear();
     float remaining=dt;
     Vector3 acceleration=force,target=mediumVelocity;
     restitution=std::clamp(restitution,0.f,1.f);damping=std::clamp(damping,0.f,1.f);
@@ -65,6 +65,13 @@ std::vector<ParticleContact> ErosionParticle::bounce(float dt, SpacePartitioning
         }
     }
     dir=velocity;
+}
+
+std::vector<ParticleContact> ErosionParticle::bounce(float dt, SpacePartitioning* boundaries,
+    float restitution, float damping, int maxBounces, const Vector3& mediumVelocity, float responseTime)
+{
+    std::vector<ParticleContact> contacts;
+    bounce(dt, boundaries, contacts, restitution, damping, maxBounces, mediumVelocity, responseTime);
     return contacts;
 }
 
@@ -182,6 +189,8 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
     history.termination=ParticleHistory::TIME_LIMIT;
     int collisionsLeft=maxCollisions<0?std::numeric_limits<int>::max():maxCollisions;
     double elapsed=0.;
+    std::vector<ParticleContact> contacts;
+    if (collisionsLeft>0) contacts.reserve(8);
     int step=0;
     for (; elapsed<maxSimulationTime && collisionsLeft>0 && step<maxTrackingSteps; ++step) {
         const float density=environmentalDensities.interpolate(particle.pos);
@@ -192,8 +201,8 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
         const float stepDt=float(std::min({double(dt),double(maxSimulationTime)-elapsed,.25,
             double(particle.properties->radius)*.25/std::max(double(speed),1e-6),
             std::sqrt(double(particle.properties->radius)*.5/std::max(double(particle.force.norm()),1e-6))}));
-        auto contacts=particle.bounce(stepDt,boundariesTree,bounciness,bouncingCoefficient,
-                                    std::min(8,collisionsLeft),target,flowResponseTime);
+        particle.bounce(stepDt,boundariesTree,contacts,bounciness,bouncingCoefficient,
+                        std::min(8,collisionsLeft),target,flowResponseTime);
         elapsed+=stepDt;
         const float contactTime=stepDt/std::max(size_t(1),contacts.size());
         for (const auto& contact : contacts) {
@@ -220,7 +229,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
         }
         if (wrapPositions)
             particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrainSize.x(), terrainSize.y(), 1000));
-        history.add(particle);
+        if (historyMode==ParticleHistoryMode::Trajectory) history.add(particle);
         if (!Vector3::isInBox(particle.pos.xy(),Vector3(),terrainSize.xy()) || particle.pos.z()<-20.f) {
             history.termination=ParticleHistory::LEFT_DOMAIN;break;
         }
@@ -246,6 +255,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle& particl
         if (collisionsLeft<=0) history.termination=ParticleHistory::COLLISION_LIMIT;
         else if (step>=maxTrackingSteps) history.termination=ParticleHistory::STEP_LIMIT;
     }
+    if (historyMode==ParticleHistoryMode::ContactsOnly) history.add(particle);
     return history;
 }
 
@@ -382,7 +392,7 @@ void ParticleErosion::reconcileTerrainExchanges(std::vector<ParticleHistory>& tr
             const size_t j=indices[i][next[i]];
             const auto& state=tracks[i].history[j];
             const double request=std::clamp(double(state.exchange.erosionValue),-loads[i],
-                std::max(0.,double(state.particleState.properties->maxCapacity)-loads[i]));
+                std::max(0.,double(tracks[i].properties().maxCapacity)-loads[i]));
             Event e;
             e.track=i;e.state=j;e.request=request;e.position=state.exchange.position;
             auto lower=[&](float c,int n){return int(std::clamp(std::ceil(double(c)-particleSize),0.,double(n)));};
@@ -467,9 +477,10 @@ void ParticleErosion::reconcileTerrainExchanges(std::vector<ParticleHistory>& tr
     }
     for (size_t i=0;i<tracks.size();++i) {
         double load=initial[i];
+        const double maxCapacity=tracks[i].properties().maxCapacity;
         for (auto& state : tracks[i].history) {
             if (state.terrainModificationApplied) load+=state.exchange.erosionValue;
-            state.particleState.capacity=float(std::clamp(load,0.,double(state.particleState.properties->maxCapacity)));
+            state.particleState.capacity=float(std::clamp(load,0.,maxCapacity));
         }
     }
     if (heights) heightmap->heights=std::move(values);
@@ -828,7 +839,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
     return tracks;
 }
 
-std::vector<Vector3> ParticleHistory::getPositions()
+std::vector<Vector3> ParticleHistory::getPositions() const
 {
     std::vector<Vector3> positions;
     positions.reserve(history.size());
@@ -836,7 +847,7 @@ std::vector<Vector3> ParticleHistory::getPositions()
     return positions;
 }
 
-std::vector<Vector3> ParticleHistory::getErosionPositions()
+std::vector<Vector3> ParticleHistory::getErosionPositions() const
 {
     std::vector<Vector3> positions;
     for (const auto& state : history)
@@ -844,7 +855,7 @@ std::vector<Vector3> ParticleHistory::getErosionPositions()
     return positions;
 }
 
-std::vector<float> ParticleHistory::getErosionValues()
+std::vector<float> ParticleHistory::getErosionValues() const
 {
     std::vector<float> values;
     for (const auto& state : history)
@@ -852,7 +863,7 @@ std::vector<float> ParticleHistory::getErosionValues()
     return values;
 }
 
-std::vector<ErosionPoint> ParticleHistory::getErosionPoints()
+std::vector<ErosionPoint> ParticleHistory::getErosionPoints() const
 {
     std::vector<ErosionPoint> points;
     for (const auto& state : history)
@@ -860,7 +871,7 @@ std::vector<ErosionPoint> ParticleHistory::getErosionPoints()
     return points;
 }
 
-std::vector<float> ParticleHistory::getCapacities()
+std::vector<float> ParticleHistory::getCapacities() const
 {
     std::vector<float> capacities;
     capacities.reserve(history.size());
