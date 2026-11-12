@@ -54,19 +54,19 @@ void PrimitivePatchesInterface::display(const Vector3& camPos)
         return;
 
     if (constructionMode && previewMesh.shader != nullptr) {
-        this->setSelectedShape(this->currentShapeSelected);
         previewMesh.shader->setVector("color", std::vector<float>({0.f, 0.4f, 0.8f, 0.5f}));
         previewMesh.display();
     }
     if (!patchAABBoxMesh.vertexArray.empty() && patchAABBoxMesh.shader != nullptr) {
-        GLint polygonMode;
-        glGetIntegerv(GL_POLYGON_MODE, &polygonMode);
+        GLint polygonMode[2];
+        glGetIntegerv(GL_POLYGON_MODE, polygonMode);
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         patchAABBoxMesh.shader->setVector("color", std::vector<float>({0.f, 0.8f, 0.4f, 1.0f}));
         patchAABBoxMesh.display(GL_LINES, 3.f);
-        glPolygonMode(GL_FRONT_AND_BACK, polygonMode);
+        glPolygonMode(GL_FRONT, polygonMode[0]);
+        glPolygonMode(GL_BACK, polygonMode[1]);
     }
-    this->primitiveControlPoint->display();
+    if (this->primitiveControlPoint) this->primitiveControlPoint->display();
 
     if (this->debugMeshDisplayed) {
 //            this->debuggingVoxelsMesh.shader->setVector("color", std::vector<float> {0.f, 0.f, 0.f, 1.f});
@@ -101,7 +101,9 @@ void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> height
     std::string noShaderVertexFilename = shaderPath + "no_shader.vert";
     std::string noShaderFragmentFilename = shaderPath + "no_shader.frag";
 
-    debuggingVoxelsMesh.shader = std::make_shared<Shader>(vertexFilename, fragmentFilename, geometryFilename);
+    debuggingVoxelsMesh.shader = std::make_shared<Shader>(noShaderVertexFilename, noShaderFragmentFilename);
+    patchAABBoxMesh.shader = debuggingVoxelsMesh.shader;
+    previewMesh.shader = debuggingVoxelsMesh.shader;
     debuggingVoxelsMesh.useIndices = false;
     debuggingVoxelsMesh.cullFace = true;
 
@@ -135,6 +137,9 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Tunnel", ImplicitPatch::ParametricTunnel));
     shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("Ripple", ImplicitPatch::Ripple));
     shapeCombobox->addChoice(new ComboboxLineElement<ImplicitPatch::PredefinedShapes>("...", ImplicitPatch::ImplicitHeightmap));
+    for (size_t i = 0; i < shapeCombobox->choices.size(); ++i)
+        if (static_cast<ComboboxLineElement<ImplicitPatch::PredefinedShapes>*>(shapeCombobox->choices[i])->value == currentShapeSelected)
+            shapeCombobox->combobox()->setCurrentIndex(int(i));
     shapeCombobox->setOnSelectionChanged([=](int) {
         auto shape = shapeCombobox->getSelection<ImplicitPatch::PredefinedShapes>();
         this->setSelectedShape(shape);
@@ -161,6 +166,10 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     auto depthSlider = new SliderElement("Depth", 0.f, 50.f, .1f, selectedDepth);
     auto heightSlider = new SliderElement("Height", 0.f, 50.f, .1f, selectedHeight);
     auto sigmaSlider = new SliderElement("Sigma", 0.f, 20.f, .1f, selectedSigma);
+    widthSlider->setOnValueChanged([this](float value) { setSelectedWidth(value); Q_EMIT updated(); });
+    depthSlider->setOnValueChanged([this](float value) { setSelectedDepth(value); Q_EMIT updated(); });
+    heightSlider->setOnValueChanged([this](float value) { setSelectedHeight(value); Q_EMIT updated(); });
+    sigmaSlider->setOnValueChanged([this](float value) { setSelectedSigma(value); Q_EMIT updated(); });
 
     auto addNoiseButton = new ButtonElement("Add noise", [=]() { this->addNoiseOnSelectedPatch(); });
     auto addDistoButton = new ButtonElement("Distord", [=]() { this->addDistortionOnSelectedPatch(); });
@@ -171,7 +180,7 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     auto resetButton = new ButtonElement("Reset", [=]() { this->resetPatch(); });
 
     auto selectedFilenameLabel = new LabelElement((this->mainFilename == "" ? "No file selected" : split(split(this->mainFilename, "/").back(), "\\").back()));
-    auto fileSelectionButton = new ButtonElement("...", [&]() {
+    auto fileSelectionButton = new ButtonElement("...", [this, selectedFilenameLabel]() {
         std::string path = "saved_maps/";
         QString fileSelection = QFileDialog::getSaveFileName(this, "Saving file", QString::fromStdString(path), "*.json", nullptr, QFileDialog::DontConfirmOverwrite);
         if (!fileSelection.isEmpty()) {
@@ -196,6 +205,9 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Dirt", TerrainTypes::DIRT));
     densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Rock", TerrainTypes::ROCK));
     densityCombobox->addChoice(new ComboboxLineElement<TerrainTypes>("Bedrock", TerrainTypes::BEDROCK));
+    for (size_t i = 0; i < densityCombobox->choices.size(); ++i)
+        if (static_cast<ComboboxLineElement<TerrainTypes>*>(densityCombobox->choices[i])->value == selectedTerrainType)
+            densityCombobox->combobox()->setCurrentIndex(int(i));
     densityCombobox->setOnSelectionChanged([=](int) { this->selectedTerrainType = densityCombobox->getSelection<TerrainTypes>(); });
 
     auto applyIntersectionButton = new CheckboxElement("Always intersect", applyIntersection);
@@ -255,7 +267,7 @@ InterfaceUI* PrimitivePatchesInterface::createGUI()
     // QObject::connect(this->primitiveControlPoint.get(), &ControlPoint3D::pointModified, this, &PrimitivePatchesInterface::moveDebugBoxWithControlPoint);
     primitiveControlPoint->setOnPointModified([=]() { moveDebugBoxWithControlPoint(); });
     // QObject::connect(this->primitiveControlPoint.get(), &ControlPoint3D::translationApplied, this, &PrimitivePatchesInterface::translatePatch);
-    primitiveControlPoint->setOnPointTranslated([=]() { translatePatch(primitiveControlPoint->state().drag.currentHitPointWorld - primitiveControlPoint->state().drag.startWorldPosition); });
+    primitiveControlPoint->setOnPointTranslated([=]() { translatePatch(primitiveControlPoint->state().transform.position - primitiveControlPoint->state().drag.startWorldPosition); });
     // QObject::connect(this->primitiveControlPoint.get(), &ControlPoint3D::rotationApplied, this, &PrimitivePatchesInterface::rotatePatch);
     primitiveControlPoint->setOnPointRotated([=]() { rotatePatch(primitiveControlPoint->state().transform.rotation.toVector3()); });
     return UI;
@@ -309,6 +321,10 @@ void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
 void PrimitivePatchesInterface::clearSelection()
 {
     currentlySelectedPatch = nullptr;
+    debugMeshDisplayed = false;
+    debuggingVoxelsMesh.clear();
+    patchAABBoxMesh.clear();
+    if (primitiveControlPoint) primitiveControlPoint->hide();
     storedPatches.clear();
     if (primitiveSelectionGui) primitiveSelectionGui->clear();
 }
@@ -322,8 +338,8 @@ ImplicitPatch *PrimitivePatchesInterface::selectedPatch()
 
 void PrimitivePatchesInterface::mouseMovedOnMapEvent(const Vector3& newPosition, TerrainModel* model)
 {
-    if (this->isVisible()) {
-        this->currentPos = newPosition;
+    if (this->isVisible() && newPosition.isValid()) {
+        this->currentPos = model ? model->getTerrainPos(newPosition) : newPosition;
         this->setSelectedShape(this->currentShapeSelected);
     }
 }
@@ -346,6 +362,7 @@ void PrimitivePatchesInterface::mouseClickedOnMapEvent(const Vector3& mousePosIn
 
 void PrimitivePatchesInterface::createPatchWithOperation(const Vector3& pos)
 {
+    setSelectedShape(currentShapeSelected);
     ImplicitPatch* patch = this->createPatchFromParameters(pos - this->functionSize.xy() * .5f);
     ImplicitPatch* previousMain = this->selectedPatch();
     ImplicitPatch* _parent = this->naiveApproachToGetParent(previousMain);
@@ -405,8 +422,10 @@ void PrimitivePatchesInterface::setSelectedShape(ImplicitPatch::PredefinedShapes
         vert -= functionSize.xy() * .5f;
     }
 
-    this->previewMesh.fromArray(vertices);
-    this->previewMesh.update();
+    if (vertices != previewMesh.vertexArray) {
+        this->previewMesh.fromArray(vertices);
+        this->previewMesh.update();
+    }
 }
 
 /*
@@ -448,15 +467,13 @@ void PrimitivePatchesInterface::resetPatch()
 void PrimitivePatchesInterface::updateMapWithCurrentPatch()
 {
     this->implicitTerrain->updateCache();
-//    this->implicitTerrain->augment();
-//    this->layerGrid->layers = this->layerGrid->previousState;
-    this->layerGrid->fromImplicit(this->implicitTerrain.get());
-    voxelGrid->fromImplicit(implicitTerrain.get());
-//    voxelGrid->smoothVoxels();
-//    voxelGrid->fromCachedData();
-    //heightmap->fromImplicit(implicitTerrain.get());
-//    voxelGrid->fromLayerBased(*layerGrid);
-//    heightmap->fromLayerGrid(*layerGrid);
+    // Implicit editing renders the procedural source directly. Other
+    // representations can still be explicitly converted through the terrain UI.
+    if (!viewer || viewer->mapMode != IMPLICIT_MODE) {
+        this->layerGrid->fromImplicit(this->implicitTerrain.get());
+        voxelGrid->fromImplicit(implicitTerrain.get());
+    }
+    refreshSelectedPatchPreview();
     Q_EMIT this->terrainUpdated();
 }
 
@@ -1111,51 +1128,48 @@ void PrimitivePatchesInterface::structureAutoGeneration()
 }
 
 void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *current, QListWidgetItem *previous) {
-    bool newSelectionIsExisting = false;
-    if (current) {
-        auto selectedPatchItem = dynamic_cast<HierarchicalListWidgetItem<ImplicitPatch*>*>(current);
-        if (selectedPatchItem == nullptr) return;
-        int selectedPatchID = selectedPatchItem->ID;
-        auto newlySelectedPatch = this->findPrimitiveById(selectedPatchID);
-        if (newlySelectedPatch != nullptr && newlySelectedPatch != currentlySelectedPatch) {
-            this->currentlySelectedPatch = newlySelectedPatch; //this->findPrimitiveById(selectedPatchID);
-            auto patchAABBox = currentlySelectedPatch->getBBox();
-            auto patchSupportedAABBox = currentlySelectedPatch->getBBox();
-//            auto patchSupportedAABBox = currentlySelectedPatch->getSupportBBox();
-            Vector3 patchSupportedDimensions = patchSupportedAABBox.dimensions();
-            Vector3 controlPosition = patchAABBox.min();
-            this->primitiveControlPoint->setPosition(controlPosition /*+ (selectedPatch->getDimensions() * .5f).xy()*/);
-            std::vector<Vector3> box = CubeMesh::createTriangles(patchAABBox);
-            this->patchAABBoxMesh.fromArray(box);
-            this->patchAABBoxMesh.update();
-            this->primitiveControlPoint->show();
-            newSelectionIsExisting = true;
-
-            Vector3 resolution = Vector3(20, 20, 20);
-            Vector3 ratio = (patchSupportedDimensions) / (resolution /*+ Vector3(1, 1, 1)*/);
-            this->debuggingVoxelsPosition = this->selectedPatch()->getBBox().min();
-//            this->debuggingVoxelsPosition = this->selectedPatch()->getSupportBBox().min();
-            this->debuggingVoxelsScale = ratio;
-            debuggingVoxels = GridF(resolution);
-            debuggingVoxels.iterateParallel([&](const Vector3i& pos) {
-                debuggingVoxels.at(pos) = currentlySelectedPatch->evaluate((pos) * ratio + patchSupportedAABBox.min());
-            });
-            this->debugMeshDisplayed = true;
-            auto hierarchy = naiveApproachToGetAllParents(currentlySelectedPatch);
-            for (auto& node : hierarchy) {
-                std::cout << node->name << "\n";
-            }
-            std::cout << std::endl;
-        }
-    }
-    if (!newSelectionIsExisting) {
-        this->patchAABBoxMesh.fromArray(std::vector<Vector3>{});
-        this->patchAABBoxMesh.update();
-        this->primitiveControlPoint->hide();
-        this->debugMeshDisplayed = false;
-        this->currentlySelectedPatch = nullptr;
-    }
+    Q_UNUSED(previous);
+    auto* item = dynamic_cast<HierarchicalListWidgetItem<ImplicitPatch*>*>(current);
+    auto* patch = item ? findPrimitiveById(item->ID) : nullptr;
+    if (patch == currentlySelectedPatch) return;
+    currentlySelectedPatch = patch;
+    refreshSelectedPatchPreview();
     Q_EMIT updated();
+}
+
+void PrimitivePatchesInterface::refreshSelectedPatchPreview()
+{
+    debugMeshDisplayed = false;
+    debuggingVoxelsMesh.clear();
+    patchAABBoxMesh.clear();
+    if (!currentlySelectedPatch) {
+        if (primitiveControlPoint) primitiveControlPoint->hide();
+        return;
+    }
+    const auto bounds = currentlySelectedPatch->getBBox();
+    auto boxVertices = CubeMesh::createTriangles(bounds);
+    for (auto& vertex : boxVertices)
+        vertex = currentlySelectedPatch->getGlobalPositionOf(vertex - bounds.min());
+    const AABBox sceneBounds(boxVertices);
+    if (primitiveControlPoint) {
+        primitiveControlPoint->setPosition(sceneBounds.min());
+        primitiveControlPoint->show();
+    }
+    patchAABBoxMesh.fromArray(boxVertices);
+    const auto support = currentlySelectedPatch->getSupportBBox();
+    // Keep preview cost bounded, and leave air samples around bounded solids.
+    const float spacing = std::max(.25f, support.dimensions().maxComp() / 24.f);
+    const Vector3 padding(spacing * 2.f, spacing * 2.f, spacing * 2.f);
+    auto mesh = currentlySelectedPatch->getGeometryInBounds(
+        AABBox(support.min() - padding, support.max() + padding), Vector3(1, 1, 1) / spacing);
+    for (auto& vertex : mesh.vertexArray)
+        vertex = currentlySelectedPatch->getGlobalPositionOf(vertex - bounds.min());
+    mesh.vertexArrayFloat = Vector3::toArray(mesh.vertexArray);
+    mesh.computeNormals();
+    mesh.shader = debuggingVoxelsMesh.shader;
+    mesh.cullFace = false;
+    debuggingVoxelsMesh = std::move(mesh);
+    debugMeshDisplayed = true;
 }
 
 void PrimitivePatchesInterface::openPrimitiveModificationDialog(QListWidgetItem *item) {
@@ -1402,21 +1416,9 @@ void PrimitivePatchesInterface::displayPatchesTree()
 
 void PrimitivePatchesInterface::moveDebugBoxWithControlPoint()
 {
-    // Get patch being manipulated
-    if (this->selectedPatch() != nullptr) {
-        // Display modified AABBox
-        auto BBox = this->selectedPatch()->getBBox();
-        Vector3 minPos = BBox.min();
-        Vector3 maxPos = BBox.max();
-        Vector3 dim = maxPos - minPos;
-        std::vector<Vector3> box = CubeMesh::cubesEdgesVertices;
-        for (auto& p : box) {
-            p = (p * dim) + /*minPos + */primitiveControlPoint->getPosition(); //p * currentlySelectedPatch->getDimensions() + (primitiveControlPoint->getPosition() - currentlySelectedPatch->getDimensions().xy() * .5f);//p * currentlySelectedPatch->getDimensions() + (primitiveControlPoint->getPosition() - (currentlySelectedPatch->getDimensions() * .5f).xy());
-            p = (p - BBox.center()).rotate(-primitiveControlPoint->getRotation()) + BBox.center();
-        }
-        this->patchAABBoxMesh.fromArray(box);
-        this->patchAABBoxMesh.update();
-    }
+    if (!currentlySelectedPatch || !primitiveControlPoint || patchAABBoxMesh.vertexArray.empty()) return;
+    const auto bounds = AABBox(patchAABBoxMesh.vertexArray);
+    patchAABBoxMesh.translate(primitiveControlPoint->getPosition() - bounds.min());
 }
 
 void PrimitivePatchesInterface::translatePatch(const Vector3& translation)
@@ -1431,6 +1433,7 @@ void PrimitivePatchesInterface::translatePatch(const Vector3& translation)
         wrapImplicitChild(selected, operation);
     }
     operation->translate(translation);
+    currentlySelectedPatch = operation;
     updateMapWithCurrentPatch();
     updatePrimitiveList();
     primitiveSelectionGui->setCurrentItem(operation->index);
@@ -1448,6 +1451,7 @@ void PrimitivePatchesInterface::rotatePatch(const Vector3& rotation)
         wrapImplicitChild(selected, operation);
     }
     operation->rotate(rotation);
+    currentlySelectedPatch = operation;
     updateMapWithCurrentPatch();
     updatePrimitiveList();
     primitiveSelectionGui->setCurrentItem(operation->index);
@@ -1634,120 +1638,17 @@ void PrimitivePatchesInterface::updatePrimitiveList()
 //        if (nbPrimitives > 1) // If there is more than just the Identity
 //            this->savePatchesAsFile(this->mainFilename);
         this->findAllSubfiles();
+        if (currentlySelectedPatch) primitiveSelectionGui->setCurrentItem(currentlySelectedPatch->index);
     }
 }
 
 
 void PrimitivePatchesInterface::displayDebuggingVoxels()
 {
-    GlobalsGL::ContextScope contextScope;
-    if (!this->selectedPatch())
-        return;
-    std::vector<float> isoValues = {0.9f, 0.5f, 0.2f};
-//    std::vector<float> isoValues = {0.9f, 0.8f, 0.65f, 0.5f, 0.35f, 0.2f, 0.1f};
-
-    std::vector<Vector3> positions(debuggingVoxels.size());
-    for (size_t i = 0; i < positions.size(); i++) {
-        positions[i] = debuggingVoxels.getCoordAsVector3(i);
-    }
-    debuggingVoxelsMesh.fromArray(positions);
-    debuggingVoxelsMesh.update();
-    GlobalsGL::f()->glBindVertexArray(debuggingVoxelsMesh.vao);
-    debuggingVoxelsMesh.shader->setTexture3D("dataFieldTex", 0, debuggingVoxels + .5f);
-    debuggingVoxelsMesh.shader->setInt("dataFieldTex", 0);
-    debuggingVoxelsMesh.shader->setInt("edgeTableTex", 1);
-    debuggingVoxelsMesh.shader->setInt("triTableTex", 2);
-    debuggingVoxelsMesh.shader->setFloat("isolevel", 0.f);
-    debuggingVoxelsMesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
-    debuggingVoxelsMesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
-    debuggingVoxelsMesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
-    debuggingVoxelsMesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
-    debuggingVoxelsMesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
-    debuggingVoxelsMesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
-    debuggingVoxelsMesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
-    debuggingVoxelsMesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
-    debuggingVoxelsMesh.shader->setBool("useMarchingCubes", true);
-    //Edge Table texture//
-    //This texture store the 256 different configurations of a marching cube.
-    //This is a table accessed with a bitfield of the 8 cube edges states
-    //(edge cut by isosurface or totally in or out).
-    //(cf. MarchingCubes.cpp)
-
-    auto lookupResources = GlobalsGL::Resources::create();
-    GLuint edgeTableTex, triTableTex;
-    GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
-    lookupResources->textures.push_back(edgeTableTex);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, edgeTableTex);
-    //Integer textures must use nearest filtering mode
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    //We create an integer texture with new GL_EXT_texture_integer formats
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
-
-    //Triangle Table texture//
-    //This texture store the vertex index list for
-    //generating the triangles of each configurations.
-    //(cf. MarchingCubes.cpp)
-
-    glGenTextures(1, &triTableTex);
-    lookupResources->textures.push_back(triTableTex);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, triTableTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
-
-
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
-
-    // Scale the debugging mesh to the right size
-//    auto suppDim = this->selectedPatch()->getSupportDimensions();
-    auto suppDim = this->selectedPatch()->getDimensions();
-    Vector3 scaleToDisplayPatch = suppDim / debuggingVoxels.getDimensions(); // Vector3(1.f, 1.f, 1.f); // 1.f / this->debuggingVoxelsScale; //currentlySelectedPatch->getDimensions() / debuggingVoxels.getDimensions();
-    debuggingVoxelsMesh.shader->setVector("scale", scaleToDisplayPatch);
-
-    // Translate the debugging mesh to the right position
-    //    Vector3 positionToDisplayPatch = this->selectedPatch()->getSupportBBox().min(); // this->debuggingVoxelsPosition * debuggingVoxels.getDimensions() * .5f; // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
-    Vector3 positionToDisplayPatch = this->selectedPatch()->getBBox().min(); // this->debuggingVoxelsPosition * debuggingVoxels.getDimensions() * .5f; // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
-    debuggingVoxelsMesh.shader->setFloat("offsetX", positionToDisplayPatch.x());
-    debuggingVoxelsMesh.shader->setFloat("offsetY", positionToDisplayPatch.y());
-    debuggingVoxelsMesh.shader->setFloat("offsetZ", positionToDisplayPatch.z());
-
-    // Ignore parameters to hide some voxels
-    debuggingVoxelsMesh.shader->setVector("min_vertice_positions", Vector3::min());
-    debuggingVoxelsMesh.shader->setVector("max_vertice_positions", Vector3::max());
-    debuggingVoxelsMesh.shader->setFloat("min_isolevel", -1000.f);
-    debuggingVoxelsMesh.shader->setFloat("max_isolevel", 1000.f);
-
-    for (size_t i = 0; i < isoValues.size(); i++) {
-        float iso = isoValues[i];
-        Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);
-        debuggingVoxelsMesh.shader->setVector("color", std::vector<float> {color.x(), color.y(), color.z(), .3f});
-        debuggingVoxelsMesh.shader->setFloat("isolevel", iso);
-
-        // display the mesh
-        debuggingVoxelsMesh.display(GL_POINTS);
-    }
+    if (!debugMeshDisplayed || !debuggingVoxelsMesh.shader) return;
+    debuggingVoxelsMesh.shader->setVector("color", Vector4(0.f, .6f, .8f, .5f));
+    debuggingVoxelsMesh.display(GL_TRIANGLES);
 }
-
-
-
-
-
-
-
 
 
 PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller, ImplicitPatch *patchToModify)

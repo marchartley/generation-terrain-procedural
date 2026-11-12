@@ -147,6 +147,7 @@ protected:
     std::string rulesFilename = "saved_maps/transformation_rules.txt";
     bool enableHotReloading = false;
 
+    void refreshSelectedPatchPreview();
     void displayDebuggingVoxels();
     GridF debuggingVoxels;
     Mesh debuggingVoxelsMesh;
