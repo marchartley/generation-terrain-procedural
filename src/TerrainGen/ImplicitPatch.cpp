@@ -125,7 +125,21 @@ void readImplicitTerrainFrame(ImplicitPatch& patch, const nlohmann::json& conten
     patch.scaling = scale;
     patch.translation = translation;
 }
-float implicitColumnBoundary(const ImplicitPatch& patch, const Vector3& position, bool top)
+// Memoization belongs to one immutable sampling/picking operation, never to a
+// mutable scene node. Worker threads share entries without holding the lock
+// during recursive field evaluation.
+struct ColumnQueryCache {
+    using Key = std::tuple<const ImplicitPatch*, float, float, bool>;
+    std::map<Key, float> heights;
+    std::mutex mutex;
+};
+thread_local ColumnQueryCache* activeColumnQueries = nullptr;
+struct ColumnQueryScope {
+    ColumnQueryCache* previous = activeColumnQueries;
+    explicit ColumnQueryScope(ColumnQueryCache* cache) { activeColumnQueries = cache; }
+    ~ColumnQueryScope() { activeColumnQueries = previous; }
+};
+float implicitColumnBoundaryUncached(const ImplicitPatch& patch, const Vector3& position, bool top)
 {
     const auto bounds = patch.getSupportBBox();
     if (!bounds.contains(Vector3(position.x(), position.y(), bounds.center().z()))) return 0.f;
@@ -152,6 +166,23 @@ float implicitColumnBoundary(const ImplicitPatch& patch, const Vector3& position
     }
     return 0.f; // Existing empty-column convention; never a cache-validity sentinel.
 }
+float implicitColumnBoundary(const ImplicitPatch& patch, const Vector3& position, bool top)
+{
+    if (!activeColumnQueries) return implicitColumnBoundaryUncached(patch, position, top);
+    const ColumnQueryCache::Key key{&patch, position.x(), position.y(), top};
+    {
+        std::lock_guard<std::mutex> lock(activeColumnQueries->mutex);
+        const auto found = activeColumnQueries->heights.find(key);
+        if (found != activeColumnQueries->heights.end()) return found->second;
+    }
+    const float height = implicitColumnBoundaryUncached(patch, position, top);
+    {
+        std::lock_guard<std::mutex> lock(activeColumnQueries->mutex);
+        if (activeColumnQueries->heights.size() < 65536) activeColumnQueries->heights.emplace(key, height);
+    }
+    return height;
+}
+
 }
 
 float ImplicitPatch::getMaxHeight(const Vector3& pos)
@@ -462,15 +493,9 @@ void ImplicitPatch::retrieveMap(const std::string& filename)
 void ImplicitPatch::updateCache()
 {
     this->_cached = false;
-    Vector3 dim = Vector3::max(Vector3(1, 1), this->getDimensions().roundedUp());
+    // Continuous height queries use operation-local memoization. Allocating
+    // unused integer-XY grids here made every edit rebuild each subtree's area.
 
-    this->_cachedMaxHeight = GridF(dim.x(), dim.y(), 1, -1.f);
-    this->_cachedMaxHeight.raiseErrorOnBadCoord = false;
-    this->_cachedMaxHeight.defaultValueOnBadCoord = 0.f;
-
-    this->_cachedMinHeight = GridF(dim.x(), dim.y(), 1, -1.f);
-    this->_cachedMinHeight.raiseErrorOnBadCoord = false;
-    this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
 }
 
 bool ImplicitPatch::checkIsInGround(const Vector3& position)
@@ -518,6 +543,11 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
     };
     if (!finite(origin) || !finite(dir) || dir.norm2() == 0.f) return Vector3::invalid;
     const Vector3 direction = dir.normalized();
+    prepareImplicitField(this);
+    bool cacheable = true;
+    implicitFieldSignature(*this, cacheable);
+    ColumnQueryCache columns;
+    ColumnQueryScope columnScope(cacheable ? &columns : nullptr);
     auto bounds = getSupportBBox();
     if (!finite(bounds.min()) || !finite(bounds.max())) return Vector3::invalid;
     if (minPos.isValid()) bounds.mini = Vector3::max(bounds.min(), minPos);
@@ -657,9 +687,11 @@ GridF ImplicitPatch::samplePreparedBounds(const AABBox& bounds, const Vector3& s
     _cachedVoxelized = GridF(counts, -1.f);
     std::atomic<bool> failed{false};
     std::exception_ptr error;
+    ColumnQueryCache columns;
     _cachedVoxelized.iterateParallel([&](int x, int y, int z) {
         if (failed.load(std::memory_order_relaxed)) return;
         try {
+            ColumnQueryScope columnScope(cacheable ? &columns : nullptr);
             const float value = getSignedEvaluation(bounds.min() + Vector3(x, y, z) / scale);
             if (!std::isfinite(value)) throw std::domain_error("Implicit field returned a nonfinite sample");
             _cachedVoxelized(x, y, z) = value;

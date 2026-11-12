@@ -294,6 +294,12 @@ void Mesh::computeNormals()
     this->normalsArray.clear();
     this->normalsArrayIndex.clear();
     this->normalsArrayFloat.clear();
+    if (displayShape == GL_POINTS || displayShape == GL_LINES || displayShape == GL_LINE_STRIP) {
+        normalsArray.assign(vertexArray.size(), Vector3(0, 0, 1));
+        normalsArrayFloat = Vector3::toArray(normalsArray);
+        needToUpdateNormals = true;
+        return;
+    }
     this->normalsArrayIndex.resize(this->indices.size());
     for (size_t i = 0; i < this->vertexArray.size(); i+=3)
     {
@@ -316,6 +322,12 @@ void Mesh::computeNormals()
             this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), n1.begin(), n1.end());
             this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), n2.begin(), n2.end());
         }
+    }
+    if (!useIndices) {
+        // A point draw may be requested after this upload. Incomplete triangle
+        // groups still need valid attribute storage for every input vertex.
+        while (normalsArrayFloat.size() < vertexArray.size() * 3)
+            normalsArrayFloat.insert(normalsArrayFloat.end(), {0.f, 0.f, 1.f});
     }
     if(useIndices) {
         for (size_t i = 0; i < this->vertexArray.size(); i++)
@@ -509,6 +521,7 @@ void Mesh::pushToBuffer()
         } else GlobalsGL::f()->glEnableVertexAttribArray(3);
 //        if(this->shader->use()) return;
 #endif
+    needToUpdatePositions = needToUpdateNormals = needToUpdateColors = false;
     this->bufferReady = true;
 }
 void Mesh::display(GLenum shape, float lineWeight)
