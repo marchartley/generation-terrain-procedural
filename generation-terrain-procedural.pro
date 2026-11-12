@@ -430,6 +430,7 @@ HEADERS += \
     src/TerrainGen/GlobalTerrainProperties.h \
     src/TerrainGen/Heightmap.h \
     src/TerrainGen/ImplicitPatch.h \
+    src/TerrainGen/ImplicitTree.h \
     src/TerrainGen/LayerBasedGrid.h \
     src/TerrainGen/TerrainModel.h \
     src/TerrainGen/TerrainSampling.h \

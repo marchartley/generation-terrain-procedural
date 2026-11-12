@@ -1,3 +1,4 @@
+#include "TerrainGen/ImplicitTree.h"
 #include "Interface/PrimitivePatchesInterface.h"
 #include "TerrainGenerationInterface.h"
 
@@ -489,13 +490,11 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
 {
     std::cout << "Load implicit: " << showTime(timeIt([&]() {
         std::unique_ptr<ImplicitPatch> decoded(ImplicitPatch::fromJson(json_content.at(ImplicitPatch::json_identifier)));
-        auto* group = dynamic_cast<ImplicitNaryOperator*>(decoded.get());
-        if (!group) throw std::invalid_argument("Implicit terrain file requires an operator root");
-        ImplicitNaryOperator replacement(*group);
+        ImplicitNaryOperator replacement;
+        replaceImplicitRoot(replacement, *decoded);
         if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches"))) editor->clearSelection();
         if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects"))) environment->detachImplicitRoot();
-        *implicitTerrain = replacement;
-        implicitTerrain->updateCache();
+        replaceImplicitRoot(*implicitTerrain, replacement);
     })) << std::endl;
 /*
     EnvArea* reef = EnvArea::instantiate("reef"));

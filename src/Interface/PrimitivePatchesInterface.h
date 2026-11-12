@@ -134,7 +134,6 @@ protected:
 
     HierarchicalListWidget* primitiveSelectionGui = nullptr;
     void updatePrimitiveList();
-    void cleanPatch(ImplicitPatch* patch);
 
     friend class PatchReplacementDialog;
 
@@ -190,6 +189,7 @@ public:
     ImplicitPatch* patch = nullptr;
     ImplicitPatch* originalPatch = nullptr;
     std::shared_ptr<ImplicitPatch> draftPatch;
+    ImplicitPatch* firstDraftChild = nullptr;
 };
 
 #endif // PRIMITIVEPATCHESINTERFACE_H

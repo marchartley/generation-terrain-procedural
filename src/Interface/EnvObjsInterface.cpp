@@ -9,6 +9,7 @@
 #include "Utils/Voronoi.h"
 #include "Interface/MeshInstanceAmplificationInterface.h"
 #include "Interface/TerrainGenerationInterface.h"
+#include "Interface/PrimitivePatchesInterface.h"
 #include "Utils/Delaunay.h"
 #include "Utils/PSO.h"
 
@@ -46,8 +47,16 @@ EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     hotreloadTimer->start();
 }
 
+EnvObjsInterface::~EnvObjsInterface()
+{
+    // Attached roots belong to the shared terrain; detached roots belong to
+    // this interface until they are reattached or the interface is destroyed.
+    if (rootPatch && !rootPatch->parent) delete rootPatch;
+}
+
 void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
+    if (rootPatch) detachImplicitRoot();
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
 
     const char* vNoShader = "src/Shaders/no_shader.vert";
@@ -64,8 +73,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->newObjectMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
     this->newObjectMesh.useIndices = false;
 
-    this->rootPatch = new ImplicitNaryOperator;
-    // this->rootPatch = new Implicit2DNary;
+    if (!rootPatch) rootPatch = new ImplicitNaryOperator;
     this->implicitTerrain->addChild(rootPatch);
 
 
@@ -109,13 +117,14 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
 void EnvObjsInterface::detachImplicitRoot()
 {
-    // The scene keeps references to these object patches. A converted snapshot
-    // bakes their shape, so detach them without destroying the scene's objects.
-    if (!implicitTerrain || !rootPatch) return;
-    auto& children = implicitTerrain->composables;
-    children.erase(std::remove(children.begin(), children.end(), rootPatch), children.end());
+    if (!rootPatch || !rootPatch->parent) return;
+    auto* owner = rootPatch->parent;
+    auto slot = std::find(owner->composables.begin(), owner->composables.end(), rootPatch);
+    if (slot == owner->composables.end()) throw std::logic_error("Missing environment root in its owner");
+    *slot = nullptr;
+    if (typeid(*owner) == typeid(ImplicitNaryOperator)) owner->composables.erase(slot);
     rootPatch->parent = nullptr;
-    implicitTerrain->updateCache();
+    for (ImplicitPatch* node = owner; node; node = node->parent) node->_cached = false;
 }
 
 void EnvObjsInterface::display(const Vector3 &camPos)
@@ -911,12 +920,20 @@ void EnvObjsInterface::destroyEnvObject(EnvObjectInstance* object, bool applyDyi
             break;
         }
     }
-    if (this->implicitPatchesFromObjects.count(object) != 0) {
-        for (size_t i = 0; i < rootPatch->composables.size(); i++) {
-            if (rootPatch->composables[i] == this->implicitPatchesFromObjects[object])
-                rootPatch->composables.erase(rootPatch->composables.begin() + i);
+    if (auto found = implicitPatchesFromObjects.find(object); found != implicitPatchesFromObjects.end()) {
+        if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches"))) editor->clearSelection();
+        auto* patch = found->second;
+        if (patch && patch->parent) {
+            auto* owner = patch->parent;
+            auto slot = std::find(owner->composables.begin(), owner->composables.end(), patch);
+            if (slot == owner->composables.end()) throw std::logic_error("Missing environment object patch in its owner");
+            *slot = nullptr;
+            if (typeid(*owner) == typeid(ImplicitNaryOperator)) owner->composables.erase(slot);
+            for (ImplicitPatch* node = owner; node; node = node->parent) node->_cached = false;
         }
-        this->implicitPatchesFromObjects.erase(object);
+        if (object->_patch == patch) object->_patch = nullptr;
+        delete patch;
+        implicitPatchesFromObjects.erase(found);
     }
     if (recomputeTerrainPropertiesForObject)
         this->scene->recomputeTerrainPropertiesForObject(object->getDefinition()->name);
@@ -1289,6 +1306,7 @@ void EnvObjsInterface::updateSceneFlowfieldWithUserFlow()
 
 void EnvObjsInterface::resetScene()
 {
+    if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches"))) editor->clearSelection();
     this->scene->reset();
     this->simulationFlowField.reset();
     this->userFlowField.reset();
@@ -1296,11 +1314,8 @@ void EnvObjsInterface::resetScene()
         delete this->userKelvinlets[i];
     this->userKelvinlets.resize(0);
     this->materialSimulationStable = false; // We have to compute the simulation again
-    for (auto& [obj, patch] : implicitPatchesFromObjects)
-        delete patch;
     this->implicitPatchesFromObjects.clear();
-//    this->rootPatch->deleteAllChildren();
-    this->rootPatch->composables.clear();
+    this->rootPatch->deleteAllChildren();
     this->rootPatch->updateCache();
     this->currentSelections.clear();
 
@@ -2108,6 +2123,12 @@ void EnvObjsInterface::fromGanUI()
         GridV3 img = Image::readFromFile(file).colorImage;
 
         auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions(), this->scene);
+        for (auto& [object, patch] : implicitPatchesFromObjects) {
+            if (object->_patch == patch) object->_patch = nullptr;
+            object->geometryNeedsUpdate = true;
+        }
+        implicitPatchesFromObjects.clear();
+        if (auto editor = std::dynamic_pointer_cast<PrimitivePatchesInterface>(findOtherInterface("primitivepatches"))) editor->clearSelection();
         rootPatch->deleteAllChildren();
         for (auto& newObject : envObjects) {
             auto implicit = newObject->createImplicitPatch(subsidedHeightmap);

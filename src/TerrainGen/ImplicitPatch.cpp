@@ -1384,14 +1384,9 @@ void ImplicitBinaryOperator::updateCache()
 
 void ImplicitBinaryOperator::swapAB()
 {
-    if (this->composableB() != nullptr) {
-        auto tmp = this->composableA();
-        this->composables[0] = this->composableB();
-        this->composables[1] = tmp;
-        //std::swap(this->composableA(), this->composableB());
-        this->composableA()->updateCache();
-        this->composableB()->updateCache();
-    }
+    std::swap(composables[0], composables[1]);
+    for (auto* child : composables) if (child) child->updateCache();
+    for (ImplicitPatch* node = this; node; node = node->parent) node->_cached = false;
 }
 
 void ImplicitBinaryOperator::deleteAllChildren()

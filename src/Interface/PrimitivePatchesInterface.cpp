@@ -7,6 +7,7 @@
 #include "Curves/Contour.h"
 #include "Graphics/MarchingCubes.h"
 #include "Interface/EnvObjsInterface.h"
+#include "TerrainGen/ImplicitTree.h"
 #include <QSaveFile>
 #include <QSignalBlocker>
 #include <memory>
@@ -314,13 +315,9 @@ void PrimitivePatchesInterface::clearSelection()
 
 ImplicitPatch *PrimitivePatchesInterface::selectedPatch()
 {
-    if (this->currentlySelectedPatch != nullptr && this->currentlySelectedPatch != this->implicitTerrain.get()) {
-        return this->currentlySelectedPatch;
-    } else if (!this->implicitTerrain->composables.empty()) {
-        return this->implicitTerrain->composables[0];
-    } else {
-        return nullptr;
-    }
+    if (currentlySelectedPatch && currentlySelectedPatch != implicitTerrain.get()) return currentlySelectedPatch;
+    for (auto* child : implicitTerrain->composables) if (child) return child;
+    return nullptr;
 }
 
 void PrimitivePatchesInterface::mouseMovedOnMapEvent(const Vector3& newPosition, TerrainModel* model)
@@ -426,7 +423,8 @@ void PrimitivePatchesInterface::setCurrentPositioning(ImplicitPatch::PositionalL
 
 void PrimitivePatchesInterface::resetPatch()
 {
-    this->storedPatches.clear();
+    clearSelection();
+    if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects"))) environment->detachImplicitRoot();
 //    delete this->implicitTerrain;
     ImplicitPatch::currentMaxIndex = -1;
     this->implicitTerrain->deleteAllChildren(); // = new ImplicitPrimitive;
@@ -707,13 +705,13 @@ void PrimitivePatchesInterface::loadPatchesFromFile(const std::string& filename)
     this->lastTimeFileHasBeenModified = QFileInfo(QString::fromStdString(filename)).lastModified();
     if (json_content.contains(ImplicitPatch::json_identifier)) {
         std::unique_ptr<ImplicitPatch> decoded(ImplicitPatch::fromJson(json_content.at(ImplicitPatch::json_identifier)));
-        auto* group = dynamic_cast<ImplicitNaryOperator*>(decoded.get());
-        if (!group) throw std::invalid_argument("The implicit editor expects an operator root");
-        ImplicitNaryOperator replacement(*group);
+        // Prepare a fully typed copy before changing scene aliases.
+        ImplicitNaryOperator replacement;
+        replaceImplicitRoot(replacement, *decoded);
         clearSelection();
         if (auto environment = std::dynamic_pointer_cast<EnvObjsInterface>(findOtherInterface("envobjects")))
             environment->detachImplicitRoot();
-        *implicitTerrain = replacement;
+        replaceImplicitRoot(*implicitTerrain, replacement);
 //        this->implicitTerrain->composables = {ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier])};
         this->updateMapWithCurrentPatch();
         this->updatePrimitiveList();
@@ -1285,13 +1283,8 @@ void PrimitivePatchesInterface::findAllSubfiles()
         if (current->used_json_filename != "")
             allSubfiles.push_back(current->used_json_filename);
 
-        ImplicitBinaryOperator* AsBin = dynamic_cast<ImplicitBinaryOperator*>(current);
-        if (AsBin != nullptr) {
-            if (AsBin->composableA() != nullptr)
-                pendingPatches.push_back(AsBin->composableA());
-            if (AsBin->composableB() != nullptr)
-                pendingPatches.push_back(AsBin->composableB());
-        }
+        if (auto* group = dynamic_cast<ImplicitNaryOperator*>(current))
+            for (auto* child : group->composables) if (child) pendingPatches.push_back(child);
     }
 }
 
@@ -1605,7 +1598,6 @@ void PrimitivePatchesInterface::updatePrimitiveList()
     if (this->isVisible()) {
         primitiveSelectionGui->clear();
         this->storedPatches.clear();
-    //    this->cleanPatch(this->implicitTerrain);
         bool patchesCanBeLocked = this->mainFilename != "";
         std::vector<std::tuple<ImplicitPatch*, int, bool>> waitingPatches = { {this->implicitTerrain.get(), 0, false} };
 
@@ -1649,34 +1641,6 @@ void PrimitivePatchesInterface::updatePrimitiveList()
     }
 }
 
-void PrimitivePatchesInterface::cleanPatch(ImplicitPatch *_patch)
-{
-    auto Nary = dynamic_cast<ImplicitNaryOperator*>(_patch);
-    Nary->deleteAllChildren();
-    /*
-    ImplicitBinaryOperator* patch = dynamic_cast<ImplicitBinaryOperator*>(_patch);
-    if (!patch) // Not a composition ? Nothing to do
-        return;
-
-    // Check if it only contains Identity patches. In this case, transform it into an Identity function
-    if (patch->composableA() && patch->composableB()) {
-        if (patch->composableA()->name == "Identity" && patch->composableB()->name == "Identity") {
-            patch->name = "Identity";
-            patch->composeFunction = ImplicitPatch::CompositionFunction::NONE;
-//            patch->dimension = Vector3(0, 0, 0);
-            patch->composableA() = nullptr;
-            patch->composableB() = nullptr;
-        }
-    }
-
-    if (patch->composableA() && patch->composableB()) {
-        // If it's a composite, clean children before, so we can use their clean data
-        cleanPatch(patch->composableA());
-        cleanPatch(patch->composableB());
-    } else {
-        // Nothing to do (?)
-    }*/
-}
 
 void PrimitivePatchesInterface::displayDebuggingVoxels()
 {
@@ -1797,6 +1761,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
     draftPatch.reset(patchToModify->copy());
     patch = draftPatch.get();
     bool patchIsOperation = (dynamic_cast<ImplicitBinaryOperator*>(patch) != nullptr);
+    if (auto* binary = dynamic_cast<ImplicitBinaryOperator*>(patch)) firstDraftChild = binary->composableA();
 
     auto UI = new InterfaceUI();
 
@@ -2068,15 +2033,35 @@ void PatchReplacementDialog::confirm()
     patch->update();
     if (!originalPatch || !originalPatch->parent) throw std::logic_error("Edited implicit patch is detached");
     auto* parent = originalPatch->parent;
-    auto slot = std::find(parent->composables.begin(), parent->composables.end(), originalPatch);
-    if (slot == parent->composables.end()) throw std::logic_error("Edited implicit patch is missing from its parent");
-    std::unique_ptr<ImplicitPatch> replacement(patch->copy());
-    replacement->setIndex(originalPatch->index);
-    parent->addChild(replacement.get(), int(slot - parent->composables.begin()));
-    replacement.release();
+    if (std::find(parent->composables.begin(), parent->composables.end(), originalPatch) == parent->composables.end())
+        throw std::logic_error("Edited implicit patch is missing from its parent");
+    // Scene objects retain aliases to primitive nodes and descendants. Commit
+    // parameters in place so editing a parent never replaces their identities.
+    if (auto* target = dynamic_cast<ImplicitPrimitive*>(originalPatch)) {
+        auto* source = dynamic_cast<ImplicitPrimitive*>(patch);
+        if (!source || typeid(*source) != typeid(*target)) throw std::invalid_argument("Edited primitive type changed");
+        const int index = target->index;
+        *target = *source;
+        target->parent = parent;
+        target->index = index;
+        target->update();
+    } else if (auto* target = dynamic_cast<ImplicitBinaryOperator*>(originalPatch)) {
+        auto* source = dynamic_cast<ImplicitBinaryOperator*>(patch);
+        if (!source) throw std::invalid_argument("Edited operation type changed");
+        if (source->composableA() != firstDraftChild) target->swapAB();
+        target->composeFunction = source->composeFunction;
+        target->positionalB = source->positionalB;
+        target->blendingFactor = source->blendingFactor;
+        target->withIntersectionOnB = source->withIntersectionOnB;
+        target->name = source->name;
+        target->mirrored = source->mirrored;
+        target->optionalCurve = source->optionalCurve;
+    } else throw std::invalid_argument("Unsupported implicit parameter editor node");
+    originalPatch->used_json_filename.clear();
+    originalPatch->referenceProperties = nlohmann::json::object();
+    for (ImplicitPatch* node = originalPatch; node; node = node->parent) node->_cached = false;
     if (caller) caller->clearSelection();
-    delete originalPatch;
     originalPatch = nullptr;
     setResult(1);
-    this->done(1);
+    done(1);
 }
