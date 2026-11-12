@@ -1,4 +1,5 @@
 #include "PrimitivePatchesInterface.h"
+#include <QFileDialog>
 #include "GUIElements/ImageViewer.h"
 #include "GUIElements/InterfaceUtils.h"
 //#include "Graphics/Sphere.h"

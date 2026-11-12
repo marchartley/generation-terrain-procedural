@@ -1,4 +1,6 @@
 #include "TerrainGen/ImplicitTree.h"
+#include <QFileDialog>
+#include <QDirIterator>
 #include "Interface/PrimitivePatchesInterface.h"
 #include "TerrainGenerationInterface.h"
 

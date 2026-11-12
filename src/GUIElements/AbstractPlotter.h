@@ -1,5 +1,6 @@
 #ifndef ABSTRACTPLOTTER_H
 #define ABSTRACTPLOTTER_H
+#include <QDialog>
 
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
@@ -7,12 +8,10 @@
 
 #include "GUIElements/CommonInterface.h"
 #include "Utils/Utils.h"
-#include "DataStructure/Image.h"
 #include "GUIElements/ChartView.h"
 
 #include "Utils/Signals.h"
 
-#include "GUIElements/PlottingUtils.h"
 
 #define DECLARE_PLOTTER_GETTER(Type)                    \
 public:                                                 \

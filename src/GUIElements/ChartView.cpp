@@ -1,4 +1,14 @@
 #include "ChartView.h"
+#include <QGraphicsTextItem>
+#include <QImage>
+#include <QKeyEvent>
+#include <QLineSeries>
+#include <QLegendMarker>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QScatterSeries>
+#include <QValueAxis>
+#include <QWheelEvent>
 
 
 ChartView::ChartView(QWidget *parent) : QChartView(new Chart(nullptr), parent)

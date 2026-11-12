@@ -1,4 +1,5 @@
 #include "Curves/CatmullRomSpline.h"
+#include <iomanip>
 
 #include "Utils/Utils.h"
 #include "Utils/Collisions.h"

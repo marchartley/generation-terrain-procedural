@@ -1,15 +1,16 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
+#include <QMainWindow>
 
-#include <QObject>
-#include <QSlider>
-#include <QGridLayout>
 #include "Interface/Viewer.h"
-#include "GUIElements/RangeSlider.h"
-#include "GUIElements/FancySlider.h"
-#include "GUIElements/Spoiler.h"
 
-#include "GUIElements/StickyFrame.h"
+
+QT_BEGIN_NAMESPACE
+class QGridLayout;
+class QMenuBar;
+QT_END_NAMESPACE
+
+class StickyFrame;
 
 class ViewerInterface : public QMainWindow{
 public:

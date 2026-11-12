@@ -18,9 +18,7 @@ CONFIG += \
 
 INCLUDEPATH *= src/
 
-QMAKE_CXXFLAGS += \
-    -fopenmp \
-    -g
+QMAKE_CXXFLAGS += -fopenmp
 LIBS += \
     -fopenmp
 
@@ -28,23 +26,17 @@ DEFINES += \
     "WM_LABEL_SIZE=32"
 
 
-TORCH_DIR = $$getenv(HOME)/codes/libtorch
+# The GAN interface runs Python in a separate process. The C++ application does
+# not use libtorch, so it needs neither its headers nor its CUDA libraries.
+# Debug symbols follow qmake defaults (CONFIG+=force_debug_info for profiling).
 
-INCLUDEPATH += \
-    $$TORCH_DIR/include \
-    $$TORCH_DIR/include/torch/csrc/api/include
+# Cache stable dependencies once, without pulling editable project headers into
+# every translation unit. Disable with CONFIG+=no_pch for include diagnostics.
+!contains(CONFIG, no_pch) {
+    CONFIG += precompile_header
+    PRECOMPILED_HEADER = $$PWD/src/compilation_pch.h
+}
 
-LIBS += -L$$TORCH_DIR/lib \
-    -ltorch_global_deps \
-    -ltorch \
-    -ltorch_cpu \
-    -lc10 \
-    -ltorch_cuda \
-    -lc10_cuda \
-    -ldl -lrt -lpthread
-
-QMAKE_LFLAGS += -Wl,-rpath,$$TORCH_DIR/lib
-DEFINES += _GLIBCXX_USE_CXX11_ABI=1
 QMAKE_LFLAGS_RELEASE -= -Wl,-s
 
 

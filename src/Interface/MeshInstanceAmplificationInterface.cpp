@@ -1,4 +1,6 @@
 #include "MeshInstanceAmplificationInterface.h"
+#include <QFileDialog>
+#include <QDirIterator>
 
 #include "GUIElements/CommonInterface.h"
 

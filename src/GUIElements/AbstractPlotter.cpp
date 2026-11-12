@@ -1,4 +1,11 @@
 #include "AbstractPlotter.h"
+#include "DataStructure/Image.h"
+#include <QApplication>
+#include <QClipboard>
+#include <QFileDialog>
+#include <QLegend>
+#include <QPainter>
+#include <QTimer>
 
 
 #include <iostream>

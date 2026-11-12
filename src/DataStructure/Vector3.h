@@ -2,7 +2,10 @@
 #define VECTOR3_H
 
 #include "Utils/Random.h"
-#include <iostream>
+#include <algorithm>
+#include <memory>
+#include <ostream>
+#include <tuple>
 #include <vector>
 #include <QGLViewer/vec.h>
 #include <QGLViewer/quaternion.h>
@@ -347,7 +350,6 @@ Vec3<T> abs(const Vec3<T>& o);
 
 
 #include "Utils/Utils.h"
-#include "Utils/json.h"
 
 
 

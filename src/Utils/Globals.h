@@ -4,12 +4,12 @@
 #define useModernOpenGL 1
 
 #include <QOpenGLFunctions_4_5_Compatibility>
-#include <QtWidgets>
+#include <QOpenGLExtraFunctions>
 #include <QOpenGLWidget>
 #include <QPointer>
 #include <memory>
 #include <vector>
-#include <QOpenGLVersionFunctionsFactory>
+#include <string>
 
 #define numVAOs 1000
 #define numVBOs 4000

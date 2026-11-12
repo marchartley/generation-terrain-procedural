@@ -1,6 +1,7 @@
 #ifndef SHADERELEMENT_H
 #define SHADERELEMENT_H
 
+class Shader;
 class ShaderElement;
 class ColoredElement;
 class LightSource;
@@ -20,7 +21,9 @@ class rt_scene;
 
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Vector4.h"
-#include "Graphics/Shader.h"
+#include <QtGui/qopengl.h>
+#include <memory>
+#include <string>
 #include <glm/glm.hpp>
 
 class ShaderElement
