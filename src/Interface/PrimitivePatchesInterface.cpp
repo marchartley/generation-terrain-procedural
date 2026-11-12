@@ -1352,66 +1352,46 @@ void PrimitivePatchesInterface::displayParametricCurve()
 
 void PrimitivePatchesInterface::displayPatchesTree()
 {
-    auto& plt = ImageViewer::get();
+    if (!implicitTerrain) return;
+    auto& plot = ImageViewer::get("implicit-tree");
+    plot.dataModel->reset();
 
-    std::vector<std::pair<ImplicitPatch*, std::vector<int>>> allPatchesAndDirections;
-    std::vector<std::tuple<ImplicitPatch*, std::vector<int>, int>> queueWithDirections = {{implicitTerrain.get(), {}, -1}};
+    // Operators share the owning child API, including unary and fixed-arity
+    // operators with vacant slots. A root has no incoming edge.
+    std::vector<ImplicitPatch*> nodes{implicitTerrain.get()};
+    std::vector<int> parents{-1};
+    std::vector<size_t> depths{0};
+    std::vector<size_t> levelCounts{1};
+    for (size_t cursor = 0; cursor < nodes.size(); ++cursor) {
+        auto* group = dynamic_cast<ImplicitNaryOperator*>(nodes[cursor]);
+        if (!group) continue;
+        const size_t depth = depths[cursor] + 1;
+        if (levelCounts.size() <= depth) levelCounts.resize(depth + 1);
+        for (auto* child : group->composables) {
+            if (!child) continue;
+            nodes.push_back(child);
+            parents.push_back(int(cursor));
+            depths.push_back(depth);
+            ++levelCounts[depth];
+        }
+    }
+
     std::vector<Vector3> positions;
     std::vector<std::string> labels;
-    std::vector<std::pair<int, int>> edges;
-
-    int maxDepth = 0;
-    while (!queueWithDirections.empty()) {
-        auto [current, directions, parentIndex] = queueWithDirections.front();
-        queueWithDirections.erase(queueWithDirections.begin());
-        allPatchesAndDirections.push_back({current, directions});
-        int currentIndex = int(allPatchesAndDirections.size()) - 1;
-        edges.push_back({parentIndex, currentIndex});
-        std::string label = current->name;
-        ImplicitPrimitive* asPrim = dynamic_cast<ImplicitPrimitive*>(current);
-        if (asPrim != nullptr)
-            label += "\n(" + toCapitalize(stringFromMaterial(asPrim->material)) + ")";
+    std::vector<size_t> levelOffsets(levelCounts.size(), 0);
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        const size_t depth = depths[i];
+        positions.emplace_back(float(levelOffsets[depth]++) - float(levelCounts[depth] - 1) * .5f, -float(depth));
+        std::string label = nodes[i]->name;
+        if (auto* primitive = dynamic_cast<ImplicitPrimitive*>(nodes[i]))
+            label += "\n(" + toCapitalize(stringFromMaterial(primitive->material)) + ")";
         labels.push_back(label);
-        maxDepth = std::max(maxDepth, int(directions.size()));
-
-        ImplicitBinaryOperator* AsBin = dynamic_cast<ImplicitBinaryOperator*>(current);
-        if (AsBin != nullptr) {
-            if (AsBin->composableA() != nullptr) {
-                auto directionsForA = directions;
-                if (AsBin->composableB() == nullptr) { // A is unique child
-                    directionsForA.push_back(0);
-                } else {
-                    directionsForA.push_back(-1);
-                }
-                queueWithDirections.push_back({AsBin->composableA(), directionsForA, currentIndex});
-            }
-            if (AsBin->composableB() != nullptr) {
-                auto directionsForB = directions;
-                directionsForB.push_back(1);
-                queueWithDirections.push_back({AsBin->composableB(), directionsForB, currentIndex});
-            }
-        }
     }
-
-    for (const auto& [patch, directions] : allPatchesAndDirections) {
-        float x = 0.f;
-        float y = 0.f;
-        for (size_t depth = 0; depth < directions.size(); depth++) {
-            x += float(directions[depth]) * std::pow(0.9f, depth);
-            y -= 1.f;
-        }
-        positions.push_back(Vector3(x, y));
-    }
-    for (auto& [e0, e1] : edges) {
-        plt.addPlot({positions[e0], positions[e1]});
-    }
-    plt.addScatter(positions, "", labels);
-    plt.draw();
-    plt.show();
-//    QObject::connect(plt, &ImageViewer::finished, this, [=](int result) {
-//        std::cout << "Closed with result " << result << std::endl;
-//        plt.close();
-    //    });
+    for (size_t i = 1; i < nodes.size(); ++i)
+        plot.addPlot({positions[size_t(parents[i])], positions[i]});
+    plot.addScatter(positions, "", labels);
+    plot.draw();
+    plot.show();
 }
 
 void PrimitivePatchesInterface::moveDebugBoxWithControlPoint()
